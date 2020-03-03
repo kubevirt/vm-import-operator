@@ -1,0 +1,7 @@
+apiVersion: v2v.kubevirt.io/v1alpha3
+kind: VirtualMachineImport
+metadata:
+  name: example-virtualmachineimport
+spec:
+  # Add fields here
+  size: 3
