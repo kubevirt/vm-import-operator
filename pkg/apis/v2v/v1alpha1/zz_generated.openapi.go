@@ -11,9 +11,9 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"github.com/machacekondra/vm-import-operator/pkg/apis/v2v/v1alpha1.VirtualMachineImport":       schema_pkg_apis_v2v_v1alpha1_VirtualMachineImport(ref),
-		"github.com/machacekondra/vm-import-operator/pkg/apis/v2v/v1alpha1.VirtualMachineImportSpec":   schema_pkg_apis_v2v_v1alpha1_VirtualMachineImportSpec(ref),
-		"github.com/machacekondra/vm-import-operator/pkg/apis/v2v/v1alpha1.VirtualMachineImportStatus": schema_pkg_apis_v2v_v1alpha1_VirtualMachineImportStatus(ref),
+		"github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1.VirtualMachineImport":       schema_pkg_apis_v2v_v1alpha1_VirtualMachineImport(ref),
+		"github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1.VirtualMachineImportSpec":   schema_pkg_apis_v2v_v1alpha1_VirtualMachineImportSpec(ref),
+		"github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1.VirtualMachineImportStatus": schema_pkg_apis_v2v_v1alpha1_VirtualMachineImportStatus(ref),
 	}
 }
 
@@ -44,19 +44,19 @@ func schema_pkg_apis_v2v_v1alpha1_VirtualMachineImport(ref common.ReferenceCallb
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/machacekondra/vm-import-operator/pkg/apis/v2v/v1alpha1.VirtualMachineImportSpec"),
+							Ref: ref("github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1.VirtualMachineImportSpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("github.com/machacekondra/vm-import-operator/pkg/apis/v2v/v1alpha1.VirtualMachineImportStatus"),
+							Ref: ref("github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1.VirtualMachineImportStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"github.com/machacekondra/vm-import-operator/pkg/apis/v2v/v1alpha1.VirtualMachineImportSpec", "github.com/machacekondra/vm-import-operator/pkg/apis/v2v/v1alpha1.VirtualMachineImportStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1.VirtualMachineImportSpec", "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1.VirtualMachineImportStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 

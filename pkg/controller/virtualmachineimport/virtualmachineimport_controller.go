@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	v2vv1alpha1 "github.com/machacekondra/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	cdiv1 "github.com/pkliczewski/containerized-data-importer/pkg/apis/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"

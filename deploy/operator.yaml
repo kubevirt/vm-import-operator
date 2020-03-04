@@ -16,7 +16,7 @@ spec:
       containers:
         - name: vm-import-operator
           # Replace this with the built image name
-          image: quay.io/machacekondra/app-operator
+          image: quay.io/kubevirt/app-operator
           command:
           - vm-import-operator
           imagePullPolicy: Always

@@ -1,7 +1,7 @@
 package apis
 
 import (
-	"github.com/machacekondra/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 )
 
 func init() {
