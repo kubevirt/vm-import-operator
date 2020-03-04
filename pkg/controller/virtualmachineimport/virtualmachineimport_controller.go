@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	v2vv1alpha3 "github.com/machacekondra/vm-import-operator/pkg/apis/v2v/v1alpha3"
+	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	cdiv1 "github.com/pkliczewski/containerized-data-importer/pkg/apis/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -50,7 +50,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource VirtualMachineImport
-	err = c.Watch(&source.Kind{Type: &v2vv1alpha3.VirtualMachineImport{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &v2vv1alpha1.VirtualMachineImport{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Watch for changes to secondary resource Pods and requeue the owner VirtualMachineImport
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &v2vv1alpha3.VirtualMachineImport{},
+		OwnerType:    &v2vv1alpha1.VirtualMachineImport{},
 	})
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	reqLogger.Info("Reconciling VirtualMachineImport")
 
 	// Fetch the VirtualMachineImport instance
-	instance := &v2vv1alpha3.VirtualMachineImport{}
+	instance := &v2vv1alpha1.VirtualMachineImport{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -164,7 +164,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	return reconcile.Result{}, nil
 }
 
-func fetchOvirtVM(con *ovirtsdk.Connection, vmSpec *v2vv1alpha3.VirtualMachineImportOvirtSourceVMSpec) (*ovirtsdk.Vm, error) {
+func fetchOvirtVM(con *ovirtsdk.Connection, vmSpec *v2vv1alpha1.VirtualMachineImportOvirtSourceVMSpec) (*ovirtsdk.Vm, error) {
 	// Id of the VM specified:
 	if vmSpec.ID != "" {
 		response, err := con.SystemService().VmsService().VmService(vmSpec.ID).Get().Send()
@@ -186,7 +186,7 @@ func fetchOvirtVM(con *ovirtsdk.Connection, vmSpec *v2vv1alpha3.VirtualMachineIm
 	return nil, fmt.Errorf("Virtual machine %v not found", vmSpec.Name)
 }
 
-func (r *ReconcileVirtualMachineImport) fetchOvirtSecret(vmImport *v2vv1alpha3.VirtualMachineImport) (*corev1.Secret, error) {
+func (r *ReconcileVirtualMachineImport) fetchOvirtSecret(vmImport *v2vv1alpha1.VirtualMachineImport) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: vmImport.Spec.Source.Ovirt.SecretName, Namespace: vmImport.Namespace}, secret)
 	return secret, err

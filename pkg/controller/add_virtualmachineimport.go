@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"github.com/machacekondra/vm-import-operator/pkg/controller/virtualmachineimport"
+	"github.com/kubevirt/vm-import-operator/pkg/controller/virtualmachineimport"
 )
 
 func init() {

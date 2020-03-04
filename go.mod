@@ -1,4 +1,4 @@
-module github.com/machacekondra/vm-import-operator
+module github.com/kubevirt/vm-import-operator
 
 require (
 	github.com/go-openapi/spec v0.19.3
