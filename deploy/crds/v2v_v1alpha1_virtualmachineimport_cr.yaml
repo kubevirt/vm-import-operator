@@ -1,4 +1,4 @@
-apiVersion: v2v.kubevirt.io/v1alpha3
+apiVersion: v2v.kubevirt.io/v1alpha1
 kind: VirtualMachineImport
 metadata:
   name: example-virtualmachineimport
