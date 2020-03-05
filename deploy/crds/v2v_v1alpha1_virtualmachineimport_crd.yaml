@@ -9,6 +9,10 @@ spec:
     listKind: VirtualMachineImportList
     plural: virtualmachineimports
     singular: virtualmachineimport
+    shortNames:
+    - vmimports
+    categories:
+    - all
   scope: Namespaced
   subresources:
     status: {}

@@ -2,6 +2,37 @@ apiVersion: v2v.kubevirt.io/v1alpha1
 kind: VirtualMachineImport
 metadata:
   name: example-virtualmachineimport
+  namespace: example-ns
 spec:
-  # Add fields here
-  size: 3
+  source:
+    ovirt:  # represents ovirt-engine to import from the virtual machine
+      providerCredentialsSecret: # A secret holding the access credentials to ovirt, see example ovirt-mapping-example.yaml
+        name: my-secret-with-ovirt-credentials
+        namespace: default # optional, if not specified, use CR's namespace
+      vm: # in order to uniquely identify vm on ovirt with need to provide (vm_name,cluster) or use (vm-id)
+        id: 80554327-0569-496b-bdeb-fcbbf52b827b
+        name: myvm
+        cluster:
+          name: mycluster
+          id: CC111111-1111-1111-1111-111111111111
+  resourceMappings:
+    configMapName: config-map-of-ovirt-resources-to-kubevirt # a mapping of ovirt resource (network, storage, affinity)
+    configMapNamespace: othernamespace # optional, if not specified, use CR's namespace
+status:
+  targetVirtualMachineName: myvm # the name of the created virtual machine
+  conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2020-02-20T12:43:10Z"
+      status: "False"
+      type: Ready # indicates if the vm import process is completed or not
+      message: VM import is in progress.
+    - lastProbeTime: null
+      lastTransitionTime: "2020-02-20T12:43:10Z"
+      status: "True"
+      type: Processing # indicates if the vm import process is running
+      reason: CopyingDisk
+      message: VM disks are being copied to destination.
+  state: Running
+  dataVolumes: # list of data volumes created for the VMs
+    - name: dv-1
+    - name: dv-2

@@ -1,8 +1,9 @@
 module github.com/kubevirt/vm-import-operator
 
 require (
+	github.com/NYTimes/gziphandler v1.0.1 // indirect
 	github.com/go-openapi/spec v0.19.3
-	github.com/kubevirt/containerized-data-importer v1.10.6
+	github.com/kubevirt/containerized-data-importer v1.10.6 // indirect
 	github.com/operator-framework/operator-sdk v0.10.2-0.20191010224636-fd8747add695
 	github.com/ovirt/go-ovirt v4.3.4+incompatible
 	github.com/pkliczewski/containerized-data-importer v1.11.0
