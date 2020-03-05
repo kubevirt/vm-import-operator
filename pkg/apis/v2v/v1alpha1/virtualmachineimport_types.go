@@ -67,7 +67,8 @@ type VirtualMachineImportOvirtSourceVMSpec struct {
 // +k8s:openapi-gen=true
 // +optional
 type VirtualMachineImportOvirtSourceVMClusterSpec struct {
-	ID string `json:"id"`
+	// +optional
+	ID *string `json:"id,omitempty"`
 
 	// +optional
 	Name *string `json:"name,omitempty"`
