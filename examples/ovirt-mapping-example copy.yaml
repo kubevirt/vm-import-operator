@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ovirt-mapping-example
+  namespace: default
+data:
+  mappings: |-
+    networkMapping:
+      - source: red # maps of ovirt logic network to network attachment definition
+        target: xyz
+        type: bridge
+      - source: ovirtmgmt
+        target: pod
+        type: pod
+    storageMapping:
+      - source: ovirt_storage_domain_1 # maps ovirt storage domains to storage class
+        target: storage_class_1
+    affinityMapping: # affinity mappings will be limited at first for 'pinned-to-host', since affinity/anti-affinity requires more than a single vm import
+      - source: ovirt_node_1
+        target: k8s_node_1
+        policy: nodeAffinity
+
