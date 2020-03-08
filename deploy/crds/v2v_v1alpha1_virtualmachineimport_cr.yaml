@@ -34,5 +34,5 @@ status:
       message: VM disks are being copied to destination.
   state: Running
   dataVolumes: # list of data volumes created for the VMs
-    - name: dv-1
-    - name: dv-2
+    - name: dv-myvm-1
+    - name: dv-myvm-2
