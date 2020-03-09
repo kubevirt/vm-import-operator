@@ -6,39 +6,10 @@ import (
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
 
-const (
-	// NicInterfaceCheckID defines an ID of a NIC interface model check
-	NicInterfaceCheckID = CheckID("nic.interface")
-	// NicOnBootID defines an ID of a NIC on_boot == fales check
-	NicOnBootID = CheckID("nic.on_boot")
-	// NicPluggedID defines an ID of a NIC plugged == false check
-	NicPluggedID = CheckID("nic.plugged")
-	// NicVNicPortMirroringID defines an ID of a vnic_profile.port_mirroring == true check
-	NicVNicPortMirroringID = CheckID("nic.vnic_profile.port_mirroring")
-	// NicVNicPassThroughID defines an ID of a vnic_profile.pass_through == 'enabled' check
-	NicVNicPassThroughID = CheckID("nic.vnic_profile.pass_through")
-	// NicVNicCustomPropertiesID defines an ID of a vnic_profile.custom_properties presence check
-	NicVNicCustomPropertiesID = CheckID("nic.vnic_profile.custom_properties")
-	// NicVNicNetworkFilterID defines an ID of a vnic_profile.networ_filter presence check
-	NicVNicNetworkFilterID = CheckID("nic.vnic_profile.network_filter")
-	// NicVNicQosID defines an ID of a vnic_profile.qos presence check
-	NicVNicQosID = CheckID("nic.vnic_profile.qos")
-)
-
 // TODO: move to shared package with mapping definitions
+
 // InterfaceModelMapping defines mapping of NIC device models between oVirt and kubevirt domains
 var InterfaceModelMapping = map[string]string{"e1000": "e1000", "rtl8139": "rtl8139", "virtio": "virtio"}
-
-// CheckID identifies validation check for Virtual Machine Import
-type CheckID string
-
-// ValidationFailure describes Virtual Machine Import validation failure
-type ValidationFailure struct {
-	// Check ID
-	ID CheckID
-	// Verbose explanation of the failure
-	Message string
-}
 
 func validateNics(nics []*ovirtsdk.Nic) []ValidationFailure {
 	var failures []ValidationFailure

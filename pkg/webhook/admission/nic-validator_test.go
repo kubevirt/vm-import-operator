@@ -11,7 +11,6 @@ import (
 )
 
 var _ = Describe("Validating NIC", func() {
-	// Private API tests
 	table.DescribeTable("should flag nic with illegal interface model: ", func(iface string) {
 		var nic = newNic()
 		nic.SetInterface(ovirtsdk.NicInterface(iface))
@@ -27,14 +26,13 @@ var _ = Describe("Validating NIC", func() {
 		table.Entry("garbage", "lkfsldfksld3432432#$#@"),
 		table.Entry("empty string", ""),
 	)
-
 	table.DescribeTable("should accept nic with legal interface model: ", func(iface string) {
 		var nic = newNic()
 		nic.SetInterface(ovirtsdk.NicInterface(iface))
 
 		failures := validateNic(nic)
 
-		Expect(failures).To(HaveLen(0))
+		Expect(failures).To(BeEmpty())
 	},
 		table.Entry("virtio", "virtio"),
 		table.Entry("e1000", "e1000"),
@@ -139,7 +137,7 @@ var _ = Describe("Validating NIC", func() {
 		nics := []*ovirtsdk.Nic{nic1, nic2}
 		failures := validateNics(nics)
 
-		Expect(failures).To(HaveLen(0))
+		Expect(failures).To(BeEmpty())
 	})
 	It("should flag two nics ", func() {
 		nic1 := newNic()
