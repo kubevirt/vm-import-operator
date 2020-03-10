@@ -16,6 +16,9 @@ type VirtualMachineImportSpec struct {
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
 	Source           VirtualMachineImportSourceSpec `json:"source"`
 	ResourceMappings ResourceMappingsSpec           `json:"target"`
+
+	// +optional
+	TargetVirtualMachineName *string `json:"targetVirtualMachineName,omitempty"`
 }
 
 // ResourceMappingsSpec defines the definition of the config map that holds the resources mapping between source provider to kubevirt
