@@ -55,7 +55,7 @@ func validateNic(nic *ovirtsdk.Nic) []ValidationFailure {
 
 	//TODO: Networking rule #1
 
-	if failure, valid := isValidatNicInterfaceModel(nic, nicID); !valid {
+	if failure, valid := isValidNicInterfaceModel(nic, nicID); !valid {
 		results = append(results, failure)
 	}
 	if failure, valid := isValidNicOnBoot(nic, nicID); !valid {
@@ -69,7 +69,7 @@ func validateNic(nic *ovirtsdk.Nic) []ValidationFailure {
 		if failure, valid := isValidVnicPortMirroring(vNicProfile, nicID); !valid {
 			results = append(results, failure)
 		}
-		if failure, valid := isValidVnicProfileMigratable(vNicProfile, nicID); !valid {
+		if failure, valid := isValidVnicProfilePassThrough(vNicProfile, nicID); !valid {
 			results = append(results, failure)
 		}
 		if failure, valid := isValidVnicProfileCustomProperties(vNicProfile, nicID); !valid {
@@ -86,12 +86,12 @@ func validateNic(nic *ovirtsdk.Nic) []ValidationFailure {
 	return results
 }
 
-func isValidatNicInterfaceModel(nic *ovirtsdk.Nic, nicID string) (ValidationFailure, bool) {
+func isValidNicInterfaceModel(nic *ovirtsdk.Nic, nicID string) (ValidationFailure, bool) {
 	iFace, ok := nic.Interface()
 	if _, found := validInterfaceDeviceModels[string(iFace)]; !ok || !found {
 		return ValidationFailure{
 			ID:      NicInterfaceCheckID,
-			Message: fmt.Sprintf("interface %v uses model %s that is not supported.", nicID, iFace),
+			Message: fmt.Sprintf("interface %s uses model %s that is not supported.", nicID, iFace),
 		}, false
 	}
 	return ValidationFailure{}, true
@@ -101,7 +101,7 @@ func isValidNicOnBoot(nic *ovirtsdk.Nic, nicID string) (ValidationFailure, bool)
 	if onBoot, _ := nic.OnBoot(); !onBoot {
 		return ValidationFailure{
 			ID:      NicOnBootID,
-			Message: fmt.Sprintf("interface %v is not enabled on boot.", nicID),
+			Message: fmt.Sprintf("interface %s is not enabled on boot.", nicID),
 		}, false
 	}
 
@@ -112,7 +112,7 @@ func isValidNicPlugged(nic *ovirtsdk.Nic, nicID string) (ValidationFailure, bool
 	if plugged, _ := nic.Plugged(); !plugged {
 		return ValidationFailure{
 			ID:      NicPluggedID,
-			Message: fmt.Sprintf("interface %v is unplugged.", nicID),
+			Message: fmt.Sprintf("interface %s is unplugged.", nicID),
 		}, false
 	}
 	return ValidationFailure{}, true
@@ -122,18 +122,18 @@ func isValidVnicPortMirroring(vNicProfile *ovirtsdk.VnicProfile, nicID string) (
 	if pm, ok := vNicProfile.PortMirroring(); ok && pm {
 		return ValidationFailure{
 			ID:      NicVNicPortMirroringID,
-			Message: fmt.Sprintf("interface %v uses profile with port mirroring.", nicID),
+			Message: fmt.Sprintf("interface %s uses profile with port mirroring.", nicID),
 		}, false
 	}
 	return ValidationFailure{}, true
 }
 
-func isValidVnicProfileMigratable(vNicProfile *ovirtsdk.VnicProfile, nicID string) (ValidationFailure, bool) {
+func isValidVnicProfilePassThrough(vNicProfile *ovirtsdk.VnicProfile, nicID string) (ValidationFailure, bool) {
 	if pt, ok := vNicProfile.PassThrough(); ok {
 		if ptm, ok := pt.Mode(); ok && string(ptm) == "enabled" {
 			return ValidationFailure{
 				ID:      NicVNicPassThroughID,
-				Message: fmt.Sprintf("interface %v uses profile pass-through enabled.", nicID),
+				Message: fmt.Sprintf("interface %s uses profile pass-through enabled.", nicID),
 			}, false
 		}
 	}
@@ -144,7 +144,7 @@ func isValidVnicProfileCustomProperties(vNicProfile *ovirtsdk.VnicProfile, nicID
 	if cp, ok := vNicProfile.CustomProperties(); ok && len(cp.Slice()) > 0 {
 		return ValidationFailure{
 			ID:      NicVNicCustomPropertiesID,
-			Message: fmt.Sprintf("interface %v uses profile with custom properties: %v.", nicID, cp),
+			Message: fmt.Sprintf("interface %s uses profile with custom properties: %v.", nicID, cp),
 		}, false
 	}
 	return ValidationFailure{}, true
@@ -153,7 +153,7 @@ func isValidVnicProfileNetworFilter(vNicProfile *ovirtsdk.VnicProfile, nicID str
 	if nf, ok := vNicProfile.NetworkFilter(); ok {
 		return ValidationFailure{
 			ID:      NicVNicNetworkFilterID,
-			Message: fmt.Sprintf("interface %v uses profile with a network filter: %v.", nicID, nf),
+			Message: fmt.Sprintf("interface %s uses profile with a network filter: %v.", nicID, nf),
 		}, false
 	}
 	return ValidationFailure{}, true
@@ -162,7 +162,7 @@ func isValidVnicProfileQos(vNicProfile *ovirtsdk.VnicProfile, nicID string) (Val
 	if qos, ok := vNicProfile.Qos(); ok {
 		return ValidationFailure{
 			ID:      NicVNicQosID,
-			Message: fmt.Sprintf("interface %v uses profile with QOS: %v.", nicID, qos),
+			Message: fmt.Sprintf("interface %s uses profile with QOS: %v.", nicID, qos),
 		}, false
 	}
 	return ValidationFailure{}, true
