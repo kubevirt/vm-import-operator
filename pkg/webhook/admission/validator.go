@@ -25,7 +25,9 @@ const (
 	NicVNicQosID = CheckID("nic.vnic_profile.qos")
 )
 
-var validInterfaceDeviceModels = map[string]*struct{}{"e1000": nil, "rtl8139": nil, "virtio": nil}
+// TODO: move to shared package with mapping definitions
+// InterfaceModelMapping defines mapping of NIC device models between oVirt and kubevirt domains
+var InterfaceModelMapping = map[string]string{"e1000": "e1000", "rtl8139": "rtl8139", "virtio": "virtio"}
 
 // CheckID identifies validation check for Virtual Machine Import
 type CheckID string
@@ -88,10 +90,10 @@ func validateNic(nic *ovirtsdk.Nic) []ValidationFailure {
 
 func isValidNicInterfaceModel(nic *ovirtsdk.Nic, nicID string) (ValidationFailure, bool) {
 	iFace, ok := nic.Interface()
-	if _, found := validInterfaceDeviceModels[string(iFace)]; !ok || !found {
+	if _, found := InterfaceModelMapping[string(iFace)]; !ok || !found {
 		return ValidationFailure{
 			ID:      NicInterfaceCheckID,
-			Message: fmt.Sprintf("interface %s uses model %s that is not supported.", nicID, iFace),
+			Message: fmt.Sprintf("interface %s uses model %s that is not supported. Supported models: %v", nicID, iFace, GetMapKeys(InterfaceModelMapping)),
 		}, false
 	}
 	return ValidationFailure{}, true
@@ -149,6 +151,7 @@ func isValidVnicProfileCustomProperties(vNicProfile *ovirtsdk.VnicProfile, nicID
 	}
 	return ValidationFailure{}, true
 }
+
 func isValidVnicProfileNetworFilter(vNicProfile *ovirtsdk.VnicProfile, nicID string) (ValidationFailure, bool) {
 	if nf, ok := vNicProfile.NetworkFilter(); ok {
 		return ValidationFailure{
@@ -158,6 +161,7 @@ func isValidVnicProfileNetworFilter(vNicProfile *ovirtsdk.VnicProfile, nicID str
 	}
 	return ValidationFailure{}, true
 }
+
 func isValidVnicProfileQos(vNicProfile *ovirtsdk.VnicProfile, nicID string) (ValidationFailure, bool) {
 	if qos, ok := vNicProfile.Qos(); ok {
 		return ValidationFailure{
