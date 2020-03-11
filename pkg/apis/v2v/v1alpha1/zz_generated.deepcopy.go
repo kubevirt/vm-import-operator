@@ -257,6 +257,11 @@ func (in *VirtualMachineImportSpec) DeepCopyInto(out *VirtualMachineImportSpec) 
 	*out = *in
 	in.Source.DeepCopyInto(&out.Source)
 	in.ResourceMappings.DeepCopyInto(&out.ResourceMappings)
+	if in.TargetVirtualMachineName != nil {
+		in, out := &in.TargetVirtualMachineName, &out.TargetVirtualMachineName
+		*out = new(string)
+		**out = **in
+	}
 	return
 }
 

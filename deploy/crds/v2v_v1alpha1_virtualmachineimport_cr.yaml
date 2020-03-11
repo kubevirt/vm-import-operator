@@ -4,6 +4,7 @@ metadata:
   name: example-virtualmachineimport
   namespace: example-ns
 spec:
+  targetVirtualMachineName: examplevm # The target name is optional. If not provided, the import will attempt to use the origin name of the VM or to normalize it.
   source:
     ovirt:  # represents ovirt-engine to import from the virtual machine
       providerCredentialsSecret: # A secret holding the access credentials to ovirt, see example ovirt-mapping-example.yaml
