@@ -57,5 +57,6 @@ rules:
   - v2v.kubevirt.io
   resources:
   - '*'
+  - resourcemappings
   verbs:
   - '*'

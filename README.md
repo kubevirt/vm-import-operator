@@ -5,6 +5,7 @@ Operator which imports a VM from oVirt to KubeVirt.
 
 # Installation
 ```bash
+kubectl create -f deploy/crds/v2v_v1alpha1_resourcemapping_crd.yaml
 kubectl create -f deploy/crds/v2v_v1alpha1_virtualmachineimport_crd.yaml
 kubectl create -f deploy/service_account.yaml
 kubectl create -f deploy/role.yaml
@@ -23,38 +24,37 @@ metadata:
   name: my-secret-with-ovirt-credentials
 type: Opaque
 stringData:
-  config.yaml: |-
+  ovirt: |-
     apiUrl: "https://ovirt-engine.example.com:8443/ovirt-engine/api/"
     username: admin@internal # provided in the format of username@domain
     password: 123456
-    insecure: true
+    caCert: ...
 EOF
 ```
 
-## Create a config map that defines the resource mappings from oVirt to KubeVirt:
+The CA Certificate can be obtained from oVirt according to the instructions specified [here](http://ovirt.github.io/ovirt-engine-api-model/4.4/#_obtaining_the_ca_certificate).
+
+## Create oVirt resource mappings that defines how oVirt resources are mapped to kubevirt:
 ```bash
 cat <<EOF | kubectl create -f -
-apiVersion: v1
-kind: ConfigMap
+apiVersion: v2v.kubevirt.io/v1alpha1
+kind: ResourceMapping
 metadata:
-  name: ovirt-mapping-example
-  namespace: default
-data:
-  mappings: |-
-    networkMapping:
-      - source: red # maps of ovirt logic network to network attachment definition
-        target: xyz
-        type: bridge
-      - source: ovirtmgmt
-        target: pod
+  name: example-resourcemappings
+  namespace: example-ns
+spec:
+  ovirt:
+    networkMappings:
+      - source:
+          name: ovirtmgmt
+        target:
+          name: pod
         type: pod
-    storageMapping:
-      - source: ovirt_storage_domain_1 # maps ovirt storage domains to storage class
-        target: storage_class_1
-    affinityMapping: # affinity mappings will be limited at first for 'pinned-to-host', since affinity/anti-affinity requires more than a single vm import
-      - source: ovirt_node_1
-        target: k8s_node_1
-        policy: nodeAffinity
+    storageMappings:
+      - source:
+          name: ovirt_storage_domain_1
+        target:
+          name: storage_class_1
 EOF
 ```
 
@@ -67,16 +67,18 @@ metadata:
   name: example-virtualmachineimport
   namespace: default
 spec:
+  providerCredentialsSecret:
+    name: my-secret-with-ovirt-credentials
+    namespace: default # optional, if not specified, use CR's namespace
+  resourceMapping:
+    name: example-resourcemappings
+    namespace: othernamespace
+  targetVmName: testvm
+  startVm: false
   source:
-    ovirt:  # represents ovirt-engine to import from the virtual machine
-      providerCredentialsSecret: # A secret holding the access credentials to ovirt, see example ovirt-mapping-example.yaml
-        name: my-secret-with-ovirt-credentials
-        namespace: default # optional, if not specified, use CR's namespace
-      vm: # in order to uniquely identify vm on ovirt with need to provide (vm_name,cluster) or use (vm-id)
+    ovirt:
+      vm:
         id: 80554327-0569-496b-bdeb-fcbbf52b827b
-  resourceMappings:
-    configMapName: ovirt-mapping-example # a mapping of ovirt resource (network, storage, affinity)
-    configMapNamespace: default # optional, if not specified, use CR's namespace
 EOF
 ```
 
@@ -91,26 +93,26 @@ An example of a VM Import resource during creation:
 apiVersion: v2v.kubevirt.io/v1alpha1
 kind: VirtualMachineImport
 metadata:
+  annotations:
+    vmimport.v2v.kubevirt.io/progress: 20
   name: example-virtualmachineimport
   namespace: default
 spec:
   source:
   ...
 status:
-  targetVirtualMachineName: myvm # the name of the created virtual machine
+  targetVmName: myvm
   conditions:
-    - lastProbeTime: null
-      lastTransitionTime: "2020-02-20T12:43:10Z"
+    - lastTransitionTime: "2020-02-20T12:43:10Z"
       status: "False"
-      type: Ready # indicates if the vm import process is completed or not
-      message: VM import is in progress.
-    - lastProbeTime: null
-      lastTransitionTime: "2020-02-20T12:43:10Z"
-      status: "True"
-      type: Processing # indicates if the vm import process is running
+      type: Succeeded
+      reason: DataVolumeCreationFailed
+      message: VM import due to failure to copy source VM disks to kubevirt.
+    - lastTransitionTime: "2020-02-20T12:43:10Z"
+      status: "False"
+      type: Processing
       reason: CopyingDisk
       message: VM disks are being copied to destination.
-  state: Running
   dataVolumes: # list of data volumes created for the VMs
     - name: dv-myvm-1
     - name: dv-myvm-2
