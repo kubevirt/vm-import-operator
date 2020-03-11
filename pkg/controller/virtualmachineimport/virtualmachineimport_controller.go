@@ -3,10 +3,10 @@ package virtualmachineimport
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
-	cdiv1 "github.com/pkliczewski/containerized-data-importer/pkg/apis/core/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -14,8 +14,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
+	"kubevirt.io/client-go/kubecli"
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -24,6 +27,11 @@ import (
 )
 
 var log = logf.Log.WithName("controller_virtualmachineimport")
+
+const (
+	cdiAPIVersion = "cdi.kubevirt.io/v1alpha1"
+	ovirtLabel    = "oVirt"
+)
 
 /**
 * USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
@@ -38,7 +46,12 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileVirtualMachineImport{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	kubeClient, err := kubecli.GetKubevirtClientFromRESTConfig(mgr.GetConfig())
+	if err != nil {
+		log.Error(err, "Unable to get KubeVirt client")
+		panic("Controller cannot operate without KubeVirt")
+	}
+	return &ReconcileVirtualMachineImport{client: mgr.GetClient(), scheme: mgr.GetScheme(), kubeClient: kubeClient}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -57,7 +70,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner VirtualMachineImport
-	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
+	err = c.Watch(&source.Kind{Type: &kubevirtv1.VirtualMachine{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &v2vv1alpha1.VirtualMachineImport{},
 	})
@@ -75,8 +88,9 @@ var _ reconcile.Reconciler = &ReconcileVirtualMachineImport{}
 type ReconcileVirtualMachineImport struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client     client.Client
+	scheme     *runtime.Scheme
+	kubeClient kubecli.KubevirtClient
 }
 
 // Reconcile reads that state of the cluster for a VirtualMachineImport object and makes changes based on the state read
@@ -118,56 +132,53 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		return reconcile.Result{}, err
 	}
 
-	// Create kubevirt datavolume from oVirt VM disks:
-	dvs := newDVForCR(vm, ovirtSecret)
-	/*
-		for _, dv := range dvs {
-			err := r.client.Create(context.TODO(), dv)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-		}
-	*/
+	diskAttachmentsLink, _ := vm.DiskAttachments()
+	diskAttachments, _ := ovirtConnection.FollowLink(diskAttachmentsLink)
+	dvs := createDVmap(diskAttachments.(*ovirtsdk.DiskAttachmentSlice), ovirtSecret)
+	vmSpec := newVMForCR(vm, dvs, diskAttachments.(*ovirtsdk.DiskAttachmentSlice))
 
-	// Create kubevirt VM from oVirt VM:
-	vmSpec := newVMForCR(vm, dvs, ovirtConnection)
-	err = r.client.Create(context.TODO(), vmSpec)
-	if err != nil {
+	// Set VirtualMachineImport instance as the owner and controller
+	if err := controllerutil.SetControllerReference(instance, vmSpec, r.scheme); err != nil {
 		return reconcile.Result{}, err
 	}
 
-	// Set VirtualMachineImport instance as the owner and controller
-	/*
-		if err := controllerutil.SetControllerReference(instance, pod, r.scheme); err != nil {
-			return reconcile.Result{}, err
-		}
+	// Check if this VM already exists
+	found := &kubevirtv1.VirtualMachine{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: vmSpec.Name, Namespace: vmSpec.Namespace}, found)
+	if err != nil && errors.IsNotFound(err) {
+		reqLogger.Info("Creating a new VM", "VM.Namespace", vmSpec.Namespace, "VM.Name", vmSpec.Name)
 
-		// Check if this Pod already exists
-		found := &corev1.Pod{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, found)
-		if err != nil && errors.IsNotFound(err) {
-			reqLogger.Info("Creating a new Pod", "Pod.Namespace", pod.Namespace, "Pod.Name", pod.Name)
-			err = r.client.Create(context.TODO(), pod)
+		// Create kubevirt datavolume from oVirt VM disks:
+		for _, dv := range dvs {
+			_, err := r.kubeClient.CdiClient().CdiV1alpha1().DataVolumes(instance.Namespace).Create(&dv)
 			if err != nil {
 				return reconcile.Result{}, err
 			}
+		}
 
-			// Pod created successfully - don't requeue
-			return reconcile.Result{}, nil
-		} else if err != nil {
+		// Create kubevirt VM from oVirt VM:
+		// TODO: create vm at early stage and patch it later with additional data
+		err = r.client.Create(context.TODO(), vmSpec)
+		if err != nil {
 			return reconcile.Result{}, err
 		}
 
-		// Pod already exists - don't requeue
-		reqLogger.Info("Skip reconcile: Pod already exists", "Pod.Namespace", found.Namespace, "Pod.Name", found.Name)
-	*/
+		// Pod created successfully - don't requeue
+		return reconcile.Result{}, nil
+	} else if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// VM already exists - don't requeue
+	reqLogger.Info("Skip reconcile: VM already exists", "VM.Namespace", found.Namespace, "VM.Name", found.Name)
+
 	return reconcile.Result{}, nil
 }
 
 func fetchOvirtVM(con *ovirtsdk.Connection, vmSpec *v2vv1alpha1.VirtualMachineImportOvirtSourceVMSpec) (*ovirtsdk.Vm, error) {
 	// Id of the VM specified:
-	if vmSpec.ID != "" {
-		response, err := con.SystemService().VmsService().VmService(vmSpec.ID).Get().Send()
+	if vmSpec.ID != nil {
+		response, err := con.SystemService().VmsService().VmService(*vmSpec.ID).Get().Send()
 		if err != nil {
 			return nil, err
 		}
@@ -175,7 +186,7 @@ func fetchOvirtVM(con *ovirtsdk.Connection, vmSpec *v2vv1alpha1.VirtualMachineIm
 		return vm, nil
 	}
 	// Cluster/name of the VM specified:
-	response, err := con.SystemService().VmsService().List().Search(fmt.Sprintf("name=%v and cluster=%v", vmSpec.Name, vmSpec.Cluster)).Send()
+	response, err := con.SystemService().VmsService().List().Search(fmt.Sprintf("name=%v and cluster=%v", *vmSpec.Name, *vmSpec.Cluster.Name)).Send()
 	if err != nil {
 		return nil, err
 	}
@@ -183,74 +194,124 @@ func fetchOvirtVM(con *ovirtsdk.Connection, vmSpec *v2vv1alpha1.VirtualMachineIm
 	if len(vms.Slice()) > 0 {
 		return vms.Slice()[0], nil
 	}
-	return nil, fmt.Errorf("Virtual machine %v not found", vmSpec.Name)
+	return nil, fmt.Errorf("Virtual machine %v not found", *vmSpec.Name)
 }
 
 func (r *ReconcileVirtualMachineImport) fetchOvirtSecret(vmImport *v2vv1alpha1.VirtualMachineImport) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: vmImport.Spec.Source.Ovirt.SecretName, Namespace: vmImport.Namespace}, secret)
+	secretNamespace := vmImport.Namespace
+	if vmImport.Spec.Source.Ovirt.ProviderCredentialsSecret.Namespace != nil {
+		secretNamespace = *vmImport.Spec.Source.Ovirt.ProviderCredentialsSecret.Namespace
+	}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: vmImport.Spec.Source.Ovirt.ProviderCredentialsSecret.Name, Namespace: secretNamespace}, secret)
 	return secret, err
 }
 
 func createOvirtConnection(secret *corev1.Secret) (*ovirtsdk.Connection, error) {
 	// TODO: CA cert
+	insecure, _ := strconv.ParseBool(string(secret.Data["insecure"]))
 	return ovirtsdk.NewConnectionBuilder().
 		URL(string(secret.Data["apiUrl"])).
 		Username(string(secret.Data["username"])).
 		Password(string(secret.Data["password"])).
-		Insecure(true).
+		Insecure(insecure).
 		Build()
 }
 
-// newDVForCR returns a VM specification of the fetched oVirt VM
-func newDVForCR(vm *ovirtsdk.Vm, secret *corev1.Secret) []cdiv1.DataVolume {
-	quantity, _ := resource.ParseQuantity("1Gi")
-	diskAttachments, _ := vm.DiskAttachments()
-	dvs := make([]cdiv1.DataVolume, len(diskAttachments.Slice()))
+// newDVForCR returns the data-volume specifications for the target VM based on oVirt VM
+func createDVmap(diskAttachments *ovirtsdk.DiskAttachmentSlice, secret *corev1.Secret) map[string]cdiv1.DataVolume {
+	dvs := make(map[string]cdiv1.DataVolume, len(diskAttachments.Slice()))
 	for _, diskAttachment := range diskAttachments.Slice() {
 		disk, _ := diskAttachment.Disk()
-		dvs = append(dvs,
-			cdiv1.DataVolume{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      disk.MustId(), // FIXME:
-					Namespace: "default",     // FIXME:
-					Labels: map[string]string{ // FIXME:
-						"origin": "oVirt",
+		//quantity, _ := resource.ParseQuantity(strconv.FormatInt(disk.MustProvisionedSize(), 10))
+		quantity, _ := resource.ParseQuantity("1Gi")
+		dvs[diskAttachment.MustId()] = cdiv1.DataVolume{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: cdiAPIVersion,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      diskAttachment.MustId(), // FIXME:
+				Namespace: "default",               // FIXME:
+				Labels: map[string]string{ // FIXME:
+					"origin": ovirtLabel,
+				},
+			},
+			Spec: cdiv1.DataVolumeSpec{
+				Source: cdiv1.DataVolumeSource{
+					Imageio: &cdiv1.DataVolumeSourceImageIO{
+						URL:           string(secret.Data["apiUrl"]),
+						DiskID:        disk.MustId(),
+						SecretRef:     "ovirt-key", // FIXME, should be created dynamically
+						CertConfigMap: "ovirt-ca",  // FIXME, should be created dynamically
 					},
 				},
-				Spec: cdiv1.DataVolumeSpec{
-					Source: cdiv1.DataVolumeSource{
-						/*
-							Imageio: &cdiv1.DataVolumeSourceImageIO{
-								URL:           secret.Data["apiUrl"],
-								DiskID:        vm.MustDiskAttachments().Slice()[0].MustDisk().MustId(),
-								SecretRef:     "",
-								CertConfigMap: "",
-							},
-						*/
+				// TODO: Would be great to add storageClassName which we should get from the mapping.
+				PVC: &corev1.PersistentVolumeClaimSpec{
+					AccessModes: []corev1.PersistentVolumeAccessMode{
+						corev1.ReadWriteOnce,
 					},
-					PVC: &corev1.PersistentVolumeClaimSpec{
-						AccessModes: []corev1.PersistentVolumeAccessMode{
-							corev1.ReadWriteOnce,
-						},
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: quantity,
-							},
+					Resources: corev1.ResourceRequirements{
+						Requests: corev1.ResourceList{
+							corev1.ResourceStorage: quantity,
 						},
 					},
 				},
 			},
-		)
+		}
 	}
 	return dvs
 }
 
-// newVMForCR returns a VM specification of the fetched oVirt VM
-func newVMForCR(vm *ovirtsdk.Vm, dvs []cdiv1.DataVolume, con *ovirtsdk.Connection) *kubevirtv1.VirtualMachine {
-	labels := map[string]string{
-		"origin": "oVirt",
+func getDiskAttachmentByID(id string, diskAttachments *ovirtsdk.DiskAttachmentSlice) *ovirtsdk.DiskAttachment {
+	for _, diskAttachment := range diskAttachments.Slice() {
+		if diskAttachment.MustId() == id {
+			return diskAttachment
+		}
 	}
+	return nil
+}
+
+// newVMForCR returns a VM specification of the fetched oVirt VM
+func newVMForCR(vm *ovirtsdk.Vm, dvs map[string]cdiv1.DataVolume, diskAttachments *ovirtsdk.DiskAttachmentSlice) *kubevirtv1.VirtualMachine {
+	// Labels definition:
+	labels := map[string]string{
+		"origin": ovirtLabel,
+	}
+	// Volumes definition:
+	volumes := make([]kubevirtv1.Volume, len(dvs))
+	i := 0
+	for _, dv := range dvs {
+		volumes[i] = kubevirtv1.Volume{
+			Name: fmt.Sprintf("dv-%v", i),
+			VolumeSource: kubevirtv1.VolumeSource{
+				DataVolume: &kubevirtv1.DataVolumeSource{
+					Name: dv.Name,
+				},
+			},
+		}
+		i++
+	}
+	// Disks definition:
+	i = 0
+	disks := make([]kubevirtv1.Disk, len(dvs))
+	for id := range dvs {
+		diskAttachment := getDiskAttachmentByID(id, diskAttachments)
+		disks[i] = kubevirtv1.Disk{
+			Name: fmt.Sprintf("dv-%v", i),
+			DiskDevice: kubevirtv1.DiskDevice{
+				Disk: &kubevirtv1.DiskTarget{
+					Bus: string(diskAttachment.MustInterface()),
+				},
+			},
+		}
+		if diskAttachment.MustBootable() {
+			bootOrder := uint(1)
+			disks[i].BootOrder = &bootOrder
+		}
+
+		i++
+	}
+	running := false
 	return &kubevirtv1.VirtualMachine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      vm.MustName(), // FIXME:
@@ -258,6 +319,7 @@ func newVMForCR(vm *ovirtsdk.Vm, dvs []cdiv1.DataVolume, con *ovirtsdk.Connectio
 			Labels:    labels,
 		},
 		Spec: kubevirtv1.VirtualMachineSpec{
+			Running: &running,
 			Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
@@ -268,16 +330,7 @@ func newVMForCR(vm *ovirtsdk.Vm, dvs []cdiv1.DataVolume, con *ovirtsdk.Connectio
 							Cores: uint32(vm.MustCpu().MustTopology().MustCores()),
 						},
 						Devices: kubevirtv1.Devices{
-							Disks: []kubevirtv1.Disk{
-								kubevirtv1.Disk{
-									Name: "disk1",
-									DiskDevice: kubevirtv1.DiskDevice{
-										Disk: &kubevirtv1.DiskTarget{
-											Bus: "virtio",
-										},
-									},
-								},
-							},
+							Disks: disks,
 							// Memory:  &kubevirtv1.Memory{},
 							// Machine:   kubevirtv1.Machine{},
 							// Firmware:  &kubevirtv1.Firmware{},
@@ -287,16 +340,7 @@ func newVMForCR(vm *ovirtsdk.Vm, dvs []cdiv1.DataVolume, con *ovirtsdk.Connectio
 							// IOThreadsPolicy: &kubevirtv1.IOThreadsPolicy{},
 						},
 					},
-					Volumes: []kubevirtv1.Volume{
-						kubevirtv1.Volume{
-							Name: "dv", // TODO:
-							VolumeSource: kubevirtv1.VolumeSource{
-								DataVolume: &kubevirtv1.DataVolumeSource{
-									Name: dvs[0].Name,
-								},
-							},
-						},
-					},
+					Volumes: volumes,
 				},
 			},
 		},
