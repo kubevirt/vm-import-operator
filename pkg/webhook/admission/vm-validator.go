@@ -95,7 +95,6 @@ func isValidBios(vm *ovirtsdk.Vm) []ValidationFailure {
 }
 
 func isValidBootMenu(bios *ovirtsdk.Bios) (ValidationFailure, bool) {
-
 	if bootMenu, ok := bios.BootMenu(); ok {
 		if enabled, ok := bootMenu.Enabled(); ok && enabled {
 			return ValidationFailure{
@@ -328,7 +327,7 @@ func isValidRandomNumberGeneratorSource(vm *ovirtsdk.Vm) (ValidationFailure, boo
 		if src, ok := rng.Source(); ok && src != "urandom" {
 			return ValidationFailure{
 				ID:      VMRngDeviceSourceID,
-				Message: fmt.Sprintf("VM has illegal random number generator device source set: %v. Supported value: 'urandom'", src),
+				Message: fmt.Sprintf("VM has unsupported random number generator device source set: %v. Supported value: 'urandom'", src),
 			}, false
 		}
 	}

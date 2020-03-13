@@ -103,9 +103,9 @@ const (
 	VMQuotaID = CheckID("vm.quota")
 	// VMWatchdogsID defines an ID of a vm.watchdogs
 	VMWatchdogsID = CheckID("vm.watchdogs")
-	// VMCdromsID defines ID of a vm.cdroms storage domain type check
+	// VMCdromsID defines an ID of a vm.cdroms storage domain type check
 	VMCdromsID = CheckID("vm.cdroms.file.storage_domain.type")
-	// VMFloppiesID defines ID of a vm.floppies presence check
+	// VMFloppiesID defines an ID of a vm.floppies presence check
 	VMFloppiesID = CheckID("vm.floppies")
 )
 
