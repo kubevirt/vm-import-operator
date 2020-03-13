@@ -1,4 +1,4 @@
-package admission_test
+package validators_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestAdmission(t *testing.T) {
+func TestValidators(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Admission Suite")
+	RunSpecs(t, "Validators Suite")
 }

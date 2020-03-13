@@ -1,4 +1,4 @@
-package admission
+package validators
 
 // GetMapKeys gets all keys from a map as a slice
 func GetMapKeys(theMap map[string]string) []string {

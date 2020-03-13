@@ -1,4 +1,4 @@
-package admission
+package validators
 
 import (
 	"fmt"
@@ -111,6 +111,7 @@ var _ = Describe("Validating NIC", func() {
 		profile := nic.MustVnicProfile()
 
 		filter := ovirtsdk.NetworkFilter{}
+		filter.SetId("nf ID")
 		profile.SetNetworkFilter(&filter)
 
 		failures := validateNic(nic)
@@ -124,6 +125,7 @@ var _ = Describe("Validating NIC", func() {
 		profile := nic.MustVnicProfile()
 
 		qos := ovirtsdk.Qos{}
+		qos.SetId("qos_id")
 		profile.SetQos(&qos)
 
 		failures := validateNic(nic)
@@ -135,7 +137,7 @@ var _ = Describe("Validating NIC", func() {
 		nic1 := newNic()
 		nic2 := newNic()
 		nics := []*ovirtsdk.Nic{nic1, nic2}
-		failures := validateNics(nics)
+		failures := ValidateNics(nics)
 
 		Expect(failures).To(BeEmpty())
 	})
@@ -145,7 +147,7 @@ var _ = Describe("Validating NIC", func() {
 		nic2 := newNic()
 		nic2.SetOnBoot(false)
 		nics := []*ovirtsdk.Nic{nic1, nic2}
-		failures := validateNics(nics)
+		failures := ValidateNics(nics)
 
 		Expect(failures).To(HaveLen(2))
 

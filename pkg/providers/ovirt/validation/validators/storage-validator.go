@@ -1,4 +1,4 @@
-package admission
+package validators
 
 import (
 	"fmt"
@@ -24,6 +24,13 @@ type UsesScsiReservationOwner interface {
 	UsesScsiReservation() (bool, bool)
 }
 
+func ValidateDiskAttachments(diskAttachments []*ovirtsdk.DiskAttachment) []ValidationFailure {
+	var failures []ValidationFailure
+	for _, da := range diskAttachments {
+		failures = append(failures, validateDiskAttachment(da)...)
+	}
+	return failures
+}
 func validateDiskAttachment(diskAttachment *ovirtsdk.DiskAttachment) []ValidationFailure {
 	var results []ValidationFailure
 	var attachmentID = ""
@@ -167,9 +174,15 @@ func isValidDiskBackup(disk *ovirtsdk.Disk, diskID string) (ValidationFailure, b
 
 func isValidDiskLunStorage(disk *ovirtsdk.Disk, diskID string) (ValidationFailure, bool) {
 	if storage, ok := disk.LunStorage(); ok {
+		var message string
+		if id, ok := storage.Id(); ok {
+			message = fmt.Sprintf("disk %s uses LUN storage with ID: %v", diskID, id)
+		} else {
+			message = fmt.Sprintf("disk %s uses LUN storage", diskID)
+		}
 		return ValidationFailure{
 			ID:      DiskLunStorageID,
-			Message: fmt.Sprintf("disk %s uses LUN storage: %v", diskID, storage),
+			Message: message,
 		}, false
 	}
 	return ValidationFailure{}, true

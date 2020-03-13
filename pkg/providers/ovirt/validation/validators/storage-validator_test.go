@@ -1,4 +1,4 @@
-package admission
+package validators
 
 import (
 	"fmt"
@@ -152,6 +152,7 @@ var _ = Describe("Validating Disk", func() {
 	It("should flag disk with lun_storage present: ", func() {
 		disk := newDisk()
 		lunStorage := ovirtsdk.HostStorage{}
+		lunStorage.SetId("Lun_id")
 		disk.SetLunStorage(&lunStorage)
 
 		failures := validateDisk(disk)

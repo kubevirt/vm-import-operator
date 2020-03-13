@@ -1,4 +1,4 @@
-package admission
+package validators
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 // BiosTypeMapping defines mapping of BIOS types between oVirt and kubevirt domains
 var BiosTypeMapping = map[string]string{"q35_ovmf": "efi", "q35_sea_bios": "bios", "q35_secure_boot": "bios"}
 
-func validateVM(vm *ovirtsdk.Vm) []ValidationFailure {
+func ValidateVM(vm *ovirtsdk.Vm) []ValidationFailure {
 	var results = isValidBios(vm)
 	results = append(results, isValidCPU(vm)...)
 	if failure, valid := isValidCPUShares(vm); !valid {
@@ -193,7 +193,7 @@ func isValidDisplayType(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
 		if dt, ok := display.Type(); ok && dt != "vnc" {
 			return ValidationFailure{
 				ID:      VMDisplayTypeID,
-				Message: fmt.Sprintf("VM uses spice display: %v", display),
+				Message: "VM uses spice display",
 			}, false
 		}
 	}
@@ -283,10 +283,10 @@ func isValidOvercommit(policy *ovirtsdk.MemoryPolicy) (ValidationFailure, bool) 
 }
 
 func isValidMigration(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
-	if migration, ok := vm.Migration(); ok {
+	if _, ok := vm.Migration(); ok {
 		return ValidationFailure{
 			ID:      VMMigrationID,
-			Message: fmt.Sprintf("VM has migration options specified: %v", migration),
+			Message: "VM has migration options specified",
 		}, false
 	}
 	return ValidationFailure{}, true
@@ -296,7 +296,7 @@ func isValidMigrationDowntime(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
 	if downtime, ok := vm.MigrationDowntime(); ok {
 		return ValidationFailure{
 			ID:      VMMigrationDowntimeID,
-			Message: fmt.Sprintf("VM has migration downtime secified: %d", downtime),
+			Message: fmt.Sprintf("VM has migration downtime specified: %d", downtime),
 		}, false
 	}
 	return ValidationFailure{}, true
@@ -375,10 +375,10 @@ func isValidStorageErrorResumeBehaviour(vm *ovirtsdk.Vm) (ValidationFailure, boo
 }
 
 func isValidUsb(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
-	if usb, ok := vm.Usb(); ok {
+	if _, ok := vm.Usb(); ok {
 		return ValidationFailure{
 			ID:      VMUsbID,
-			Message: fmt.Sprintf("VM has USB configured: %v", usb),
+			Message: fmt.Sprintf("VM has USB configured"),
 		}, false
 	}
 	return ValidationFailure{}, true
@@ -391,7 +391,7 @@ func isValidGraphicsConsoles(vm *ovirtsdk.Vm) []ValidationFailure {
 			if protocol, ok := console.Protocol(); ok && protocol != "vnc" {
 				results = append(results, ValidationFailure{
 					ID:      VMGraphicConsolesID,
-					Message: fmt.Sprintf("VM has non-VNC graphics console configured: %v", console),
+					Message: fmt.Sprintf("VM has non-VNC graphics console configured: %v", protocol),
 				})
 			}
 		}
@@ -421,9 +421,15 @@ func isValidReportedDevices(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
 
 func isValidQuota(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
 	if quota, ok := vm.Quota(); ok {
+		var message string
+		if id, ok := quota.Id(); ok {
+			message = fmt.Sprintf("VM has quota with ID %v assigned", id)
+		} else {
+			message = "VM has quota assigned"
+		}
 		return ValidationFailure{
 			ID:      VMQuotaID,
-			Message: fmt.Sprintf("VM has quota assigned: %v", quota),
+			Message: message,
 		}, false
 	}
 	return ValidationFailure{}, true
@@ -450,9 +456,15 @@ func isValidCdroms(vm *ovirtsdk.Vm) []ValidationFailure {
 		for _, cdrom := range cdroms.Slice() {
 			if file, ok := cdrom.File(); ok {
 				if storageType, ok := getStorageDomainType(file); ok && storageType != "data" {
+					var message string
+					if id, ok := cdrom.Id(); ok {
+						message = fmt.Sprintf("VM uses CD ROM with image not stored in data domain: %v", id)
+					} else {
+						message = "VM uses CD ROM with image not stored in data domain"
+					}
 					results = append(results, ValidationFailure{
 						ID:      VMCdromsID,
-						Message: fmt.Sprintf("VM uses CD ROM with image not stored in data domain: %v", cdrom),
+						Message: message,
 					})
 				}
 			}
@@ -474,7 +486,7 @@ func isValidFloppies(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
 	if floppies, ok := vm.Floppies(); ok && len(floppies.Slice()) > 0 {
 		return ValidationFailure{
 			ID:      VMFloppiesID,
-			Message: fmt.Sprintf("VM uses floppies: %v", floppies),
+			Message: fmt.Sprintf("VM uses %d floppies", len(floppies.Slice())),
 		}, false
 	}
 	return ValidationFailure{}, true

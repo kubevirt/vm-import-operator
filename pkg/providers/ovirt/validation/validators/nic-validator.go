@@ -1,4 +1,4 @@
-package admission
+package validators
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ import (
 // InterfaceModelMapping defines mapping of NIC device models between oVirt and kubevirt domains
 var InterfaceModelMapping = map[string]string{"e1000": "e1000", "rtl8139": "rtl8139", "virtio": "virtio"}
 
-func validateNics(nics []*ovirtsdk.Nic) []ValidationFailure {
+func ValidateNics(nics []*ovirtsdk.Nic) []ValidationFailure {
 	var failures []ValidationFailure
 	for _, nic := range nics {
 		failures = append(failures, validateNic(nic)...)
@@ -125,9 +125,15 @@ func isValidVnicProfileCustomProperties(vNicProfile *ovirtsdk.VnicProfile, nicID
 
 func isValidVnicProfileNetworFilter(vNicProfile *ovirtsdk.VnicProfile, nicID string) (ValidationFailure, bool) {
 	if nf, ok := vNicProfile.NetworkFilter(); ok {
+		var message string
+		if id, ok := nf.Id(); ok {
+			message = fmt.Sprintf("Interface %s uses profile with a network filter with ID: %v.", nicID, id)
+		} else {
+			message = fmt.Sprintf("Interface %s uses profile with a network filter", nicID)
+		}
 		return ValidationFailure{
 			ID:      NicVNicNetworkFilterID,
-			Message: fmt.Sprintf("interface %s uses profile with a network filter: %v.", nicID, nf),
+			Message: message,
 		}, false
 	}
 	return ValidationFailure{}, true
@@ -135,9 +141,15 @@ func isValidVnicProfileNetworFilter(vNicProfile *ovirtsdk.VnicProfile, nicID str
 
 func isValidVnicProfileQos(vNicProfile *ovirtsdk.VnicProfile, nicID string) (ValidationFailure, bool) {
 	if qos, ok := vNicProfile.Qos(); ok {
+		var message string
+		if id, ok := qos.Id(); ok {
+			message = fmt.Sprintf("Interface %s uses profile with QOS with ID: %v.", nicID, id)
+		} else {
+			message = fmt.Sprintf("Interface %s uses profile with QOS", nicID)
+		}
 		return ValidationFailure{
 			ID:      NicVNicQosID,
-			Message: fmt.Sprintf("interface %s uses profile with QOS: %v.", nicID, qos),
+			Message: message,
 		}, false
 	}
 	return ValidationFailure{}, true
