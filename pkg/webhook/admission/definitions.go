@@ -43,8 +43,70 @@ const (
 	DiskStatusID = CheckID("disk_attachment.disk.status")
 	// DiskStoragaTypeID defines an ID of a disk.storage_type != image check
 	DiskStoragaTypeID = CheckID("disk_attachment.disk.storage_type")
-	// DiskSgioID defines and ID of a disk.sgio == true check
+	// DiskSgioID defines an ID of a disk.sgio == true check
 	DiskSgioID = CheckID("disk_attachment.disk.sgio")
+	// VMBiosBootMenuID defines an ID of a vm.bios.boot_menu.enabled == true check
+	VMBiosBootMenuID = CheckID("vm.bios.boot_menu.enabled")
+	// VMBiosTypeID defines an ID of a vm.bios.type check
+	VMBiosTypeID = CheckID("vm.bios.type")
+	// VMBiosTypeQ35SecureBootID defines an ID of a vm.bios.type != q35_secure_boot check
+	VMBiosTypeQ35SecureBootID = CheckID("vm.bios.type.q35_secure_boot")
+	// VMCpuArchitectureID defines an ID of a vm.cpu.architecture != s390x check
+	VMCpuArchitectureID = CheckID("vm.cpu.architecture")
+	// VMCpuTuneID defines an ID of a vm.cpu.cpu_tune mapping check
+	VMCpuTuneID = CheckID("vm.cpu.cpu_tune")
+	// VMCpuSharesID defines an ID of a vm.cpu_shares check
+	VMCpuSharesID = CheckID("vm.cpu_shares")
+	// VMCustomPropertiesID defines an ID of a vm.custom_properties check
+	VMCustomPropertiesID = CheckID("vm.custom_properties")
+	// VMDisplayTypeID defines an ID of a vm.display.type == spice check
+	VMDisplayTypeID = CheckID("vm.display.type")
+	// VMHasIllegalImagesID defines an ID of a vm.has_illegal_images == true check
+	VMHasIllegalImagesID = CheckID("vm.has_illegal_images")
+	// VMHighAvailabilityPriorityID defines an ID of a vm.high_availability.priority check
+	VMHighAvailabilityPriorityID = CheckID("vm.high_availability.priority")
+	// VMIoThreadsID defines an ID of a vm.io.threads check
+	VMIoThreadsID = CheckID("vm.io.threads")
+	// VMMemoryPolicyBallooningID defines an ID of a vm.memory_policy.ballooning == true check
+	VMMemoryPolicyBallooningID = CheckID("vm.memory_policy.ballooning")
+	// VMMemoryPolicyOvercommitPercentID defines an ID of a vm.memory_policy.over_commit.percent check
+	VMMemoryPolicyOvercommitPercentID = CheckID("vm.memory_policy.over_commit.percent")
+	// VMMemoryPolicyGuaranteedID defines an ID of a vm.memory_policy.guaranteed check
+	VMMemoryPolicyGuaranteedID = CheckID("vm.memory_policy.guaranteed")
+	// VMMigrationID defines an ID of a vm.migration check
+	VMMigrationID = CheckID("vm.migration")
+	// VMMigrationDowntimeID defines an ID of a vm.migration_downtime check
+	VMMigrationDowntimeID = CheckID("vm.migration_downtime")
+	// VMNumaTuneModeID defines an ID of a vm.numa_tune_mode check
+	VMNumaTuneModeID = CheckID("vm.numa_tune_mode")
+	// VMOriginID defines an ID of a vm.origin == kubevirt check
+	VMOriginID = CheckID("vm.origin")
+	// VMRngDeviceSourceID defines an ID of a vm.rng_device.source != urandom check
+	VMRngDeviceSourceID = CheckID("vm.rng_device.source")
+	// VMSoundcardEnabledID defines an ID of a vm.soundcard_enabled == true check
+	VMSoundcardEnabledID = CheckID("vm.soundcard_enabled")
+	// VMStartPausedID defines an ID of a vm.start_paused == true check
+	VMStartPausedID = CheckID("vm.start_paused")
+	// VMStorageErrorResumeBehaviourID defines an ID of a vm.storage_error_resume_behaviour check
+	VMStorageErrorResumeBehaviourID = CheckID("vm.storage_error_resume_behaviour")
+	// VMTunnelMigrationID defines an ID of a vm.tunnel_migration == true check
+	VMTunnelMigrationID = CheckID("vm.tunnel_migration")
+	// VMUsbID defines an ID of a vm.usb check
+	VMUsbID = CheckID("vm.usb")
+	// VMGraphicConsolesID defines an ID of a vm.graphic_consoles.protocol == spice check
+	VMGraphicConsolesID = CheckID("vm.graphic_consoles.protocol")
+	// VMHostDevicesID defines an ID of a vm.host_devices check
+	VMHostDevicesID = CheckID("vm.host_devices")
+	// VMReportedDevicesID defines an ID of a vm.reported_devices check
+	VMReportedDevicesID = CheckID("vm.reported_devices")
+	// VMQuotaID defines an ID of a vm.quota check
+	VMQuotaID = CheckID("vm.quota")
+	// VMWatchdogsID defines an ID of a vm.watchdogs
+	VMWatchdogsID = CheckID("vm.watchdogs")
+	// VMCdromsID defines an ID of a vm.cdroms storage domain type check
+	VMCdromsID = CheckID("vm.cdroms.file.storage_domain.type")
+	// VMFloppiesID defines an ID of a vm.floppies presence check
+	VMFloppiesID = CheckID("vm.floppies")
 )
 
 // CheckID identifies validation check for Virtual Machine Import
