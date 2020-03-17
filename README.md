@@ -129,7 +129,7 @@ kubectl logs import-vm-oprator-xyz
 ```bash
 export GO111MODULE=on
 go mod vendor
-operator-sdk up local --namespace=default
+operator-sdk run --local --namespace=default
 ```
 
 ### After applying changes to types file run:
