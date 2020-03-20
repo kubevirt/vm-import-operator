@@ -19,6 +19,7 @@ require (
 	github.com/technosophos/moniker v0.0.0-20180509230615-a5dbd03a2245 // indirect
 	go.etcd.io/bbolt v1.3.3 // indirect
 	golang.org/x/build v0.0.0-20190314133821-5284462c4bec // indirect
+	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.17.1
 	k8s.io/apimachinery v0.17.1
 	k8s.io/client-go v12.0.0+incompatible
@@ -28,6 +29,8 @@ require (
 	sigs.k8s.io/controller-runtime v0.4.0
 	vbom.ml/util v0.0.0-20180919145318-efcd4e0f9787 // indirect
 )
+
+replace github.com/ovirt/go-ovirt => github.com/ovirt/go-ovirt v0.0.0-20200320082526-4e97a11ff083
 
 replace kubevirt.io/containerized-data-importer => github.com/pkliczewski/containerized-data-importer v1.10.2-0.20200302082837-f4b489dba1bc
 

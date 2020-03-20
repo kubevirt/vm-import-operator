@@ -2,13 +2,23 @@ package ovirtclient
 
 import (
 	"fmt"
+	"time"
 
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
 
+const (
+	// Number of minutes to wait for VM to be stopped
+	vmStopTimeout = 5
+	// Vm poll interval in seconds
+	vmPollInterval = 5
+)
+
 // OvirtClient retrieves rich VM object - with all necessary links have been followed
 type OvirtClient interface {
-	GetVM(id *string, name *string, cluster *string) (*ovirtsdk.Vm, error)
+	GetVM(id *string, name *string, cluster *string, clusterID *string) (*ovirtsdk.Vm, error)
+	StopVM(id string) error
+	RenameVM(id string, newName string) error
 	Close() error
 }
 
@@ -18,7 +28,7 @@ type ConnectionSettings struct {
 	Username string
 	Password string
 	Insecure bool
-	CAFile   string
+	CACert   string
 }
 
 // RichOvirtClient is responsilbe for retrieving VM data from oVirt API
@@ -28,7 +38,7 @@ type richOvirtClient struct {
 
 // NewRitchOvirtClient creates new, connected rich oVirt client. After it is no longer needed, call Close().
 func NewRitchOvirtClient(cs *ConnectionSettings) (OvirtClient, error) {
-	con, err := connect(cs.URL, cs.Username, cs.Password, cs.CAFile, cs.Insecure)
+	con, err := connect(cs.URL, cs.Username, cs.Password, cs.CACert, cs.Insecure)
 	if err != nil {
 		return nil, err
 	}
@@ -44,8 +54,8 @@ func (client *richOvirtClient) Close() error {
 }
 
 // GetVM rertrieves oVirt VM data for given id or name and cluster. VM will have certain links followed and updated.
-func (client *richOvirtClient) GetVM(id *string, name *string, cluster *string) (*ovirtsdk.Vm, error) {
-	vm, err := client.fetchVM(id, name, cluster)
+func (client *richOvirtClient) GetVM(id *string, name *string, cluster *string, clusterID *string) (*ovirtsdk.Vm, error) {
+	vm, err := client.fetchVM(id, name, cluster, clusterID)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +98,58 @@ func (client *richOvirtClient) GetVM(id *string, name *string, cluster *string) 
 	return vm, nil
 }
 
-func (client *richOvirtClient) fetchVM(id *string, name *string, cluster *string) (*ovirtsdk.Vm, error) {
+// RenameVM rename the vm
+func (client *richOvirtClient) RenameVM(id string, newName string) error {
+	_, err := client.connection.SystemService().VmsService().VmService(id).
+		Update().
+		Vm(
+			ovirtsdk.NewVmBuilder().Name(newName).MustBuild(),
+		).
+		Send()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// StopVM stop the VM and wait for the vm to be stopped
+func (client *richOvirtClient) StopVM(id string) error {
+	vmService := client.connection.SystemService().VmsService().VmService(id)
+
+	// Return if VM is already stopped:
+	tmp, _ := vmService.Get().Send()
+	if status, _ := tmp.MustVm().Status(); status == ovirtsdk.VMSTATUS_DOWN {
+		return nil
+	}
+
+	// Stop the VM gracefully:
+	_, err := vmService.Shutdown().Send()
+	if err != nil {
+		return err
+	}
+
+	// Wait for VM to be stopped
+	c := make(chan bool, 1)
+	go func() {
+		for {
+			time.Sleep(vmPollInterval * time.Second)
+			tmp, _ = vmService.Get().Send()
+			if status, _ := tmp.MustVm().Status(); status == ovirtsdk.VMSTATUS_DOWN {
+				c <- true
+				break
+			}
+		}
+	}()
+	select {
+	case <-c:
+		return nil
+	case <-time.After(vmStopTimeout * time.Minute):
+		vm := tmp.MustVm()
+		return fmt.Errorf("Failed to stop vm %s, current status is %s", vm.MustName(), vm.MustStatus())
+	}
+}
+
+func (client *richOvirtClient) fetchVM(id *string, name *string, clusterName *string, clusterID *string) (*ovirtsdk.Vm, error) {
 	// Id of the VM specified:
 	if id != nil {
 		response, err := client.connection.SystemService().VmsService().VmService(*id).Get().Send()
@@ -100,19 +161,38 @@ func (client *richOvirtClient) fetchVM(id *string, name *string, cluster *string
 		}
 		return nil, fmt.Errorf("Virtual machine %v not found", *id)
 	}
-	// Cluster/name of the VM specified:
-	response, err := client.connection.SystemService().VmsService().List().Search(fmt.Sprintf("name=%v and cluster=%v", *name, *cluster)).Send()
+
+	// Cluster and name specified:
+	var (
+		response *ovirtsdk.VmsServiceListResponse
+		err      error
+	)
+	if clusterName != nil {
+		response, err = client.connection.SystemService().VmsService().List().Search(fmt.Sprintf("name=%v and cluster=%v", *name, *clusterName)).Send()
+	} else {
+		response, err = client.connection.SystemService().VmsService().List().Search(fmt.Sprintf("name=%v", *name)).Send()
+	}
 	if err != nil {
 		return nil, err
 	}
+
 	vms, _ := response.Vms()
 	vmsCount := len(vms.Slice())
 	if vmsCount == 1 {
 		return vms.Slice()[0], nil
 	} else if vmsCount > 1 {
-		return nil, fmt.Errorf("Found more than one virtual machine with name %v in clusters with name %v. VM IDs: %v", *name, *cluster, getVMIDs(vms.Slice()))
+		// If user specified clusterID, iterate over list of VMs and find the VM
+		// that match the clusterID
+		if clusterID != nil {
+			for _, vm := range vms.Slice() {
+				if vmID, _ := vm.Id(); vmID == *clusterID {
+					return vm, nil
+				}
+			}
+		}
+		return nil, fmt.Errorf("Found more than one virtual machine with name %v in cluster %v(%v). VM IDs: %v", *name, clusterName, clusterID, getVMIDs(vms.Slice()))
 	}
-	return nil, fmt.Errorf("Virtual machine %v not found in cluster %v", *name, *cluster)
+	return nil, fmt.Errorf("Virtual machine %v not found in cluster: %v(%v)", *name, clusterName, clusterID)
 }
 
 func (client *richOvirtClient) populateHostDevices(vm *ovirtsdk.Vm) error {
@@ -252,12 +332,12 @@ func (client *richOvirtClient) populateDiskAttachments(vm *ovirtsdk.Vm) error {
 	return nil
 }
 
-func connect(apiURL string, username string, password string, caFile string, insecure bool) (*ovirtsdk.Connection, error) {
+func connect(apiURL string, username string, password string, caCrt string, insecure bool) (*ovirtsdk.Connection, error) {
 	connection, err := ovirtsdk.NewConnectionBuilder().
 		URL(apiURL).
 		Username(username).
 		Password(password).
-		CAFile(caFile).
+		CACert([]byte(caCrt)).
 		Insecure(insecure).
 		Build()
 	return connection, err
