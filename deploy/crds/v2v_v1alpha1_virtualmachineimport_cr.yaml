@@ -3,37 +3,43 @@ kind: VirtualMachineImport
 metadata:
   name: example-virtualmachineimport
   namespace: example-ns
+  annotations:
+    vmimport.v2v.kubevirt.io/progress: "20"
+  labels:
+    vmimport.v2v.kubevirt.io/tracker: "vmimport-123"
 spec:
-  targetVirtualMachineName: examplevm # The target name is optional. If not provided, the import will attempt to use the origin name of the VM or to normalize it.
+  providerCredentialsSecret: # A secret holding the access credentials to ovirt, see example ovirt-mapping-example.yaml
+    name: my-secret-with-ovirt-credentials
+    namespace: default # optional, if not specified, use CR's namespace
+  resourceMapping:
+    name: ovirt-resources-mapping-to-kubevirt # a mapping of ovirt resource (network, storage, affinity)
+    namespace: othernamespace # optional, if not specified, use CR's namespace
+  targetVmName: examplevm # The target name is optional. If not provided, the import will attempt to use the origin name of the VM or to normalize it.
+  startVm: true # should the vm be started after the vm was created on kubevirt
   source:
     ovirt:  # represents ovirt-engine to import from the virtual machine
-      providerCredentialsSecret: # A secret holding the access credentials to ovirt, see example ovirt-mapping-example.yaml
-        name: my-secret-with-ovirt-credentials
-        namespace: default # optional, if not specified, use CR's namespace
       vm: # in order to uniquely identify vm on ovirt with need to provide (vm_name,cluster) or use (vm-id)
         id: 80554327-0569-496b-bdeb-fcbbf52b827b
-        name: myvm
-        cluster:
-          name: mycluster
-          id: CC111111-1111-1111-1111-111111111111
-  resourceMappings:
-    configMapName: config-map-of-ovirt-resources-to-kubevirt # a mapping of ovirt resource (network, storage, affinity)
-    configMapNamespace: othernamespace # optional, if not specified, use CR's namespace
+      mappings:
+        networkMapping:
+          - source:
+              name: ovirtmgmt
+            target:
+              name: pod
+            type: pod
 status:
-  targetVirtualMachineName: myvm # the name of the created virtual machine
+  targetVmName: myvm # the name of the created virtual machine
   conditions:
-    - lastProbeTime: null
-      lastTransitionTime: "2020-02-20T12:43:10Z"
+    - type: Succeeded # indicates if the VM import process succeeded or failed
       status: "False"
-      type: Ready # indicates if the vm import process is completed or not
-      message: VM import is in progress.
-    - lastProbeTime: null
+      reason: ValidationFailed
+      message: Failed to validate mapping rules for the VM.
       lastTransitionTime: "2020-02-20T12:43:10Z"
-      status: "True"
-      type: Processing # indicates if the vm import process is running
-      reason: CopyingDisk
-      message: VM disks are being copied to destination.
-  state: Running
+    - status: "True"
+      type: Processing # indicates if the VM import process is running
+      reason: CopyingDisks
+      message: VM disks are being copied to the destination.
+      lastTransitionTime: "2020-02-20T12:43:10Z"
   dataVolumes: # list of data volumes created for the VMs
-    - name: dv-myvm-1
-    - name: dv-myvm-2
+    - name: dv-examplevm-1
+    - name: dv-examplevm-2

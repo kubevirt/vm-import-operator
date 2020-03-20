@@ -32,9 +32,66 @@ spec:
         metadata:
           type: object
         spec:
-          type: object
+          description: 'VirtualMachineImportSpec defines the desired state of VirtualMachineImport'
+          properties:
+            providerCredentialsSecret:
+              description: 'ProviderCredentialsSecret defines how a secret resource should be identified on kubevirt'
+              properties:
+                name:
+                  description: 'Name defines the name of the secret for source provider credentials'
+                  type: string
+                namespace:
+                  description: 'Namespace defines the namespace of the secret for source provider credentials'
+                  type: string
+            resourceMapping:
+              description: 'ResourceMapping defines how a ResourceMapping should be identified on kubevirt. VM Import will map resources of source provider
+                to kubevirt resources based on the mappings within ResourceMapping'
+              properties:
+                name:
+                  description: 'Name defines the name of the ResourceMapping to use'
+                  type: string
+                namespace:
+                  description: 'Namespace defines the namespace of the ResourceMapping to use'
+                  type: string
+            targetVmName:
+              description: 'TargetVmName defines the name of the target VM to be created'
+              type: string
+            startVm:
+              description: 'StartVm defines if the VM should be started at the end of the import process'
+              type: boolean
+            source:
+              description: 'VirtualMachineImportSourceSpec defines the definition of the source provider and mapping resources'
+              properties:
+                ovirt:
+                  description: 'VirtualMachineImportOvirtSourceSpec defines the definition of the VM in oVirt'
+                  properties:
+                    vm:
+                      description: 'VirtualMachineImportOvirtSourceVMSpec defines the identification of the VM in oVirt'
+                      properties:
+                        id:
+                          description: 'ID defines the ID of the VM in oVirt'
+                          type: string
+                        name:
+                          description: 'Name defines the name of the VM in oVirt'
+                          type: string
+                        cluster:
+                          description: 'VirtualMachineImportOvirtSourceVMClusterSpec defines the identification of source VM cluster in oVirt'
+                          properties:
+                            id:
+                              description: 'ID defines the cluster ID in oVirt'
+                              type: string
+                            name:
+                              description: 'ID defines the cluster name in oVirt'
+                              type: string
+                mappings:
+                  description: 'OvirtMappings defines the mappings of ovirt resources to kubevirt'
+                  properties:
+                    networkMappings:
+                      type: array
+                    storageMappings:
+                      type: array
         status:
-          type: object
+          properties:
   version: v1alpha1
   versions:
   - name: v1alpha1

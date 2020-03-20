@@ -1,0 +1,23 @@
+apiVersion: v2v.kubevirt.io/v1alpha1
+kind: ResourceMapping
+metadata:
+  name: example-resourcemappings
+  namespace: example-ns
+spec:
+  ovirt:
+    networkMappings:
+      - source:
+          name: red # maps of ovirt logical network to network attachment definition
+        target:
+          name: xyz
+        type: bridge
+      - source:
+          name: ovirtmgmt
+        target:
+          name: pod
+        type: pod
+    storageMappings:
+      - source:
+          name: ovirt_storage_domain_1 # maps ovirt storage domain to storage class
+        target:
+          name: storage_class_1

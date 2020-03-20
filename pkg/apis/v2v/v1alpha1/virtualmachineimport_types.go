@@ -14,23 +14,18 @@ type VirtualMachineImportSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	Source           VirtualMachineImportSourceSpec `json:"source"`
-	ResourceMappings ResourceMappingsSpec           `json:"target"`
+	ProviderCredentialsSecret ObjectIdentifier               `json:"providerCredentialsSecret"`
+	ResourceMapping           ObjectIdentifier               `json:"resourceMapping"`
+	Source                    VirtualMachineImportSourceSpec `json:"source"`
 
 	// +optional
-	TargetVirtualMachineName *string `json:"targetVirtualMachineName,omitempty"`
-}
-
-// ResourceMappingsSpec defines the definition of the config map that holds the resources mapping between source provider to kubevirt
-// +k8s:openapi-gen=true
-type ResourceMappingsSpec struct {
-	ConfigMapName string `json:"configMapName"`
+	TargetVMName *string `json:"targetVmName,omitempty"`
 
 	// +optional
-	ConfigMapNamespace *string `json:"configMapNamespace,omitempty"`
+	StartVM *bool `json:"startVm,omitempty"`
 }
 
-// VirtualMachineImportSourceSpec defines the definition of the oVirt virtual machine infrastructure
+// VirtualMachineImportSourceSpec defines the definition of the source provider and mapping resources
 // +k8s:openapi-gen=true
 // +optional
 type VirtualMachineImportSourceSpec struct {
@@ -40,13 +35,15 @@ type VirtualMachineImportSourceSpec struct {
 // VirtualMachineImportOvirtSourceSpec defines the definition of the VM in oVirt and the credentials to oVirt
 // +k8s:openapi-gen=true
 type VirtualMachineImportOvirtSourceSpec struct {
-	VM                        VirtualMachineImportOvirtSourceVMSpec `json:"vm"`
-	ProviderCredentialsSecret ProviderCredentialsSecret             `json:"providerCredentialsSecret"`
+	VM VirtualMachineImportOvirtSourceVMSpec `json:"vm"`
+
+	// +optional
+	Mappings *OvirtMappings `json:"mappings,omitempty"`
 }
 
-// ProviderCredentialsSecret defines the details of the secret that contains the credentials to oVirt
+// ObjectIdentifier defines how a resource should be identified on kubevirt
 // +k8s:openapi-gen=true
-type ProviderCredentialsSecret struct {
+type ObjectIdentifier struct {
 	Name string `json:"name"`
 
 	// +optional
@@ -83,22 +80,10 @@ type VirtualMachineImportStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	TargetVirtualMachineName string                          `json:"targetVirtualMachineName"`
-	Conditions               []VirtualMachineImportCondition `json:"conditions"`
-	State                    VirtualMachineImportState       `json:"state"`
-	DataVolumes              []DataVolumeItem                `json:"dataVolumes"`
+	TargetVMName string                          `json:"targetVmName"`
+	Conditions   []VirtualMachineImportCondition `json:"conditions"`
+	DataVolumes  []DataVolumeItem                `json:"dataVolumes"`
 }
-
-// VirtualMachineImportState defines the state of virtual machine import
-// +k8s:openapi-gen=true
-type VirtualMachineImportState string
-
-// These are valid values of virtual machine import state
-const (
-	VirtualMachineImportStateRunning  VirtualMachineImportState = "Running"
-	VirtualMachineImportStateFinished VirtualMachineImportState = "Finished"
-	VirtualMachineImportStateUnknown  VirtualMachineImportState = "Unknown"
-)
 
 // VirtualMachineImportConditionType defines the condition of VM import
 // +k8s:openapi-gen=true
@@ -106,11 +91,96 @@ type VirtualMachineImportConditionType string
 
 // These are valid conditions of of VM import.
 const (
-	// Ready represents status of the VM import process being completed.
-	Ready VirtualMachineImportConditionType = "Ready"
+	// Succeeded represents status of the VM import process being completed successfully
+	Succeeded VirtualMachineImportConditionType = "Succeeded"
 
-	// Processing represents status of the VM import process while in progress
+	// Validating represents the status of the validation of the mapping rules and eligibility of source VM for import
+	Validating VirtualMachineImportConditionType = "Validating"
+
+	// MappingRulesChecking represents the status of the VM import mapping rules checking
+	MappingRulesChecking VirtualMachineImportConditionType = "MappingRulesChecking"
+
+	// Processing represents the status of the VM import process while in progress
 	Processing VirtualMachineImportConditionType = "Processing"
+)
+
+// SucceededConditionReason defines the reasons for the Succeeded condition of VM import
+// +k8s:openapi-gen=true
+type SucceededConditionReason string
+
+// These are valid reasons for the Succeeded conditions of VM import.
+const (
+	// ValidationFailed represents a failure to validate the eligibility of the VM for import
+	ValidationFailed SucceededConditionReason = "ValidationFailed"
+
+	// UpdatingSourceVMFailed represents a failure to stop VM or rename it on the source provider
+	UpdatingSourceVMFailed SucceededConditionReason = "UpdatingSourceVMFailed"
+
+	// VMCreationFailed represents a failure to create the VM entity
+	VMCreationFailed SucceededConditionReason = "VMCreationFailed"
+
+	// DataVolumeCreationFailed represents a failure to create data volumes based on source VM disks
+	DataVolumeCreationFailed SucceededConditionReason = "DataVolumeCreationFailed"
+
+	// VirtualMachineReady represents the completion of the vm import
+	VirtualMachineReady SucceededConditionReason = "VirtualMachineReady"
+)
+
+// ValidatingConditionReason defines the reasons for the Validating condition of VM import
+// +k8s:openapi-gen=true
+type ValidatingConditionReason string
+
+// These are valid reasons for the Validating conditions of VM import.
+const (
+	// ValidationCompleted represents the completion of the vm import resource validating
+	ValidationCompleted ValidatingConditionReason = "ValidationCompleted"
+
+	// SecretNotFound represents the nonexistence of the provider's secret
+	SecretNotFound ValidatingConditionReason = "SecretNotFound"
+
+	// MappingResourceNotFound represents the nonexistence of the mapping resource
+	MappingResourceNotFound ValidatingConditionReason = "MappingResourceNotFound"
+
+	// UnreachableProvider represents a failure to connect to the provider
+	UnreachableProvider ValidatingConditionReason = "UnreachableProvider"
+
+	// SourceVmNotFound represents the nonexistence of the source VM
+	SourceVMNotFound ValidatingConditionReason = "SourceVMNotFound"
+
+	// IncompleteMappingRules represents the inability to prepare the mapping rules
+	IncompleteMappingRules ValidatingConditionReason = "IncompleteMappingRules"
+)
+
+// MappingRulesCheckingReason defines the reasons for the MappingRulesChecking condition of VM import
+// +k8s:openapi-gen=true
+type MappingRulesCheckingReason string
+
+// These are valid reasons for the Validating conditions of VM import.
+const (
+	// Completed represents the completion of the mapping rules checking without warnings or errors
+	MappingRulesCheckingCompleted MappingRulesCheckingReason = "MappingRulesCheckingCompleted"
+
+	// MappingRulesViolated represents the violation of the mapping rules
+	MappingRulesCheckingFailed MappingRulesCheckingReason = "MappingRulesCheckingFailed"
+
+	// MappingRulesWarningsReported represents the existence of warnings as a result of checking the mapping rules
+	MappingRulesCheckingReportedWarnings MappingRulesCheckingReason = "MappingRulesCheckingReportedWarnings"
+)
+
+// ProcessingConditionReason defines the reasons for the Processing condition of VM import
+// +k8s:openapi-gen=true
+type ProcessingConditionReason string
+
+// These are valid reasons for the Processing conditions of VM import.
+const (
+	// UpdatingSourceVM represents the renaming of source vm to be prefixed with 'imported_' and shutting it down
+	UpdatingSourceVM ProcessingConditionReason = "UpdatingSourceVM"
+
+	// CreatingTargetVM represents the creation of the VM spec
+	CreatingTargetVM ProcessingConditionReason = "CreatingTargetVM"
+
+	// CopyingDisks represents the creation of data volumes based on source VM disks
+	CopyingDisks ProcessingConditionReason = "CopyingDisks"
 )
 
 // VirtualMachineImportCondition defines the observed state of VirtualMachineImport conditions

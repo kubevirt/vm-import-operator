@@ -200,10 +200,10 @@ func fetchOvirtVM(con *ovirtsdk.Connection, vmSpec *v2vv1alpha1.VirtualMachineIm
 func (r *ReconcileVirtualMachineImport) fetchOvirtSecret(vmImport *v2vv1alpha1.VirtualMachineImport) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 	secretNamespace := vmImport.Namespace
-	if vmImport.Spec.Source.Ovirt.ProviderCredentialsSecret.Namespace != nil {
-		secretNamespace = *vmImport.Spec.Source.Ovirt.ProviderCredentialsSecret.Namespace
+	if vmImport.Spec.ProviderCredentialsSecret.Namespace != nil {
+		secretNamespace = *vmImport.Spec.ProviderCredentialsSecret.Namespace
 	}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: vmImport.Spec.Source.Ovirt.ProviderCredentialsSecret.Name, Namespace: secretNamespace}, secret)
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: vmImport.Spec.ProviderCredentialsSecret.Name, Namespace: secretNamespace}, secret)
 	return secret, err
 }
 
