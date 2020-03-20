@@ -1,4 +1,4 @@
-package admission
+package validators
 
 const (
 	// NicInterfaceCheckID defines an ID of a NIC interface model check
