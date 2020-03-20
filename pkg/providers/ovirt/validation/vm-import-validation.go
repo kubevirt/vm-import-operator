@@ -28,9 +28,9 @@ const (
 	warn  = 1
 	block = 2
 
-	warnReason  = "WarningViolation"
-	errorReason = "BlockingViolation"
-	okReason    = "NoViolation"
+	warnReason  = string(v2vv1alpha1.MappingRulesCheckingReportedWarnings)
+	errorReason = string(v2vv1alpha1.MappingRulesCheckingFailed)
+	okReason    = string(v2vv1alpha1.MappingRulesCheckingCompleted)
 )
 
 var checkToAction = map[validators.CheckID]action{
@@ -150,14 +150,11 @@ func (validator *VirtualMachineImportValidator) processFailures(failures []valid
 	copy := instance.DeepCopy()
 
 	if !valid {
-		//TODO: change reason after api changes are merged
 		updateCondition(&copy.Status.Conditions, errorReason, errorMessage, false)
 	} else if warnMessage != "" {
-		//TODO: change reason after api changes are merged
 		updateCondition(&copy.Status.Conditions, warnReason, warnMessage, true)
 	} else {
-		//TODO: change reason after api changes are merged
-		updateCondition(&copy.Status.Conditions, okReason, "All validation checks passed", true)
+		updateCondition(&copy.Status.Conditions, okReason, "All mapping rules checks passed", true)
 	}
 
 	err = validator.client.Status().Update(context.TODO(), copy)
@@ -182,9 +179,7 @@ func updateCondition(conditions *[]v2vv1alpha1.VirtualMachineImportCondition, re
 	if !status {
 		conditionStatus = v1.ConditionFalse
 	}
-
-	//TODO: change type after api changes are merged
-	conditionType := v2vv1alpha1.Processing
+	conditionType := v2vv1alpha1.MappingRulesChecking
 
 	condition := findConditionOfType(conditionType, *conditions)
 	now := metav1.NewTime(time.Now())
