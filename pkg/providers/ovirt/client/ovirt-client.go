@@ -27,7 +27,6 @@ type ConnectionSettings struct {
 	URL      string
 	Username string
 	Password string
-	Insecure bool
 	CACert   string
 }
 
@@ -38,7 +37,7 @@ type richOvirtClient struct {
 
 // NewRitchOvirtClient creates new, connected rich oVirt client. After it is no longer needed, call Close().
 func NewRitchOvirtClient(cs *ConnectionSettings) (OvirtClient, error) {
-	con, err := connect(cs.URL, cs.Username, cs.Password, cs.CACert, cs.Insecure)
+	con, err := connect(cs.URL, cs.Username, cs.Password, cs.CACert)
 	if err != nil {
 		return nil, err
 	}
@@ -332,13 +331,12 @@ func (client *richOvirtClient) populateDiskAttachments(vm *ovirtsdk.Vm) error {
 	return nil
 }
 
-func connect(apiURL string, username string, password string, caCrt string, insecure bool) (*ovirtsdk.Connection, error) {
+func connect(apiURL string, username string, password string, caCrt string) (*ovirtsdk.Connection, error) {
 	connection, err := ovirtsdk.NewConnectionBuilder().
 		URL(apiURL).
 		Username(username).
 		Password(password).
 		CACert([]byte(caCrt)).
-		Insecure(insecure).
 		Build()
 	return connection, err
 }
