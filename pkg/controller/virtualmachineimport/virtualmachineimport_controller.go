@@ -137,7 +137,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	ovirt, err := ovirtclient.NewRitchOvirtClient(
+	ovirt, err := ovirtclient.NewRichOvirtClient(
 		&ovirtclient.ConnectionSettings{
 			URL:      ovirtSecretDataMap["apiUrl"],
 			Username: ovirtSecretDataMap["username"],
