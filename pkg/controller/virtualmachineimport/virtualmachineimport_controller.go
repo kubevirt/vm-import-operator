@@ -145,10 +145,10 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 			CACert:   ovirtSecretDataMap["caCert"],
 		},
 	)
-	defer ovirt.Close()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	defer ovirt.Close()
 
 	// Fetch oVirt VM:
 	sourceVMID := instance.Spec.Source.Ovirt.VM.ID
