@@ -30,13 +30,13 @@ type ConnectionSettings struct {
 	CACert   string
 }
 
-// RichOvirtClient is responsilbe for retrieving VM data from oVirt API
+// RichOvirtClient is responsible for retrieving VM data from oVirt API
 type richOvirtClient struct {
 	connection *ovirtsdk.Connection
 }
 
-// NewRitchOvirtClient creates new, connected rich oVirt client. After it is no longer needed, call Close().
-func NewRitchOvirtClient(cs *ConnectionSettings) (OvirtClient, error) {
+// NewRichOvirtClient creates new, connected rich oVirt client. After it is no longer needed, call Close().
+func NewRichOvirtClient(cs *ConnectionSettings) (OvirtClient, error) {
 	con, err := connect(cs.URL, cs.Username, cs.Password, cs.CACert)
 	if err != nil {
 		return nil, err
