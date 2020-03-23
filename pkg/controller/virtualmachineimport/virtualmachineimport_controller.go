@@ -165,8 +165,12 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	// Fetch oVirt VM:
 	sourceVMID := instance.Spec.Source.Ovirt.VM.ID
 	sourceVMName := instance.Spec.Source.Ovirt.VM.Name
-	sourceVMClusterName := instance.Spec.Source.Ovirt.VM.Cluster.Name
-	sourceVMClusterID := instance.Spec.Source.Ovirt.VM.Cluster.ID
+	var sourceVMClusterName *string
+	var sourceVMClusterID *string
+	if instance.Spec.Source.Ovirt.VM.Cluster != nil {
+		sourceVMClusterName = instance.Spec.Source.Ovirt.VM.Cluster.Name
+		sourceVMClusterID = instance.Spec.Source.Ovirt.VM.Cluster.ID
+	}
 	vm, err := ovirt.GetVM(sourceVMID, sourceVMName, sourceVMClusterName, sourceVMClusterID)
 	if err != nil {
 		return reconcile.Result{}, err
