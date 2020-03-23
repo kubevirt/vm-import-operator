@@ -140,19 +140,13 @@ operator-sdk generate k8s
 ```
 
 ### In order to debug the operator locally using 'dlv', start the operator locally:
-```bash
-operator-sdk build quay.io/$USER/vm-import-operator:v0.0.1
-OPERATOR_NAME=import-vm-operator WATCH_NAMESPACE=default ./build/_output/bin/import-vm-operator
-```
-
-Kubernetes cluster should be available and pointed by `~/.kube/config`.
+Kubernetes cluster should be available and pointed by `~/.kube/config` or by `$KUBECONFIG`
 The CRDs of `./deploy/crds/` should be applied on it.
 
-From a second terminal window run:
 ```bash
-dlv attach --headless --api-version=2 --listen=:2345 $(pgrep -f vm-import-operator) ./build/_output/bin/vm-import-operator
+operator-sdk build quay.io/$USER/vm-import-operator:v0.0.1
+operator-sdk run --local --enable-delve
 ```
-
 Connect to the debug session, i.e. if using vscode, create launch.json as:
 
 ```yaml
@@ -163,12 +157,12 @@ Connect to the debug session, i.e. if using vscode, create launch.json as:
             "name": "Connect to vm-import-operator",
             "type": "go",
             "request": "launch",
-            "mode": "remote",
-            "remotePath": "${workspaceFolder}",
-            "port": 2345,
-            "host": "127.0.0.1",
-            "program": "${workspaceFolder}",
-            "env": {},
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/manager/main.go",
+            "env": {
+                "WATCH_NAMESPACE": "default",
+                "KUBECONFIG": "PATH_TO_KUBECONFIG",
+              },
             "args": []
         }
     ]
