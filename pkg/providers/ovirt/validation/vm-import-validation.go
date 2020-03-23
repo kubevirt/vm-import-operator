@@ -12,6 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"kubevirt.io/client-go/kubecli"
+
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,6 +33,8 @@ const (
 	warnReason  = string(v2vv1alpha1.MappingRulesCheckingReportedWarnings)
 	errorReason = string(v2vv1alpha1.MappingRulesCheckingFailed)
 	okReason    = string(v2vv1alpha1.MappingRulesCheckingCompleted)
+
+	incompleteMappingRulesReason = string(v2vv1alpha1.IncompleteMappingRules)
 )
 
 var checkToAction = map[validators.CheckID]action{
@@ -97,6 +101,7 @@ type Validator interface {
 	ValidateVM(vm *ovirtsdk.Vm) []validators.ValidationFailure
 	ValidateDiskAttachments(diskAttachments []*ovirtsdk.DiskAttachment) []validators.ValidationFailure
 	ValidateNics(nics []*ovirtsdk.Nic) []validators.ValidationFailure
+	ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.ResourceMappingItem, crNamespace string) []validators.ValidationFailure
 }
 
 // VirtualMachineImportValidator validates VirtualMachineImport object
@@ -106,27 +111,68 @@ type VirtualMachineImportValidator struct {
 }
 
 // NewVirtualMachineImportValidator creates ready-to-use NewVirtualMachineImportValidator
-func NewVirtualMachineImportValidator(client client.Client) VirtualMachineImportValidator {
+func NewVirtualMachineImportValidator(client client.Client, kubevirtClient kubecli.KubevirtClient) VirtualMachineImportValidator {
 	return VirtualMachineImportValidator{
-		Validator: &validators.ValidatorWrapper{},
+		Validator: validators.NewValidatorWrapper(kubevirtClient),
 		client:    client,
 	}
 }
 
 // Validate validates whether VM described in VirtualMachineImport can be imported
-func (validator *VirtualMachineImportValidator) Validate(vm *ovirtsdk.Vm, vmiCrName *types.NamespacedName) error {
+func (validator *VirtualMachineImportValidator) Validate(vm *ovirtsdk.Vm, vmiCrName *types.NamespacedName, mappings *v2vv1alpha1.OvirtMappings) error {
+	err := validator.validateMappings(vm, mappings, vmiCrName)
+	if err != nil {
+		return err
+	}
+
 	failures := validator.Validator.ValidateVM(vm)
 	if nics, ok := vm.Nics(); ok {
+
 		failures = append(failures, validator.Validator.ValidateNics(nics.Slice())...)
 	}
 	if das, ok := vm.DiskAttachments(); ok {
 		failures = append(failures, validator.Validator.ValidateDiskAttachments(das.Slice())...)
 	}
 
-	return validator.processFailures(failures, vmiCrName)
+	return validator.processValidationFailures(failures, vmiCrName)
 }
 
-func (validator *VirtualMachineImportValidator) processFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) error {
+func (validator *VirtualMachineImportValidator) validateMappings(vm *ovirtsdk.Vm, mappings *v2vv1alpha1.OvirtMappings, vmiCrName *types.NamespacedName) error {
+	var failures []validators.ValidationFailure
+
+	if nics, ok := vm.Nics(); ok {
+		nSlice := nics.Slice()
+		failures = validator.Validator.ValidateNetworkMapping(nSlice, mappings.NetworkMappings, vmiCrName.Namespace)
+	}
+	return validator.processMappingValidationFailures(failures, vmiCrName)
+}
+
+func (validator *VirtualMachineImportValidator) processMappingValidationFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) error {
+	var message string
+
+	for _, failure := range failures {
+		message = withMessage(message, failure.Message)
+	}
+
+	if len(failures) > 0 {
+		instance := &v2vv1alpha1.VirtualMachineImport{}
+		err := validator.client.Get(context.TODO(), *vmiCrName, instance)
+		if err != nil {
+			return err
+		}
+		copy := instance.DeepCopy()
+		updateCondition(&copy.Status.Conditions, incompleteMappingRulesReason, message, false, v2vv1alpha1.Validating)
+		err = validator.client.Status().Update(context.TODO(), copy)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("Mapping rules validation failed for %v. Reasons: %s", vmiCrName, message)
+	}
+
+	return nil
+}
+
+func (validator *VirtualMachineImportValidator) processValidationFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) error {
 	valid := true
 	var warnMessage, errorMessage string
 
@@ -150,11 +196,11 @@ func (validator *VirtualMachineImportValidator) processFailures(failures []valid
 	copy := instance.DeepCopy()
 
 	if !valid {
-		updateCondition(&copy.Status.Conditions, errorReason, errorMessage, false)
+		updateCondition(&copy.Status.Conditions, errorReason, errorMessage, false, v2vv1alpha1.MappingRulesChecking)
 	} else if warnMessage != "" {
-		updateCondition(&copy.Status.Conditions, warnReason, warnMessage, true)
+		updateCondition(&copy.Status.Conditions, warnReason, warnMessage, true, v2vv1alpha1.MappingRulesChecking)
 	} else {
-		updateCondition(&copy.Status.Conditions, okReason, "All mapping rules checks passed", true)
+		updateCondition(&copy.Status.Conditions, okReason, "All mapping rules checks passed", true, v2vv1alpha1.MappingRulesChecking)
 	}
 
 	err = validator.client.Status().Update(context.TODO(), copy)
@@ -174,12 +220,11 @@ func withMessage(message string, newMessage string) string {
 	return fmt.Sprintf("%s, %s", message, newMessage)
 }
 
-func updateCondition(conditions *[]v2vv1alpha1.VirtualMachineImportCondition, reason string, message string, status bool) {
+func updateCondition(conditions *[]v2vv1alpha1.VirtualMachineImportCondition, reason string, message string, status bool, conditionType v2vv1alpha1.VirtualMachineImportConditionType) {
 	conditionStatus := v1.ConditionTrue
 	if !status {
 		conditionStatus = v1.ConditionFalse
 	}
-	conditionType := v2vv1alpha1.MappingRulesChecking
 
 	condition := findConditionOfType(conditionType, *conditions)
 	now := metav1.NewTime(time.Now())

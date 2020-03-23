@@ -9,6 +9,7 @@ require (
 	github.com/coreos/bbolt v1.3.3 // indirect
 	github.com/go-openapi/spec v0.19.4
 	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
+	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20191119172530-79f836b90111
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.7.1
 	github.com/operator-framework/operator-sdk v0.15.2

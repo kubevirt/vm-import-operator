@@ -1,11 +1,22 @@
 package validators
 
 import (
+	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
+	"kubevirt.io/client-go/kubecli"
 )
 
 // ValidatorWrapper exposes validator package API as a struct
-type ValidatorWrapper struct{}
+type ValidatorWrapper struct {
+	networkMappingValidator NetworkMappingValidator
+}
+
+// NewValidatorWrapper creates new, configured ValidatorWrapper
+func NewValidatorWrapper(kubevirt kubecli.KubevirtClient) *ValidatorWrapper {
+	return &ValidatorWrapper{
+		networkMappingValidator: NewNetworkMappingValidator(kubevirt),
+	}
+}
 
 // ValidateVM wraps validators package implementation of ValidateVM function
 func (v *ValidatorWrapper) ValidateVM(vm *ovirtsdk.Vm) []ValidationFailure {
@@ -20,4 +31,9 @@ func (v *ValidatorWrapper) ValidateDiskAttachments(diskAttachments []*ovirtsdk.D
 // ValidateNics wraps validators package implementation of ValidateNics function
 func (v *ValidatorWrapper) ValidateNics(nics []*ovirtsdk.Nic) []ValidationFailure {
 	return ValidateNics(nics)
+}
+
+// ValidateNetworkMapping wraps networkMappingValidator call
+func (v *ValidatorWrapper) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.ResourceMappingItem, crNamespace string) []ValidationFailure {
+	return v.networkMappingValidator.ValidateNetworkMapping(nics, mapping, crNamespace)
 }
