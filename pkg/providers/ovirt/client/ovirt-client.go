@@ -27,7 +27,7 @@ type ConnectionSettings struct {
 	URL      string
 	Username string
 	Password string
-	CACert   string
+	CACert   []byte
 }
 
 // RichOvirtClient is responsible for retrieving VM data from oVirt API
@@ -331,12 +331,12 @@ func (client *richOvirtClient) populateDiskAttachments(vm *ovirtsdk.Vm) error {
 	return nil
 }
 
-func connect(apiURL string, username string, password string, caCrt string) (*ovirtsdk.Connection, error) {
+func connect(apiURL string, username string, password string, caCrt []byte) (*ovirtsdk.Connection, error) {
 	connection, err := ovirtsdk.NewConnectionBuilder().
 		URL(apiURL).
 		Username(username).
 		Password(password).
-		CACert([]byte(caCrt)).
+		CACert(caCrt).
 		Build()
 	return connection, err
 }
