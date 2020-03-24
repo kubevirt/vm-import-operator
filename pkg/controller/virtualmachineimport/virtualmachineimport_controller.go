@@ -2,11 +2,14 @@ package virtualmachineimport
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	ovirtclient "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/client"
 	ovirtsdk "github.com/ovirt/go-ovirt"
+	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -26,11 +29,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-var log = logf.Log.WithName("controller_virtualmachineimport")
-
 const (
-	cdiAPIVersion = "cdi.kubevirt.io/v1alpha1"
-	ovirtLabel    = "oVirt"
+	ovirtSecret    = "ovirt-key"
+	ovirtConfigmap = "ovirt-ca"
+	cdiAPIVersion  = "cdi.kubevirt.io/v1alpha1"
+	ovirtLabel     = "oVirt"
+	ovirtSecretKey = "ovirt"
+)
+
+var (
+	log    = logf.Log.WithName("controller_virtualmachineimport")
+	labels = map[string]string{
+		"origin": ovirtLabel,
+	}
 )
 
 /**
@@ -117,25 +128,63 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	// Connect to oVirt:
-	ovirtSecret, err := r.fetchOvirtSecret(instance)
+	ovirtSecretObj, err := r.fetchOvirtSecret(instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	ovirtConnection, err := createOvirtConnection(ovirtSecret)
+
+	ovirtSecretDataMap := make(map[string]string)
+	err = yaml.Unmarshal(ovirtSecretObj.Data[ovirtSecretKey], &ovirtSecretDataMap)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+
+	if _, ok := ovirtSecretDataMap["caCert"]; !ok {
+		return reconcile.Result{}, fmt.Errorf("oVirt secret must contain caCert attribute")
+	}
+	if len(ovirtSecretDataMap["caCert"]) == 0 {
+		return reconcile.Result{}, fmt.Errorf("oVirt secret caCert cannot be empty")
+	}
+	caCert, err := base64.StdEncoding.DecodeString(ovirtSecretDataMap["caCert"])
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("Failed to decode oVirt secret caCert to base64 format")
+	}
+	ovirt, err := ovirtclient.NewRichOvirtClient(
+		&ovirtclient.ConnectionSettings{
+			URL:      ovirtSecretDataMap["apiUrl"],
+			Username: ovirtSecretDataMap["username"],
+			Password: ovirtSecretDataMap["password"],
+			CACert:   caCert,
+		},
+	)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	defer ovirt.Close()
 
 	// Fetch oVirt VM:
-	vm, err := fetchOvirtVM(ovirtConnection, &instance.Spec.Source.Ovirt.VM)
+	sourceVMID := instance.Spec.Source.Ovirt.VM.ID
+	sourceVMName := instance.Spec.Source.Ovirt.VM.Name
+	var sourceVMClusterName *string
+	var sourceVMClusterID *string
+	if instance.Spec.Source.Ovirt.VM.Cluster != nil {
+		sourceVMClusterName = instance.Spec.Source.Ovirt.VM.Cluster.Name
+		sourceVMClusterID = instance.Spec.Source.Ovirt.VM.Cluster.ID
+	}
+	vm, err := ovirt.GetVM(sourceVMID, sourceVMName, sourceVMClusterName, sourceVMClusterID)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	diskAttachmentsLink, _ := vm.DiskAttachments()
-	diskAttachments, _ := ovirtConnection.FollowLink(diskAttachmentsLink)
-	dvs := createDVmap(diskAttachments.(*ovirtsdk.DiskAttachmentSlice), ovirtSecret)
-	vmSpec := newVMForCR(vm, dvs, diskAttachments.(*ovirtsdk.DiskAttachmentSlice))
+	// Stop VM
+	vmID, _ := vm.Id()
+	err = ovirt.StopVM(vmID)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Define VM spec
+	vmSpec := createVMSpec(vm, instance)
 
 	// Set VirtualMachineImport instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, vmSpec, r.scheme); err != nil {
@@ -146,9 +195,26 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	found := &kubevirtv1.VirtualMachine{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: vmSpec.Name, Namespace: vmSpec.Namespace}, found)
 	if err != nil && errors.IsNotFound(err) {
-		reqLogger.Info("Creating a new VM", "VM.Namespace", vmSpec.Namespace, "VM.Name", vmSpec.Name)
 
-		// Create kubevirt datavolume from oVirt VM disks:
+		// Create kubevirt VM from oVirt VM:
+		reqLogger.Info("Creating a new VM", "VM.Namespace", vmSpec.Namespace, "VM.Name", vmSpec.Name)
+		err = r.client.Create(context.TODO(), vmSpec)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		// Secret with username/password for the image import:
+		if err = ensureDVSecretExists(r.client, instance, vmSpec.Namespace, ovirtSecretDataMap); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		// CM containing CA for the image import:
+		if err = ensureDVConfigmapExists(r.client, instance, vmSpec.Namespace, ovirtSecretDataMap); err != nil {
+			return reconcile.Result{}, err
+		}
+
+		// Import disks:
+		dvs := createDVmap(vm, ovirtSecretDataMap, instance.Namespace)
 		for _, dv := range dvs {
 			_, err := r.kubeClient.CdiClient().CdiV1alpha1().DataVolumes(instance.Namespace).Create(&dv)
 			if err != nil {
@@ -156,12 +222,26 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 			}
 		}
 
-		// Create kubevirt VM from oVirt VM:
-		// TODO: create vm at early stage and patch it later with additional data
-		err = r.client.Create(context.TODO(), vmSpec)
+		// Update VM spec with disks:
+		vmDef := &kubevirtv1.VirtualMachine{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: vmSpec.Namespace, Name: vmSpec.Name}, vmDef)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+		updateVM(vmDef, dvs, vm)
+		err = r.client.Update(context.TODO(), vmDef)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		// Rename VM
+		/*
+			vmName, _ := vm.Name()
+			err = ovirt.RenameVM(vmID, fmt.Sprintf("%s_exported", vmName))
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		*/
 
 		// Pod created successfully - don't requeue
 		return reconcile.Result{}, nil
@@ -175,26 +255,98 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	return reconcile.Result{}, nil
 }
 
-func fetchOvirtVM(con *ovirtsdk.Connection, vmSpec *v2vv1alpha1.VirtualMachineImportOvirtSourceVMSpec) (*ovirtsdk.Vm, error) {
-	// Id of the VM specified:
-	if vmSpec.ID != nil {
-		response, err := con.SystemService().VmsService().VmService(*vmSpec.ID).Get().Send()
-		if err != nil {
-			return nil, err
+func ensureDVSecretExists(client client.Client, instance *v2vv1alpha1.VirtualMachineImport, namespace string, ovirtSecretDataMap map[string]string) error {
+	secretObj := &corev1.Secret{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: ovirtSecret, Namespace: namespace}, secretObj)
+	if err != nil && errors.IsNotFound(err) {
+		dvSecret := createDVSecret(ovirtSecretDataMap, instance)
+		return client.Create(context.TODO(), dvSecret)
+	}
+	return err
+}
+
+func ensureDVConfigmapExists(client client.Client, instance *v2vv1alpha1.VirtualMachineImport, namespace string, ovirtSecretDataMap map[string]string) error {
+	cm := &corev1.ConfigMap{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: ovirtConfigmap, Namespace: namespace}, cm)
+	if err != nil && errors.IsNotFound(err) {
+		dvCm := createDVConfigmap(ovirtSecretDataMap, instance)
+		return client.Create(context.TODO(), dvCm)
+	}
+	return err
+}
+
+func createDVConfigmap(creds map[string]string, vmImport *v2vv1alpha1.VirtualMachineImport) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ovirtConfigmap,
+			Namespace: vmImport.Namespace,
+		},
+		Data: map[string]string{
+			"ca.pem": creds["caCert"],
+		},
+	}
+}
+
+func createDVSecret(creds map[string]string, vmImport *v2vv1alpha1.VirtualMachineImport) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ovirtSecret,
+			Namespace: vmImport.Namespace,
+		},
+		Data: map[string][]byte{
+			"accessKeyId": []byte(creds["username"]),
+			"secretKey":   []byte(creds["password"]),
+		},
+	}
+}
+
+func createVMSpec(vm *ovirtsdk.Vm, vmImport *v2vv1alpha1.VirtualMachineImport) *kubevirtv1.VirtualMachine {
+	cpu := &kubevirtv1.CPU{}
+	if cpuDef, available := vm.Cpu(); available {
+		if topology, available := cpuDef.Topology(); available {
+			if cores, available := topology.Cores(); available {
+				cpu.Cores = uint32(cores)
+			}
+			if sockets, available := topology.Sockets(); available {
+				cpu.Sockets = uint32(sockets)
+			}
+			if threads, available := topology.Threads(); available {
+				cpu.Threads = uint32(threads)
+			}
 		}
-		vm, _ := response.Vm()
-		return vm, nil
 	}
-	// Cluster/name of the VM specified:
-	response, err := con.SystemService().VmsService().List().Search(fmt.Sprintf("name=%v and cluster=%v", *vmSpec.Name, *vmSpec.Cluster.Name)).Send()
-	if err != nil {
-		return nil, err
+	running := false
+	name, _ := vm.Name()
+	if vmImport.Spec.TargetVMName != nil {
+		name = *vmImport.Spec.TargetVMName
 	}
-	vms, _ := response.Vms()
-	if len(vms.Slice()) > 0 {
-		return vms.Slice()[0], nil
+	return &kubevirtv1.VirtualMachine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: vmImport.Namespace,
+			Labels:    labels,
+		},
+		Spec: kubevirtv1.VirtualMachineSpec{
+			Running: &running,
+			Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labels,
+				},
+				Spec: kubevirtv1.VirtualMachineInstanceSpec{
+					Domain: kubevirtv1.DomainSpec{
+						CPU: cpu,
+						// Memory:  &kubevirtv1.Memory{},
+						// Machine:   kubevirtv1.Machine{},
+						// Firmware:  &kubevirtv1.Firmware{},
+						// Clock:     &kubevirtv1.Clock{},
+						// Features:  &kubevirtv1.Features{},
+						// Chassis:   &kubevirtv1.Chassis{},
+						// IOThreadsPolicy: &kubevirtv1.IOThreadsPolicy{},
+					},
+				},
+			},
+		},
 	}
-	return nil, fmt.Errorf("Virtual machine %v not found", *vmSpec.Name)
 }
 
 func (r *ReconcileVirtualMachineImport) fetchOvirtSecret(vmImport *v2vv1alpha1.VirtualMachineImport) (*corev1.Secret, error) {
@@ -207,45 +359,34 @@ func (r *ReconcileVirtualMachineImport) fetchOvirtSecret(vmImport *v2vv1alpha1.V
 	return secret, err
 }
 
-func createOvirtConnection(secret *corev1.Secret) (*ovirtsdk.Connection, error) {
-	// TODO: CA cert
-	insecure, _ := strconv.ParseBool(string(secret.Data["insecure"]))
-	return ovirtsdk.NewConnectionBuilder().
-		URL(string(secret.Data["apiUrl"])).
-		Username(string(secret.Data["username"])).
-		Password(string(secret.Data["password"])).
-		Insecure(insecure).
-		Build()
-}
-
 // newDVForCR returns the data-volume specifications for the target VM based on oVirt VM
-func createDVmap(diskAttachments *ovirtsdk.DiskAttachmentSlice, secret *corev1.Secret) map[string]cdiv1.DataVolume {
+func createDVmap(vm *ovirtsdk.Vm, creds map[string]string, namespace string) map[string]cdiv1.DataVolume {
+	diskAttachments, _ := vm.DiskAttachments()
 	dvs := make(map[string]cdiv1.DataVolume, len(diskAttachments.Slice()))
 	for _, diskAttachment := range diskAttachments.Slice() {
+		attachID, _ := diskAttachment.Id()
 		disk, _ := diskAttachment.Disk()
-		//quantity, _ := resource.ParseQuantity(strconv.FormatInt(disk.MustProvisionedSize(), 10))
-		quantity, _ := resource.ParseQuantity("1Gi")
-		dvs[diskAttachment.MustId()] = cdiv1.DataVolume{
+		diskID, _ := disk.Id()
+		quantity, _ := resource.ParseQuantity(strconv.FormatInt(disk.MustProvisionedSize(), 10))
+		dvs[attachID] = cdiv1.DataVolume{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: cdiAPIVersion,
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      diskAttachment.MustId(), // FIXME:
-				Namespace: "default",               // FIXME:
-				Labels: map[string]string{ // FIXME:
-					"origin": ovirtLabel,
-				},
+				Name:      attachID,
+				Namespace: namespace,
+				Labels:    labels,
 			},
 			Spec: cdiv1.DataVolumeSpec{
 				Source: cdiv1.DataVolumeSource{
 					Imageio: &cdiv1.DataVolumeSourceImageIO{
-						URL:           string(secret.Data["apiUrl"]),
-						DiskID:        disk.MustId(),
-						SecretRef:     "ovirt-key", // FIXME, should be created dynamically
-						CertConfigMap: "ovirt-ca",  // FIXME, should be created dynamically
+						URL:           creds["apiUrl"],
+						DiskID:        diskID,
+						SecretRef:     ovirtSecret,
+						CertConfigMap: ovirtConfigmap,
 					},
 				},
-				// TODO: Would be great to add storageClassName which we should get from the mapping.
+				// TODO: Should be done according to mappings
 				PVC: &corev1.PersistentVolumeClaimSpec{
 					AccessModes: []corev1.PersistentVolumeAccessMode{
 						corev1.ReadWriteOnce,
@@ -272,11 +413,7 @@ func getDiskAttachmentByID(id string, diskAttachments *ovirtsdk.DiskAttachmentSl
 }
 
 // newVMForCR returns a VM specification of the fetched oVirt VM
-func newVMForCR(vm *ovirtsdk.Vm, dvs map[string]cdiv1.DataVolume, diskAttachments *ovirtsdk.DiskAttachmentSlice) *kubevirtv1.VirtualMachine {
-	// Labels definition:
-	labels := map[string]string{
-		"origin": ovirtLabel,
-	}
+func updateVM(vmspec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume, vm *ovirtsdk.Vm) {
 	// Volumes definition:
 	volumes := make([]kubevirtv1.Volume, len(dvs))
 	i := 0
@@ -295,7 +432,7 @@ func newVMForCR(vm *ovirtsdk.Vm, dvs map[string]cdiv1.DataVolume, diskAttachment
 	i = 0
 	disks := make([]kubevirtv1.Disk, len(dvs))
 	for id := range dvs {
-		diskAttachment := getDiskAttachmentByID(id, diskAttachments)
+		diskAttachment := getDiskAttachmentByID(id, vm.MustDiskAttachments())
 		disks[i] = kubevirtv1.Disk{
 			Name: fmt.Sprintf("dv-%v", i),
 			DiskDevice: kubevirtv1.DiskDevice{
@@ -312,36 +449,29 @@ func newVMForCR(vm *ovirtsdk.Vm, dvs map[string]cdiv1.DataVolume, diskAttachment
 		i++
 	}
 	running := false
-	return &kubevirtv1.VirtualMachine{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      vm.MustName(), // FIXME:
-			Namespace: "default",     // FIXME:
-			Labels:    labels,
-		},
-		Spec: kubevirtv1.VirtualMachineSpec{
-			Running: &running,
-			Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
-				},
-				Spec: kubevirtv1.VirtualMachineInstanceSpec{
-					Domain: kubevirtv1.DomainSpec{
-						CPU: &kubevirtv1.CPU{
-							Cores: uint32(vm.MustCpu().MustTopology().MustCores()),
-						},
-						Devices: kubevirtv1.Devices{
-							Disks: disks,
-							// Memory:  &kubevirtv1.Memory{},
-							// Machine:   kubevirtv1.Machine{},
-							// Firmware:  &kubevirtv1.Firmware{},
-							// Clock:     &kubevirtv1.Clock{},
-							// Features:  &kubevirtv1.Features{},
-							// Chassis:   &kubevirtv1.Chassis{},
-							// IOThreadsPolicy: &kubevirtv1.IOThreadsPolicy{},
-						},
+	vmspec.Spec = kubevirtv1.VirtualMachineSpec{
+		Running: &running,
+		Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: labels,
+			},
+			Spec: kubevirtv1.VirtualMachineInstanceSpec{
+				Domain: kubevirtv1.DomainSpec{
+					CPU: &kubevirtv1.CPU{
+						Cores: uint32(vm.MustCpu().MustTopology().MustCores()),
 					},
-					Volumes: volumes,
+					Devices: kubevirtv1.Devices{
+						Disks: disks,
+						// Memory:  &kubevirtv1.Memory{},
+						// Machine:   kubevirtv1.Machine{},
+						// Firmware:  &kubevirtv1.Firmware{},
+						// Clock:     &kubevirtv1.Clock{},
+						// Features:  &kubevirtv1.Features{},
+						// Chassis:   &kubevirtv1.Chassis{},
+						// IOThreadsPolicy: &kubevirtv1.IOThreadsPolicy{},
+					},
 				},
+				Volumes: volumes,
 			},
 		},
 	}
