@@ -2,7 +2,6 @@ package virtualmachineimport
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"strconv"
 
@@ -145,16 +144,12 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	if len(ovirtSecretDataMap["caCert"]) == 0 {
 		return reconcile.Result{}, fmt.Errorf("oVirt secret caCert cannot be empty")
 	}
-	caCert, err := base64.StdEncoding.DecodeString(ovirtSecretDataMap["caCert"])
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("Failed to decode oVirt secret caCert to base64 format")
-	}
 	ovirt, err := ovirtclient.NewRichOvirtClient(
 		&ovirtclient.ConnectionSettings{
 			URL:      ovirtSecretDataMap["apiUrl"],
 			Username: ovirtSecretDataMap["username"],
 			Password: ovirtSecretDataMap["password"],
-			CACert:   caCert,
+			CACert:   []byte(ovirtSecretDataMap["caCert"]),
 		},
 	)
 	if err != nil {
