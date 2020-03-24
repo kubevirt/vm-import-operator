@@ -375,11 +375,13 @@ func isValidStorageErrorResumeBehaviour(vm *ovirtsdk.Vm) (ValidationFailure, boo
 }
 
 func isValidUsb(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
-	if _, ok := vm.Usb(); ok {
-		return ValidationFailure{
-			ID:      VMUsbID,
-			Message: fmt.Sprintf("VM has USB configured"),
-		}, false
+	if usb, ok := vm.Usb(); ok {
+		if enabled, ok := usb.Enabled(); ok && enabled {
+			return ValidationFailure{
+				ID:      VMUsbID,
+				Message: fmt.Sprintf("VM has USB enabled"),
+			}, false
+		}
 	}
 	return ValidationFailure{}, true
 }

@@ -257,9 +257,10 @@ var _ = Describe("Validating VM", func() {
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(VMTunnelMigrationID))
 	})
-	It("should flag vm with USB configured", func() {
+	It("should flag vm with USB enabled", func() {
 		var vm = newVM()
 		usb := ovirtsdk.Usb{}
+		usb.SetEnabled(true)
 		vm.SetUsb(&usb)
 
 		failures := ValidateVM(vm)

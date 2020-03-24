@@ -38,15 +38,6 @@ var _ = Describe("Validating Disk Attachment", func() {
 		table.Entry("sata", "sata"),
 		table.Entry("virtio_scsi", "virtio_scsi"),
 	)
-	It("should flag disk attachment without interface: ", func() {
-		attachment := ovirtsdk.DiskAttachment{}
-		attachment.SetId("Attachment_id")
-
-		failures := validateDiskAttachment(&attachment)
-
-		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskAttachmentInterfaceID))
-	})
 	It("should flag disk attachment with logical name: ", func() {
 		attachment := newDiskAttachment()
 		attachment.SetLogicalName("/dev/sdMy")
@@ -112,16 +103,6 @@ var _ = Describe("Validating Disk", func() {
 		table.Entry("sata", "sata"),
 		table.Entry("virtio_scsi", "virtio_scsi"),
 	)
-	It("should flag disk attachment without interface: ", func() {
-		disk := ovirtsdk.Disk{}
-		disk.SetId("Disk_id")
-		disk.SetStorageType("image")
-
-		failures := validateDisk(&disk)
-
-		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskInterfaceID))
-	})
 	It("should flag disk with logical name: ", func() {
 		disk := newDisk()
 		disk.SetLogicalName("/dev/sdMy")
