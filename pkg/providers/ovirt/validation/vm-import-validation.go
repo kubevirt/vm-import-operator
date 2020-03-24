@@ -102,6 +102,7 @@ type Validator interface {
 	ValidateDiskAttachments(diskAttachments []*ovirtsdk.DiskAttachment) []validators.ValidationFailure
 	ValidateNics(nics []*ovirtsdk.Nic) []validators.ValidationFailure
 	ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.ResourceMappingItem, crNamespace string) []validators.ValidationFailure
+	ValidateStorageMapping(attachments []*ovirtsdk.DiskAttachment, mapping *[]v2vv1alpha1.ResourceMappingItem) []validators.ValidationFailure
 }
 
 // VirtualMachineImportValidator validates VirtualMachineImport object
@@ -142,8 +143,13 @@ func (validator *VirtualMachineImportValidator) validateMappings(vm *ovirtsdk.Vm
 
 	if nics, ok := vm.Nics(); ok {
 		nSlice := nics.Slice()
-		failures = validator.Validator.ValidateNetworkMapping(nSlice, mappings.NetworkMappings, vmiCrName.Namespace)
+		failures = append(failures, validator.Validator.ValidateNetworkMapping(nSlice, mappings.NetworkMappings, vmiCrName.Namespace)...)
 	}
+	if attachments, ok := vm.DiskAttachments(); ok {
+		das := attachments.Slice()
+		failures = append(failures, validator.Validator.ValidateStorageMapping(das, mappings.StorageMappings)...)
+	}
+
 	return validator.processMappingValidationFailures(failures, vmiCrName)
 }
 

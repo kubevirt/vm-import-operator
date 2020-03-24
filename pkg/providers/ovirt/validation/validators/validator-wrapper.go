@@ -9,12 +9,14 @@ import (
 // ValidatorWrapper exposes validator package API as a struct
 type ValidatorWrapper struct {
 	networkMappingValidator NetworkMappingValidator
+	storageMappingValidator StorageMappingValidator
 }
 
 // NewValidatorWrapper creates new, configured ValidatorWrapper
 func NewValidatorWrapper(kubevirt kubecli.KubevirtClient) *ValidatorWrapper {
 	return &ValidatorWrapper{
 		networkMappingValidator: NewNetworkMappingValidator(kubevirt),
+		storageMappingValidator: NewStorageMappingValidator(kubevirt),
 	}
 }
 
@@ -36,4 +38,9 @@ func (v *ValidatorWrapper) ValidateNics(nics []*ovirtsdk.Nic) []ValidationFailur
 // ValidateNetworkMapping wraps networkMappingValidator call
 func (v *ValidatorWrapper) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.ResourceMappingItem, crNamespace string) []ValidationFailure {
 	return v.networkMappingValidator.ValidateNetworkMapping(nics, mapping, crNamespace)
+}
+
+// ValidateStorageMapping wraps storageMappingValidator call
+func (v *ValidatorWrapper) ValidateStorageMapping(attachments []*ovirtsdk.DiskAttachment, mapping *[]v2vv1alpha1.ResourceMappingItem) []ValidationFailure {
+	return v.storageMappingValidator.ValidateStorageMapping(attachments, mapping)
 }

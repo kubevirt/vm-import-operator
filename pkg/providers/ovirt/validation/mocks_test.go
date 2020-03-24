@@ -18,6 +18,7 @@ var validateVMMock func(*ovirtsdk.Vm) []validators.ValidationFailure
 var validateNicsMock func([]*ovirtsdk.Nic) []validators.ValidationFailure
 var validateDiskAttachmentsMock func([]*ovirtsdk.DiskAttachment) []validators.ValidationFailure
 var validateNetworkMappingsMock func(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.ResourceMappingItem, crNamespace string) []validators.ValidationFailure
+var validateStorageMappingMock func(attachments []*ovirtsdk.DiskAttachment, mapping *[]v2vv1alpha1.ResourceMappingItem) []validators.ValidationFailure
 
 type mockValidator struct{}
 
@@ -35,6 +36,10 @@ func (v *mockValidator) ValidateNics(nics []*ovirtsdk.Nic) []validators.Validati
 
 func (v *mockValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.ResourceMappingItem, crNamespace string) []validators.ValidationFailure {
 	return validateNetworkMappingsMock(nics, mapping, crNamespace)
+}
+
+func (v *mockValidator) ValidateStorageMapping(attachments []*ovirtsdk.DiskAttachment, mapping *[]v2vv1alpha1.ResourceMappingItem) []validators.ValidationFailure {
+	return validateStorageMappingMock(attachments, mapping)
 }
 
 type mockClient struct {

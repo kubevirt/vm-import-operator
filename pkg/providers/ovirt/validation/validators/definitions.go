@@ -113,6 +113,10 @@ const (
 	NetworkTypeID = CheckID("network.type")
 	// NetworkTargetID defines an ID of a check verifyting existence of target network
 	NetworkTargetID = CheckID("network.target")
+	// StorageMappingID defines an ID of a check verifying that all the required source storage domains are present in the resource mapping
+	StorageMappingID = CheckID("storage.mapping")
+	// StorageTargetID defines an ID of a check verifying existence of target storage class
+	StorageTargetID = CheckID("storage.target")
 )
 
 // CheckID identifies validation check for Virtual Machine Import
