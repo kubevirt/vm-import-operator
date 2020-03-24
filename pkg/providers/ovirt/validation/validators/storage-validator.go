@@ -105,12 +105,13 @@ func isValidDiskInterface(disk *ovirtsdk.Disk, diskID string) (ValidationFailure
 }
 
 func isValidStorageInterface(diskAttachment DiskInterfaceOwner, ownerID string, checkID CheckID) (ValidationFailure, bool) {
-	iface, _ := diskAttachment.Interface()
-	if _, found := DiskInterfaceModelMapping[string(iface)]; !found {
-		return ValidationFailure{
-			ID:      checkID,
-			Message: fmt.Sprintf("%s %s uses interface %v. Allowed values: %v", checkID, ownerID, iface, GetMapKeys(DiskInterfaceModelMapping)),
-		}, false
+	if iface, ok := diskAttachment.Interface(); ok {
+		if _, found := DiskInterfaceModelMapping[string(iface)]; !found {
+			return ValidationFailure{
+				ID:      checkID,
+				Message: fmt.Sprintf("%s %s uses interface %v. Allowed values: %v", checkID, ownerID, iface, GetMapKeys(DiskInterfaceModelMapping)),
+			}, false
+		}
 	}
 
 	return ValidationFailure{}, true
