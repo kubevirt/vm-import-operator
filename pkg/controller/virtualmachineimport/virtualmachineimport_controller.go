@@ -204,25 +204,13 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		}
 
 		// Secret with username/password for the image import:
-		secretObj := &corev1.Secret{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: ovirtSecret, Namespace: vmSpec.Namespace}, secretObj)
-		if err != nil && errors.IsNotFound(err) {
-			dvSecret := createDVSecret(ovirtSecretDataMap, instance)
-			err = r.client.Create(context.TODO(), dvSecret)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
+		if err = ensureDVSecretExists(r.client, instance, vmSpec.Namespace, ovirtSecretDataMap); err != nil {
+			return reconcile.Result{}, err
 		}
 
 		// CM containing CA for the image import:
-		cm := &corev1.ConfigMap{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Name: ovirtConfigmap, Namespace: vmSpec.Namespace}, cm)
-		if err != nil && errors.IsNotFound(err) {
-			dvCm := createDVConfigmap(ovirtSecretDataMap, instance)
-			err = r.client.Create(context.TODO(), dvCm)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
+		if err = ensureDVConfigmapExists(r.client, instance, vmSpec.Namespace, ovirtSecretDataMap); err != nil {
+			return reconcile.Result{}, err
 		}
 
 		// Import disks:
@@ -265,6 +253,26 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	reqLogger.Info("Skip reconcile: VM already exists", "VM.Namespace", found.Namespace, "VM.Name", found.Name)
 
 	return reconcile.Result{}, nil
+}
+
+func ensureDVSecretExists(client client.Client, instance *v2vv1alpha1.VirtualMachineImport, namespace string, ovirtSecretDataMap map[string]string) error {
+	secretObj := &corev1.Secret{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: ovirtSecret, Namespace: namespace}, secretObj)
+	if err != nil && errors.IsNotFound(err) {
+		dvSecret := createDVSecret(ovirtSecretDataMap, instance)
+		return client.Create(context.TODO(), dvSecret)
+	}
+	return err
+}
+
+func ensureDVConfigmapExists(client client.Client, instance *v2vv1alpha1.VirtualMachineImport, namespace string, ovirtSecretDataMap map[string]string) error {
+	cm := &corev1.ConfigMap{}
+	err := client.Get(context.TODO(), types.NamespacedName{Name: ovirtConfigmap, Namespace: namespace}, cm)
+	if err != nil && errors.IsNotFound(err) {
+		dvCm := createDVConfigmap(ovirtSecretDataMap, instance)
+		return client.Create(context.TODO(), dvCm)
+	}
+	return err
 }
 
 func createDVConfigmap(creds map[string]string, vmImport *v2vv1alpha1.VirtualMachineImport) *corev1.ConfigMap {
