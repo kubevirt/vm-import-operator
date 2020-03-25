@@ -26,8 +26,6 @@ func validateNic(nic *ovirtsdk.Nic) []ValidationFailure {
 		nicID = id
 	}
 
-	//TODO: Networking rule #1
-
 	if failure, valid := isValidNicInterfaceModel(nic, nicID); !valid {
 		results = append(results, failure)
 	}

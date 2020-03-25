@@ -107,6 +107,12 @@ const (
 	VMCdromsID = CheckID("vm.cdroms.file.storage_domain.type")
 	// VMFloppiesID defines an ID of a vm.floppies presence check
 	VMFloppiesID = CheckID("vm.floppies")
+	// NetworkMappingID defines an ID of a check verifying that all the required source networks are present in the resource mapping
+	NetworkMappingID = CheckID("network.mapping")
+	// NetworkTypeID defines an ID of a check verifying supported network types
+	NetworkTypeID = CheckID("network.type")
+	// NetworkTargetID defines an ID of a check verifyting existence of target network
+	NetworkTargetID = CheckID("network.target")
 )
 
 // CheckID identifies validation check for Virtual Machine Import
