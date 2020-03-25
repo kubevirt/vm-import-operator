@@ -167,20 +167,20 @@ func (validator *VirtualMachineImportValidator) processMappingValidationFailures
 	}
 	copy := instance.DeepCopy()
 
-	invalid := len(failures) > 0
-	if invalid {
+	if len(failures) > 0 {
 		updateCondition(&copy.Status.Conditions, incompleteMappingRulesReason, message, false, v2vv1alpha1.Validating)
-	} else {
-		updateCondition(&copy.Status.Conditions, validationCompletedReason, "Validating completed successfully", true, v2vv1alpha1.Validating)
+		err = validator.client.Status().Update(context.TODO(), copy)
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("Mapping rules validation failed for %v. Reasons: %s", vmiCrName, message)
 	}
-
+	updateCondition(&copy.Status.Conditions, validationCompletedReason, "Validating completed successfully", true, v2vv1alpha1.Validating)
 	err = validator.client.Status().Update(context.TODO(), copy)
 	if err != nil {
 		return err
 	}
-	if invalid {
-		return fmt.Errorf("Mapping rules validation failed for %v. Reasons: %s", vmiCrName, message)
-	}
+
 	return nil
 }
 
