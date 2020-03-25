@@ -24,11 +24,14 @@ metadata:
   name: my-secret-with-ovirt-credentials
 type: Opaque
 stringData:
-  ovirt: |-
-    apiUrl: "https://ovirt-engine.example.com:8443/ovirt-engine/api/"
+  ovirt: |
+    apiUrl: "https://ovirt-engine.example.com:8443/ovirt-engine/api"
     username: admin@internal # provided in the format of username@domain
     password: 123456
-    caCert: ...
+    caCert: |
+      -----BEGIN CERTIFICATE-----
+      ...
+      -----END CERTIFICATE-----
 EOF
 ```
 
