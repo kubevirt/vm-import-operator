@@ -35,6 +35,7 @@ const (
 	okReason    = string(v2vv1alpha1.MappingRulesCheckingCompleted)
 
 	incompleteMappingRulesReason = string(v2vv1alpha1.IncompleteMappingRules)
+	validationCompletedReason    = string(v2vv1alpha1.ValidationCompleted)
 )
 
 var checkToAction = map[validators.CheckID]action{
@@ -159,22 +160,27 @@ func (validator *VirtualMachineImportValidator) processMappingValidationFailures
 	for _, failure := range failures {
 		message = withMessage(message, failure.Message)
 	}
+	instance := &v2vv1alpha1.VirtualMachineImport{}
+	err := validator.client.Get(context.TODO(), *vmiCrName, instance)
+	if err != nil {
+		return err
+	}
+	copy := instance.DeepCopy()
 
-	if len(failures) > 0 {
-		instance := &v2vv1alpha1.VirtualMachineImport{}
-		err := validator.client.Get(context.TODO(), *vmiCrName, instance)
-		if err != nil {
-			return err
-		}
-		copy := instance.DeepCopy()
+	invalid := len(failures) > 0
+	if invalid {
 		updateCondition(&copy.Status.Conditions, incompleteMappingRulesReason, message, false, v2vv1alpha1.Validating)
-		err = validator.client.Status().Update(context.TODO(), copy)
-		if err != nil {
-			return err
-		}
-		return fmt.Errorf("Mapping rules validation failed for %v. Reasons: %s", vmiCrName, message)
+	} else {
+		updateCondition(&copy.Status.Conditions, validationCompletedReason, "Validating completed successfully", true, v2vv1alpha1.Validating)
 	}
 
+	err = validator.client.Status().Update(context.TODO(), copy)
+	if err != nil {
+		return err
+	}
+	if invalid {
+		return fmt.Errorf("Mapping rules validation failed for %v. Reasons: %s", vmiCrName, message)
+	}
 	return nil
 }
 
