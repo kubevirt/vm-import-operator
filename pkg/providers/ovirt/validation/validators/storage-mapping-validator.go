@@ -7,6 +7,7 @@ import (
 	"kubevirt.io/client-go/kubecli"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
 
@@ -42,7 +43,7 @@ func (v *StorageMappingValidator) ValidateStorageMapping(attachments []*ovirtsdk
 	}
 	requiredDomains := v.getRequiredStorageDomains(attachments)
 	// Map source id and name to ResourceMappingItem
-	mapByID, mapByName := IndexByIDAndName(mapping)
+	mapByID, mapByName := utils.IndexByIDAndName(mapping)
 
 	requiredTargetsSet := make(map[v2vv1alpha1.ObjectIdentifier]bool)
 	// Validate that all vm storage domains are mapped and populate requiredTargetsSet for target existence check
@@ -63,7 +64,7 @@ func (v *StorageMappingValidator) ValidateStorageMapping(attachments []*ovirtsdk
 		}
 		failures = append(failures, ValidationFailure{
 			ID:      StorageMappingID,
-			Message: fmt.Sprintf("Required source storage domain '%s' lacks mapping", ToLoggableID(domain.ID, domain.Name)),
+			Message: fmt.Sprintf("Required source storage domain '%s' lacks mapping", utils.ToLoggableID(domain.ID, domain.Name)),
 		})
 	}
 

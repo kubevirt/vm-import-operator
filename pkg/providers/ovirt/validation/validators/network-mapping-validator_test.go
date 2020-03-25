@@ -22,7 +22,7 @@ var (
 
 	targetNetworkName      = "targetNetwork"
 	targetNetworkNamespace = "targetNamespace"
-	findNetAttachDefMock   func() (*netv1.NetworkAttachmentDefinition, error)
+	findNetAttachDefMock   func(string) (*netv1.NetworkAttachmentDefinition, error)
 
 	namespace = "default"
 )
@@ -32,7 +32,7 @@ var _ = Describe("Validating Network mapping", func() {
 		provider: &mockNetAttachDefProvider{},
 	}
 	BeforeEach(func() {
-		findNetAttachDefMock = func() (*netv1.NetworkAttachmentDefinition, error) {
+		findNetAttachDefMock = func(name string) (*netv1.NetworkAttachmentDefinition, error) {
 			netAttachDef := netv1.NetworkAttachmentDefinition{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      targetNetworkName,
@@ -116,6 +116,50 @@ var _ = Describe("Validating Network mapping", func() {
 
 		Expect(failures).To(BeEmpty())
 	})
+	It("should accept mapping with non-existing, not-required network attachment definition", func() {
+		nics := []*ovirtsdk.Nic{
+			createNic(&networkName, &networkID),
+		}
+		otherNetwork := "other-net"
+
+		mapping := []v2vv1alpha1.ResourceMappingItem{
+			v2vv1alpha1.ResourceMappingItem{
+				Source: v2vv1alpha1.Source{
+					ID: &networkID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: targetNetworkName,
+				},
+				Type: &multusType,
+			},
+			v2vv1alpha1.ResourceMappingItem{
+				Source: v2vv1alpha1.Source{
+					ID: &otherNetwork,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: wrongNetworkName,
+				},
+				Type: &multusType,
+			},
+		}
+
+		findNetAttachDefMock = func(name string) (*netv1.NetworkAttachmentDefinition, error) {
+			if name == targetNetworkName {
+				netAttachDef := netv1.NetworkAttachmentDefinition{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      targetNetworkName,
+						Namespace: targetNetworkNamespace,
+					},
+				}
+				return &netAttachDef, nil
+			}
+			return nil, fmt.Errorf("Not found: %s", name)
+		}
+
+		failures := validator.ValidateNetworkMapping(nics, &mapping, namespace)
+
+		Expect(failures).To(BeEmpty())
+	})
 	It("should accept mapping for multus type", func() {
 		nics := []*ovirtsdk.Nic{
 			createNic(&networkName, &networkID),
@@ -156,7 +200,7 @@ var _ = Describe("Validating Network mapping", func() {
 			},
 		}
 
-		findNetAttachDefMock = func() (*netv1.NetworkAttachmentDefinition, error) {
+		findNetAttachDefMock = func(name string) (*netv1.NetworkAttachmentDefinition, error) {
 			return nil, fmt.Errorf("boom")
 		}
 
@@ -228,5 +272,5 @@ func createNic(networkName *string, networkID *string) *ovirtsdk.Nic {
 type mockNetAttachDefProvider struct{}
 
 func (m *mockNetAttachDefProvider) Find(name string, namespace string) (*netv1.NetworkAttachmentDefinition, error) {
-	return findNetAttachDefMock()
+	return findNetAttachDefMock(name)
 }

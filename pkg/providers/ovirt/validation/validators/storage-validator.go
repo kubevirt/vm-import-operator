@@ -3,6 +3,7 @@ package validators
 import (
 	"fmt"
 
+	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
 
@@ -109,7 +110,7 @@ func isValidStorageInterface(diskAttachment DiskInterfaceOwner, ownerID string, 
 		if _, found := DiskInterfaceModelMapping[string(iface)]; !found {
 			return ValidationFailure{
 				ID:      checkID,
-				Message: fmt.Sprintf("%s %s uses interface %v. Allowed values: %v", checkID, ownerID, iface, GetMapKeys(DiskInterfaceModelMapping)),
+				Message: fmt.Sprintf("%s %s uses interface %v. Allowed values: %v", checkID, ownerID, iface, utils.GetMapKeys(DiskInterfaceModelMapping)),
 			}, false
 		}
 	}
