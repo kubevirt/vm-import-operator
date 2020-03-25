@@ -18,7 +18,6 @@ const (
 type OvirtClient interface {
 	GetVM(id *string, name *string, cluster *string, clusterID *string) (*ovirtsdk.Vm, error)
 	StopVM(id string) error
-	RenameVM(id string, newName string) error
 	Close() error
 }
 
@@ -95,20 +94,6 @@ func (client *richOvirtClient) GetVM(id *string, name *string, cluster *string, 
 		return nil, err
 	}
 	return vm, nil
-}
-
-// RenameVM rename the vm
-func (client *richOvirtClient) RenameVM(id string, newName string) error {
-	_, err := client.connection.SystemService().VmsService().VmService(id).
-		Update().
-		Vm(
-			ovirtsdk.NewVmBuilder().Name(newName).MustBuild(),
-		).
-		Send()
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // StopVM stop the VM and wait for the vm to be stopped
