@@ -22,24 +22,24 @@ var (
 
 	targetNetworkName      = "targetNetwork"
 	targetNetworkNamespace = "targetNamespace"
-	findNadMock            func() (*netv1.NetworkAttachmentDefinition, error)
+	findNetAttachDefMock   func() (*netv1.NetworkAttachmentDefinition, error)
 
 	namespace = "default"
 )
 
 var _ = Describe("Validating Network mapping", func() {
 	validator := NetworkMappingValidator{
-		provider: &mockNadProvider{},
+		provider: &mockNetAttachDefProvider{},
 	}
 	BeforeEach(func() {
-		findNadMock = func() (*netv1.NetworkAttachmentDefinition, error) {
-			nad := netv1.NetworkAttachmentDefinition{
+		findNetAttachDefMock = func() (*netv1.NetworkAttachmentDefinition, error) {
+			netAttachDef := netv1.NetworkAttachmentDefinition{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      targetNetworkName,
 					Namespace: targetNetworkNamespace,
 				},
 			}
-			return &nad, nil
+			return &netAttachDef, nil
 		}
 	})
 	table.DescribeTable("should reject missing mapping for: ", func(nic *ovirtsdk.Nic, networkName *string, networkID *string) {
@@ -65,15 +65,10 @@ var _ = Describe("Validating Network mapping", func() {
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(NetworkMappingID))
 	},
-		table.Entry("Direct network with no mapping", createNic(&networkName, &networkID), nil, nil),
-		table.Entry("Direct network with ID mismatch", createNic(&networkName, &networkID), nil, &wrongNetworkID),
-		table.Entry("Direct network with name mismatch", createNic(&networkName, &networkID), &wrongNetworkName, nil),
-		table.Entry("Direct network with both name and ID wrong", createNic(&networkName, &networkID), &wrongNetworkName, &wrongNetworkID),
-
-		table.Entry("Vnic profile network with no mapping", createNicWithProfile(&networkName, &networkID), nil, nil),
-		table.Entry("Vnic profile network with ID mismatch", createNicWithProfile(&networkName, &networkID), nil, &wrongNetworkID),
-		table.Entry("Vnic profile network with name mismatch", createNicWithProfile(&networkName, &networkID), &wrongNetworkName, nil),
-		table.Entry("Vnic profile network with both name and ID wrong", createNicWithProfile(&networkName, &networkID), &wrongNetworkName, &wrongNetworkID),
+		table.Entry("Vnic profile network with no mapping", createNic(&networkName, &networkID), nil, nil),
+		table.Entry("Vnic profile network with ID mismatch", createNic(&networkName, &networkID), nil, &wrongNetworkID),
+		table.Entry("Vnic profile network with name mismatch", createNic(&networkName, &networkID), &wrongNetworkName, nil),
+		table.Entry("Vnic profile network with both name and ID wrong", createNic(&networkName, &networkID), &wrongNetworkName, &wrongNetworkID),
 	)
 	table.DescribeTable("should accept mapping for: ", func(nic *ovirtsdk.Nic, networkName *string, networkID *string) {
 		nics := []*ovirtsdk.Nic{
@@ -97,13 +92,9 @@ var _ = Describe("Validating Network mapping", func() {
 
 		Expect(failures).To(BeEmpty())
 	},
-		table.Entry("Direct network with mapping with name", createNic(&networkName, &networkID), &networkName, nil),
-		table.Entry("Direct network with mapping with ID", createNic(&networkName, &networkID), nil, &networkID),
-		table.Entry("Direct network with mapping with both name and ID", createNic(&networkName, &networkID), &networkName, &networkID),
-
-		table.Entry("Vnic profile network with mapping with name", createNicWithProfile(&networkName, &networkID), &networkName, nil),
-		table.Entry("Vnic profile network with mapping with ID", createNicWithProfile(&networkName, &networkID), nil, &networkID),
-		table.Entry("Vnic profile network with mapping with both name and ID", createNicWithProfile(&networkName, &networkID), &networkName, &networkID),
+		table.Entry("Vnic profile network with mapping with name", createNic(&networkName, &networkID), &networkName, nil),
+		table.Entry("Vnic profile network with mapping with ID", createNic(&networkName, &networkID), nil, &networkID),
+		table.Entry("Vnic profile network with mapping with both name and ID", createNic(&networkName, &networkID), &networkName, &networkID),
 	)
 	It("should accept mapping for no type", func() {
 		nics := []*ovirtsdk.Nic{
@@ -165,7 +156,7 @@ var _ = Describe("Validating Network mapping", func() {
 			},
 		}
 
-		findNadMock = func() (*netv1.NetworkAttachmentDefinition, error) {
+		findNetAttachDefMock = func() (*netv1.NetworkAttachmentDefinition, error) {
 			return nil, fmt.Errorf("boom")
 		}
 
@@ -197,23 +188,29 @@ var _ = Describe("Validating Network mapping", func() {
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(NetworkTypeID))
 	})
+	It("should reject nil mapping", func() {
+		nics := []*ovirtsdk.Nic{
+			createNic(&networkName, &networkID),
+		}
+
+		failures := validator.ValidateNetworkMapping(nics, nil, namespace)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(NetworkMappingID))
+	})
+	It("should accept nil mapping and one nic with no vnic profile", func() {
+		nic := ovirtsdk.Nic{}
+		nics := []*ovirtsdk.Nic{
+			&nic,
+		}
+
+		failures := validator.ValidateNetworkMapping(nics, nil, namespace)
+
+		Expect(failures).To(BeEmpty())
+	})
 })
 
 func createNic(networkName *string, networkID *string) *ovirtsdk.Nic {
-	nic := ovirtsdk.Nic{}
-	network := ovirtsdk.Network{}
-	if networkID != nil {
-		network.SetId(*networkID)
-	}
-	if networkName != nil {
-		network.SetName(*networkName)
-	}
-
-	nic.SetNetwork(&network)
-	return &nic
-}
-
-func createNicWithProfile(networkName *string, networkID *string) *ovirtsdk.Nic {
 	nic := ovirtsdk.Nic{}
 	network := ovirtsdk.Network{}
 	if networkID != nil {
@@ -228,8 +225,8 @@ func createNicWithProfile(networkName *string, networkID *string) *ovirtsdk.Nic 
 	return &nic
 }
 
-type mockNadProvider struct{}
+type mockNetAttachDefProvider struct{}
 
-func (m *mockNadProvider) Find(name string, namespace string) (*netv1.NetworkAttachmentDefinition, error) {
-	return findNadMock()
+func (m *mockNetAttachDefProvider) Find(name string, namespace string) (*netv1.NetworkAttachmentDefinition, error) {
+	return findNetAttachDefMock()
 }
