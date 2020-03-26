@@ -140,7 +140,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	// Load the external resource mapping
-	resourceMapping, err := r.fetchResourceMapping(&instance.Spec.ResourceMapping)
+	resourceMapping, err := r.fetchResourceMapping(instance.Spec.ResourceMapping)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
