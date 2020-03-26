@@ -122,7 +122,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		return reconcile.Result{}, err
 	}
 
-	provider, err := createProvider(instance.Spec.Source)
+	provider, err := r.createProvider(instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -137,6 +137,26 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	err = provider.LoadVM(instance.Spec.Source)
 	if err != nil {
 		return reconcile.Result{}, err
+	}
+
+	// Load the external resource mapping
+	resourceMapping, err := r.fetchResourceMapping(&instance.Spec.ResourceMapping)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Prepare/merge the resourceMapping
+	err = provider.PrepareResourceMapping(resourceMapping, instance.Spec.Source)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	// Validate if it's needed at this stage of processing
+	if shouldValidate(&instance.Status) {
+		err = provider.Validate()
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// Stop VM
@@ -219,6 +239,11 @@ func (r *ReconcileVirtualMachineImport) fetchSecret(vmImport *v2vv1alpha1.Virtua
 	return secret, err
 }
 
+func (r *ReconcileVirtualMachineImport) fetchResourceMapping(resourceMappingID *v2vv1alpha1.ObjectIdentifier) (*v2vv1alpha1.ResourceMappingSpec, error) {
+	// TODO: fetch the mapping
+	return nil, nil
+}
+
 func (r *ReconcileVirtualMachineImport) ensureDVSecretExists(instance *v2vv1alpha1.VirtualMachineImport, namespace string, dvCreds provider.DataVolumeCredentials) error {
 	secretObj := &corev1.Secret{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: dvCreds.SecretName, Namespace: namespace}, secretObj)
@@ -266,10 +291,17 @@ func createDVSecret(creds provider.DataVolumeCredentials, vmImport *v2vv1alpha1.
 	}
 }
 
-func createProvider(source v2vv1alpha1.VirtualMachineImportSourceSpec) (provider.Provider, error) {
+func shouldValidate(vmi *v2vv1alpha1.VirtualMachineImportStatus) bool {
+	// TODO: check the status - status manipulation package is needed
+	return true
+}
+
+func (r *ReconcileVirtualMachineImport) createProvider(vmi *v2vv1alpha1.VirtualMachineImport) (provider.Provider, error) {
 	// The type of the provider is evaluated based on the source field from the CR
-	if source.Ovirt != nil {
-		return &ovirtprovider.OvirtProvider{}, nil
+	if vmi.Spec.Source.Ovirt != nil {
+		namespacedName := types.NamespacedName{Name: vmi.Name, Namespace: vmi.Namespace}
+		provider := ovirtprovider.NewOvirtProvider(namespacedName, r.client, r.kubeClient)
+		return &provider, nil
 	}
 
 	return nil, fmt.Errorf("Invalid source type. only Ovirt type is supported")

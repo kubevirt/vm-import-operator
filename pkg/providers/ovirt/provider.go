@@ -3,19 +3,24 @@ package ovirtprovider
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	ovirtclient "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/client"
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
+	"kubevirt.io/client-go/kubecli"
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -36,7 +41,19 @@ var (
 type OvirtProvider struct {
 	ovirtSecretDataMap map[string]string
 	ovirtClient        ovirtclient.OvirtClient
+	validator          validation.VirtualMachineImportValidator
 	vm                 *ovirtsdk.Vm
+	vmiCrName          types.NamespacedName
+	resourceMapping    *v2vv1alpha1.OvirtMappings
+}
+
+// NewOvirtProvider creates new OvirtProvider configured with dependencies
+func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, kubevirtClient kubecli.KubevirtClient) OvirtProvider {
+	provider := OvirtProvider{
+		vmiCrName: vmiCrName,
+		validator: validation.NewVirtualMachineImportValidator(client, kubevirtClient),
+	}
+	return provider
 }
 
 // GetDataVolumeCredentials returns the data volume credentials based on ovirt secret
@@ -112,6 +129,21 @@ func (o *OvirtProvider) LoadVM(sourceSpec v2vv1alpha1.VirtualMachineImportSource
 	}
 	o.vm = vm
 	return nil
+}
+
+// PrepareResourceMapping merges external resource mapping and resource mapping provided in the virtual machine import spec
+func (o *OvirtProvider) PrepareResourceMapping(externalResourceMapping *v2vv1alpha1.ResourceMappingSpec, vmiSpec v2vv1alpha1.VirtualMachineImportSourceSpec) error {
+	o.resourceMapping = vmiSpec.Ovirt.Mappings
+	// TODO: merge the mappings
+	return nil
+}
+
+// Validate validates whether loaded previously VM and resource mapping is valid. The validation results are recorded in th VMI CR identified by vmiCrName and in case of a validation failure error is returned.
+func (o *OvirtProvider) Validate() error {
+	if o.vm == nil {
+		return errors.New("VM has not been loaded")
+	}
+	return o.validator.Validate(o.vm, &o.vmiCrName, o.resourceMapping)
 }
 
 // StopVM stop the source VM on ovirt
