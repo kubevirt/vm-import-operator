@@ -35,6 +35,7 @@ const (
 	okReason    = string(v2vv1alpha1.MappingRulesCheckingCompleted)
 
 	incompleteMappingRulesReason = string(v2vv1alpha1.IncompleteMappingRules)
+	validationCompletedReason    = string(v2vv1alpha1.ValidationCompleted)
 )
 
 var checkToAction = map[validators.CheckID]action{
@@ -102,6 +103,7 @@ type Validator interface {
 	ValidateDiskAttachments(diskAttachments []*ovirtsdk.DiskAttachment) []validators.ValidationFailure
 	ValidateNics(nics []*ovirtsdk.Nic) []validators.ValidationFailure
 	ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.ResourceMappingItem, crNamespace string) []validators.ValidationFailure
+	ValidateStorageMapping(attachments []*ovirtsdk.DiskAttachment, mapping *[]v2vv1alpha1.ResourceMappingItem) []validators.ValidationFailure
 }
 
 // VirtualMachineImportValidator validates VirtualMachineImport object
@@ -142,8 +144,13 @@ func (validator *VirtualMachineImportValidator) validateMappings(vm *ovirtsdk.Vm
 
 	if nics, ok := vm.Nics(); ok {
 		nSlice := nics.Slice()
-		failures = validator.Validator.ValidateNetworkMapping(nSlice, mappings.NetworkMappings, vmiCrName.Namespace)
+		failures = append(failures, validator.Validator.ValidateNetworkMapping(nSlice, mappings.NetworkMappings, vmiCrName.Namespace)...)
 	}
+	if attachments, ok := vm.DiskAttachments(); ok {
+		das := attachments.Slice()
+		failures = append(failures, validator.Validator.ValidateStorageMapping(das, mappings.StorageMappings)...)
+	}
+
 	return validator.processMappingValidationFailures(failures, vmiCrName)
 }
 
@@ -153,20 +160,25 @@ func (validator *VirtualMachineImportValidator) processMappingValidationFailures
 	for _, failure := range failures {
 		message = withMessage(message, failure.Message)
 	}
+	instance := &v2vv1alpha1.VirtualMachineImport{}
+	err := validator.client.Get(context.TODO(), *vmiCrName, instance)
+	if err != nil {
+		return err
+	}
+	copy := instance.DeepCopy()
 
 	if len(failures) > 0 {
-		instance := &v2vv1alpha1.VirtualMachineImport{}
-		err := validator.client.Get(context.TODO(), *vmiCrName, instance)
-		if err != nil {
-			return err
-		}
-		copy := instance.DeepCopy()
 		updateCondition(&copy.Status.Conditions, incompleteMappingRulesReason, message, false, v2vv1alpha1.Validating)
 		err = validator.client.Status().Update(context.TODO(), copy)
 		if err != nil {
 			return err
 		}
 		return fmt.Errorf("Mapping rules validation failed for %v. Reasons: %s", vmiCrName, message)
+	}
+	updateCondition(&copy.Status.Conditions, validationCompletedReason, "Validating completed successfully", true, v2vv1alpha1.Validating)
+	err = validator.client.Status().Update(context.TODO(), copy)
+	if err != nil {
+		return err
 	}
 
 	return nil

@@ -24,6 +24,7 @@ require (
 	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.17.1
 	k8s.io/apimachinery v0.17.1
+	k8s.io/apiserver v0.16.4
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
 	kubevirt.io/client-go v0.26.2

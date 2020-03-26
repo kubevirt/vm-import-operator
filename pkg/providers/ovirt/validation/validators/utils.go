@@ -1,6 +1,10 @@
 package validators
 
-import "fmt"
+import (
+	"fmt"
+
+	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+)
 
 // GetMapKeys gets all keys from a map as a slice
 func GetMapKeys(theMap map[string]string) []string {
@@ -34,4 +38,19 @@ func ToLoggableID(id *string, name *string) string {
 		identifier = fmt.Sprintf("%s%s ", *name, identifier)
 	}
 	return identifier
+}
+
+// IndexByIDAndName indexes mapping array by ID and by Name
+func IndexByIDAndName(mapping *[]v2vv1alpha1.ResourceMappingItem) (mapByID map[string]v2vv1alpha1.ResourceMappingItem, mapByName map[string]v2vv1alpha1.ResourceMappingItem) {
+	mapByID = make(map[string]v2vv1alpha1.ResourceMappingItem)
+	mapByName = make(map[string]v2vv1alpha1.ResourceMappingItem)
+	for _, item := range *mapping {
+		if item.Source.ID != nil {
+			mapByID[*item.Source.ID] = item
+		}
+		if item.Source.Name != nil {
+			mapByName[*item.Source.Name] = item
+		}
+	}
+	return
 }
