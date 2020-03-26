@@ -429,7 +429,11 @@ func (in *VirtualMachineImportSourceSpec) DeepCopy() *VirtualMachineImportSource
 func (in *VirtualMachineImportSpec) DeepCopyInto(out *VirtualMachineImportSpec) {
 	*out = *in
 	in.ProviderCredentialsSecret.DeepCopyInto(&out.ProviderCredentialsSecret)
-	in.ResourceMapping.DeepCopyInto(&out.ResourceMapping)
+	if in.ResourceMapping != nil {
+		in, out := &in.ResourceMapping, &out.ResourceMapping
+		*out = new(ObjectIdentifier)
+		(*in).DeepCopyInto(*out)
+	}
 	in.Source.DeepCopyInto(&out.Source)
 	if in.TargetVMName != nil {
 		in, out := &in.TargetVMName, &out.TargetVMName
