@@ -13,6 +13,7 @@ import (
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	ovirtclient "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/client"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation"
+	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
@@ -173,16 +174,21 @@ func (o *OvirtProvider) CreateVMSpec(vmImport *v2vv1alpha1.VirtualMachineImport)
 		}
 	}
 	running := false
-	name, _ := o.vm.Name()
-	if vmImport.Spec.TargetVMName != nil {
-		name = *vmImport.Spec.TargetVMName
+	// TODO: TargetVMName should be validated by admission for compliance with DNS-1123 format
+	name, shouldGenerate := resolveVMName(vmImport.Spec.TargetVMName, o.vm)
+	objectMeta := metav1.ObjectMeta{
+		Namespace: vmImport.Namespace,
+		Labels:    labels,
 	}
+	if shouldGenerate {
+		// TODO: consider a uniquer value for VM name prefix, perhaps crName
+		objectMeta.GenerateName = "ovirt-"
+	} else {
+		objectMeta.Name = name
+	}
+	// TODO: The VM Spec is idempotent, however, we should add a notation by which we should search for the VM (e.g label/ownerReference)
 	return &kubevirtv1.VirtualMachine{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: vmImport.Namespace,
-			Labels:    labels,
-		},
+		ObjectMeta: objectMeta,
 		Spec: kubevirtv1.VirtualMachineSpec{
 			Running: &running,
 			Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
@@ -322,4 +328,23 @@ func getDiskAttachmentByID(id string, diskAttachments *ovirtsdk.DiskAttachmentSl
 		}
 	}
 	return nil
+}
+
+func resolveVMName(targetVMName *string, vm *ovirtsdk.Vm) (string, bool) {
+	if targetVMName != nil {
+		return *targetVMName, false
+	}
+
+	name, ok := vm.Name()
+	if !ok {
+		return "", true
+	}
+
+	name, err := utils.NormalizeName(name)
+	if err != nil {
+		// TODO: should name validation be included in condition ?
+		return "", true
+	}
+
+	return name, false
 }
