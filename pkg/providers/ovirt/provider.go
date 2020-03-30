@@ -5,19 +5,17 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strconv"
 
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mappings"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	ovirtclient "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/client"
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation"
-	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
@@ -29,7 +27,6 @@ import (
 const (
 	ovirtSecret    = "ovirt-key"
 	ovirtConfigmap = "ovirt-ca"
-	cdiAPIVersion  = "cdi.kubevirt.io/v1alpha1"
 	ovirtLabel     = "oVirt"
 	ovirtSecretKey = "ovirt"
 )
@@ -157,103 +154,9 @@ func (o *OvirtProvider) StopVM() error {
 	return nil
 }
 
-// CreateVMSpec creates the VM spec based on the source VM
-func (o *OvirtProvider) CreateVMSpec(vmImport *v2vv1alpha1.VirtualMachineImport) *kubevirtv1.VirtualMachine {
-	cpu := &kubevirtv1.CPU{}
-	if cpuDef, available := o.vm.Cpu(); available {
-		if topology, available := cpuDef.Topology(); available {
-			if cores, available := topology.Cores(); available {
-				cpu.Cores = uint32(cores)
-			}
-			if sockets, available := topology.Sockets(); available {
-				cpu.Sockets = uint32(sockets)
-			}
-			if threads, available := topology.Threads(); available {
-				cpu.Threads = uint32(threads)
-			}
-		}
-	}
-	running := false
-	// TODO: TargetVMName should be validated by admission for compliance with DNS-1123 format
-	name, shouldGenerate := resolveVMName(vmImport.Spec.TargetVMName, o.vm)
-	objectMeta := metav1.ObjectMeta{
-		Namespace: vmImport.Namespace,
-		Labels:    labels,
-	}
-	if shouldGenerate {
-		// TODO: consider a uniquer value for VM name prefix, perhaps crName
-		objectMeta.GenerateName = "ovirt-"
-	} else {
-		objectMeta.Name = name
-	}
-	// TODO: The VM Spec is idempotent, however, we should add a notation by which we should search for the VM (e.g label/ownerReference)
-	return &kubevirtv1.VirtualMachine{
-		ObjectMeta: objectMeta,
-		Spec: kubevirtv1.VirtualMachineSpec{
-			Running: &running,
-			Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
-				},
-				Spec: kubevirtv1.VirtualMachineInstanceSpec{
-					Domain: kubevirtv1.DomainSpec{
-						CPU: cpu,
-						// Memory:  &kubevirtv1.Memory{},
-						// Machine:   kubevirtv1.Machine{},
-						// Firmware:  &kubevirtv1.Firmware{},
-						// Clock:     &kubevirtv1.Clock{},
-						// Features:  &kubevirtv1.Features{},
-						// Chassis:   &kubevirtv1.Chassis{},
-						// IOThreadsPolicy: &kubevirtv1.IOThreadsPolicy{},
-					},
-				},
-			},
-		},
-	}
-}
-
-// CreateDataVolumeMap returns the data-volume specifications for the target VM
-func (o *OvirtProvider) CreateDataVolumeMap(namespace string) map[string]cdiv1.DataVolume {
-	diskAttachments, _ := o.vm.DiskAttachments()
-	dvs := make(map[string]cdiv1.DataVolume, len(diskAttachments.Slice()))
-	for _, diskAttachment := range diskAttachments.Slice() {
-		attachID, _ := diskAttachment.Id()
-		disk, _ := diskAttachment.Disk()
-		diskID, _ := disk.Id()
-		quantity, _ := resource.ParseQuantity(strconv.FormatInt(disk.MustProvisionedSize(), 10))
-		dvs[attachID] = cdiv1.DataVolume{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: cdiAPIVersion,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      attachID,
-				Namespace: namespace,
-				Labels:    labels,
-			},
-			Spec: cdiv1.DataVolumeSpec{
-				Source: cdiv1.DataVolumeSource{
-					Imageio: &cdiv1.DataVolumeSourceImageIO{
-						URL:           o.ovirtSecretDataMap["apiUrl"],
-						DiskID:        diskID,
-						SecretRef:     ovirtSecret,
-						CertConfigMap: ovirtConfigmap,
-					},
-				},
-				// TODO: Should be done according to mappings
-				PVC: &corev1.PersistentVolumeClaimSpec{
-					AccessModes: []corev1.PersistentVolumeAccessMode{
-						corev1.ReadWriteOnce,
-					},
-					Resources: corev1.ResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: quantity,
-						},
-					},
-				},
-			},
-		}
-	}
-	return dvs
+// CreateMapper create the mapper for ovirt provider
+func (o *OvirtProvider) CreateMapper() provider.Mapper {
+	return mapper.NewOvirtMapper(o.vm, o.resourceMapping, o.GetDataVolumeCredentials(), o.vmiCrName.Namespace)
 }
 
 // UpdateVM updates VM specification with data volumes information
@@ -328,23 +231,4 @@ func getDiskAttachmentByID(id string, diskAttachments *ovirtsdk.DiskAttachmentSl
 		}
 	}
 	return nil
-}
-
-func resolveVMName(targetVMName *string, vm *ovirtsdk.Vm) (string, bool) {
-	if targetVMName != nil {
-		return *targetVMName, false
-	}
-
-	name, ok := vm.Name()
-	if !ok {
-		return "", true
-	}
-
-	name, err := utils.NormalizeName(name)
-	if err != nil {
-		// TODO: should name validation be included in condition ?
-		return "", true
-	}
-
-	return name, false
 }

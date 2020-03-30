@@ -15,10 +15,15 @@ type Provider interface {
 	PrepareResourceMapping(*v2vv1alpha1.ResourceMappingSpec, v2vv1alpha1.VirtualMachineImportSourceSpec)
 	Validate() error
 	StopVM() error
-	CreateVMSpec(vmImport *v2vv1alpha1.VirtualMachineImport) *kubevirtv1.VirtualMachine
 	GetDataVolumeCredentials() DataVolumeCredentials
-	CreateDataVolumeMap(namespace string) map[string]cdiv1.DataVolume
 	UpdateVM(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume)
+	CreateMapper() Mapper
+}
+
+// Mapper is interface to be used for mapping external VM to kubevirt VM
+type Mapper interface {
+	MapVM(targetVMName *string) *kubevirtv1.VirtualMachine
+	MapDisks() map[string]cdiv1.DataVolume
 }
 
 // DataVolumeCredentials defines the credentials required for creating a data volume
