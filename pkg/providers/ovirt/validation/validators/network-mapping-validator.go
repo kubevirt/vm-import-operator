@@ -7,6 +7,7 @@ import (
 
 	netv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
 
@@ -44,7 +45,7 @@ func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, m
 	}
 
 	// Map source id and name to ResourceMappingItem
-	mapByID, mapByName := IndexByIDAndName(mapping)
+	mapByID, mapByName := utils.IndexByIDAndName(mapping)
 	// Get all networks needed by the VM as slice of sources
 	requiredNetworks := v.getRequiredNetworks(nics)
 
@@ -67,7 +68,7 @@ func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, m
 		}
 		failures = append(failures, ValidationFailure{
 			ID:      NetworkMappingID,
-			Message: fmt.Sprintf("Required source network '%s' lacks mapping", ToLoggableID(network.ID, network.Name)),
+			Message: fmt.Sprintf("Required source network '%s' lacks mapping", utils.ToLoggableID(network.ID, network.Name)),
 		})
 	}
 
@@ -101,7 +102,7 @@ func (v *NetworkMappingValidator) validateNetwork(networkID v2vv1alpha1.ObjectId
 	default:
 		return ValidationFailure{
 			ID:      NetworkTypeID,
-			Message: fmt.Sprintf("Network %s has unsupported network type: %s", ToLoggableResourceName(networkID.Name, networkID.Namespace), networkType),
+			Message: fmt.Sprintf("Network %s has unsupported network type: %s", utils.ToLoggableResourceName(networkID.Name, networkID.Namespace), networkType),
 		}, false
 	}
 }
@@ -115,7 +116,7 @@ func (v *NetworkMappingValidator) isValidMultusNetwork(networkID v2vv1alpha1.Obj
 	if err != nil {
 		return ValidationFailure{
 			ID:      NetworkTargetID,
-			Message: fmt.Sprintf("Network Attachment Defintion %s has not been found. Error: %v", ToLoggableResourceName(networkID.Name, &namespace), err),
+			Message: fmt.Sprintf("Network Attachment Defintion %s has not been found. Error: %v", utils.ToLoggableResourceName(networkID.Name, &namespace), err),
 		}, false
 	}
 

@@ -3,6 +3,7 @@ package validators
 import (
 	"fmt"
 
+	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
 
@@ -62,7 +63,7 @@ func isValidNicInterfaceModel(nic *ovirtsdk.Nic, nicID string) (ValidationFailur
 	if _, found := InterfaceModelMapping[string(iFace)]; !ok || !found {
 		return ValidationFailure{
 			ID:      NicInterfaceCheckID,
-			Message: fmt.Sprintf("interface %s uses model %s that is not supported. Supported models: %v", nicID, iFace, GetMapKeys(InterfaceModelMapping)),
+			Message: fmt.Sprintf("interface %s uses model %s that is not supported. Supported models: %v", nicID, iFace, utils.GetMapKeys(InterfaceModelMapping)),
 		}, false
 	}
 	return ValidationFailure{}, true

@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/pkg/mappings"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	ovirtprovider "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt"
 	corev1 "k8s.io/api/core/v1"
@@ -51,7 +52,9 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 		log.Error(err, "Unable to get KubeVirt client")
 		panic("Controller cannot operate without KubeVirt")
 	}
-	return &ReconcileVirtualMachineImport{client: mgr.GetClient(), scheme: mgr.GetScheme(), kubeClient: kubeClient}
+	client := mgr.GetClient()
+	finder := mappings.NewResourceMappingsFinder(client)
+	return &ReconcileVirtualMachineImport{client: client, scheme: mgr.GetScheme(), kubeClient: kubeClient, resourceMappingsFinder: finder}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -88,9 +91,10 @@ var _ reconcile.Reconciler = &ReconcileVirtualMachineImport{}
 type ReconcileVirtualMachineImport struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client     client.Client
-	scheme     *runtime.Scheme
-	kubeClient kubecli.KubevirtClient
+	client                 client.Client
+	scheme                 *runtime.Scheme
+	kubeClient             kubecli.KubevirtClient
+	resourceMappingsFinder mappings.ResourceMappingsFinder
 }
 
 // Reconcile reads that state of the cluster for a VirtualMachineImport object and makes changes based on the state read
@@ -140,16 +144,14 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	// Load the external resource mapping
-	resourceMapping, err := r.fetchResourceMapping(instance.Spec.ResourceMapping)
+	resourceMapping, err := r.fetchResourceMapping(instance.Spec.ResourceMapping, instance.Namespace)
 	if err != nil {
+		//TODO: update Validating status condition
 		return reconcile.Result{}, err
 	}
 
 	// Prepare/merge the resourceMapping
-	err = provider.PrepareResourceMapping(resourceMapping, instance.Spec.Source)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
+	provider.PrepareResourceMapping(resourceMapping, instance.Spec.Source)
 
 	// Validate if it's needed at this stage of processing
 	if shouldValidate(&instance.Status) {
@@ -239,9 +241,19 @@ func (r *ReconcileVirtualMachineImport) fetchSecret(vmImport *v2vv1alpha1.Virtua
 	return secret, err
 }
 
-func (r *ReconcileVirtualMachineImport) fetchResourceMapping(resourceMappingID *v2vv1alpha1.ObjectIdentifier) (*v2vv1alpha1.ResourceMappingSpec, error) {
-	// TODO: fetch the mapping
-	return nil, nil
+func (r *ReconcileVirtualMachineImport) fetchResourceMapping(resourceMappingID *v2vv1alpha1.ObjectIdentifier, crNamespace string) (*v2vv1alpha1.ResourceMappingSpec, error) {
+	if resourceMappingID == nil {
+		return nil, nil
+	}
+	namespace := crNamespace
+	if resourceMappingID.Namespace != nil {
+		namespace = *resourceMappingID.Namespace
+	}
+	resourceMapping, err := r.resourceMappingsFinder.GetResourceMapping(types.NamespacedName{Name: resourceMappingID.Name, Namespace: namespace})
+	if err != nil {
+		return nil, err
+	}
+	return &resourceMapping.Spec, nil
 }
 
 func (r *ReconcileVirtualMachineImport) ensureDVSecretExists(instance *v2vv1alpha1.VirtualMachineImport, namespace string, dvCreds provider.DataVolumeCredentials) error {

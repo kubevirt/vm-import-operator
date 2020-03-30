@@ -12,7 +12,7 @@ type Provider interface {
 	Connect(*corev1.Secret) error
 	Close()
 	LoadVM(v2vv1alpha1.VirtualMachineImportSourceSpec) error
-	PrepareResourceMapping(*v2vv1alpha1.ResourceMappingSpec, v2vv1alpha1.VirtualMachineImportSourceSpec) error
+	PrepareResourceMapping(*v2vv1alpha1.ResourceMappingSpec, v2vv1alpha1.VirtualMachineImportSourceSpec)
 	Validate() error
 	StopVM() error
 	CreateVMSpec(vmImport *v2vv1alpha1.VirtualMachineImport) *kubevirtv1.VirtualMachine

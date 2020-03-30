@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mappings"
+
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	ovirtclient "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/client"
@@ -132,10 +134,8 @@ func (o *OvirtProvider) LoadVM(sourceSpec v2vv1alpha1.VirtualMachineImportSource
 }
 
 // PrepareResourceMapping merges external resource mapping and resource mapping provided in the virtual machine import spec
-func (o *OvirtProvider) PrepareResourceMapping(externalResourceMapping *v2vv1alpha1.ResourceMappingSpec, vmiSpec v2vv1alpha1.VirtualMachineImportSourceSpec) error {
-	o.resourceMapping = vmiSpec.Ovirt.Mappings
-	// TODO: merge the mappings
-	return nil
+func (o *OvirtProvider) PrepareResourceMapping(externalResourceMapping *v2vv1alpha1.ResourceMappingSpec, vmiSpec v2vv1alpha1.VirtualMachineImportSourceSpec) {
+	o.resourceMapping = mappings.MergeMappings(externalResourceMapping, vmiSpec.Ovirt.Mappings)
 }
 
 // Validate validates whether loaded previously VM and resource mapping is valid. The validation results are recorded in th VMI CR identified by vmiCrName and in case of a validation failure error is returned.
