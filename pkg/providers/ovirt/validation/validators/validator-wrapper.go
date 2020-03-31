@@ -14,9 +14,15 @@ type ValidatorWrapper struct {
 
 // NewValidatorWrapper creates new, configured ValidatorWrapper
 func NewValidatorWrapper(kubevirt kubecli.KubevirtClient) *ValidatorWrapper {
+	netAttachDefProvider := NetworkAttachmentDefinitions{
+		Client: kubevirt.NetworkClient(),
+	}
+	storageClassesProvider := StorageClasses{
+		Client: kubevirt.StorageV1().StorageClasses(),
+	}
 	return &ValidatorWrapper{
-		networkMappingValidator: NewNetworkMappingValidator(kubevirt),
-		storageMappingValidator: NewStorageMappingValidator(kubevirt),
+		networkMappingValidator: NewNetworkMappingValidator(&netAttachDefProvider),
+		storageMappingValidator: NewStorageMappingValidator(&storageClassesProvider),
 	}
 }
 

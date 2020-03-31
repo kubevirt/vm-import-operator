@@ -1,8 +1,9 @@
-package validators
+package validators_test
 
 import (
 	netv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -28,9 +29,7 @@ var (
 )
 
 var _ = Describe("Validating Network mapping", func() {
-	validator := NetworkMappingValidator{
-		provider: &mockNetAttachDefProvider{},
-	}
+	validator := validators.NewNetworkMappingValidator(&mockNetAttachDefProvider{})
 	BeforeEach(func() {
 		findNetAttachDefMock = func(name string) (*netv1.NetworkAttachmentDefinition, error) {
 			netAttachDef := netv1.NetworkAttachmentDefinition{
@@ -63,7 +62,7 @@ var _ = Describe("Validating Network mapping", func() {
 		failures := validator.ValidateNetworkMapping(nics, &mapping, namespace)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(NetworkMappingID))
+		Expect(failures[0].ID).To(Equal(validators.NetworkMappingID))
 	},
 		table.Entry("Vnic profile network with no mapping", createNic(&networkName, &networkID), nil, nil),
 		table.Entry("Vnic profile network with ID mismatch", createNic(&networkName, &networkID), nil, &wrongNetworkID),
@@ -207,7 +206,7 @@ var _ = Describe("Validating Network mapping", func() {
 		failures := validator.ValidateNetworkMapping(nics, &mapping, namespace)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(NetworkTargetID))
+		Expect(failures[0].ID).To(Equal(validators.NetworkTargetID))
 	})
 	It("should reject genie type", func() {
 		nics := []*ovirtsdk.Nic{
@@ -230,7 +229,7 @@ var _ = Describe("Validating Network mapping", func() {
 		failures := validator.ValidateNetworkMapping(nics, &mapping, namespace)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(NetworkTypeID))
+		Expect(failures[0].ID).To(Equal(validators.NetworkTypeID))
 	})
 	It("should reject nil mapping", func() {
 		nics := []*ovirtsdk.Nic{
@@ -240,7 +239,7 @@ var _ = Describe("Validating Network mapping", func() {
 		failures := validator.ValidateNetworkMapping(nics, nil, namespace)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(NetworkMappingID))
+		Expect(failures[0].ID).To(Equal(validators.NetworkMappingID))
 	})
 	It("should accept nil mapping and one nic with no vnic profile", func() {
 		nic := ovirtsdk.Nic{}

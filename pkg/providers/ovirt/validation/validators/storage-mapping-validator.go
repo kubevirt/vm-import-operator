@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	v1 "k8s.io/api/storage/v1"
-	"kubevirt.io/client-go/kubecli"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
@@ -21,12 +20,10 @@ type StorageMappingValidator struct {
 	provider StorageClassProvider
 }
 
-// NewStorageMappingValidator creates new StorageMappingValidator that will use provided KubevirtClient
-func NewStorageMappingValidator(kubevirt kubecli.KubevirtClient) StorageMappingValidator {
+// NewStorageMappingValidator creates new StorageMappingValidator that will use given provider
+func NewStorageMappingValidator(provider StorageClassProvider) StorageMappingValidator {
 	return StorageMappingValidator{
-		provider: &StorageClasses{
-			Client: kubevirt.StorageV1().StorageClasses(),
-		},
+		provider: provider,
 	}
 }
 
