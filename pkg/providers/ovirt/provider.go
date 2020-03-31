@@ -13,6 +13,7 @@ import (
 	ovirtclient "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/client"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation"
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
@@ -49,9 +50,10 @@ type OvirtProvider struct {
 
 // NewOvirtProvider creates new OvirtProvider configured with dependencies
 func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, kubevirtClient kubecli.KubevirtClient) OvirtProvider {
+	validator := validators.NewValidatorWrapper(kubevirtClient)
 	provider := OvirtProvider{
 		vmiCrName: vmiCrName,
-		validator: validation.NewVirtualMachineImportValidator(client, kubevirtClient),
+		validator: validation.NewVirtualMachineImportValidator(client, validator),
 	}
 	return provider
 }

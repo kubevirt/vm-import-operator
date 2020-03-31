@@ -12,8 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"kubevirt.io/client-go/kubecli"
-
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -113,9 +111,9 @@ type VirtualMachineImportValidator struct {
 }
 
 // NewVirtualMachineImportValidator creates ready-to-use NewVirtualMachineImportValidator
-func NewVirtualMachineImportValidator(client client.Client, kubevirtClient kubecli.KubevirtClient) VirtualMachineImportValidator {
+func NewVirtualMachineImportValidator(client client.Client, validator Validator) VirtualMachineImportValidator {
 	return VirtualMachineImportValidator{
-		Validator: validators.NewValidatorWrapper(kubevirtClient),
+		Validator: validator,
 		client:    client,
 	}
 }
