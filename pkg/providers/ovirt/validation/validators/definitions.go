@@ -117,6 +117,10 @@ const (
 	StorageMappingID = CheckID("storage.mapping")
 	// StorageTargetID defines an ID of a check verifying existence of target storage class
 	StorageTargetID = CheckID("storage.target")
+	// DiskMappingID defines an ID of a check verifying that all the required source disks are present in the resource mapping
+	DiskMappingID = CheckID("disk.mapping")
+	// DiskTargetID defines an ID of a check verifying existence of target storage class
+	DiskTargetID = CheckID("disk.target")
 )
 
 // CheckID identifies validation check for Virtual Machine Import

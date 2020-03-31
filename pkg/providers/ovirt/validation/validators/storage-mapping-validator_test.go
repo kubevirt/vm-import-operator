@@ -14,8 +14,13 @@ import (
 )
 
 var (
-	findStorageClassMock func() (*v1.StorageClass, error)
+	findStorageClassMock func(name string) (*v1.StorageClass, error)
 	targetStorageClass   = "myStorageClass"
+
+	diskID        = "disk-id"
+	diskName      = "disk-name"
+	wrongDiskID   = "wrong-disk-id"
+	wrongDiskName = "wrong-disk-name"
 
 	domainName      = "domain"
 	domainID        = "domain-id"
@@ -26,7 +31,7 @@ var (
 var _ = Describe("Validating Storage mapping", func() {
 	validator := validators.NewStorageMappingValidator(&mockStorageClassProvider{})
 	BeforeEach(func() {
-		findStorageClassMock = func() (*v1.StorageClass, error) {
+		findStorageClassMock = func(name string) (*v1.StorageClass, error) {
 			sc := v1.StorageClass{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: targetNetworkName,
@@ -53,7 +58,7 @@ var _ = Describe("Validating Storage mapping", func() {
 			},
 		}
 
-		failures := validator.ValidateStorageMapping(das, &mapping)
+		failures := validator.ValidateStorageMapping(das, &mapping, nil)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.StorageMappingID))
@@ -81,7 +86,7 @@ var _ = Describe("Validating Storage mapping", func() {
 			},
 		}
 
-		failures := validator.ValidateStorageMapping(das, &mapping)
+		failures := validator.ValidateStorageMapping(das, &mapping, nil)
 
 		Expect(failures).To(BeEmpty())
 	},
@@ -108,11 +113,11 @@ var _ = Describe("Validating Storage mapping", func() {
 			},
 		}
 
-		findStorageClassMock = func() (*v1.StorageClass, error) {
+		findStorageClassMock = func(name string) (*v1.StorageClass, error) {
 			return nil, fmt.Errorf("boom")
 		}
 
-		failures := validator.ValidateStorageMapping(das, &mapping)
+		failures := validator.ValidateStorageMapping(das, &mapping, nil)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.StorageTargetID))
@@ -124,20 +129,197 @@ var _ = Describe("Validating Storage mapping", func() {
 			da,
 		}
 
-		failures := validator.ValidateStorageMapping(das, nil)
+		failures := validator.ValidateStorageMapping(das, nil, nil)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.StorageMappingID))
 	})
 })
 
+var _ = Describe("Validating Disk mapping", func() {
+	validator := validators.NewStorageMappingValidator(&mockStorageClassProvider{})
+	BeforeEach(func() {
+		findStorageClassMock = func(name string) (*v1.StorageClass, error) {
+			sc := v1.StorageClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: targetNetworkName,
+				},
+			}
+			return &sc, nil
+		}
+	})
+	table.DescribeTable("should reject missing mapping for: ", func(diskName *string, diskID *string) {
+		da := createDiskAttachment(createDomain(&domainName, &domainID))
+		das := []*ovirtsdk.DiskAttachment{
+			da,
+		}
+
+		diskMapping := []v2vv1alpha1.ResourceMappingItem{
+			v2vv1alpha1.ResourceMappingItem{
+				Source: v2vv1alpha1.Source{
+					Name: diskName,
+					ID:   diskID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: targetStorageClass,
+				},
+			},
+		}
+
+		failures := validator.ValidateStorageMapping(das, nil, &diskMapping)
+
+		Expect(failures).To(HaveLen(2))
+		Expect(failures[0].ID).To(Equal(validators.StorageMappingID))
+		Expect(failures[1].ID).To(Equal(validators.DiskMappingID))
+	},
+		table.Entry("No mapping", nil, nil),
+		table.Entry("ID mismatch", nil, &wrongDiskID),
+		table.Entry("name mismatch", &wrongDiskName, nil),
+		table.Entry("both name and ID wrong", &wrongDiskName, &wrongDiskID),
+	)
+	table.DescribeTable("should accept mapping for: ", func(diskName *string, diskID *string) {
+		da := createDiskAttachment(createDomain(&domainName, &domainID))
+		das := []*ovirtsdk.DiskAttachment{
+			da,
+		}
+
+		diskMapping := []v2vv1alpha1.ResourceMappingItem{
+			v2vv1alpha1.ResourceMappingItem{
+				Source: v2vv1alpha1.Source{
+					Name: diskName,
+					ID:   diskID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: targetStorageClass,
+				},
+			},
+		}
+
+		failures := validator.ValidateStorageMapping(das, nil, &diskMapping)
+
+		Expect(failures).To(BeEmpty())
+	},
+		table.Entry("mapping with ID", nil, &diskID),
+		table.Entry("mapping with name", &diskName, nil),
+		table.Entry("mapping with both name and ID", &diskName, &diskID),
+	)
+	It("should reject mapping for storage class retrieval error", func() {
+		da := createDiskAttachment(createDomain(&domainName, &domainID))
+		das := []*ovirtsdk.DiskAttachment{
+			da,
+		}
+
+		diskMapping := []v2vv1alpha1.ResourceMappingItem{
+			v2vv1alpha1.ResourceMappingItem{
+				Source: v2vv1alpha1.Source{
+					Name: &diskName,
+					ID:   &diskID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: targetStorageClass,
+				},
+			},
+		}
+
+		findStorageClassMock = func(name string) (*v1.StorageClass, error) {
+			return nil, fmt.Errorf("boom")
+		}
+
+		failures := validator.ValidateStorageMapping(das, nil, &diskMapping)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.DiskTargetID))
+	})
+	It("should reject nil mapping", func() {
+		da := createDiskAttachment(createDomain(&domainName, &domainID))
+		das := []*ovirtsdk.DiskAttachment{
+			da,
+		}
+
+		failures := validator.ValidateStorageMapping(das, &[]v2vv1alpha1.ResourceMappingItem{}, nil)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.StorageMappingID))
+	})
+	It("should accept mapping for storage class and disk mapping", func() {
+		sd := createDomain(&domainName, &domainID)
+		da := createDiskAttachment(sd)
+		customID := "custom-disk-id"
+		customName := "custom-disk-name"
+		customSDID := "custom-domain-id"
+		customSDName := "custom-domain-name"
+		customTargetStorageClass := "customStorageClass"
+		csd := createDomain(&customSDName, &customSDID)
+		cda := createCustomDiskAttachment(csd, customID, customName)
+		das := []*ovirtsdk.DiskAttachment{
+			da,
+			cda,
+		}
+
+		storageMapping := []v2vv1alpha1.ResourceMappingItem{
+			v2vv1alpha1.ResourceMappingItem{
+				Source: v2vv1alpha1.Source{
+					Name: &domainName,
+					ID:   &domainID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: targetStorageClass,
+				},
+			},
+		}
+
+		diskMapping := []v2vv1alpha1.ResourceMappingItem{
+			v2vv1alpha1.ResourceMappingItem{
+				Source: v2vv1alpha1.Source{
+					Name: &customName,
+					ID:   &customID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: customTargetStorageClass,
+				},
+			},
+		}
+
+		findStorageClassMock = func(name string) (*v1.StorageClass, error) {
+			if name == targetStorageClass {
+				sc := v1.StorageClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: targetStorageClass,
+					},
+				}
+				return &sc, nil
+			}
+			if name == customTargetStorageClass {
+				sc := v1.StorageClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: customTargetStorageClass,
+					},
+				}
+				return &sc, nil
+			}
+			return nil, fmt.Errorf("boom")
+		}
+
+		failures := validator.ValidateStorageMapping(das, &storageMapping, &diskMapping)
+
+		Expect(failures).To(BeEmpty())
+	})
+})
+
 func createDiskAttachment(sd *ovirtsdk.StorageDomain) *ovirtsdk.DiskAttachment {
+	return createCustomDiskAttachment(sd, diskID, diskName)
+}
+
+func createCustomDiskAttachment(sd *ovirtsdk.StorageDomain, diskID string, diskName string) *ovirtsdk.DiskAttachment {
 	disk := ovirtsdk.Disk{}
 	disk.SetStorageDomain(sd)
+	disk.SetId(diskID)
+	disk.SetAlias(diskName)
 	da := ovirtsdk.DiskAttachment{}
 	da.SetDisk(&disk)
 	return &da
 }
+
 func createDomain(name *string, id *string) *ovirtsdk.StorageDomain {
 	sd := ovirtsdk.StorageDomain{}
 	if name != nil {
@@ -152,5 +334,5 @@ func createDomain(name *string, id *string) *ovirtsdk.StorageDomain {
 type mockStorageClassProvider struct{}
 
 func (m *mockStorageClassProvider) Find(name string) (*v1.StorageClass, error) {
-	return findStorageClassMock()
+	return findStorageClassMock(name)
 }

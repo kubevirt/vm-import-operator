@@ -27,6 +27,16 @@ spec:
             target:
               name: pod
             type: pod
+        storageMappings:
+          - source:
+              name: storage_domain_1
+            target:
+              name: storage_class_1
+        diskMappings: # specifies per-disk placement on storage class
+          - source:
+              id: 8181ecc1-5db8-4193-9c92-3ddab3be7b05
+            target:
+              name: storage_class_1
 status:
   targetVmName: myvm # the name of the created virtual machine
   conditions:

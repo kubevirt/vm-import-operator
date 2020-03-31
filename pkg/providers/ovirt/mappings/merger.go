@@ -15,9 +15,13 @@ func MergeMappings(externalMappingSpec *v2vv1alpha1.ResourceMappingSpec, vmiMapp
 	networkMappings := mergeMappings(primaryMappings.NetworkMappings, secondaryMappings.NetworkMappings)
 	storageMappings := mergeMappings(primaryMappings.StorageMappings, secondaryMappings.StorageMappings)
 
+	// diskMappings are expected to be provided only for a specific VM Import CR
+	diskMappings := primaryMappings.DiskMappings
+
 	ovirtMappings := v2vv1alpha1.OvirtMappings{
 		NetworkMappings: networkMappings,
 		StorageMappings: storageMappings,
+		DiskMappings:    diskMappings,
 	}
 	return &ovirtMappings
 }

@@ -37,9 +37,9 @@ func ToLoggableID(id *string, name *string) string {
 	}
 	if name != nil {
 		if identifier != "" {
-			identifier = fmt.Sprintf("(%s) ", identifier)
+			identifier = fmt.Sprintf("(%s)", identifier)
 		}
-		identifier = fmt.Sprintf("%s%s ", *name, identifier)
+		identifier = fmt.Sprintf("%s%s", *name, identifier)
 	}
 	return identifier
 }
