@@ -1,4 +1,4 @@
-package mappings_test
+package conditions_test
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestMappings(t *testing.T) {
+func TestConditions(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Mappings Suite")
+	RunSpecs(t, "Conditions Suite")
 }
