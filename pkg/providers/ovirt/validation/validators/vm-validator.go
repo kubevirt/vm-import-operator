@@ -10,6 +10,7 @@ import (
 // BiosTypeMapping defines mapping of BIOS types between oVirt and kubevirt domains
 var BiosTypeMapping = map[string]string{"q35_ovmf": "efi", "q35_sea_bios": "bios", "q35_secure_boot": "bios"}
 
+// ValidateVM validates given VM
 func ValidateVM(vm *ovirtsdk.Vm) []ValidationFailure {
 	var results = isValidBios(vm)
 	results = append(results, isValidCPU(vm)...)

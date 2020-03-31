@@ -1,9 +1,10 @@
-package validators
+package validators_test
 
 import (
 	"fmt"
 	"math/rand"
 
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -14,11 +15,12 @@ var _ = Describe("Validating Disk Attachment", func() {
 	table.DescribeTable("should flag disk attachment with illegal interface: ", func(iface string) {
 		var attachment = newDiskAttachment()
 		attachment.SetInterface(ovirtsdk.DiskInterface(iface))
+		attachments := []*ovirtsdk.DiskAttachment{attachment}
 
-		failures := validateDiskAttachment(attachment)
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskAttachmentInterfaceID))
+		Expect(failures[0].ID).To(Equal(validators.DiskAttachmentInterfaceID))
 	},
 		table.Entry("ide", "pci"),
 		table.Entry("spapr_vscsi", "spapr_vscsi"),
@@ -30,7 +32,9 @@ var _ = Describe("Validating Disk Attachment", func() {
 		var attachment = newDiskAttachment()
 		attachment.SetInterface(ovirtsdk.DiskInterface(iface))
 
-		failures := validateDiskAttachment(attachment)
+		attachments := []*ovirtsdk.DiskAttachment{attachment}
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(BeEmpty())
 	},
@@ -42,28 +46,34 @@ var _ = Describe("Validating Disk Attachment", func() {
 		attachment := newDiskAttachment()
 		attachment.SetLogicalName("/dev/sdMy")
 
-		failures := validateDiskAttachment(attachment)
+		attachments := []*ovirtsdk.DiskAttachment{attachment}
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskAttachmentLogicalNameID))
+		Expect(failures[0].ID).To(Equal(validators.DiskAttachmentLogicalNameID))
 	})
 	It("should flag disk attachment with pass_discard == true: ", func() {
 		attachment := newDiskAttachment()
 		attachment.SetPassDiscard(true)
 
-		failures := validateDiskAttachment(attachment)
+		attachments := []*ovirtsdk.DiskAttachment{attachment}
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskAttachmentPassDiscardID))
+		Expect(failures[0].ID).To(Equal(validators.DiskAttachmentPassDiscardID))
 	})
 	It("should flag disk attachment with uses_scsi_reservation == true: ", func() {
 		attachment := newDiskAttachment()
 		attachment.SetUsesScsiReservation(true)
 
-		failures := validateDiskAttachment(attachment)
+		attachments := []*ovirtsdk.DiskAttachment{attachment}
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskAttachmentUsesScsiReservationID))
+		Expect(failures[0].ID).To(Equal(validators.DiskAttachmentUsesScsiReservationID))
 	})
 })
 
@@ -80,10 +90,12 @@ var _ = Describe("Validating Disk", func() {
 		var disk = newDisk()
 		disk.SetInterface(ovirtsdk.DiskInterface(iface))
 
-		failures := validateDisk(disk)
+		attachments := newDiskAttachmentsWithDisk(disk)
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskInterfaceID))
+		Expect(failures[0].ID).To(Equal(validators.DiskInterfaceID))
 	},
 		table.Entry("ide", "ide"),
 		table.Entry("spapr_vscsi", "spapr_vscsi"),
@@ -95,7 +107,9 @@ var _ = Describe("Validating Disk", func() {
 		var disk = newDisk()
 		disk.SetInterface(ovirtsdk.DiskInterface(iface))
 
-		failures := validateDisk(disk)
+		attachments := newDiskAttachmentsWithDisk(disk)
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(BeEmpty())
 	},
@@ -107,28 +121,34 @@ var _ = Describe("Validating Disk", func() {
 		disk := newDisk()
 		disk.SetLogicalName("/dev/sdMy")
 
-		failures := validateDisk(disk)
+		attachments := newDiskAttachmentsWithDisk(disk)
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskLogicalNameID))
+		Expect(failures[0].ID).To(Equal(validators.DiskLogicalNameID))
 	})
 	It("should flag disk with uses_scsi_reservation == true: ", func() {
 		disk := newDisk()
 		disk.SetUsesScsiReservation(true)
 
-		failures := validateDisk(disk)
+		attachments := newDiskAttachmentsWithDisk(disk)
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskUsesScsiReservationID))
+		Expect(failures[0].ID).To(Equal(validators.DiskUsesScsiReservationID))
 	})
 	It("should flag disk with backup == 'incremental': ", func() {
 		disk := newDisk()
 		disk.SetBackup(ovirtsdk.DiskBackup("incremental"))
 
-		failures := validateDisk(disk)
+		attachments := newDiskAttachmentsWithDisk(disk)
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskBackupID))
+		Expect(failures[0].ID).To(Equal(validators.DiskBackupID))
 	})
 	It("should flag disk with lun_storage present: ", func() {
 		disk := newDisk()
@@ -136,46 +156,56 @@ var _ = Describe("Validating Disk", func() {
 		lunStorage.SetId("Lun_id")
 		disk.SetLunStorage(&lunStorage)
 
-		failures := validateDisk(disk)
+		attachments := newDiskAttachmentsWithDisk(disk)
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskLunStorageID))
+		Expect(failures[0].ID).To(Equal(validators.DiskLunStorageID))
 	})
 	It("should flag disk with propagate_errors == true setting present: ", func() {
 		disk := newDisk()
 		disk.SetPropagateErrors(true)
 
-		failures := validateDisk(disk)
+		attachments := newDiskAttachmentsWithDisk(disk)
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskPropagateErrorsID))
+		Expect(failures[0].ID).To(Equal(validators.DiskPropagateErrorsID))
 	})
 	It("should flag disk with propagate_errors == false setting present: ", func() {
 		disk := newDisk()
 		disk.SetPropagateErrors(false)
 
-		failures := validateDisk(disk)
+		attachments := newDiskAttachmentsWithDisk(disk)
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskPropagateErrorsID))
+		Expect(failures[0].ID).To(Equal(validators.DiskPropagateErrorsID))
 	})
 	It("should flag disk with wipe_after_delete == true setting present: ", func() {
 		disk := newDisk()
 		disk.SetWipeAfterDelete(true)
 
-		failures := validateDisk(disk)
+		attachments := newDiskAttachmentsWithDisk(disk)
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskWipeAfterDeleteID))
+		Expect(failures[0].ID).To(Equal(validators.DiskWipeAfterDeleteID))
 	})
 	table.DescribeTable("should flag disk with illegal status: ", func(status string) {
 		var disk = newDisk()
 		disk.SetStatus(ovirtsdk.DiskStatus(status))
 
-		failures := validateDisk(disk)
+		attachments := newDiskAttachmentsWithDisk(disk)
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskStatusID))
+		Expect(failures[0].ID).To(Equal(validators.DiskStatusID))
 	},
 		table.Entry("illegal", "illegal"),
 		table.Entry("locked", "locked"),
@@ -187,10 +217,12 @@ var _ = Describe("Validating Disk", func() {
 		var disk = newDisk()
 		disk.SetStorageType(ovirtsdk.DiskStorageType(storageType))
 
-		failures := validateDisk(disk)
+		attachments := newDiskAttachmentsWithDisk(disk)
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskStoragaTypeID))
+		Expect(failures[0].ID).To(Equal(validators.DiskStoragaTypeID))
 	},
 		table.Entry("cinder", "cinder"),
 		table.Entry("lun", "lun"),
@@ -204,16 +236,20 @@ var _ = Describe("Validating Disk", func() {
 		disk.SetId("Disk_id")
 		disk.SetInterface(ovirtsdk.DiskInterface("virtio"))
 
-		failures := validateDisk(&disk)
+		attachments := newDiskAttachmentsWithDisk(&disk)
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskStoragaTypeID))
+		Expect(failures[0].ID).To(Equal(validators.DiskStoragaTypeID))
 	})
 	It("should allow for disk with disabled sgio: ", func() {
 		disk := newDisk()
 		disk.SetSgio(ovirtsdk.ScsiGenericIO("disabled"))
 
-		failures := validateDisk(disk)
+		attachments := newDiskAttachmentsWithDisk(disk)
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(BeEmpty())
 	})
@@ -221,15 +257,24 @@ var _ = Describe("Validating Disk", func() {
 		var disk = newDisk()
 		disk.SetSgio(ovirtsdk.ScsiGenericIO(sgio))
 
-		failures := validateDisk(disk)
+		attachments := newDiskAttachmentsWithDisk(disk)
+
+		failures := validators.ValidateDiskAttachments(attachments)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(DiskSgioID))
+		Expect(failures[0].ID).To(Equal(validators.DiskSgioID))
 	},
 		table.Entry("Filtered", "filtered"),
 		table.Entry("Unfiltered", "unfiltered"),
 	)
 })
+
+func newDiskAttachmentsWithDisk(disk *ovirtsdk.Disk) []*ovirtsdk.DiskAttachment {
+	attachment := newDiskAttachment()
+	attachment.SetDisk(disk)
+	attachments := []*ovirtsdk.DiskAttachment{attachment}
+	return attachments
+}
 
 func newDisk() *ovirtsdk.Disk {
 	disk := ovirtsdk.Disk{}

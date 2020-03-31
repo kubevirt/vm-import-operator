@@ -10,21 +10,22 @@ import (
 // DiskInterfaceModelMapping defines mapping of disk interface models between oVirt and kubevirt domains
 var DiskInterfaceModelMapping = map[string]string{"sata": "sata", "virtio_scsi": "virtio", "virtio": "virtio"}
 
-//DiskInterfaceOwner defines means of getting interface of a storage entity
-type DiskInterfaceOwner interface {
+// diskInterfaceOwner defines means of getting interface of a storage entity
+type diskInterfaceOwner interface {
 	Interface() (ovirtsdk.DiskInterface, bool)
 }
 
-//DiskLogicalNameOwner defines means of getting logical name of a storage entity
-type DiskLogicalNameOwner interface {
+// diskLogicalNameOwner defines means of getting logical name of a storage entity
+type diskLogicalNameOwner interface {
 	LogicalName() (string, bool)
 }
 
-//UsesScsiReservationOwner defines means of getting uses scsi reservation flag value of a storage entity
-type UsesScsiReservationOwner interface {
+// usesScsiReservationOwner defines means of getting uses scsi reservation flag value of a storage entity
+type usesScsiReservationOwner interface {
 	UsesScsiReservation() (bool, bool)
 }
 
+// ValidateDiskAttachments validates disk attachments
 func ValidateDiskAttachments(diskAttachments []*ovirtsdk.DiskAttachment) []ValidationFailure {
 	var failures []ValidationFailure
 	for _, da := range diskAttachments {
@@ -32,6 +33,7 @@ func ValidateDiskAttachments(diskAttachments []*ovirtsdk.DiskAttachment) []Valid
 	}
 	return failures
 }
+
 func validateDiskAttachment(diskAttachment *ovirtsdk.DiskAttachment) []ValidationFailure {
 	var results []ValidationFailure
 	var attachmentID = ""
@@ -105,7 +107,7 @@ func isValidDiskInterface(disk *ovirtsdk.Disk, diskID string) (ValidationFailure
 	return isValidStorageInterface(disk, diskID, DiskInterfaceID)
 }
 
-func isValidStorageInterface(diskAttachment DiskInterfaceOwner, ownerID string, checkID CheckID) (ValidationFailure, bool) {
+func isValidStorageInterface(diskAttachment diskInterfaceOwner, ownerID string, checkID CheckID) (ValidationFailure, bool) {
 	if iface, ok := diskAttachment.Interface(); ok {
 		if _, found := DiskInterfaceModelMapping[string(iface)]; !found {
 			return ValidationFailure{
@@ -126,7 +128,7 @@ func isValidDiskLogicalName(disk *ovirtsdk.Disk, diskID string) (ValidationFailu
 	return isValidStorageLogicalName(disk, diskID, DiskLogicalNameID)
 }
 
-func isValidStorageLogicalName(logicalNameOwner DiskLogicalNameOwner, ownerID string, checkID CheckID) (ValidationFailure, bool) {
+func isValidStorageLogicalName(logicalNameOwner diskLogicalNameOwner, ownerID string, checkID CheckID) (ValidationFailure, bool) {
 	if logicalName, ok := logicalNameOwner.LogicalName(); ok {
 		return ValidationFailure{
 			ID:      checkID,
@@ -154,7 +156,7 @@ func isValidDiskUsesScsiReservation(disk *ovirtsdk.Disk, diskID string) (Validat
 	return isValidStorageUsesScsiReservation(disk, diskID, DiskUsesScsiReservationID)
 }
 
-func isValidStorageUsesScsiReservation(owner UsesScsiReservationOwner, ownerID string, checkID CheckID) (ValidationFailure, bool) {
+func isValidStorageUsesScsiReservation(owner usesScsiReservationOwner, ownerID string, checkID CheckID) (ValidationFailure, bool) {
 	if sr, ok := owner.UsesScsiReservation(); ok && sr {
 		return ValidationFailure{
 			ID:      checkID,
