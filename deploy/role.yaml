@@ -60,3 +60,15 @@ rules:
   - resourcemappings
   verbs:
   - '*'
+- apiGroups:
+  - kubevirt.io
+  resources:
+  - 'virtualmachines'
+  verbs:
+  - '*'
+- apiGroups:
+  - cdi.kubevirt.io
+  resources:
+  - 'datavolumes'
+  verbs:
+  - '*'
