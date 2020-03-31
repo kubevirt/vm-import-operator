@@ -1,9 +1,10 @@
-package validation
+package validation_test
 
 import (
 	"encoding/json"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation"
 	validators "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
@@ -16,8 +17,16 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+var (
+	warnReason  = string(v2vv1alpha1.MappingRulesCheckingReportedWarnings)
+	errorReason = string(v2vv1alpha1.MappingRulesCheckingFailed)
+	okReason    = string(v2vv1alpha1.MappingRulesCheckingCompleted)
+
+	incompleteMappingRulesReason = string(v2vv1alpha1.IncompleteMappingRules)
+	validationCompletedReason    = string(v2vv1alpha1.ValidationCompleted)
+)
 var _ = Describe("Validating VirtualMachineImport Admitter", func() {
-	var vmImportValidator *VirtualMachineImportValidator
+	var vmImportValidator validation.VirtualMachineImportValidator
 	var clientMock mockClient
 
 	BeforeEach(func() {
@@ -25,10 +34,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		clientMock = mockClient{
 			statusWriter: mockStatusWriter{},
 		}
-		vmImportValidator = &VirtualMachineImportValidator{
-			Validator: &mockValidator{},
-			client:    &clientMock,
-		}
+		vmImportValidator = validation.NewVirtualMachineImportValidator(&clientMock, &mockValidator{})
 		validateVMMock = func(vm *ovirtsdk.Vm) []validators.ValidationFailure {
 			return []validators.ValidationFailure{}
 		}
@@ -455,6 +461,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		Expect(condition.Type).To(Equal(v2vv1alpha1.Validating))
 		Expect(condition.Status).To(Equal(v1.ConditionFalse))
 		Expect(*condition.Message).To(ContainSubstring(message))
+		Expect(*condition.Reason).To(Equal(incompleteMappingRulesReason))
 	})
 	It("should reject VirtualMachineImport spec with failed storage mapping check ", func() {
 		vm := newVM()
@@ -479,6 +486,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		Expect(condition.Type).To(Equal(v2vv1alpha1.Validating))
 		Expect(condition.Status).To(Equal(v1.ConditionFalse))
 		Expect(*condition.Message).To(ContainSubstring(message))
+		Expect(*condition.Reason).To(Equal(incompleteMappingRulesReason))
 	})
 })
 
