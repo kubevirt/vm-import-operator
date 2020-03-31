@@ -12,6 +12,7 @@ import (
 // InterfaceModelMapping defines mapping of NIC device models between oVirt and kubevirt domains
 var InterfaceModelMapping = map[string]string{"e1000": "e1000", "rtl8139": "rtl8139", "virtio": "virtio"}
 
+// ValidateNics validates given slice of NICs
 func ValidateNics(nics []*ovirtsdk.Nic) []ValidationFailure {
 	var failures []ValidationFailure
 	for _, nic := range nics {

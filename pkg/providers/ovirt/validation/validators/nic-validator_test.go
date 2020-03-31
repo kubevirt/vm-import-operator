@@ -1,9 +1,10 @@
-package validators
+package validators_test
 
 import (
 	"fmt"
 	"math/rand"
 
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -14,11 +15,12 @@ var _ = Describe("Validating NIC", func() {
 	table.DescribeTable("should flag nic with illegal interface model: ", func(iface string) {
 		var nic = newNic()
 		nic.SetInterface(ovirtsdk.NicInterface(iface))
+		nics := []*ovirtsdk.Nic{nic}
 
-		failures := validateNic(nic)
+		failures := validators.ValidateNics(nics)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(NicInterfaceCheckID))
+		Expect(failures[0].ID).To(Equal(validators.NicInterfaceCheckID))
 	},
 		table.Entry("pci_passthrough", "pci_passthrough"),
 		table.Entry("spapr_vlan", "spapr_vlan"),
@@ -30,7 +32,9 @@ var _ = Describe("Validating NIC", func() {
 		var nic = newNic()
 		nic.SetInterface(ovirtsdk.NicInterface(iface))
 
-		failures := validateNic(nic)
+		nics := []*ovirtsdk.Nic{nic}
+
+		failures := validators.ValidateNics(nics)
 
 		Expect(failures).To(BeEmpty())
 	},
@@ -44,37 +48,45 @@ var _ = Describe("Validating NIC", func() {
 		nic.SetPlugged(true)
 		nic.SetOnBoot(true)
 
-		failures := validateNic(&nic)
+		nics := []*ovirtsdk.Nic{&nic}
+
+		failures := validators.ValidateNics(nics)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(NicInterfaceCheckID))
+		Expect(failures[0].ID).To(Equal(validators.NicInterfaceCheckID))
 	})
 	It("should flag nic with on_boot == false: ", func() {
 		var nic = newNic()
 		nic.SetOnBoot(false)
 
-		failures := validateNic(nic)
+		nics := []*ovirtsdk.Nic{nic}
+
+		failures := validators.ValidateNics(nics)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(NicOnBootID))
+		Expect(failures[0].ID).To(Equal(validators.NicOnBootID))
 	})
 	It("should flag nic with plugged == false: ", func() {
 		var nic = newNic()
 		nic.SetPlugged(false)
 
-		failures := validateNic(nic)
+		nics := []*ovirtsdk.Nic{nic}
+
+		failures := validators.ValidateNics(nics)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(NicPluggedID))
+		Expect(failures[0].ID).To(Equal(validators.NicPluggedID))
 	})
 	It("should flag nic with port mirroring: ", func() {
 		var nic = newNic()
 		nic.MustVnicProfile().SetPortMirroring(true)
 
-		failures := validateNic(nic)
+		nics := []*ovirtsdk.Nic{nic}
+
+		failures := validators.ValidateNics(nics)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(NicVNicPortMirroringID))
+		Expect(failures[0].ID).To(Equal(validators.NicVNicPortMirroringID))
 	})
 	It("should flag nic with pass-through == 'enabled': ", func() {
 		var nic = newNic()
@@ -83,10 +95,12 @@ var _ = Describe("Validating NIC", func() {
 		profile := nic.MustVnicProfile()
 		profile.SetPassThrough(&passThrough)
 
-		failures := validateNic(nic)
+		nics := []*ovirtsdk.Nic{nic}
+
+		failures := validators.ValidateNics(nics)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(NicVNicPassThroughID))
+		Expect(failures[0].ID).To(Equal(validators.NicVNicPassThroughID))
 	})
 	It("should flag nic with some custom_properties ", func() {
 		var nic = newNic()
@@ -100,10 +114,12 @@ var _ = Describe("Validating NIC", func() {
 		properties.SetSlice(customPropertySlice)
 		profile.SetCustomProperties(&properties)
 
-		failures := validateNic(nic)
+		nics := []*ovirtsdk.Nic{nic}
+
+		failures := validators.ValidateNics(nics)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(NicVNicCustomPropertiesID))
+		Expect(failures[0].ID).To(Equal(validators.NicVNicCustomPropertiesID))
 	})
 	It("should flag nic with network filter ", func() {
 		var nic = newNic()
@@ -114,10 +130,12 @@ var _ = Describe("Validating NIC", func() {
 		filter.SetId("nf ID")
 		profile.SetNetworkFilter(&filter)
 
-		failures := validateNic(nic)
+		nics := []*ovirtsdk.Nic{nic}
+
+		failures := validators.ValidateNics(nics)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(NicVNicNetworkFilterID))
+		Expect(failures[0].ID).To(Equal(validators.NicVNicNetworkFilterID))
 	})
 	It("should flag nic with QOS ", func() {
 		var nic = newNic()
@@ -128,16 +146,18 @@ var _ = Describe("Validating NIC", func() {
 		qos.SetId("qos_id")
 		profile.SetQos(&qos)
 
-		failures := validateNic(nic)
+		nics := []*ovirtsdk.Nic{nic}
+
+		failures := validators.ValidateNics(nics)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(NicVNicQosID))
+		Expect(failures[0].ID).To(Equal(validators.NicVNicQosID))
 	})
 	It("should not flag two nics ", func() {
 		nic1 := newNic()
 		nic2 := newNic()
 		nics := []*ovirtsdk.Nic{nic1, nic2}
-		failures := ValidateNics(nics)
+		failures := validators.ValidateNics(nics)
 
 		Expect(failures).To(BeEmpty())
 	})
@@ -147,13 +167,13 @@ var _ = Describe("Validating NIC", func() {
 		nic2 := newNic()
 		nic2.SetOnBoot(false)
 		nics := []*ovirtsdk.Nic{nic1, nic2}
-		failures := ValidateNics(nics)
+		failures := validators.ValidateNics(nics)
 
 		Expect(failures).To(HaveLen(2))
 
-		var checkIDs = [2]CheckID{failures[0].ID, failures[1].ID}
-		Expect(checkIDs).To(ContainElement(NicPluggedID))
-		Expect(checkIDs).To(ContainElement(NicOnBootID))
+		var checkIDs = [2]validators.CheckID{failures[0].ID, failures[1].ID}
+		Expect(checkIDs).To(ContainElement(validators.NicPluggedID))
+		Expect(checkIDs).To(ContainElement(validators.NicOnBootID))
 	})
 })
 

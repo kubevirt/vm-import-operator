@@ -3,8 +3,6 @@ package validators
 import (
 	"fmt"
 
-	"kubevirt.io/client-go/kubecli"
-
 	netv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
@@ -21,12 +19,10 @@ type NetworkMappingValidator struct {
 	provider NetworkAttachmentDefinitionProvider
 }
 
-//NewNetworkMappingValidator creates new NetworkMappingValidator that will use provided KubevirtClient
-func NewNetworkMappingValidator(kubevirt kubecli.KubevirtClient) NetworkMappingValidator {
+//NewNetworkMappingValidator creates new NetworkMappingValidator that will use given provider
+func NewNetworkMappingValidator(provider NetworkAttachmentDefinitionProvider) NetworkMappingValidator {
 	return NetworkMappingValidator{
-		provider: &NetworkAttachmentDefinitions{
-			Client: kubevirt.NetworkClient(),
-		},
+		provider: provider,
 	}
 }
 

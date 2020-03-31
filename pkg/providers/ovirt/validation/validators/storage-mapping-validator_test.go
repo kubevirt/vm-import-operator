@@ -1,9 +1,10 @@
-package validators
+package validators_test
 
 import (
 	"fmt"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -23,9 +24,7 @@ var (
 )
 
 var _ = Describe("Validating Storage mapping", func() {
-	validator := StorageMappingValidator{
-		provider: &mockStorageClassProvider{},
-	}
+	validator := validators.NewStorageMappingValidator(&mockStorageClassProvider{})
 	BeforeEach(func() {
 		findStorageClassMock = func() (*v1.StorageClass, error) {
 			sc := v1.StorageClass{
@@ -57,7 +56,7 @@ var _ = Describe("Validating Storage mapping", func() {
 		failures := validator.ValidateStorageMapping(das, &mapping)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(StorageMappingID))
+		Expect(failures[0].ID).To(Equal(validators.StorageMappingID))
 	},
 		table.Entry("No mapping", createDomain(&domainName, &domainID), nil, nil),
 		table.Entry("ID mismatch", createDomain(&domainName, &domainID), nil, &wrongDomainID),
@@ -116,7 +115,7 @@ var _ = Describe("Validating Storage mapping", func() {
 		failures := validator.ValidateStorageMapping(das, &mapping)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(StorageTargetID))
+		Expect(failures[0].ID).To(Equal(validators.StorageTargetID))
 	})
 	It("should reject nil mapping", func() {
 		sd := createDomain(&domainName, &domainID)
@@ -128,7 +127,7 @@ var _ = Describe("Validating Storage mapping", func() {
 		failures := validator.ValidateStorageMapping(das, nil)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(StorageMappingID))
+		Expect(failures[0].ID).To(Equal(validators.StorageMappingID))
 	})
 })
 

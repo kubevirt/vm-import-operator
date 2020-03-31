@@ -1,6 +1,7 @@
-package validators
+package validators_test
 
 import (
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -11,7 +12,7 @@ var _ = Describe("Validating VM", func() {
 	It("should accept vm ", func() {
 		var vm = newVM()
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(BeEmpty())
 	})
@@ -22,30 +23,30 @@ var _ = Describe("Validating VM", func() {
 		bootMenu.SetEnabled(true)
 		bios.SetBootMenu(&bootMenu)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMBiosBootMenuID))
+		Expect(failures[0].ID).To(Equal(validators.VMBiosBootMenuID))
 	})
 	It("should flag vm with no bios type ", func() {
 		var vm = newVM()
 		bios := ovirtsdk.Bios{}
 		vm.SetBios(&bios)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMBiosTypeID))
+		Expect(failures[0].ID).To(Equal(validators.VMBiosTypeID))
 	})
 	It("should flag vm with q35_secure_boot bios ", func() {
 		var vm = newVM()
 		bios := vm.MustBios()
 		bios.SetType("q35_secure_boot")
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMBiosTypeQ35SecureBootID))
+		Expect(failures[0].ID).To(Equal(validators.VMBiosTypeQ35SecureBootID))
 	})
 	It("should flag vm with s390x CPU ", func() {
 		var vm = newVM()
@@ -53,19 +54,19 @@ var _ = Describe("Validating VM", func() {
 		cpu.SetArchitecture("s390x")
 		vm.SetCpu(&cpu)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMCpuArchitectureID))
+		Expect(failures[0].ID).To(Equal(validators.VMCpuArchitectureID))
 	})
 	table.DescribeTable("should flag CPU with illegal pinning for", func(pins []*ovirtsdk.VcpuPin) {
 		vm := newVM()
 		vm.MustCpu().MustCpuTune().MustVcpuPins().SetSlice(pins)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMCpuTuneID))
+		Expect(failures[0].ID).To(Equal(validators.VMCpuTuneID))
 	},
 		table.Entry("duplicate pins", []*ovirtsdk.VcpuPin{newCPUPin(0, "0"), newCPUPin(1, "0")}),
 		table.Entry("cpu range", []*ovirtsdk.VcpuPin{newCPUPin(0, "0-1"), newCPUPin(1, "0-1")}),
@@ -76,10 +77,10 @@ var _ = Describe("Validating VM", func() {
 		var vm = newVM()
 		vm.SetCpuShares(1024)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMCpuSharesID))
+		Expect(failures[0].ID).To(Equal(validators.VMCpuSharesID))
 	})
 	It("should flag vm with custom properties ", func() {
 		var vm = newVM()
@@ -89,10 +90,10 @@ var _ = Describe("Validating VM", func() {
 		cps.SetSlice(properties)
 		vm.SetCustomProperties(&cps)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMCustomPropertiesID))
+		Expect(failures[0].ID).To(Equal(validators.VMCustomPropertiesID))
 	})
 	It("should flag vm with spice display ", func() {
 		var vm = newVM()
@@ -100,28 +101,28 @@ var _ = Describe("Validating VM", func() {
 		display.SetType("spice")
 		vm.SetDisplay(&display)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMDisplayTypeID))
+		Expect(failures[0].ID).To(Equal(validators.VMDisplayTypeID))
 	})
 	It("should flag vm with illegal images ", func() {
 		var vm = newVM()
 		vm.SetHasIllegalImages(true)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMHasIllegalImagesID))
+		Expect(failures[0].ID).To(Equal(validators.VMHasIllegalImagesID))
 	})
 	It("should flag vm with high availability priority ", func() {
 		var vm = newVM()
 		vm.MustHighAvailability().SetPriority(1)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMHighAvailabilityPriorityID))
+		Expect(failures[0].ID).To(Equal(validators.VMHighAvailabilityPriorityID))
 	})
 	It("should flag vm with IO Threads configured ", func() {
 		var vm = newVM()
@@ -129,10 +130,10 @@ var _ = Describe("Validating VM", func() {
 		io.SetThreads(4)
 		vm.SetIo(&io)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMIoThreadsID))
+		Expect(failures[0].ID).To(Equal(validators.VMIoThreadsID))
 	})
 	It("should flag vm with memory balooning ", func() {
 		var vm = newVM()
@@ -140,10 +141,10 @@ var _ = Describe("Validating VM", func() {
 		memPolicy.SetBallooning(true)
 		vm.SetMemoryPolicy(&memPolicy)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMMemoryPolicyBallooningID))
+		Expect(failures[0].ID).To(Equal(validators.VMMemoryPolicyBallooningID))
 	})
 	It("should flag vm with guaranteed memory ", func() {
 		var vm = newVM()
@@ -151,10 +152,10 @@ var _ = Describe("Validating VM", func() {
 		memPolicy.SetGuaranteed(1024)
 		vm.SetMemoryPolicy(&memPolicy)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMMemoryPolicyGuaranteedID))
+		Expect(failures[0].ID).To(Equal(validators.VMMemoryPolicyGuaranteedID))
 	})
 	It("should flag vm with overcommit percent ", func() {
 		var vm = newVM()
@@ -164,56 +165,56 @@ var _ = Describe("Validating VM", func() {
 		memPolicy.SetOverCommit(&memOverCommit)
 		vm.SetMemoryPolicy(&memPolicy)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMMemoryPolicyOvercommitPercentID))
+		Expect(failures[0].ID).To(Equal(validators.VMMemoryPolicyOvercommitPercentID))
 	})
 	It("should flag vm with migration options ", func() {
 		var vm = newVM()
 		migration := ovirtsdk.MigrationOptions{}
 		vm.SetMigration(&migration)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMMigrationID))
+		Expect(failures[0].ID).To(Equal(validators.VMMigrationID))
 	})
 	It("should flag vm with migration downtime ", func() {
 		var vm = newVM()
 		vm.SetMigrationDowntime(5)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMMigrationDowntimeID))
+		Expect(failures[0].ID).To(Equal(validators.VMMigrationDowntimeID))
 	})
 	It("should flag vm with NUMA tune mode ", func() {
 		var vm = newVM()
 		vm.SetNumaTuneMode("strict")
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMNumaTuneModeID))
+		Expect(failures[0].ID).To(Equal(validators.VMNumaTuneModeID))
 	})
 	It("should flag vm with origin == kubevirt ", func() {
 		var vm = newVM()
 		vm.SetOrigin("kubevirt")
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMOriginID))
+		Expect(failures[0].ID).To(Equal(validators.VMOriginID))
 	})
 	table.DescribeTable("should flag VM with illegal random number generator source", func(source string) {
 		vm := newVM()
 		vm.MustRngDevice().SetSource(ovirtsdk.RngSource(source))
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMRngDeviceSourceID))
+		Expect(failures[0].ID).To(Equal(validators.VMRngDeviceSourceID))
 	},
 		table.Entry("hwrng", "hwrng"),
 		table.Entry("random", "random"),
@@ -225,37 +226,37 @@ var _ = Describe("Validating VM", func() {
 		var vm = newVM()
 		vm.SetSoundcardEnabled(true)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMSoundcardEnabledID))
+		Expect(failures[0].ID).To(Equal(validators.VMSoundcardEnabledID))
 	})
 	It("should flag vm with start paused enabled", func() {
 		var vm = newVM()
 		vm.SetStartPaused(true)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMStartPausedID))
+		Expect(failures[0].ID).To(Equal(validators.VMStartPausedID))
 	})
 	It("should flag vm with storage error resume behaviour specified", func() {
 		var vm = newVM()
 		vm.SetStorageErrorResumeBehaviour("auto_resume")
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMStorageErrorResumeBehaviourID))
+		Expect(failures[0].ID).To(Equal(validators.VMStorageErrorResumeBehaviourID))
 	})
 	It("should flag vm with tunnel migration enabled", func() {
 		var vm = newVM()
 		vm.SetTunnelMigration(true)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMTunnelMigrationID))
+		Expect(failures[0].ID).To(Equal(validators.VMTunnelMigrationID))
 	})
 	It("should flag vm with USB enabled", func() {
 		var vm = newVM()
@@ -263,20 +264,20 @@ var _ = Describe("Validating VM", func() {
 		usb.SetEnabled(true)
 		vm.SetUsb(&usb)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMUsbID))
+		Expect(failures[0].ID).To(Equal(validators.VMUsbID))
 	})
 	It("should flag vm with spice console configured", func() {
 		var vm = newVM()
 		consoles := []*ovirtsdk.GraphicsConsole{newGraphicsConsole("spice"), newGraphicsConsole("vnc")}
 		vm.MustGraphicsConsoles().SetSlice(consoles)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMGraphicConsolesID))
+		Expect(failures[0].ID).To(Equal(validators.VMGraphicConsolesID))
 	})
 	It("should flag vm's host devices", func() {
 		var vm = newVM()
@@ -285,10 +286,10 @@ var _ = Describe("Validating VM", func() {
 		hostDevices.SetSlice(devices)
 		vm.SetHostDevices(&hostDevices)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMHostDevicesID))
+		Expect(failures[0].ID).To(Equal(validators.VMHostDevicesID))
 	})
 	It("should flag vm's reported devices", func() {
 		var vm = newVM()
@@ -297,10 +298,10 @@ var _ = Describe("Validating VM", func() {
 		reportedDevices.SetSlice(devices)
 		vm.SetReportedDevices(&reportedDevices)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMReportedDevicesID))
+		Expect(failures[0].ID).To(Equal(validators.VMReportedDevicesID))
 	})
 	It("should flag vm with quota", func() {
 		var vm = newVM()
@@ -308,10 +309,10 @@ var _ = Describe("Validating VM", func() {
 		quota.SetId("quota_id")
 		vm.SetQuota(&quota)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMQuotaID))
+		Expect(failures[0].ID).To(Equal(validators.VMQuotaID))
 	})
 	It("should flag illegal watchdog - diag288", func() {
 		var vm = newVM()
@@ -319,10 +320,10 @@ var _ = Describe("Validating VM", func() {
 		watchdog.SetModel("diag288")
 		vm.MustWatchdogs().SetSlice([]*ovirtsdk.Watchdog{&watchdog})
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMWatchdogsID))
+		Expect(failures[0].ID).To(Equal(validators.VMWatchdogsID))
 	})
 	It("should flag CD ROM with image stored in non-data domain", func() {
 		var vm = newVM()
@@ -336,10 +337,10 @@ var _ = Describe("Validating VM", func() {
 		cdroms := []*ovirtsdk.Cdrom{&cdrom}
 		vm.MustCdroms().SetSlice(cdroms)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMCdromsID))
+		Expect(failures[0].ID).To(Equal(validators.VMCdromsID))
 	})
 	It("should flag floppies", func() {
 		var vm = newVM()
@@ -349,10 +350,10 @@ var _ = Describe("Validating VM", func() {
 		floppySlice.SetSlice(floppies)
 		vm.SetFloppies(&floppySlice)
 
-		failures := ValidateVM(vm)
+		failures := validators.ValidateVM(vm)
 
 		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(VMFloppiesID))
+		Expect(failures[0].ID).To(Equal(validators.VMFloppiesID))
 	})
 })
 
