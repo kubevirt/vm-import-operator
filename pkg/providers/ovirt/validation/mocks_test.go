@@ -1,18 +1,10 @@
 package validation_test
 
 import (
-	"context"
-
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	validators "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	ovirtsdk "github.com/ovirt/go-ovirt"
-	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-
-var clientGetMock func(runtime.Object) error
-
-var statusUpdateObjects []runtime.Object
 
 var validateVMMock func(*ovirtsdk.Vm) []validators.ValidationFailure
 var validateNicsMock func([]*ovirtsdk.Nic) []validators.ValidationFailure
@@ -40,51 +32,4 @@ func (v *mockValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]
 
 func (v *mockValidator) ValidateStorageMapping(attachments []*ovirtsdk.DiskAttachment, mapping *[]v2vv1alpha1.ResourceMappingItem) []validators.ValidationFailure {
 	return validateStorageMappingMock(attachments, mapping)
-}
-
-type mockClient struct {
-	statusWriter mockStatusWriter
-}
-
-func (c mockClient) Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-	return clientGetMock(obj)
-}
-
-func (c mockClient) List(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
-	return nil
-}
-
-func (c mockClient) Create(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
-	return nil
-}
-
-func (c mockClient) Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
-	return nil
-}
-
-func (c mockClient) Update(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-	return nil
-}
-
-func (c mockClient) Patch(ctx context.Context, obj runtime.Object, patch client.Patch, opts ...client.PatchOption) error {
-	return nil
-}
-
-func (c mockClient) DeleteAllOf(ctx context.Context, obj runtime.Object, opts ...client.DeleteAllOfOption) error {
-	return nil
-}
-func (c mockClient) Status() client.StatusWriter {
-	return c.statusWriter
-}
-
-type mockStatusWriter struct {
-}
-
-func (c mockStatusWriter) Update(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-	statusUpdateObjects = append(statusUpdateObjects, obj)
-	return nil
-}
-
-func (c mockStatusWriter) Patch(ctx context.Context, obj runtime.Object, patch client.Patch, opts ...client.PatchOption) error {
-	return nil
 }

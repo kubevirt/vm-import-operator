@@ -13,7 +13,7 @@ type Provider interface {
 	Close()
 	LoadVM(v2vv1alpha1.VirtualMachineImportSourceSpec) error
 	PrepareResourceMapping(*v2vv1alpha1.ResourceMappingSpec, v2vv1alpha1.VirtualMachineImportSourceSpec)
-	Validate() error
+	Validate() ([]v2vv1alpha1.VirtualMachineImportCondition, error)
 	StopVM() error
 	GetDataVolumeCredentials() DataVolumeCredentials
 	UpdateVM(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume)
