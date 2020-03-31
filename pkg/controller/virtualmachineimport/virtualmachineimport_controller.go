@@ -168,7 +168,8 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	// Define VM spec
-	vmSpec := provider.CreateVMSpec(instance)
+	mapper := provider.CreateMapper()
+	vmSpec := mapper.MapVM(instance.Spec.TargetVMName)
 
 	// Set VirtualMachineImport instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, vmSpec, r.scheme); err != nil {
@@ -199,7 +200,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		}
 
 		// Import disks:
-		dvs := provider.CreateDataVolumeMap(instance.Namespace)
+		dvs := mapper.MapDisks()
 		for _, dv := range dvs {
 			_, err := r.kubeClient.CdiClient().CdiV1alpha1().DataVolumes(instance.Namespace).Create(&dv)
 			if err != nil {
