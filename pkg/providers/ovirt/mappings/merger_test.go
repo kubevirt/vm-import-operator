@@ -1,7 +1,8 @@
-package mappings
+package mappings_test
 
 import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mappings"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -21,14 +22,52 @@ var (
 	type1 = "type1"
 	type2 = "type2"
 )
-var _ = Describe("Validating low-level merging", func() {
-	It("should produce nil on both input slices nil", func() {
-		result := mergeMappings(nil, nil)
-		Expect(result).To(BeNil())
+var _ = Describe("Mappings merging ", func() {
+	It("Should merge no mappings", func() {
+		result := mappings.MergeMappings(nil, nil)
+
+		Expect(result).To(Not(BeNil()))
+		Expect(result.NetworkMappings).To(BeNil())
+		Expect(result.StorageMappings).To(BeNil())
 	})
-	table.DescribeTable("should merge the resource items ", func(primaryMapping *[]v2vv1alpha1.ResourceMappingItem, secondaryMapping *[]v2vv1alpha1.ResourceMappingItem, expected *[]v2vv1alpha1.ResourceMappingItem) {
-		result := mergeMappings(primaryMapping, secondaryMapping)
-		Expect(*result).To(ConsistOf(*expected))
+	It("should produce nil mapping itemst on both input mapping items nil", func() {
+		mapping := v2vv1alpha1.OvirtMappings{
+			NetworkMappings: nil,
+			StorageMappings: nil,
+		}
+
+		externalMapping := v2vv1alpha1.OvirtMappings{
+			NetworkMappings: nil,
+			StorageMappings: nil,
+		}
+
+		spec := v2vv1alpha1.ResourceMappingSpec{
+			OvirtMappings: &externalMapping,
+		}
+
+		result := mappings.MergeMappings(&spec, &mapping)
+		Expect(result).To(Not(BeNil()))
+		Expect(result.NetworkMappings).To(BeNil())
+		Expect(result.StorageMappings).To(BeNil())
+	})
+	table.DescribeTable("should merge the mappings ", func(primaryMapping *[]v2vv1alpha1.ResourceMappingItem, secondaryMapping *[]v2vv1alpha1.ResourceMappingItem, expected *[]v2vv1alpha1.ResourceMappingItem) {
+		mapping := v2vv1alpha1.OvirtMappings{
+			NetworkMappings: primaryMapping,
+			StorageMappings: primaryMapping,
+		}
+
+		externalMapping := v2vv1alpha1.OvirtMappings{
+			NetworkMappings: secondaryMapping,
+			StorageMappings: secondaryMapping,
+		}
+
+		spec := v2vv1alpha1.ResourceMappingSpec{
+			OvirtMappings: &externalMapping,
+		}
+
+		result := mappings.MergeMappings(&spec, &mapping)
+		Expect(*result.NetworkMappings).To(ConsistOf(*expected))
+		Expect(*result.StorageMappings).To(ConsistOf(*expected))
 	},
 		table.Entry("Primary nil",
 			nil,
@@ -137,22 +176,12 @@ var _ = Describe("Validating low-level merging", func() {
 			&[]v2vv1alpha1.ResourceMappingItem{i(&id1, &name2, &type2), i(&id2, &name1, &type2), i(&id3, &name3, &type2), i(&id4, nil, &type2), i(nil, nil, nil)},
 			&[]v2vv1alpha1.ResourceMappingItem{i(&id1, &name1, &type1), i(&id2, &name1, &type2), i(&id3, nil, &type1), i(nil, &name4, &type1), i(&id4, nil, &type2)}),
 	)
-})
-
-var _ = Describe("Validating high-level API", func() {
-	It("Should merge no mappings", func() {
-		result := MergeMappings(nil, nil)
-
-		Expect(result).To(Not(BeNil()))
-		Expect(result.NetworkMappings).To(BeNil())
-		Expect(result.StorageMappings).To(BeNil())
-	})
 	It("Should merge mapping with only import CR mapping", func() {
 		mapping := v2vv1alpha1.OvirtMappings{
 			NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{i(&id1, &name1, &type1)},
 			StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{i(&id2, &name2, &type2)},
 		}
-		result := MergeMappings(nil, &mapping)
+		result := mappings.MergeMappings(nil, &mapping)
 
 		Expect(result).To(Not(BeNil()))
 		Expect(*result.NetworkMappings).To(ConsistOf(*mapping.NetworkMappings))
@@ -167,7 +196,7 @@ var _ = Describe("Validating high-level API", func() {
 			OvirtMappings: nil,
 		}
 
-		result := MergeMappings(&spec, &mapping)
+		result := mappings.MergeMappings(&spec, &mapping)
 
 		Expect(result).To(Not(BeNil()))
 		Expect(*result.NetworkMappings).To(ConsistOf(*mapping.NetworkMappings))
@@ -181,7 +210,7 @@ var _ = Describe("Validating high-level API", func() {
 		spec := v2vv1alpha1.ResourceMappingSpec{
 			OvirtMappings: &mapping,
 		}
-		result := MergeMappings(&spec, nil)
+		result := mappings.MergeMappings(&spec, nil)
 
 		Expect(result).To(Not(BeNil()))
 		Expect(*result.NetworkMappings).To(ConsistOf(*mapping.NetworkMappings))
@@ -200,7 +229,7 @@ var _ = Describe("Validating high-level API", func() {
 		spec := v2vv1alpha1.ResourceMappingSpec{
 			OvirtMappings: &externalMapping,
 		}
-		result := MergeMappings(&spec, &mapping)
+		result := mappings.MergeMappings(&spec, &mapping)
 
 		Expect(result).To(Not(BeNil()))
 		Expect(*result.NetworkMappings).To(ConsistOf(i(&id1, &name1, &type1), i(&id3, &name3, &type2)))
@@ -217,7 +246,7 @@ var _ = Describe("Validating high-level API", func() {
 		spec := v2vv1alpha1.ResourceMappingSpec{
 			OvirtMappings: &externalMapping,
 		}
-		result := MergeMappings(&spec, &mapping)
+		result := mappings.MergeMappings(&spec, &mapping)
 
 		Expect(result).To(Not(BeNil()))
 		Expect(*result.NetworkMappings).To(ConsistOf(i(&id1, &name1, &type1)))
@@ -234,7 +263,7 @@ var _ = Describe("Validating high-level API", func() {
 		spec := v2vv1alpha1.ResourceMappingSpec{
 			OvirtMappings: &externalMapping,
 		}
-		result := MergeMappings(&spec, &mapping)
+		result := mappings.MergeMappings(&spec, &mapping)
 
 		Expect(result).To(Not(BeNil()))
 		Expect(*result.NetworkMappings).To(ConsistOf(i(&id3, &name3, &type2)))
@@ -251,7 +280,7 @@ var _ = Describe("Validating high-level API", func() {
 		spec := v2vv1alpha1.ResourceMappingSpec{
 			OvirtMappings: &externalMapping,
 		}
-		result := MergeMappings(&spec, &mapping)
+		result := mappings.MergeMappings(&spec, &mapping)
 
 		Expect(result).To(Not(BeNil()))
 		Expect(*result.NetworkMappings).To(ConsistOf(i(&id3, &name3, &type2)))
@@ -267,7 +296,7 @@ var _ = Describe("Validating high-level API", func() {
 		spec := v2vv1alpha1.ResourceMappingSpec{
 			OvirtMappings: &externalMapping,
 		}
-		result := MergeMappings(&spec, &mapping)
+		result := mappings.MergeMappings(&spec, &mapping)
 
 		Expect(result).To(Not(BeNil()))
 		Expect(*result.StorageMappings).To(ConsistOf(i(&id4, &name4, &type2)))
@@ -285,7 +314,7 @@ var _ = Describe("Validating high-level API", func() {
 		spec := v2vv1alpha1.ResourceMappingSpec{
 			OvirtMappings: &externalMapping,
 		}
-		result := MergeMappings(&spec, &mapping)
+		result := mappings.MergeMappings(&spec, &mapping)
 
 		Expect(result).To(Not(BeNil()))
 		Expect(*result.NetworkMappings).To(ConsistOf(i(&id1, &name1, &type1), i(&id3, &name3, &type1)))
