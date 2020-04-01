@@ -1,9 +1,8 @@
 package validation_test
 
 import (
-	"encoding/json"
-
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation"
 	validators "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	. "github.com/onsi/ginkgo"
@@ -27,14 +26,9 @@ var (
 )
 var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 	var vmImportValidator validation.VirtualMachineImportValidator
-	var clientMock mockClient
 
 	BeforeEach(func() {
-		statusUpdateObjects = nil
-		clientMock = mockClient{
-			statusWriter: mockStatusWriter{},
-		}
-		vmImportValidator = validation.NewVirtualMachineImportValidator(&clientMock, &mockValidator{})
+		vmImportValidator = validation.NewVirtualMachineImportValidator(&mockValidator{})
 		validateVMMock = func(vm *ovirtsdk.Vm) []validators.ValidationFailure {
 			return []validators.ValidationFailure{}
 		}
@@ -51,68 +45,22 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 			return []validators.ValidationFailure{}
 
 		}
-		clientGetMock = func(obj runtime.Object) error {
-			cr := v2vv1alpha1.VirtualMachineImport{}
-			data, _ := json.Marshal(cr)
-			decoderFor(cr.GroupVersionKind().GroupVersion()).Decode(data, nil, obj)
-			return nil
-		}
 	})
 	It("should accept VirtualMachineImport", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		err := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		conditions := vmImportValidator.Validate(vm, crName, newOvirtMappings())
 
-		Expect(err).To(BeNil())
-		Expect(statusUpdateObjects).To(HaveLen(2))
-
+		Expect(conditions).To(HaveLen(2))
 		By("having positive status of the validation condition")
-		vmi := statusUpdateObjects[0].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition := vmi.Status.Conditions[0]
+		condition := conditions[0]
 		Expect(condition.Type).To(Equal(v2vv1alpha1.Validating))
 		Expect(condition.Status).To(Equal(v1.ConditionTrue))
 		Expect(*condition.Reason).To(Equal(validationCompletedReason))
 
 		By("having positive status of the mapping rules checking condition")
-		vmi = statusUpdateObjects[1].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition = vmi.Status.Conditions[0]
-		Expect(condition.Type).To(Equal(v2vv1alpha1.MappingRulesChecking))
-		Expect(condition.Status).To(Equal(v1.ConditionTrue))
-		Expect(*condition.Reason).To(Equal(okReason))
-	})
-
-	It("should update existing VirtualMachineImport status condition ", func() {
-		vm := newVM()
-		crName := newNamespacedName()
-		reason := errorReason
-		message := "Error message"
-		clientGetMock = func(obj runtime.Object) error {
-			cr := v2vv1alpha1.VirtualMachineImport{
-				Status: v2vv1alpha1.VirtualMachineImportStatus{
-					Conditions: []v2vv1alpha1.VirtualMachineImportCondition{
-						v2vv1alpha1.VirtualMachineImportCondition{
-							Type:    v2vv1alpha1.MappingRulesChecking,
-							Reason:  &reason,
-							Message: &message,
-							Status:  v1.ConditionFalse,
-						},
-					},
-				},
-			}
-			data, _ := json.Marshal(cr)
-			decoderFor(cr.GroupVersionKind().GroupVersion()).Decode(data, nil, obj)
-			return nil
-		}
-		err := vmImportValidator.Validate(vm, crName, newOvirtMappings())
-
-		Expect(err).To(BeNil())
-		Expect(statusUpdateObjects).To(HaveLen(2))
-		vmi := statusUpdateObjects[1].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition := vmi.Status.Conditions[0]
+		condition = conditions[1]
 		Expect(condition.Type).To(Equal(v2vv1alpha1.MappingRulesChecking))
 		Expect(condition.Status).To(Equal(v1.ConditionTrue))
 		Expect(*condition.Reason).To(Equal(okReason))
@@ -126,13 +74,9 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		err := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
 
-		Expect(err).To(BeNil())
-		Expect(statusUpdateObjects).To(HaveLen(2))
-		vmi := statusUpdateObjects[1].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition := vmi.Status.Conditions[0]
+		condition := conditions.FindConditionOfType(result, v2vv1alpha1.MappingRulesChecking)
 		Expect(condition.Type).To(Equal(v2vv1alpha1.MappingRulesChecking))
 		Expect(condition.Status).To(Equal(v1.ConditionTrue))
 		Expect(*condition.Reason).To(Equal(okReason))
@@ -165,13 +109,9 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		err := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
 
-		Expect(err).To(BeNil())
-		Expect(statusUpdateObjects).To(HaveLen(2))
-		vmi := statusUpdateObjects[1].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition := vmi.Status.Conditions[0]
+		condition := conditions.FindConditionOfType(result, v2vv1alpha1.MappingRulesChecking)
 		Expect(condition.Type).To(Equal(v2vv1alpha1.MappingRulesChecking))
 		Expect(condition.Status).To(Equal(v1.ConditionTrue))
 		Expect(*condition.Message).To(ContainSubstring(message))
@@ -195,14 +135,9 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		err := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
 
-		Expect(err).To(Not(BeNil()))
-		Expect(err.Error()).To(ContainSubstring(message))
-		Expect(statusUpdateObjects).To(HaveLen(2))
-		vmi := statusUpdateObjects[1].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition := vmi.Status.Conditions[0]
+		condition := conditions.FindConditionOfType(result, v2vv1alpha1.MappingRulesChecking)
 		Expect(condition.Type).To(Equal(v2vv1alpha1.MappingRulesChecking))
 		Expect(condition.Status).To(Equal(v1.ConditionFalse))
 		Expect(*condition.Message).To(ContainSubstring(message))
@@ -224,13 +159,9 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		err := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
 
-		Expect(err).To(BeNil())
-		Expect(statusUpdateObjects).To(HaveLen(2))
-		vmi := statusUpdateObjects[1].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition := vmi.Status.Conditions[0]
+		condition := conditions.FindConditionOfType(result, v2vv1alpha1.MappingRulesChecking)
 		Expect(condition.Type).To(Equal(v2vv1alpha1.MappingRulesChecking))
 		Expect(condition.Status).To(Equal(v1.ConditionTrue))
 		Expect(*condition.Reason).To(BeEquivalentTo(okReason))
@@ -248,13 +179,9 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		err := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
 
-		Expect(err).To(BeNil())
-		Expect(statusUpdateObjects).To(HaveLen(2))
-		vmi := statusUpdateObjects[1].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition := vmi.Status.Conditions[0]
+		condition := conditions.FindConditionOfType(result, v2vv1alpha1.MappingRulesChecking)
 		Expect(condition.Type).To(Equal(v2vv1alpha1.MappingRulesChecking))
 		Expect(condition.Status).To(Equal(v1.ConditionTrue))
 		Expect(*condition.Message).To(ContainSubstring(message))
@@ -274,14 +201,9 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		err := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
 
-		Expect(err).To(Not(BeNil()))
-		Expect(err.Error()).To(ContainSubstring(message))
-		Expect(statusUpdateObjects).To(HaveLen(2))
-		vmi := statusUpdateObjects[1].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition := vmi.Status.Conditions[0]
+		condition := conditions.FindConditionOfType(result, v2vv1alpha1.MappingRulesChecking)
 		Expect(condition.Type).To(Equal(v2vv1alpha1.MappingRulesChecking))
 		Expect(condition.Status).To(Equal(v1.ConditionFalse))
 		Expect(*condition.Message).To(ContainSubstring(message))
@@ -299,13 +221,9 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		err := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
 
-		Expect(err).To(BeNil())
-		Expect(statusUpdateObjects).To(HaveLen(2))
-		vmi := statusUpdateObjects[1].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition := vmi.Status.Conditions[0]
+		condition := conditions.FindConditionOfType(result, v2vv1alpha1.MappingRulesChecking)
 		Expect(condition.Type).To(Equal(v2vv1alpha1.MappingRulesChecking))
 		Expect(condition.Status).To(Equal(v1.ConditionTrue))
 		Expect(*condition.Reason).To(Equal(okReason))
@@ -326,13 +244,9 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		err := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
 
-		Expect(err).To(BeNil())
-		Expect(statusUpdateObjects).To(HaveLen(2))
-		vmi := statusUpdateObjects[1].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition := vmi.Status.Conditions[0]
+		condition := conditions.FindConditionOfType(result, v2vv1alpha1.MappingRulesChecking)
 		Expect(condition.Type).To(Equal(v2vv1alpha1.MappingRulesChecking))
 		Expect(condition.Status).To(Equal(v1.ConditionTrue))
 		Expect(*condition.Message).To(ContainSubstring(message))
@@ -349,14 +263,9 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		err := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
 
-		Expect(err).To(Not(BeNil()))
-		Expect(err.Error()).To(ContainSubstring(message))
-		Expect(statusUpdateObjects).To(HaveLen(2))
-		vmi := statusUpdateObjects[1].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition := vmi.Status.Conditions[0]
+		condition := conditions.FindConditionOfType(result, v2vv1alpha1.MappingRulesChecking)
 		Expect(condition.Type).To(Equal(v2vv1alpha1.MappingRulesChecking))
 		Expect(condition.Status).To(Equal(v1.ConditionFalse))
 		Expect(*condition.Message).To(ContainSubstring(message))
@@ -416,18 +325,9 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 			}
 		}
 
-		err := vmImportValidator.Validate(vm, crName, newOvirtMappings())
-		Expect(err).To(Not(BeNil()))
-		Expect(err.Error()).To(ContainSubstring(storageFailure1.Message))
-		Expect(err.Error()).To(ContainSubstring(storageFailure2.Message))
-		Expect(err.Error()).To(ContainSubstring(nicFailure1.Message))
-		Expect(err.Error()).To(ContainSubstring(nicFailure2.Message))
-		Expect(err.Error()).To(ContainSubstring(vmFailure1.Message))
-		Expect(err.Error()).To(ContainSubstring(vmFailure2.Message))
-		Expect(statusUpdateObjects).To(HaveLen(2))
-		vmi := statusUpdateObjects[1].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition := vmi.Status.Conditions[0]
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+
+		condition := conditions.FindConditionOfType(result, v2vv1alpha1.MappingRulesChecking)
 		Expect(condition.Type).To(Equal(v2vv1alpha1.MappingRulesChecking))
 		Expect(condition.Status).To(Equal(v1.ConditionFalse))
 		Expect(*condition.Message).To(ContainSubstring(storageFailure1.Message))
@@ -451,13 +351,9 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 			}
 		}
 
-		err := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
 
-		Expect(err).To(Not(BeNil()))
-		Expect(statusUpdateObjects).To(HaveLen(1))
-		vmi := statusUpdateObjects[0].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition := vmi.Status.Conditions[0]
+		condition := conditions.FindConditionOfType(result, v2vv1alpha1.Validating)
 		Expect(condition.Type).To(Equal(v2vv1alpha1.Validating))
 		Expect(condition.Status).To(Equal(v1.ConditionFalse))
 		Expect(*condition.Message).To(ContainSubstring(message))
@@ -476,13 +372,9 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 			}
 		}
 
-		err := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
 
-		Expect(err).To(Not(BeNil()))
-		Expect(statusUpdateObjects).To(HaveLen(1))
-		vmi := statusUpdateObjects[0].(*v2vv1alpha1.VirtualMachineImport)
-		Expect(vmi.Status.Conditions).To(HaveLen(1))
-		condition := vmi.Status.Conditions[0]
+		condition := conditions.FindConditionOfType(result, v2vv1alpha1.Validating)
 		Expect(condition.Type).To(Equal(v2vv1alpha1.Validating))
 		Expect(condition.Status).To(Equal(v1.ConditionFalse))
 		Expect(*condition.Message).To(ContainSubstring(message))

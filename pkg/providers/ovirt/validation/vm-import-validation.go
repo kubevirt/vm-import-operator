@@ -1,16 +1,13 @@
 package validation
 
 import (
-	"context"
 	"fmt"
-	"time"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/pkg/utils"
 
+	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	validators "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	v1 "k8s.io/api/core/v1"
@@ -107,23 +104,20 @@ type Validator interface {
 // VirtualMachineImportValidator validates VirtualMachineImport object
 type VirtualMachineImportValidator struct {
 	Validator Validator
-	client    client.Client
 }
 
 // NewVirtualMachineImportValidator creates ready-to-use NewVirtualMachineImportValidator
-func NewVirtualMachineImportValidator(client client.Client, validator Validator) VirtualMachineImportValidator {
+func NewVirtualMachineImportValidator(validator Validator) VirtualMachineImportValidator {
 	return VirtualMachineImportValidator{
 		Validator: validator,
-		client:    client,
 	}
 }
 
 // Validate validates whether VM described in VirtualMachineImport can be imported
-func (validator *VirtualMachineImportValidator) Validate(vm *ovirtsdk.Vm, vmiCrName *types.NamespacedName, mappings *v2vv1alpha1.OvirtMappings) error {
-	err := validator.validateMappings(vm, mappings, vmiCrName)
-	if err != nil {
-		return err
-	}
+func (validator *VirtualMachineImportValidator) Validate(vm *ovirtsdk.Vm, vmiCrName *types.NamespacedName, mappings *v2vv1alpha1.OvirtMappings) []v2vv1alpha1.VirtualMachineImportCondition {
+	var validationResults []v2vv1alpha1.VirtualMachineImportCondition
+	mappingsCheckResult := validator.validateMappings(vm, mappings, vmiCrName)
+	validationResults = append(validationResults, mappingsCheckResult)
 
 	failures := validator.Validator.ValidateVM(vm)
 	if nics, ok := vm.Nics(); ok {
@@ -133,11 +127,12 @@ func (validator *VirtualMachineImportValidator) Validate(vm *ovirtsdk.Vm, vmiCrN
 	if das, ok := vm.DiskAttachments(); ok {
 		failures = append(failures, validator.Validator.ValidateDiskAttachments(das.Slice())...)
 	}
-
-	return validator.processValidationFailures(failures, vmiCrName)
+	rulesCheckResult := validator.processValidationFailures(failures, vmiCrName)
+	validationResults = append(validationResults, rulesCheckResult)
+	return validationResults
 }
 
-func (validator *VirtualMachineImportValidator) validateMappings(vm *ovirtsdk.Vm, mappings *v2vv1alpha1.OvirtMappings, vmiCrName *types.NamespacedName) error {
+func (validator *VirtualMachineImportValidator) validateMappings(vm *ovirtsdk.Vm, mappings *v2vv1alpha1.OvirtMappings, vmiCrName *types.NamespacedName) v2vv1alpha1.VirtualMachineImportCondition {
 	var failures []validators.ValidationFailure
 
 	if nics, ok := vm.Nics(); ok {
@@ -152,37 +147,19 @@ func (validator *VirtualMachineImportValidator) validateMappings(vm *ovirtsdk.Vm
 	return validator.processMappingValidationFailures(failures, vmiCrName)
 }
 
-func (validator *VirtualMachineImportValidator) processMappingValidationFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) error {
+func (validator *VirtualMachineImportValidator) processMappingValidationFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) v2vv1alpha1.VirtualMachineImportCondition {
 	var message string
 
 	for _, failure := range failures {
-		message = withMessage(message, failure.Message)
+		message = utils.WithMessage(message, failure.Message)
 	}
-	instance := &v2vv1alpha1.VirtualMachineImport{}
-	err := validator.client.Get(context.TODO(), *vmiCrName, instance)
-	if err != nil {
-		return err
-	}
-	copy := instance.DeepCopy()
-
 	if len(failures) > 0 {
-		updateCondition(&copy.Status.Conditions, incompleteMappingRulesReason, message, false, v2vv1alpha1.Validating)
-		err = validator.client.Status().Update(context.TODO(), copy)
-		if err != nil {
-			return err
-		}
-		return fmt.Errorf("Mapping rules validation failed for %v. Reasons: %s", vmiCrName, message)
+		return conditions.NewCondition(v2vv1alpha1.Validating, incompleteMappingRulesReason, message, v1.ConditionFalse)
 	}
-	updateCondition(&copy.Status.Conditions, validationCompletedReason, "Validating completed successfully", true, v2vv1alpha1.Validating)
-	err = validator.client.Status().Update(context.TODO(), copy)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return conditions.NewCondition(v2vv1alpha1.Validating, validationCompletedReason, "Validating completed successfully", v1.ConditionTrue)
 }
 
-func (validator *VirtualMachineImportValidator) processValidationFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) error {
+func (validator *VirtualMachineImportValidator) processValidationFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) v2vv1alpha1.VirtualMachineImportCondition {
 	valid := true
 	var warnMessage, errorMessage string
 
@@ -191,80 +168,18 @@ func (validator *VirtualMachineImportValidator) processValidationFailures(failur
 		case log:
 			logger.Info(fmt.Sprintf("Validation information for %v: %v", vmiCrName, failure))
 		case warn:
-			warnMessage = withMessage(warnMessage, failure.Message)
+			warnMessage = utils.WithMessage(warnMessage, failure.Message)
 		case block:
 			valid = false
-			errorMessage = withMessage(errorMessage, failure.Message)
+			errorMessage = utils.WithMessage(errorMessage, failure.Message)
 		}
 	}
 
-	instance := &v2vv1alpha1.VirtualMachineImport{}
-	err := validator.client.Get(context.TODO(), *vmiCrName, instance)
-	if err != nil {
-		return err
-	}
-	copy := instance.DeepCopy()
-
 	if !valid {
-		updateCondition(&copy.Status.Conditions, errorReason, errorMessage, false, v2vv1alpha1.MappingRulesChecking)
+		return conditions.NewCondition(v2vv1alpha1.MappingRulesChecking, errorReason, errorMessage, v1.ConditionFalse)
 	} else if warnMessage != "" {
-		updateCondition(&copy.Status.Conditions, warnReason, warnMessage, true, v2vv1alpha1.MappingRulesChecking)
+		return conditions.NewCondition(v2vv1alpha1.MappingRulesChecking, warnReason, warnMessage, v1.ConditionTrue)
 	} else {
-		updateCondition(&copy.Status.Conditions, okReason, "All mapping rules checks passed", true, v2vv1alpha1.MappingRulesChecking)
+		return conditions.NewCondition(v2vv1alpha1.MappingRulesChecking, okReason, "All mapping rules checks passed", v1.ConditionTrue)
 	}
-
-	err = validator.client.Status().Update(context.TODO(), copy)
-	if err != nil {
-		return err
-	}
-	if !valid {
-		return fmt.Errorf("Validation failed for %v. Reasons: %s", vmiCrName, errorMessage)
-	}
-	return nil
-}
-
-func withMessage(message string, newMessage string) string {
-	if message == "" {
-		return newMessage
-	}
-	return fmt.Sprintf("%s, %s", message, newMessage)
-}
-
-func updateCondition(conditions *[]v2vv1alpha1.VirtualMachineImportCondition, reason string, message string, status bool, conditionType v2vv1alpha1.VirtualMachineImportConditionType) {
-	conditionStatus := v1.ConditionTrue
-	if !status {
-		conditionStatus = v1.ConditionFalse
-	}
-
-	condition := findConditionOfType(conditionType, *conditions)
-	now := metav1.NewTime(time.Now())
-
-	if condition != nil {
-		condition.Message = &message
-		condition.Reason = &reason
-		condition.LastHeartbeatTime = &now
-		if condition.Status != conditionStatus {
-			condition.Status = conditionStatus
-			condition.LastTransitionTime = &now
-		}
-	} else {
-		newCondition := v2vv1alpha1.VirtualMachineImportCondition{
-			Type:               conditionType,
-			LastTransitionTime: &now,
-			LastHeartbeatTime:  &now,
-			Message:            &message,
-			Reason:             &reason,
-			Status:             conditionStatus,
-		}
-		*conditions = append(*conditions, newCondition)
-	}
-}
-
-func findConditionOfType(tp v2vv1alpha1.VirtualMachineImportConditionType, conditions []v2vv1alpha1.VirtualMachineImportCondition) *v2vv1alpha1.VirtualMachineImportCondition {
-	for i := range conditions {
-		if conditions[i].Type == tp {
-			return &conditions[i]
-		}
-	}
-	return nil
 }

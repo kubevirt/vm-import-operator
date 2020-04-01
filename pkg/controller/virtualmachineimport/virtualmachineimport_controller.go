@@ -2,12 +2,15 @@ package virtualmachineimport
 
 import (
 	"context"
+	langerr "errors"
 	"fmt"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	"github.com/kubevirt/vm-import-operator/pkg/mappings"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	ovirtprovider "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt"
+	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -155,10 +158,19 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 
 	// Validate if it's needed at this stage of processing
 	if shouldValidate(&instance.Status) {
-		err = provider.Validate()
+		conditions, err := provider.Validate()
 		if err != nil {
 			return reconcile.Result{}, err
 		}
+		err = r.upsertStatusConditions(request.NamespacedName, conditions)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		if valid, message := shouldFailWith(conditions); !valid {
+			return reconcile.Result{}, langerr.New(message)
+		}
+	} else {
+		reqLogger.Info("VirtualMachineImport has already been validated positively. Skipping re-validation")
 	}
 
 	// Stop VM
@@ -304,9 +316,15 @@ func createDVSecret(creds provider.DataVolumeCredentials, vmImport *v2vv1alpha1.
 	}
 }
 
-func shouldValidate(vmi *v2vv1alpha1.VirtualMachineImportStatus) bool {
-	// TODO: check the status - status manipulation package is needed
-	return true
+func shouldValidate(vmiStatus *v2vv1alpha1.VirtualMachineImportStatus) bool {
+	validatingCondition := conditions.FindConditionOfType(vmiStatus.Conditions, v2vv1alpha1.Validating)
+	rulesCheckingCondition := conditions.FindConditionOfType(vmiStatus.Conditions, v2vv1alpha1.MappingRulesChecking)
+
+	return isIncomplete(validatingCondition) || isIncomplete(rulesCheckingCondition)
+}
+
+func isIncomplete(condition *v2vv1alpha1.VirtualMachineImportCondition) bool {
+	return condition == nil || condition.Status != corev1.ConditionTrue
 }
 
 func (r *ReconcileVirtualMachineImport) createProvider(vmi *v2vv1alpha1.VirtualMachineImport) (provider.Provider, error) {
@@ -318,4 +336,38 @@ func (r *ReconcileVirtualMachineImport) createProvider(vmi *v2vv1alpha1.VirtualM
 	}
 
 	return nil, fmt.Errorf("Invalid source type. only Ovirt type is supported")
+}
+
+func (r *ReconcileVirtualMachineImport) upsertStatusConditions(vmiName types.NamespacedName, newConditions []v2vv1alpha1.VirtualMachineImportCondition) error {
+	var instance v2vv1alpha1.VirtualMachineImport
+	err := r.client.Get(context.TODO(), vmiName, &instance)
+	if err != nil {
+		return err
+	}
+
+	copy := instance.DeepCopy()
+	for _, condition := range newConditions {
+		conditions.UpsertCondition(copy, condition)
+	}
+
+	patch := client.MergeFrom(&instance)
+	err = r.client.Status().Patch(context.TODO(), copy, patch)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func shouldFailWith(conditions []v2vv1alpha1.VirtualMachineImportCondition) (bool, string) {
+	var message string
+	valid := true
+	for _, condition := range conditions {
+		if condition.Status == corev1.ConditionFalse {
+			if condition.Message != nil {
+				message = utils.WithMessage(message, *condition.Message)
+			}
+			valid = false
+		}
+	}
+	return valid, message
 }

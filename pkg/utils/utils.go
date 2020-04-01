@@ -90,3 +90,11 @@ func NormalizeName(name string) (string, error) {
 	}
 	return name, nil
 }
+
+// WithMessage joins message and newMessage with a ", " string and returns the resulting string or returns newMessage if message is empty
+func WithMessage(message string, newMessage string) string {
+	if message == "" {
+		return newMessage
+	}
+	return fmt.Sprintf("%s, %s", message, newMessage)
+}

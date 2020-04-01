@@ -53,7 +53,7 @@ func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, kube
 	validator := validators.NewValidatorWrapper(kubevirtClient)
 	provider := OvirtProvider{
 		vmiCrName: vmiCrName,
-		validator: validation.NewVirtualMachineImportValidator(client, validator),
+		validator: validation.NewVirtualMachineImportValidator(validator),
 	}
 	return provider
 }
@@ -139,11 +139,11 @@ func (o *OvirtProvider) PrepareResourceMapping(externalResourceMapping *v2vv1alp
 }
 
 // Validate validates whether loaded previously VM and resource mapping is valid. The validation results are recorded in th VMI CR identified by vmiCrName and in case of a validation failure error is returned.
-func (o *OvirtProvider) Validate() error {
+func (o *OvirtProvider) Validate() ([]v2vv1alpha1.VirtualMachineImportCondition, error) {
 	if o.vm == nil {
-		return errors.New("VM has not been loaded")
+		return []v2vv1alpha1.VirtualMachineImportCondition{}, errors.New("VM has not been loaded")
 	}
-	return o.validator.Validate(o.vm, &o.vmiCrName, o.resourceMapping)
+	return o.validator.Validate(o.vm, &o.vmiCrName, o.resourceMapping), nil
 }
 
 // StopVM stop the source VM on ovirt
