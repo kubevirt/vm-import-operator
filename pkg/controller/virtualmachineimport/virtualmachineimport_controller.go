@@ -18,11 +18,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 	"kubevirt.io/client-go/kubecli"
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -69,17 +72,69 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource VirtualMachineImport
-	err = c.Watch(&source.Kind{Type: &v2vv1alpha1.VirtualMachineImport{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(
+		&source.Kind{Type: &v2vv1alpha1.VirtualMachineImport{}},
+		&handler.EnqueueRequestForObject{},
+		predicate.Funcs{
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				// Ignore update func in case VM import succeded:
+				vmimport := e.ObjectNew.(*v2vv1alpha1.VirtualMachineImport)
+				for _, cond := range vmimport.Status.Conditions {
+					if cond.Type == v2vv1alpha1.Succeeded {
+						return false
+					}
+				}
+				return true
+			},
+		},
+	)
 	if err != nil {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner VirtualMachineImport
-	err = c.Watch(&source.Kind{Type: &kubevirtv1.VirtualMachine{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &v2vv1alpha1.VirtualMachineImport{},
-	})
+	// Watch for VM events:
+	err = c.Watch(
+		&source.Kind{Type: &kubevirtv1.VirtualMachine{}},
+		&handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    &v2vv1alpha1.VirtualMachineImport{},
+		},
+		// We are interested only on Delete and Generic events.
+		predicate.Funcs{
+			CreateFunc: func(e event.CreateEvent) bool {
+				return false
+			},
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				return false
+			},
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	// Watch for DV events:
+	err = c.Watch(
+		&source.Kind{Type: &cdiv1.DataVolume{}},
+		&handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    &v2vv1alpha1.VirtualMachineImport{},
+		},
+		// We are interested only on Delete and Generic events.
+		predicate.Funcs{
+			CreateFunc: func(e event.CreateEvent) bool {
+				return false
+			},
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				// Ignore update func in case VM import succeded:
+				dv := e.ObjectNew.(*cdiv1.DataVolume)
+				if dv.Status.Phase == cdiv1.Succeeded {
+					return false
+				}
+				return true
+			},
+		},
+	)
 	if err != nil {
 		return err
 	}
