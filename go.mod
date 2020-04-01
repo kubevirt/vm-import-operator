@@ -3,34 +3,21 @@ module github.com/kubevirt/vm-import-operator
 go 1.13
 
 require (
-	contrib.go.opencensus.io/exporter/ocagent v0.4.11 // indirect
-	github.com/Masterminds/sprig v0.0.0-20190301161902-9f8fceff796f // indirect
-	github.com/chai2010/gettext-go v0.0.0-20170215093142-bf70f2a70fb1 // indirect
-	github.com/coreos/bbolt v1.3.3 // indirect
 	github.com/go-openapi/spec v0.19.4
-	github.com/gotestyourself/gotestyourself v2.2.0+incompatible // indirect
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20191119172530-79f836b90111
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.7.1
 	github.com/operator-framework/operator-sdk v0.15.2
 	github.com/ovirt/go-ovirt v4.3.4+incompatible
-	github.com/pelletier/go-toml v1.3.0 // indirect
-	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5
-	github.com/technosophos/moniker v0.0.0-20180509230615-a5dbd03a2245 // indirect
-	go.etcd.io/bbolt v1.3.3 // indirect
-	go.etcd.io/etcd v3.3.19+incompatible
-	golang.org/x/build v0.0.0-20190314133821-5284462c4bec // indirect
 	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.17.1
 	k8s.io/apimachinery v0.17.1
-	k8s.io/apiserver v0.16.4
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
 	kubevirt.io/client-go v0.26.2
 	kubevirt.io/containerized-data-importer v1.13.0
 	sigs.k8s.io/controller-runtime v0.4.0
-	vbom.ml/util v0.0.0-20180919145318-efcd4e0f9787 // indirect
 )
 
 replace github.com/ovirt/go-ovirt => github.com/ovirt/go-ovirt v0.0.0-20200320082526-4e97a11ff083
