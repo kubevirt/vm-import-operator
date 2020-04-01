@@ -103,3 +103,15 @@ func WithMessage(message string, newMessage string) string {
 func MakeLabelFrom(namespace string, name string) string {
 	return fmt.Sprintf("%s-%s", namespace, name)
 }
+
+// CountImportedDataVolumes return number of true values in map of booleans
+func CountImportedDataVolumes(dvsDone map[string]bool) int {
+	done := 0
+	for _, isDone := range dvsDone {
+		if isDone {
+			done++
+		}
+	}
+
+	return done
+}

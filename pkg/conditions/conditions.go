@@ -22,6 +22,16 @@ func NewCondition(conditionType v2vv1alpha1.VirtualMachineImportConditionType, r
 	return condition
 }
 
+// NewSucceededCondition create a condition of type succeded of specific reason and message
+func NewSucceededCondition(reason string, message string) v2vv1alpha1.VirtualMachineImportCondition {
+	return NewCondition(v2vv1alpha1.Succeeded, reason, message, v1.ConditionTrue)
+}
+
+// NewProccessingCondition create a condition of type succeded of specific reason and message
+func NewProccessingCondition(reason string, message string) v2vv1alpha1.VirtualMachineImportCondition {
+	return NewCondition(v2vv1alpha1.Processing, reason, message, v1.ConditionTrue)
+}
+
 // UpsertCondition updates or creates condition in the virtualMachineImportStatus
 func UpsertCondition(vmi *v2vv1alpha1.VirtualMachineImport, condition v2vv1alpha1.VirtualMachineImportCondition) {
 	existingCondition := FindConditionOfType(vmi.Status.Conditions, condition.Type)
@@ -48,4 +58,18 @@ func FindConditionOfType(conditions []v2vv1alpha1.VirtualMachineImportCondition,
 		}
 	}
 	return nil
+}
+
+// HasSucceededConditionOfReason finds condition of a Succeeded type with conditionReason reason in the conditions slice
+func HasSucceededConditionOfReason(conditions []v2vv1alpha1.VirtualMachineImportCondition, conditionReason ...v2vv1alpha1.SucceededConditionReason) bool {
+	for _, cond := range conditions {
+		if cond.Type == v2vv1alpha1.Succeeded {
+			for _, reason := range conditionReason {
+				if *cond.Reason == string(reason) {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

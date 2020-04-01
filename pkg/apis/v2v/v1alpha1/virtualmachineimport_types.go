@@ -124,6 +124,9 @@ const (
 
 	// VirtualMachineReady represents the completion of the vm import
 	VirtualMachineReady SucceededConditionReason = "VirtualMachineReady"
+
+	// VirtualMachineRunning represents the completion of the vm import and vm in running state
+	VirtualMachineRunning SucceededConditionReason = "VirtualMachineRunning"
 )
 
 // ValidatingConditionReason defines the reasons for the Validating condition of VM import

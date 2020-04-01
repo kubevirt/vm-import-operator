@@ -24,6 +24,7 @@ import (
 	"github.com/spf13/pflag"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -103,6 +104,12 @@ func main() {
 
 	// Setup Scheme for all resources
 	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Setup Scheme for all resources
+	if err := cdiv1.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}

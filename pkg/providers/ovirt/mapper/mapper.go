@@ -418,11 +418,7 @@ func (o *OvirtMapper) mapHighAvailability() *bool {
 }
 
 func (o *OvirtMapper) mapMemory() *kubevirtv1.Memory {
-	// Guest memory
-	ovirtVMMemory, _ := o.vm.Memory()
-	guestMemory, _ := resource.ParseQuantity(strconv.FormatInt(ovirtVMMemory, 10))
 	memory := &kubevirtv1.Memory{}
-	memory.Guest = &guestMemory
 
 	// HugePages
 	hp := o.mapHugePages()
@@ -456,6 +452,15 @@ func (o *OvirtMapper) mapHugePages() *kubevirtv1.Hugepages {
 
 func (o *OvirtMapper) mapResourceRequirements() kubevirtv1.ResourceRequirements {
 	reqs := kubevirtv1.ResourceRequirements{}
+
+	// Requests
+	ovirtVMMemory, _ := o.vm.Memory()
+	guestMemory, _ := resource.ParseQuantity(strconv.FormatInt(ovirtVMMemory, 10))
+	reqs.Requests = map[corev1.ResourceName]resource.Quantity{
+		corev1.ResourceMemory: guestMemory,
+	}
+
+	// Limits
 	memoryPolicy, _ := o.vm.MemoryPolicy()
 	maxMemory, _ := memoryPolicy.Max()
 	maxMemoryQuantity, _ := resource.ParseQuantity(strconv.FormatInt(maxMemory, 10))

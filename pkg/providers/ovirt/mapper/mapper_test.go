@@ -52,7 +52,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 	It("should map Memory", func() {
 		// guest memory
-		guestMemory, _ := vmSpec.Spec.Template.Spec.Domain.Memory.Guest.AsInt64()
+		guestMemory, _ := vmSpec.Spec.Template.Spec.Domain.Resources.Requests.Memory().AsInt64()
 		Expect(guestMemory).To(Equal(vm.MustMemory()))
 
 		// huge page
