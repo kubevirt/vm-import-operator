@@ -122,6 +122,12 @@ func (o *OvirtMapper) MapVM(targetVMName *string) *kubevirtv1.VirtualMachine {
 	// Map timezone
 	vmSpec.Spec.Template.Spec.Domain.Clock = o.mapTimeZone()
 
+	// Map network interfaces
+	vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces = o.mapNics()
+
+	// Map networks
+	vmSpec.Spec.Template.Spec.Networks = o.mapNetworks()
+
 	return &vmSpec
 }
 
@@ -174,6 +180,75 @@ func (o *OvirtMapper) MapDisks() map[string]cdiv1.DataVolume {
 		}
 	}
 	return dvs
+}
+
+func (o *OvirtMapper) mapNics() []kubevirtv1.Interface {
+	var kubevirtNics []kubevirtv1.Interface
+	nics, _ := o.vm.Nics()
+	for _, nic := range nics.Slice() {
+		// This network interface don't have any network specified.
+		if _, ok := nic.VnicProfile(); !ok {
+			continue
+		}
+
+		kubevirtNic := kubevirtv1.Interface{}
+		kubevirtNic.Name, _ = nic.Name()
+		if nicMac, ok := nic.Mac(); ok {
+			kubevirtNic.MacAddress, _ = nicMac.Address()
+		}
+		if nicInterface, ok := nic.Interface(); ok {
+			kubevirtNic.Model = string(nicInterface)
+		}
+		kubevirtNics = append(kubevirtNics, kubevirtNic)
+	}
+
+	return kubevirtNics
+}
+
+func (o *OvirtMapper) mapNetworks() []kubevirtv1.Network {
+	var kubevirtNetworks []kubevirtv1.Network
+	nics, _ := o.vm.Nics()
+	for _, nic := range nics.Slice() {
+		// This network interface don't have any network specified.
+		nicProfile, ok := nic.VnicProfile()
+		if !ok {
+			continue
+		}
+
+		kubevirtNet := o.getNetworkForNic(nicProfile)
+		kubevirtNet.Name, _ = nic.Name()
+		kubevirtNetworks = append(kubevirtNetworks, kubevirtNet)
+	}
+
+	return kubevirtNetworks
+}
+
+func (o *OvirtMapper) getNetworkForNic(vnicProfile *ovirtsdk.VnicProfile) kubevirtv1.Network {
+	kubevirtNet := kubevirtv1.Network{}
+	network, _ := vnicProfile.Network()
+	for _, mapping := range *o.mappings.NetworkMappings {
+		if mapping.Source.Name != nil {
+			if nicNetworkName, _ := network.Name(); nicNetworkName == *mapping.Source.Name {
+				o.mapNetworkType(mapping, &kubevirtNet)
+			}
+		}
+		if mapping.Source.ID != nil {
+			if nicNetworkID, _ := network.Id(); nicNetworkID == *mapping.Source.ID {
+				o.mapNetworkType(mapping, &kubevirtNet)
+			}
+		}
+	}
+	return kubevirtNet
+}
+
+func (o *OvirtMapper) mapNetworkType(mapping v2vv1alpha1.ResourceMappingItem, kubevirtNet *kubevirtv1.Network) {
+	if *mapping.Type == "pod" {
+		kubevirtNet.Pod = &kubevirtv1.PodNetwork{}
+	} else if *mapping.Type == "multus" {
+		kubevirtNet.Multus = &kubevirtv1.MultusNetwork{
+			NetworkName: mapping.Target.Name,
+		}
+	}
 }
 
 func (o *OvirtMapper) resolveVMName(targetVMName *string, vm *ovirtsdk.Vm) (string, bool) {

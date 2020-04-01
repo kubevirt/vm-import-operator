@@ -3,13 +3,13 @@ package mapper_test
 import (
 	"fmt"
 
+	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
-
-	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
 )
 
 const memoryGI = 1024 * 1024 * 1024
@@ -18,13 +18,15 @@ var targetVMName = "myvm"
 
 var _ = Describe("Test mapping virtual machine attributes", func() {
 	var (
-		vm     *ovirtsdk.Vm
-		vmSpec *kubevirtv1.VirtualMachine
+		vm       *ovirtsdk.Vm
+		vmSpec   *kubevirtv1.VirtualMachine
+		mappings v2vv1alpha1.OvirtMappings
 	)
 
 	BeforeEach(func() {
 		vm = createVM()
-		mapper := mapper.NewOvirtMapper(vm, nil, provider.DataVolumeCredentials{}, "")
+		mappings = createMappings()
+		mapper := mapper.NewOvirtMapper(vm, &mappings, provider.DataVolumeCredentials{}, "")
 		vmSpec = mapper.MapVM(&targetVMName)
 	})
 
@@ -91,6 +93,18 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(labels[mapper.LabelOrigin]).To(Equal(vm.MustOrigin()))
 		Expect(labels[mapper.LabelInstanceType]).To(Equal(vm.MustInstanceType().MustName()))
 	})
+
+	It("should map nics", func() {
+		interfaces := vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces
+		networks := vmSpec.Spec.Template.Spec.Networks
+		networkMapping := *mappings.NetworkMappings
+		nic := vm.MustNics().Slice()[0]
+
+		Expect(interfaces[0].Name).To(Equal(nic.MustName()))
+		Expect(interfaces[0].Model).To(Equal(string(nic.MustInterface())))
+		Expect(networks[0].Name).To(Equal(nic.MustName()))
+		Expect(networks[0].Multus.NetworkName).To(Equal(networkMapping[0].Target.Name))
+	})
 })
 
 func createVM() *ovirtsdk.Vm {
@@ -144,5 +158,62 @@ func createVM() *ovirtsdk.Vm {
 						Id(ovirtsdk.SSOMETHOD_GUEST_AGENT).
 						MustBuild()).
 				MustBuild()).
+		NicsOfAny(
+			ovirtsdk.NewNicBuilder().
+				Name("nic1").
+				Interface("virtio").
+				VnicProfile(
+					ovirtsdk.NewVnicProfileBuilder().
+						Network(
+							ovirtsdk.NewNetworkBuilder().
+								Name("network1").MustBuild()).
+						MustBuild()).
+				MustBuild()).
+		DiskAttachmentsOfAny(
+			ovirtsdk.NewDiskAttachmentBuilder().
+				Id("123").
+				Disk(
+					ovirtsdk.NewDiskBuilder().
+						Id("123").
+						Name("mydisk").
+						Bootable(true).
+						ProvisionedSize(memoryGI).
+						StorageDomainsOfAny(
+							ovirtsdk.NewStorageDomainBuilder().
+								Name("mystoragedomain").MustBuild()).
+						MustBuild()).MustBuild()).
 		MustBuild()
+}
+
+func createMappings() v2vv1alpha1.OvirtMappings {
+	// network mappings
+	var networks []v2vv1alpha1.ResourceMappingItem
+	multusNetwork := "multus"
+	networkName := "network1"
+	networks = append(networks, v2vv1alpha1.ResourceMappingItem{
+		Source: v2vv1alpha1.Source{
+			Name: &networkName,
+		},
+		Target: v2vv1alpha1.ObjectIdentifier{
+			Name: "net-attach-def",
+		},
+		Type: &multusNetwork,
+	})
+
+	// storage mappings
+	var storages []v2vv1alpha1.ResourceMappingItem
+	storageName := "mystoragedomain"
+	storages = append(storages, v2vv1alpha1.ResourceMappingItem{
+		Source: v2vv1alpha1.Source{
+			Name: &storageName,
+		},
+		Target: v2vv1alpha1.ObjectIdentifier{
+			Name: "storageclassname",
+		},
+	})
+
+	return v2vv1alpha1.OvirtMappings{
+		NetworkMappings: &networks,
+		StorageMappings: &storages,
+	}
 }
