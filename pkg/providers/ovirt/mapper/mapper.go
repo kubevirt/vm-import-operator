@@ -8,6 +8,7 @@ import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
+	templatev1 "github.com/openshift/api/template/v1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -62,7 +63,8 @@ func NewOvirtMapper(vm *ovirtsdk.Vm, mappings *v2vv1alpha1.OvirtMappings, creds 
 }
 
 // MapVM map oVirt API VM definition to kubevirt VM definition
-func (o *OvirtMapper) MapVM(targetVMName *string) *kubevirtv1.VirtualMachine {
+func (o *OvirtMapper) MapVM(targetVMName *string, template *templatev1.Template) *kubevirtv1.VirtualMachine {
+	// TODO use vm spec from the template (DeepCopy without network nor volumes)
 	vmSpec := kubevirtv1.VirtualMachine{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: o.namespace,

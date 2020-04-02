@@ -2,6 +2,7 @@ package provider
 
 import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	oapiv1 "github.com/openshift/api/template/v1"
 	corev1 "k8s.io/api/core/v1"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
@@ -27,11 +28,12 @@ type Provider interface {
 	CreateMapper() Mapper
 	GetVMStatus() (VMStatus, error)
 	StartVM() error
+	FindTemplate() (*oapiv1.Template, error)
 }
 
 // Mapper is interface to be used for mapping external VM to kubevirt VM
 type Mapper interface {
-	MapVM(targetVMName *string) *kubevirtv1.VirtualMachine
+	MapVM(targetVMName *string, tempalte *oapiv1.Template) *kubevirtv1.VirtualMachine
 	MapDisks() map[string]cdiv1.DataVolume
 }
 

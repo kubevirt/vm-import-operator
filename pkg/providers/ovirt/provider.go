@@ -12,8 +12,11 @@ import (
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	ovirtclient "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/client"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
+	templates "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/templates"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
+	templatev1 "github.com/openshift/api/template/v1"
+	tempclient "github.com/openshift/client-go/template/clientset/versioned/typed/template/v1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
@@ -46,14 +49,16 @@ type OvirtProvider struct {
 	vm                 *ovirtsdk.Vm
 	vmiCrName          types.NamespacedName
 	resourceMapping    *v2vv1alpha1.OvirtMappings
+	templateFinder     *templates.TemplateFinder
 }
 
 // NewOvirtProvider creates new OvirtProvider configured with dependencies
-func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, kubevirtClient kubecli.KubevirtClient) OvirtProvider {
+func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, kubevirtClient kubecli.KubevirtClient, tempClient *tempclient.TemplateV1Client) OvirtProvider {
 	validator := validators.NewValidatorWrapper(kubevirtClient)
 	provider := OvirtProvider{
-		vmiCrName: vmiCrName,
-		validator: validation.NewVirtualMachineImportValidator(validator),
+		vmiCrName:      vmiCrName,
+		validator:      validation.NewVirtualMachineImportValidator(validator),
+		templateFinder: templates.NewTemplateFinder(tempClient),
 	}
 	return provider
 }
@@ -167,6 +172,11 @@ func (o *OvirtProvider) StopVM() error {
 		return err
 	}
 	return nil
+}
+
+// FindTemplate attempts to find best match for a template based on the source VM
+func (o *OvirtProvider) FindTemplate() (*templatev1.Template, error) {
+	return o.templateFinder.FindTemplate(o.vm)
 }
 
 // CreateMapper create the mapper for ovirt provider

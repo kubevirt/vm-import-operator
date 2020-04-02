@@ -11,6 +11,7 @@ import (
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	ovirtprovider "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
+	templatev1 "github.com/openshift/client-go/template/clientset/versioned/typed/template/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 	"kubevirt.io/client-go/kubecli"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -56,9 +58,14 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 		log.Error(err, "Unable to get KubeVirt client")
 		panic("Controller cannot operate without KubeVirt")
 	}
+	tempClient, err := templatev1.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		log.Error(err, "Unable to get OC client")
+		panic("Controller cannot operate without OC client")
+	}
 	client := mgr.GetClient()
 	finder := mappings.NewResourceMappingsFinder(client)
-	return &ReconcileVirtualMachineImport{client: client, scheme: mgr.GetScheme(), kubeClient: kubeClient, resourceMappingsFinder: finder}
+	return &ReconcileVirtualMachineImport{client: client, scheme: mgr.GetScheme(), kubeClient: kubeClient, resourceMappingsFinder: finder, ocClient: tempClient}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -99,6 +106,7 @@ type ReconcileVirtualMachineImport struct {
 	scheme                 *runtime.Scheme
 	kubeClient             kubecli.KubevirtClient
 	resourceMappingsFinder mappings.ResourceMappingsFinder
+	ocClient               *templatev1.TemplateV1Client
 }
 
 // Reconcile reads that state of the cluster for a VirtualMachineImport object and makes changes based on the state read
@@ -193,7 +201,11 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 
 	// Define VM spec
 	mapper := provider.CreateMapper()
-	vmSpec := mapper.MapVM(instance.Spec.TargetVMName)
+	template, err := provider.FindTemplate()
+	if err != nil {
+		// TODO build vm spec from scratch with a warning
+	}
+	vmSpec := mapper.MapVM(instance.Spec.TargetVMName, template)
 
 	// Set VirtualMachineImport instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, vmSpec, r.scheme); err != nil {
@@ -203,6 +215,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	// Check if this VM already exists
 	found := &kubevirtv1.VirtualMachine{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: vmSpec.Name, Namespace: vmSpec.Namespace}, found)
+
 	if err != nil && errors.IsNotFound(err) {
 
 		// Create kubevirt VM from source VM:
@@ -343,7 +356,7 @@ func (r *ReconcileVirtualMachineImport) createProvider(vmi *v2vv1alpha1.VirtualM
 	// The type of the provider is evaluated based on the source field from the CR
 	if vmi.Spec.Source.Ovirt != nil {
 		namespacedName := types.NamespacedName{Name: vmi.Name, Namespace: vmi.Namespace}
-		provider := ovirtprovider.NewOvirtProvider(namespacedName, r.client, r.kubeClient)
+		provider := ovirtprovider.NewOvirtProvider(namespacedName, r.client, r.kubeClient, r.ocClient)
 		return &provider, nil
 	}
 
