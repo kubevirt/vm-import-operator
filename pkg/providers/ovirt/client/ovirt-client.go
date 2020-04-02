@@ -93,6 +93,14 @@ func (client *richOvirtClient) GetVM(id *string, name *string, cluster *string, 
 	if err != nil {
 		return nil, err
 	}
+	err = client.populateInstanceType(vm)
+	if err != nil {
+		return nil, err
+	}
+	err = client.populateTags(vm)
+	if err != nil {
+		return nil, err
+	}
 	return vm, nil
 }
 
@@ -146,7 +154,8 @@ func (client *richOvirtClient) StopVM(id string) error {
 func (client *richOvirtClient) fetchVM(id *string, name *string, clusterName *string, clusterID *string) (*ovirtsdk.Vm, error) {
 	// Id of the VM specified:
 	if id != nil {
-		response, err := client.connection.SystemService().VmsService().VmService(*id).Get().Send()
+		// We need to pass "All-content" header, so we fetch also information about console, etc.
+		response, err := client.connection.SystemService().VmsService().VmService(*id).Get().AllContent(true).Send()
 		if err != nil {
 			return nil, err
 		}
@@ -314,14 +323,49 @@ func (client *richOvirtClient) populateDiskAttachments(vm *ovirtsdk.Vm) error {
 		attachments := followed.(*ovirtsdk.DiskAttachmentSlice)
 		for _, da := range attachments.Slice() {
 			if disk, ok := da.Disk(); ok {
+				// Follow disk:
 				diskFollowed, err := client.connection.FollowLink(disk)
 				if err != nil {
 					return err
 				}
-				da.SetDisk(diskFollowed.(*ovirtsdk.Disk))
+				diskPopulated := diskFollowed.(*ovirtsdk.Disk)
+
+				// Follow storage domain:
+				if storageDomains, ok := diskPopulated.StorageDomains(); ok {
+					storageDomainHref := storageDomains.Slice()[0]
+					storageDomainPopulated, err := client.connection.FollowLink(storageDomainHref)
+					if err != nil {
+						return err
+					}
+					diskPopulated.SetStorageDomain(storageDomainPopulated.(*ovirtsdk.StorageDomain))
+				}
+				da.SetDisk(diskPopulated)
 			}
 		}
 		vm.SetDiskAttachments(attachments)
+	}
+	return nil
+}
+
+func (client *richOvirtClient) populateInstanceType(vm *ovirtsdk.Vm) error {
+	if instanceType, ok := vm.InstanceType(); ok {
+		followed, err := client.connection.FollowLink(instanceType)
+		if err != nil {
+			return err
+		}
+		vm.SetInstanceType(followed.(*ovirtsdk.InstanceType))
+	}
+	return nil
+}
+
+func (client *richOvirtClient) populateTags(vm *ovirtsdk.Vm) error {
+	if tags, ok := vm.Tags(); ok {
+		followed, err := client.connection.FollowLink(tags)
+		if err != nil {
+			return err
+		}
+		tagsPopulated := followed.(*ovirtsdk.TagSlice)
+		vm.SetTags(tagsPopulated)
 	}
 	return nil
 }

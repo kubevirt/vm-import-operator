@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
-
-// BiosTypeMapping defines mapping of BIOS types between oVirt and kubevirt domains
-var BiosTypeMapping = map[string]string{"q35_ovmf": "efi", "q35_sea_bios": "bios", "q35_secure_boot": "bios"}
 
 // ValidateVM validates given VM
 func ValidateVM(vm *ovirtsdk.Vm) []ValidationFailure {
@@ -110,7 +108,7 @@ func isValidBootMenu(bios *ovirtsdk.Bios) (ValidationFailure, bool) {
 
 func isValidBiosType(bios *ovirtsdk.Bios) (ValidationFailure, bool) {
 	biosType, _ := bios.Type()
-	if _, found := BiosTypeMapping[string(biosType)]; !found {
+	if _, found := mapper.BiosTypeMapping[string(biosType)]; !found {
 		return ValidationFailure{
 			ID:      VMBiosTypeID,
 			Message: fmt.Sprintf("VM uses unsupported bios type: %v", biosType),
