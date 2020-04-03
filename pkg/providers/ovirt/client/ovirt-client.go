@@ -18,6 +18,8 @@ const (
 type OvirtClient interface {
 	GetVM(id *string, name *string, cluster *string, clusterID *string) (*ovirtsdk.Vm, error)
 	StopVM(id string) error
+	StartVM(id string) error
+	RenameVM(id string, name string) error
 	Close() error
 }
 
@@ -149,6 +151,41 @@ func (client *richOvirtClient) StopVM(id string) error {
 	case <-time.After(vmStopTimeout * time.Minute):
 		return fmt.Errorf("Failed to stop vm %s, current status is %s", vm.MustName(), vm.MustStatus())
 	}
+}
+
+// StartVM requests VM start and doesn't wait for it to be UP
+func (client *richOvirtClient) StartVM(id string) error {
+	vmService := client.connection.SystemService().VmsService().VmService(id)
+
+	vmResponse, _ := vmService.Get().Send()
+	vm, vmAvailable := vmResponse.Vm()
+	if !vmAvailable {
+		return fmt.Errorf("Failed to start vm %s, vm is not available", id)
+	}
+
+	// Request the VM startup if VM is not UP
+	if status, _ := vm.Status(); status == ovirtsdk.VMSTATUS_DOWN {
+		_, err := vmService.Start().Send()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RenameVM updates VM's name
+func (client *richOvirtClient) RenameVM(id string, name string) error {
+	vmService := client.connection.SystemService().VmsService().VmService(id)
+
+	newVm, err := ovirtsdk.NewVmBuilder().Name(name).Build()
+	if err != nil {
+		return err
+	}
+	_, err = vmService.Update().Vm(newVm).Send()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (client *richOvirtClient) fetchVM(id *string, name *string, clusterName *string, clusterID *string) (*ovirtsdk.Vm, error) {
