@@ -24,8 +24,16 @@ type OvirtMappings struct {
 	// +optional
 	NetworkMappings *[]ResourceMappingItem `json:"networkMappings,omitempty"`
 
+	// StorageMappings defines the mapping of storage domains to storage classes
 	// +optional
 	StorageMappings *[]ResourceMappingItem `json:"storageMappings,omitempty"`
+
+	// DiskMappings defines the mapping of disks to storage classes
+	// DiskMappings.Source.ID represents the disk ID on ovirt (as opposed to disk-attachment ID)
+	// DiskMappings.Source.Name represents the disk alias on ovirt
+	// DiskMappings is respected only when provided in context of a single VM import within VirtualMachineImport
+	// +optional
+	DiskMappings *[]ResourceMappingItem `json:"diskMappings,omitempty"`
 }
 
 // Source defines how to identify a resource on the provider, either by ID or by name

@@ -90,6 +90,8 @@ spec:
                       type: array
                     storageMappings:
                       type: array
+                    diskMappings:
+                      type: array
         status:
           properties:
   version: v1alpha1

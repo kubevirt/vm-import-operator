@@ -70,6 +70,17 @@ func (in *OvirtMappings) DeepCopyInto(out *OvirtMappings) {
 			}
 		}
 	}
+	if in.DiskMappings != nil {
+		in, out := &in.DiskMappings, &out.DiskMappings
+		*out = new([]ResourceMappingItem)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]ResourceMappingItem, len(*in))
+			for i := range *in {
+				(*in)[i].DeepCopyInto(&(*out)[i])
+			}
+		}
+	}
 	return
 }
 

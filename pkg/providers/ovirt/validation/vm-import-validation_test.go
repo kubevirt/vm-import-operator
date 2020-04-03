@@ -41,9 +41,12 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		validateNetworkMappingsMock = func(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.ResourceMappingItem, crNamespace string) []validators.ValidationFailure {
 			return []validators.ValidationFailure{}
 		}
-		validateStorageMappingMock = func(attachments []*ovirtsdk.DiskAttachment, mapping *[]v2vv1alpha1.ResourceMappingItem) []validators.ValidationFailure {
+		validateStorageMappingMock = func(
+			attachments []*ovirtsdk.DiskAttachment,
+			storageMapping *[]v2vv1alpha1.ResourceMappingItem,
+			diskMapping *[]v2vv1alpha1.ResourceMappingItem,
+		) []validators.ValidationFailure {
 			return []validators.ValidationFailure{}
-
 		}
 	})
 	It("should accept VirtualMachineImport", func() {
@@ -363,7 +366,11 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 		message := "Mapping - boom!"
-		validateStorageMappingMock = func(attachments []*ovirtsdk.DiskAttachment, mapping *[]v2vv1alpha1.ResourceMappingItem) []validators.ValidationFailure {
+		validateStorageMappingMock = func(
+			attachments []*ovirtsdk.DiskAttachment,
+			storageMapping *[]v2vv1alpha1.ResourceMappingItem,
+			diskMapping *[]v2vv1alpha1.ResourceMappingItem,
+		) []validators.ValidationFailure {
 			return []validators.ValidationFailure{
 				validators.ValidationFailure{
 					ID:      validators.StorageMappingID,
