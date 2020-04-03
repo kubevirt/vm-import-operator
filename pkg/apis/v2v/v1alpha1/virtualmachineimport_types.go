@@ -113,7 +113,7 @@ const (
 	// ValidationFailed represents a failure to validate the eligibility of the VM for import
 	ValidationFailed SucceededConditionReason = "ValidationFailed"
 
-	// UpdatingSourceVMFailed represents a failure to stop VM or rename it on the source provider
+	// UpdatingSourceVMFailed represents a failure to stop source VM
 	UpdatingSourceVMFailed SucceededConditionReason = "UpdatingSourceVMFailed"
 
 	// VMCreationFailed represents a failure to create the VM entity

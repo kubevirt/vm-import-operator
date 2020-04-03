@@ -19,7 +19,6 @@ type OvirtClient interface {
 	GetVM(id *string, name *string, cluster *string, clusterID *string) (*ovirtsdk.Vm, error)
 	StopVM(id string) error
 	StartVM(id string) error
-	RenameVM(id string, name string) error
 	Close() error
 }
 
@@ -169,21 +168,6 @@ func (client *richOvirtClient) StartVM(id string) error {
 		if err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-// RenameVM updates VM's name
-func (client *richOvirtClient) RenameVM(id string, name string) error {
-	vmService := client.connection.SystemService().VmsService().VmService(id)
-
-	newVm, err := ovirtsdk.NewVmBuilder().Name(name).Build()
-	if err != nil {
-		return err
-	}
-	_, err = vmService.Update().Vm(newVm).Send()
-	if err != nil {
-		return err
 	}
 	return nil
 }
