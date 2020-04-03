@@ -60,6 +60,7 @@ var checkToAction = map[validators.CheckID]action{
 	validators.DiskSgioID:                          block,
 	// VM rules
 	validators.VMBiosBootMenuID:                  log,
+	validators.VMStatusID:                        block,
 	validators.VMBiosTypeID:                      block,
 	validators.VMBiosTypeQ35SecureBootID:         warn,
 	validators.VMCpuArchitectureID:               block,
