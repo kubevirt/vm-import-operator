@@ -29,8 +29,9 @@ import (
 )
 
 const (
-	keyAccess = "accessKeyId"
-	keySecret = "secretKey"
+	keyAccess            = "accessKeyId"
+	keySecret            = "secretKey"
+	sourceVMInitialState = "vmimport.v2v.kubevirt.io/source-vm-initial-state"
 )
 
 var (
@@ -168,6 +169,17 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		}
 		if valid, message := shouldFailWith(conditions); !valid {
 			return reconcile.Result{}, langerr.New(message)
+		}
+
+		vmStatus, err := provider.GetVMStatus()
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+
+		reqLogger.Info("Storing source VM status", "status", vmStatus)
+		err = r.storeSourceVMStatus(instance, string(vmStatus))
+		if err != nil {
+			return reconcile.Result{}, err
 		}
 	} else {
 		reqLogger.Info("VirtualMachineImport has already been validated positively. Skipping re-validation")
@@ -356,6 +368,86 @@ func (r *ReconcileVirtualMachineImport) upsertStatusConditions(vmiName types.Nam
 		return err
 	}
 	return nil
+}
+
+func (r *ReconcileVirtualMachineImport) storeSourceVMStatus(instance *v2vv1alpha1.VirtualMachineImport, vmStatus string) error {
+	vmiCopy := instance.DeepCopy()
+	vmiCopy.Annotations[sourceVMInitialState] = vmStatus
+
+	patch := client.MergeFrom(instance)
+	return r.client.Patch(context.TODO(), vmiCopy, patch)
+}
+
+//TODO: use in proper places
+func (r *ReconcileVirtualMachineImport) afterFailure(vmiName types.NamespacedName, p provider.Provider) error {
+	var errs []error
+	err := r.afterImport(p, vmiName.Namespace)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	err = r.restoreInitialVMState(vmiName, p)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	if len(errs) > 0 {
+		message := ""
+		for _, e := range errs {
+			message = utils.WithMessage(message, e.Error())
+		}
+		return fmt.Errorf("Import failure clean-up for %v failed: %s", vmiName, message)
+	}
+	return nil
+}
+
+func (r *ReconcileVirtualMachineImport) restoreInitialVMState(vmiName types.NamespacedName, p provider.Provider) error {
+	var instance v2vv1alpha1.VirtualMachineImport
+	err := r.client.Get(context.TODO(), vmiName, &instance)
+	if err != nil {
+		return err
+	}
+
+	vmInitialState, found := instance.Annotations[sourceVMInitialState]
+	if !found {
+		return fmt.Errorf("VM didn't have initial state stored in '%s' annotation", sourceVMInitialState)
+	}
+	if vmInitialState == string(provider.VMStatusUp) {
+		return p.StartVM()
+	}
+	// VM was already down
+	return nil
+}
+
+// afterImport should be called in both failure and success scenario. a.k.a common clean-up
+func (r *ReconcileVirtualMachineImport) afterImport(p provider.Provider, namespace string) error {
+	credentials := p.GetDataVolumeCredentials()
+	err := r.deleteDVConfigMap(credentials.ConfigMapName, namespace)
+	if err != nil {
+		return err
+	}
+	err = r.deleteDVSecret(credentials.SecretName, namespace)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *ReconcileVirtualMachineImport) deleteDVConfigMap(configMapName string, namespace string) error {
+	cm := &corev1.ConfigMap{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: configMapName, Namespace: namespace}, cm)
+	if err != nil {
+		return nil
+	}
+	return r.client.Delete(context.TODO(), cm)
+}
+
+func (r *ReconcileVirtualMachineImport) deleteDVSecret(secretName string, namespace string) error {
+	secret := &corev1.Secret{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: namespace}, secret)
+	if err != nil {
+		return nil
+	}
+	return r.client.Delete(context.TODO(), secret)
 }
 
 func shouldFailWith(conditions []v2vv1alpha1.VirtualMachineImportCondition) (bool, string) {

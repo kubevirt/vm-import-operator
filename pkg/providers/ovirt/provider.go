@@ -58,6 +58,18 @@ func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, kube
 	return provider
 }
 
+func (o *OvirtProvider) GetVMStatus() (provider.VMStatus, error) {
+	if status, ok := o.vm.Status(); ok {
+		switch status {
+		case ovirtsdk.VMSTATUS_DOWN:
+			return provider.VMStatusDown, nil
+		case ovirtsdk.VMSTATUS_UP:
+			return provider.VMStatusUp, nil
+		}
+	}
+	return "", fmt.Errorf("VM doesn't have a legal status. Allowed statuses: [%v, %v]", ovirtsdk.VMSTATUS_UP, ovirtsdk.VMSTATUS_DOWN)
+}
+
 // GetDataVolumeCredentials returns the data volume credentials based on ovirt secret
 func (o *OvirtProvider) GetDataVolumeCredentials() provider.DataVolumeCredentials {
 	suffix := createSuffix(o.ovirtSecretDataMap["apiUrl"])
@@ -224,6 +236,17 @@ func (o *OvirtProvider) UpdateVM(vmspec *kubevirtv1.VirtualMachine, dvs map[stri
 			},
 		},
 	}
+}
+
+// StartVM starts the source VM
+func (o *OvirtProvider) StartVM() error {
+	if id, ok := o.vm.Id(); ok {
+		err := o.ovirtClient.StartVM(id)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func getDiskAttachmentByID(id string, diskAttachments *ovirtsdk.DiskAttachmentSlice) *ovirtsdk.DiskAttachment {
