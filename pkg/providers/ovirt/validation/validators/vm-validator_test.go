@@ -16,6 +16,48 @@ var _ = Describe("Validating VM", func() {
 
 		Expect(failures).To(BeEmpty())
 	})
+	It("should reject VM with no status ", func() {
+		var vm = newVMWithStatusControl(false)
+
+		failures := validators.ValidateVM(vm)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.VMStatusID))
+	})
+	table.DescribeTable("should accept VM with legal status", func(status ovirtsdk.VmStatus) {
+		vm := newVM()
+		vm.SetStatus(status)
+
+		failures := validators.ValidateVM(vm)
+
+		Expect(failures).To(BeEmpty())
+	},
+		table.Entry(string(ovirtsdk.VMSTATUS_DOWN), ovirtsdk.VMSTATUS_DOWN),
+		table.Entry(string(ovirtsdk.VMSTATUS_UP), ovirtsdk.VMSTATUS_UP),
+	)
+	table.DescribeTable("should flag VM with illegal status", func(status ovirtsdk.VmStatus) {
+		vm := newVM()
+		vm.SetStatus(status)
+
+		failures := validators.ValidateVM(vm)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.VMStatusID))
+	},
+		table.Entry(string(ovirtsdk.VMSTATUS_IMAGE_LOCKED), ovirtsdk.VMSTATUS_IMAGE_LOCKED),
+		table.Entry(string(ovirtsdk.VMSTATUS_MIGRATING), ovirtsdk.VMSTATUS_MIGRATING),
+		table.Entry(string(ovirtsdk.VMSTATUS_NOT_RESPONDING), ovirtsdk.VMSTATUS_NOT_RESPONDING),
+		table.Entry(string(ovirtsdk.VMSTATUS_PAUSED), ovirtsdk.VMSTATUS_PAUSED),
+		table.Entry(string(ovirtsdk.VMSTATUS_POWERING_DOWN), ovirtsdk.VMSTATUS_POWERING_DOWN),
+		table.Entry(string(ovirtsdk.VMSTATUS_POWERING_UP), ovirtsdk.VMSTATUS_POWERING_UP),
+		table.Entry(string(ovirtsdk.VMSTATUS_REBOOT_IN_PROGRESS), ovirtsdk.VMSTATUS_REBOOT_IN_PROGRESS),
+		table.Entry(string(ovirtsdk.VMSTATUS_RESTORING_STATE), ovirtsdk.VMSTATUS_RESTORING_STATE),
+		table.Entry(string(ovirtsdk.VMSTATUS_SAVING_STATE), ovirtsdk.VMSTATUS_SAVING_STATE),
+		table.Entry(string(ovirtsdk.VMSTATUS_SUSPENDED), ovirtsdk.VMSTATUS_SUSPENDED),
+		table.Entry(string(ovirtsdk.VMSTATUS_UNASSIGNED), ovirtsdk.VMSTATUS_UNASSIGNED),
+		table.Entry(string(ovirtsdk.VMSTATUS_UNKNOWN), ovirtsdk.VMSTATUS_UNKNOWN),
+		table.Entry(string(ovirtsdk.VMSTATUS_WAIT_FOR_LAUNCH), ovirtsdk.VMSTATUS_WAIT_FOR_LAUNCH),
+	)
 	It("should flag vm with boot menu enabled ", func() {
 		var vm = newVM()
 		bios := vm.MustBios()
@@ -364,7 +406,14 @@ func newGraphicsConsole(protocol string) *ovirtsdk.GraphicsConsole {
 }
 
 func newVM() *ovirtsdk.Vm {
+	return newVMWithStatusControl(true)
+}
+
+func newVMWithStatusControl(withStatus bool) *ovirtsdk.Vm {
 	vm := ovirtsdk.Vm{}
+	if withStatus {
+		vm.SetStatus(ovirtsdk.VMSTATUS_UP)
+	}
 	bios := ovirtsdk.Bios{}
 	bios.SetType("q35_sea_bios")
 	vm.SetBios(&bios)

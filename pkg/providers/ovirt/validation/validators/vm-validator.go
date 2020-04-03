@@ -11,6 +11,9 @@ import (
 // ValidateVM validates given VM
 func ValidateVM(vm *ovirtsdk.Vm) []ValidationFailure {
 	var results = isValidBios(vm)
+	if failure, valid := isValidStatus(vm); !valid {
+		results = append(results, failure)
+	}
 	results = append(results, isValidCPU(vm)...)
 	if failure, valid := isValidCPUShares(vm); !valid {
 		results = append(results, failure)
@@ -91,6 +94,22 @@ func isValidBios(vm *ovirtsdk.Vm) []ValidationFailure {
 		}
 	}
 	return results
+}
+
+func isValidStatus(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
+	if status, ok := vm.Status(); ok {
+		if status != ovirtsdk.VMSTATUS_UP && status != ovirtsdk.VMSTATUS_DOWN {
+			return ValidationFailure{
+				ID:      VMStatusID,
+				Message: fmt.Sprintf("VM has illegal status: %v. Only 'up' and 'down' are allowed.", status),
+			}, false
+		}
+		return ValidationFailure{}, true
+	}
+	return ValidationFailure{
+		ID:      VMStatusID,
+		Message: "VM doesn't have any status. Must be 'up' or 'down'.",
+	}, false
 }
 
 func isValidBootMenu(bios *ovirtsdk.Bios) (ValidationFailure, bool) {

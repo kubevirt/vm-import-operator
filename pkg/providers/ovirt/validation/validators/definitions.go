@@ -45,6 +45,8 @@ const (
 	DiskStoragaTypeID = CheckID("disk_attachment.disk.storage_type")
 	// DiskSgioID defines an ID of a disk.sgio == true check
 	DiskSgioID = CheckID("disk_attachment.disk.sgio")
+	// VMStatusID defines an ID of a VM status check
+	VMStatusID = CheckID("vm.status")
 	// VMBiosBootMenuID defines an ID of a vm.bios.boot_menu.enabled == true check
 	VMBiosBootMenuID = CheckID("vm.bios.boot_menu.enabled")
 	// VMBiosTypeID defines an ID of a vm.bios.type check

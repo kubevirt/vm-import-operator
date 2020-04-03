@@ -147,6 +147,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		Expect(*condition.Reason).To(Equal(errorReason))
 	},
 		table.Entry("Bios type", validators.VMBiosTypeID),
+		table.Entry("Status", validators.VMStatusID),
 		table.Entry("CPU Architecture", validators.VMCpuArchitectureID),
 		table.Entry("Illegal images", validators.VMHasIllegalImagesID),
 		table.Entry("Origin ID", validators.VMOriginID),
