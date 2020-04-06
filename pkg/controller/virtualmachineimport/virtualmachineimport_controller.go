@@ -372,6 +372,9 @@ func (r *ReconcileVirtualMachineImport) upsertStatusConditions(vmiName types.Nam
 
 func (r *ReconcileVirtualMachineImport) storeSourceVMStatus(instance *v2vv1alpha1.VirtualMachineImport, vmStatus string) error {
 	vmiCopy := instance.DeepCopy()
+	if vmiCopy.Annotations == nil {
+		vmiCopy.Annotations = make(map[string]string)
+	}
 	vmiCopy.Annotations[sourceVMInitialState] = vmStatus
 
 	patch := client.MergeFrom(instance)
