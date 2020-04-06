@@ -58,6 +58,7 @@ func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, kube
 	return provider
 }
 
+// GetVMStatus provides source VM status
 func (o *OvirtProvider) GetVMStatus() (provider.VMStatus, error) {
 	if status, ok := o.vm.Status(); ok {
 		switch status {
