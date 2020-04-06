@@ -381,6 +381,42 @@ func (r *ReconcileVirtualMachineImport) storeSourceVMStatus(instance *v2vv1alpha
 	return r.client.Patch(context.TODO(), vmiCopy, patch)
 }
 
+//TODO: use in proper place
+func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName, vmiName types.NamespacedName, p provider.Provider) error {
+	var errs []error
+	err := r.afterImport(p, vmiName.Namespace)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	err = r.removeOwnerReference(vmName)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	if len(errs) > 0 {
+		return foldErrors(errs, "Import success", vmiName)
+	}
+	return nil
+}
+
+func (r *ReconcileVirtualMachineImport) removeOwnerReference(vmName types.NamespacedName) error {
+	vm := kubevirtv1.VirtualMachine{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, &vm)
+	if err != nil {
+		return err
+	}
+
+	refs := vm.GetOwnerReferences()
+	newRefs := removeControllerReference(refs)
+	if len(newRefs) < len(refs) {
+		vmCopy := vm.DeepCopy()
+		vmCopy.SetOwnerReferences(newRefs)
+		patch := client.MergeFrom(&vm)
+		return r.client.Patch(context.TODO(), vmCopy, patch)
+	}
+	return nil
+}
+
 //TODO: use in proper places
 func (r *ReconcileVirtualMachineImport) afterFailure(vmiName types.NamespacedName, p provider.Provider) error {
 	var errs []error
@@ -394,11 +430,7 @@ func (r *ReconcileVirtualMachineImport) afterFailure(vmiName types.NamespacedNam
 	}
 
 	if len(errs) > 0 {
-		message := ""
-		for _, e := range errs {
-			message = utils.WithMessage(message, e.Error())
-		}
-		return fmt.Errorf("Import failure clean-up for %v failed: %s", vmiName, message)
+		return foldErrors(errs, "Import failure", vmiName)
 	}
 	return nil
 }
@@ -451,6 +483,25 @@ func (r *ReconcileVirtualMachineImport) deleteDVSecret(secretName string, namesp
 		return nil
 	}
 	return r.client.Delete(context.TODO(), secret)
+}
+
+func removeControllerReference(refs []metav1.OwnerReference) []metav1.OwnerReference {
+	for i := range refs {
+		isController := refs[i].Controller
+		if isController != nil && *isController {
+			// There can be only one controller reference
+			return append(refs[:i], refs[i+1:]...)
+		}
+	}
+	return refs
+}
+
+func foldErrors(errs []error, prefix string, vmiName types.NamespacedName) error {
+	message := ""
+	for _, e := range errs {
+		message = utils.WithMessage(message, e.Error())
+	}
+	return fmt.Errorf("%s clean-up for %v failed: %s", prefix, vmiName, message)
 }
 
 func shouldFailWith(conditions []v2vv1alpha1.VirtualMachineImportCondition) (bool, string) {
