@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	templatev1 "github.com/openshift/api/template/v1"
+	v1 "github.com/openshift/api/template/v1"
 	tempclient "github.com/openshift/client-go/template/clientset/versioned/typed/template/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -21,6 +22,10 @@ const (
 
 	// TemplateFlavorLabel is a label that specifies the flavor of the template
 	TemplateFlavorLabel = "flavor.template.kubevirt.io/%s"
+
+	processingURI = "processedTemplates"
+	nameParameter = "NAME"
+	otherValue    = "other"
 )
 
 // Templates is responsible for finding templates
@@ -40,6 +45,30 @@ func (t *Templates) Find(
 		LabelSelector: labelSelector,
 	}
 	return t.Client.Templates(*namespace).List(options)
+}
+
+// Process calls the openshift api to process parameters
+func (t *Templates) Process(namespace string, vmName string, template *templatev1.Template) (*templatev1.Template, error) {
+	temp := template.DeepCopy()
+	params := temp.Parameters
+	for i, param := range params {
+		if param.Name == nameParameter {
+			temp.Parameters[i].Value = vmName
+		} else {
+			temp.Parameters[i].Value = otherValue
+		}
+	}
+	result := &v1.Template{}
+	err := t.Client.RESTClient().Post().
+		Namespace(namespace).
+		Resource(processingURI).
+		Body(temp).
+		Do().
+		Into(result)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 // OSLabelSelectorBuilder build the label selector based on template criteria

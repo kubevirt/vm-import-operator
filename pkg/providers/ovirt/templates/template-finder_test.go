@@ -89,3 +89,8 @@ func (t *mockTemplateProvider) Find(
 	// namespace is assumed to be always 'openshift'
 	return findTemplatesMock(name, os, workload, flavor)
 }
+
+// Process mocks the behavior of the client for calling process API
+func (t *mockTemplateProvider) Process(namespace string, vmName string, template *templatev1.Template) (*templatev1.Template, error) {
+	return &templatev1.Template{}, nil
+}

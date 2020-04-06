@@ -202,10 +202,18 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	// Define VM spec
 	mapper := provider.CreateMapper()
 	template, err := provider.FindTemplate()
+	var spec = &kubevirtv1.VirtualMachine{}
 	if err != nil {
-		reqLogger.Info("No matching template was found for the virtual machine")
+		reqLogger.Info("No matching template was found for the virtual machine using empty vm definition")
+		spec = mapper.CreateEmptyVM()
+	} else {
+		spec, err = provider.ProcessTemplate(template, *instance.Spec.TargetVMName)
+		if err != nil {
+			reqLogger.Info("Failed to process the template using empty vm definition")
+			spec = mapper.CreateEmptyVM()
+		}
 	}
-	vmSpec := mapper.MapVM(instance.Spec.TargetVMName, template)
+	vmSpec := mapper.MapVM(instance.Spec.TargetVMName, spec)
 
 	// Set VirtualMachineImport instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, vmSpec, r.scheme); err != nil {

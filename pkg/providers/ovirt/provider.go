@@ -179,6 +179,11 @@ func (o *OvirtProvider) FindTemplate() (*templatev1.Template, error) {
 	return o.templateFinder.FindTemplate(o.vm)
 }
 
+// ProcessTemplate uses openshift api to process template
+func (o *OvirtProvider) ProcessTemplate(template *templatev1.Template, vmName string) (*kubevirtv1.VirtualMachine, error) {
+	return o.templateFinder.ProcessTemplate(template, vmName)
+}
+
 // CreateMapper create the mapper for ovirt provider
 func (o *OvirtProvider) CreateMapper() provider.Mapper {
 	return mapper.NewOvirtMapper(o.vm, o.resourceMapping, o.GetDataVolumeCredentials(), o.vmiCrName.Namespace)

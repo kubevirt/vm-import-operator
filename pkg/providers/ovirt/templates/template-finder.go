@@ -6,6 +6,8 @@ import (
 
 	templatev1 "github.com/openshift/api/template/v1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
+	"k8s.io/apimachinery/pkg/runtime"
+	kubevirtv1 "kubevirt.io/client-go/api/v1"
 )
 
 const (
@@ -33,6 +35,8 @@ type TemplateProvider interface {
 		workload *string,
 		flavor *string,
 	) (*templatev1.TemplateList, error)
+
+	Process(namespace string, vmName string, template *templatev1.Template) (*templatev1.Template, error)
 }
 
 // NewTemplateFinder creates new TemplateFinder
@@ -90,4 +94,27 @@ func (f *TemplateFinder) getTemplate(os string, workload string) (*templatev1.Te
 	}
 	// Take first which matches label selector
 	return &templates.Items[0], nil
+}
+
+func (f *TemplateFinder) processTemplate(template *templatev1.Template, vmName string) (*kubevirtv1.VirtualMachine, error) {
+	processed, err := f.provider.Process(TemplateNamespace, vmName, template)
+	if err != nil {
+		return nil, err
+	}
+	var vm = &kubevirtv1.VirtualMachine{}
+	for _, obj := range processed.Objects {
+		decoder := kubevirtv1.Codecs.UniversalDecoder(kubevirtv1.GroupVersion)
+		decoded, err := runtime.Decode(decoder, obj.Raw)
+		if err != nil {
+			return nil, err
+		}
+		done, ok := decoded.(*kubevirtv1.VirtualMachine)
+		if ok {
+			vm = done
+			break
+		}
+	}
+	vm.Spec.Template.Spec.Volumes = []kubevirtv1.Volume{}
+	vm.Spec.Template.Spec.Networks = []kubevirtv1.Network{}
+	return vm, nil
 }

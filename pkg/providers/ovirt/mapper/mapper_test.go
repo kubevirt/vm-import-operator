@@ -8,7 +8,6 @@ import (
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	templatev1 "github.com/openshift/api/template/v1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 )
@@ -22,15 +21,13 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		vm       *ovirtsdk.Vm
 		vmSpec   *kubevirtv1.VirtualMachine
 		mappings v2vv1alpha1.OvirtMappings
-		template *templatev1.Template
 	)
 
 	BeforeEach(func() {
 		vm = createVM()
-		template = createTemplate()
 		mappings = createMappings()
 		mapper := mapper.NewOvirtMapper(vm, &mappings, provider.DataVolumeCredentials{}, "")
-		vmSpec = mapper.MapVM(&targetVMName, template)
+		vmSpec = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 	})
 
 	It("should map name", func() {
@@ -219,9 +216,4 @@ func createMappings() v2vv1alpha1.OvirtMappings {
 		NetworkMappings: &networks,
 		StorageMappings: &storages,
 	}
-}
-
-func createTemplate() *templatev1.Template {
-	template := templatev1.Template{}
-	return &template
 }

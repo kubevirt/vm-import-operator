@@ -29,11 +29,13 @@ type Provider interface {
 	GetVMStatus() (VMStatus, error)
 	StartVM() error
 	FindTemplate() (*oapiv1.Template, error)
+	ProcessTemplate(*oapiv1.Template, string) (*kubevirtv1.VirtualMachine, error)
 }
 
 // Mapper is interface to be used for mapping external VM to kubevirt VM
 type Mapper interface {
-	MapVM(targetVMName *string, tempalte *oapiv1.Template) *kubevirtv1.VirtualMachine
+	CreateEmptyVM() *kubevirtv1.VirtualMachine
+	MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachine) *kubevirtv1.VirtualMachine
 	MapDisks() map[string]cdiv1.DataVolume
 }
 
