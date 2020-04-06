@@ -7,6 +7,11 @@ import (
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 )
 
+const (
+	VMStatusDown VMStatus = "down"
+	VMStatusUp   VMStatus = "up"
+)
+
 // Provider defines the methods required by source providers for importing a VM
 type Provider interface {
 	Connect(*corev1.Secret) error
@@ -18,6 +23,8 @@ type Provider interface {
 	GetDataVolumeCredentials() DataVolumeCredentials
 	UpdateVM(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume)
 	CreateMapper() Mapper
+	GetVMStatus() (VMStatus, error)
+	StartVM() error
 }
 
 // Mapper is interface to be used for mapping external VM to kubevirt VM
@@ -35,3 +42,5 @@ type DataVolumeCredentials struct {
 	ConfigMapName string
 	SecretName    string
 }
+
+type VMStatus string
