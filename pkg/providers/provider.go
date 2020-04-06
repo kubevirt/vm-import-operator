@@ -8,8 +8,10 @@ import (
 )
 
 const (
+	// VMStatusDown defines VM status representing stopped VM
 	VMStatusDown VMStatus = "down"
-	VMStatusUp   VMStatus = "up"
+	// VMStatusUp defines VM status representing running VM
+	VMStatusUp VMStatus = "up"
 )
 
 // Provider defines the methods required by source providers for importing a VM
@@ -43,4 +45,5 @@ type DataVolumeCredentials struct {
 	SecretName    string
 }
 
+// VMStatus represents VM status
 type VMStatus string
