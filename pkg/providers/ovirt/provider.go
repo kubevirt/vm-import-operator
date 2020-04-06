@@ -58,7 +58,7 @@ func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, kube
 	provider := OvirtProvider{
 		vmiCrName:      vmiCrName,
 		validator:      validation.NewVirtualMachineImportValidator(validator),
-		templateFinder: templates.NewTemplateFinder(tempClient),
+		templateFinder: templates.NewTemplateFinder(&templates.Templates{Client: tempClient}),
 	}
 	return provider
 }

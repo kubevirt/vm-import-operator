@@ -203,7 +203,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	mapper := provider.CreateMapper()
 	template, err := provider.FindTemplate()
 	if err != nil {
-		// TODO build vm spec from scratch with a warning
+		reqLogger.Info("No matching template was found for the virtual machine")
 	}
 	vmSpec := mapper.MapVM(instance.Spec.TargetVMName, template)
 

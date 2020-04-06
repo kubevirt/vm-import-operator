@@ -5,15 +5,15 @@ import (
 	"strings"
 
 	templatev1 "github.com/openshift/api/template/v1"
-	tempclient "github.com/openshift/client-go/template/clientset/versioned/typed/template/v1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const (
-	templateNamespace = "openshift"
+	// TemplateNamespace stores the default namespace for kubevirt templates
+	TemplateNamespace = "openshift"
 	defaultLinux      = "rhel8"
 	defaultWindows    = "windows"
+	defaultFlavor     = "medium"
 )
 
 var osInfo = map[string]string{
@@ -23,13 +23,22 @@ var osInfo = map[string]string{
 
 // TemplateFinder attempts to find a template based on given parameters
 type TemplateFinder struct {
-	client *tempclient.TemplateV1Client
+	provider TemplateProvider
+}
+
+// TemplateProvider searches for template in Openshift
+type TemplateProvider interface {
+	Find(namespace *string,
+		os *string,
+		workload *string,
+		flavor *string,
+	) (*templatev1.TemplateList, error)
 }
 
 // NewTemplateFinder creates new TemplateFinder
-func NewTemplateFinder(tempClient *tempclient.TemplateV1Client) *TemplateFinder {
+func NewTemplateFinder(provider TemplateProvider) *TemplateFinder {
 	return &TemplateFinder{
-		client: tempClient,
+		provider: provider,
 	}
 }
 
@@ -70,11 +79,9 @@ func getWorkload(vm *ovirtsdk.Vm) string {
 
 func (f *TemplateFinder) getTemplate(os string, workload string) (*templatev1.Template, error) {
 	// We update metadata from the source vm so we default to medium flavor
-	labelSelector := fmt.Sprintf("os.template.kubevirt.io/%s=true,workload.template.kubevirt.io/%s=true,flavor.template.kubevirt.io/medium=true", os, workload)
-	options := metav1.ListOptions{
-		LabelSelector: labelSelector,
-	}
-	templates, err := f.client.Templates(templateNamespace).List(options)
+	namespace := TemplateNamespace
+	flavor := defaultFlavor
+	templates, err := f.provider.Find(&namespace, &os, &workload, &flavor)
 	if err != nil {
 		return nil, err
 	}
