@@ -92,6 +92,10 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 		vmSpec.Spec.Template.Spec.Hostname = fqdn
 	}
 
+	if vmSpec.Spec.Template == nil {
+		vmSpec.Spec.Template = &kubevirtv1.VirtualMachineInstanceTemplateSpec{}
+	}
+
 	// Map CPU
 	vmSpec.Spec.Template.Spec.Domain.CPU = o.mapCPU()
 

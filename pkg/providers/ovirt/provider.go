@@ -56,9 +56,12 @@ type OvirtProvider struct {
 func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, kubevirtClient kubecli.KubevirtClient, tempClient *tempclient.TemplateV1Client) OvirtProvider {
 	validator := validators.NewValidatorWrapper(kubevirtClient)
 	provider := OvirtProvider{
-		vmiCrName:      vmiCrName,
-		validator:      validation.NewVirtualMachineImportValidator(validator),
-		templateFinder: templates.NewTemplateFinder(&templates.Templates{Client: tempClient}),
+		vmiCrName: vmiCrName,
+		validator: validation.NewVirtualMachineImportValidator(validator),
+		templateFinder: templates.NewTemplateFinder(
+			&templates.Templates{Client: tempClient},
+			&templates.OSMaps{Client: client},
+		),
 	}
 	return provider
 }

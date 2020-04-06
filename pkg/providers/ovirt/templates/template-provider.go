@@ -14,6 +14,9 @@ const (
 	// UsedTemplateLabel is a label to be added to the VM specifying which template used to created it
 	UsedTemplateLabel = "vm.kubevirt.io/template"
 
+	// UsedTemplateNamespaceLabel is a label that specifies the namespace of the used template
+	UsedTemplateNamespaceLabel = "vm.kubevirt.io/template-namespace"
+
 	// TemplateOsLabel is a label that specifies the OS of the template
 	TemplateOsLabel = "os.template.kubevirt.io/%s"
 
@@ -34,13 +37,8 @@ type Templates struct {
 }
 
 // Find looks for a template based on given namespace and options
-func (t *Templates) Find(
-	namespace *string,
-	os *string,
-	workload *string,
-	flavor *string,
-) (*templatev1.TemplateList, error) {
-	labelSelector := OSLabelSelectorBuilder(os, workload, nil)
+func (t *Templates) Find(namespace *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error) {
+	labelSelector := osLabelSelectorBuilder(os, workload, flavor)
 	options := metav1.ListOptions{
 		LabelSelector: labelSelector,
 	}
@@ -71,11 +69,11 @@ func (t *Templates) Process(namespace string, vmName string, template *templatev
 	return result, nil
 }
 
-// OSLabelSelectorBuilder build the label selector based on template criteria
-func OSLabelSelectorBuilder(os *string, workload *string, flavor *string) string {
-	labeles := OSLabelBuilder(os, workload, flavor)
-	keys := make([]string, 0, len(labeles))
-	for k := range labeles {
+// osLabelSelectorBuilder build the label selector based on template criteria
+func osLabelSelectorBuilder(os *string, workload *string, flavor *string) string {
+	labels := OSLabelBuilder(os, workload, flavor)
+	keys := make([]string, 0, len(labels))
+	for k := range labels {
 		keys = append(keys, k)
 	}
 	return strings.Join(keys, ",")

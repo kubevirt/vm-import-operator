@@ -14,19 +14,26 @@ import (
 
 var (
 	findTemplatesMock func(name *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error)
+	getOSMaps         func() (map[string]string, map[string]string, error)
 )
 var _ = Describe("Finding a Template", func() {
-	templateFinder := templates.NewTemplateFinder(&mockTemplateProvider{})
+	templateFinder := templates.NewTemplateFinder(&mockTemplateProvider{}, &mockOSMapProvider{})
 	BeforeEach(func() {
 		findTemplatesMock = func(name *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error) {
 			template := createTemplate(name, os, workload, flavor)
 			templateList := createTemplatesList(template)
 			return templateList, nil
 		}
+
+		getOSMaps = func() (map[string]string, map[string]string, error) {
+			guest2common := make(map[string]string)
+			os2common := make(map[string]string)
+			return guest2common, os2common, nil
+		}
 	})
 	It("should find a template for given OS: ", func() {
 		vmOS := ovirtsdk.OperatingSystem{}
-		vmOS.SetType("RHEL")
+		vmOS.SetType("rhel")
 		vm := ovirtsdk.NewVmBuilder().Os(&vmOS).MustBuild()
 		template, err := templateFinder.FindTemplate(vm)
 
@@ -40,7 +47,10 @@ var _ = Describe("Finding a Template", func() {
 			templateList := createTemplatesList(template1, template2)
 			return templateList, nil
 		}
-		template, err := templateFinder.FindTemplate(&ovirtsdk.Vm{})
+		vmOS := ovirtsdk.OperatingSystem{}
+		vmOS.SetType("rhel")
+		vm := ovirtsdk.NewVmBuilder().Os(&vmOS).MustBuild()
+		template, err := templateFinder.FindTemplate(vm)
 
 		Expect(err).To(BeNil())
 		Expect(template).To(Not(BeNil()))
@@ -93,4 +103,11 @@ func (t *mockTemplateProvider) Find(
 // Process mocks the behavior of the client for calling process API
 func (t *mockTemplateProvider) Process(namespace string, vmName string, template *templatev1.Template) (*templatev1.Template, error) {
 	return &templatev1.Template{}, nil
+}
+
+type mockOSMapProvider struct{}
+
+// GetOSMaps retrives the OS Maps
+func (o *mockOSMapProvider) GetOSMaps() (map[string]string, map[string]string, error) {
+	return getOSMaps()
 }
