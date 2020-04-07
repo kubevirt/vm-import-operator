@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
-	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	corev1 "k8s.io/api/core/v1"
@@ -43,16 +42,26 @@ var archMapping = map[string]string{
 	"ppc64":  "pseries",
 }
 
+// DataVolumeCredentials defines the credentials required for creating a data volume
+type DataVolumeCredentials struct {
+	URL           string
+	CACertificate string
+	KeyAccess     string
+	KeySecret     string
+	ConfigMapName string
+	SecretName    string
+}
+
 // OvirtMapper is struct that holds attributes needed to map oVirt VM to kubevirt VM
 type OvirtMapper struct {
 	vm        *ovirtsdk.Vm
 	mappings  *v2vv1alpha1.OvirtMappings
-	creds     provider.DataVolumeCredentials
+	creds     DataVolumeCredentials
 	namespace string
 }
 
 // NewOvirtMapper create ovirt mapper object
-func NewOvirtMapper(vm *ovirtsdk.Vm, mappings *v2vv1alpha1.OvirtMappings, creds provider.DataVolumeCredentials, namespace string) *OvirtMapper {
+func NewOvirtMapper(vm *ovirtsdk.Vm, mappings *v2vv1alpha1.OvirtMappings, creds DataVolumeCredentials, namespace string) *OvirtMapper {
 	return &OvirtMapper{
 		vm:        vm,
 		mappings:  mappings,
