@@ -11,12 +11,6 @@ import (
 )
 
 const (
-	// UsedTemplateLabel is a label to be added to the VM specifying which template used to created it
-	UsedTemplateLabel = "vm.kubevirt.io/template"
-
-	// UsedTemplateNamespaceLabel is a label that specifies the namespace of the used template
-	UsedTemplateNamespaceLabel = "vm.kubevirt.io/template-namespace"
-
 	// TemplateOsLabel is a label that specifies the OS of the template
 	TemplateOsLabel = "os.template.kubevirt.io/%s"
 

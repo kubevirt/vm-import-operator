@@ -17,6 +17,12 @@ const (
 	defaultLinux      = "rhel8"
 	defaultWindows    = "windows"
 	defaultFlavor     = "medium"
+
+	// templateNameLabel defines a label of the template name which was used to created the VM
+	templateNameLabel = "vm.kubevirt.io/template"
+
+	// templateNamespaceLabel defines a label of the template namespace which was used to created the VM
+	templateNamespaceLabel = "vm.kubevirt.io/template-namespace"
 )
 
 // TemplateFinder attempts to find a template based on given parameters
@@ -134,5 +140,22 @@ func (f *TemplateFinder) ProcessTemplate(template *templatev1.Template, vmName s
 	if len(vm.Spec.DataVolumeTemplates) > 0 {
 		vm.Spec.DataVolumeTemplates = []cdiv1.DataVolume{}
 	}
+	addLabels(vm, template)
 	return vm, nil
+}
+
+func addLabels(vm *kubevirtv1.VirtualMachine, template *templatev1.Template) {
+	labels := vm.ObjectMeta.GetLabels()
+	if labels == nil {
+		labels = make(map[string]string)
+		vm.ObjectMeta.SetLabels(labels)
+	}
+	_, found := labels[templateNameLabel]
+	if !found {
+		labels[templateNameLabel] = template.GetObjectMeta().GetName()
+	}
+	_, found = labels[templateNamespaceLabel]
+	if !found {
+		labels[templateNamespaceLabel] = template.GetObjectMeta().GetNamespace()
+	}
 }
