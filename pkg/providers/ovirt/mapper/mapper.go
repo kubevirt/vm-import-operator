@@ -64,9 +64,6 @@ func NewOvirtMapper(vm *ovirtsdk.Vm, mappings *v2vv1alpha1.OvirtMappings, creds 
 // CreateEmptyVM creates empty virtual machine definition
 func (o *OvirtMapper) CreateEmptyVM() *kubevirtv1.VirtualMachine {
 	return &kubevirtv1.VirtualMachine{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: o.namespace,
-		},
 		Spec: kubevirtv1.VirtualMachineSpec{
 			Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
 				Spec: kubevirtv1.VirtualMachineInstanceSpec{
@@ -79,6 +76,9 @@ func (o *OvirtMapper) CreateEmptyVM() *kubevirtv1.VirtualMachine {
 
 // MapVM map oVirt API VM definition to kubevirt VM definition
 func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachine) *kubevirtv1.VirtualMachine {
+	// Set Namespace
+	vmSpec.ObjectMeta.Namespace = o.namespace
+
 	// Map name
 	vmName, shouldGenerate := o.resolveVMName(targetVMName, o.vm)
 	if shouldGenerate {
