@@ -118,7 +118,7 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 	vmSpec.Spec.Template.Spec.Domain.Devices = *o.mapGraphicalConsoles()
 
 	// Map labels like origin, instance_type
-	vmSpec.ObjectMeta.Labels = o.mapLabels()
+	vmSpec.ObjectMeta.Labels = o.mapLabels(vmSpec.ObjectMeta.Labels)
 
 	// Map annotations like sso
 	vmSpec.ObjectMeta.Annotations = o.mapAnnotations()
@@ -453,9 +453,13 @@ func (o *OvirtMapper) mapGraphicalConsoles() *kubevirtv1.Devices {
 	return devices
 }
 
-func (o *OvirtMapper) mapLabels() map[string]string {
-	labels := map[string]string{}
-
+func (o *OvirtMapper) mapLabels(vmLabels map[string]string) map[string]string {
+	var labels map[string]string
+	if vmLabels == nil {
+		labels = map[string]string{}
+	} else {
+		labels = vmLabels
+	}
 	// Origin
 	labels[LabelOrigin], _ = o.vm.Origin()
 
