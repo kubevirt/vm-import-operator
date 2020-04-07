@@ -98,3 +98,8 @@ func WithMessage(message string, newMessage string) string {
 	}
 	return fmt.Sprintf("%s, %s", message, newMessage)
 }
+
+// MakeLabelFrom creates label value from given namespace and name
+func MakeLabelFrom(namespace string, name string) string {
+	return fmt.Sprintf("%s/%s", namespace, name)
+}
