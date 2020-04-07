@@ -150,12 +150,6 @@ func addLabels(vm *kubevirtv1.VirtualMachine, template *templatev1.Template) {
 		labels = make(map[string]string)
 		vm.ObjectMeta.SetLabels(labels)
 	}
-	_, found := labels[templateNameLabel]
-	if !found {
-		labels[templateNameLabel] = template.GetObjectMeta().GetName()
-	}
-	_, found = labels[templateNamespaceLabel]
-	if !found {
-		labels[templateNamespaceLabel] = template.GetObjectMeta().GetNamespace()
-	}
+	labels[templateNameLabel] = template.GetObjectMeta().GetName()
+	labels[templateNamespaceLabel] = template.GetObjectMeta().GetNamespace()
 }
