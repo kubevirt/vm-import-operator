@@ -8,6 +8,7 @@ import (
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 )
 
 const (
@@ -105,7 +106,8 @@ func (f *TemplateFinder) getTemplate(os string, workload string) (*templatev1.Te
 	return &templates.Items[0], nil
 }
 
-func (f *TemplateFinder) processTemplate(template *templatev1.Template, vmName string) (*kubevirtv1.VirtualMachine, error) {
+// ProcessTemplate processes template with provided parameter values
+func (f *TemplateFinder) ProcessTemplate(template *templatev1.Template, vmName string) (*kubevirtv1.VirtualMachine, error) {
 	processed, err := f.templateProvider.Process(TemplateNamespace, vmName, template)
 	if err != nil {
 		return nil, err
@@ -123,7 +125,14 @@ func (f *TemplateFinder) processTemplate(template *templatev1.Template, vmName s
 			break
 		}
 	}
-	vm.Spec.Template.Spec.Volumes = []kubevirtv1.Volume{}
-	vm.Spec.Template.Spec.Networks = []kubevirtv1.Network{}
+	if len(vm.Spec.Template.Spec.Volumes) > 0 {
+		vm.Spec.Template.Spec.Volumes = []kubevirtv1.Volume{}
+	}
+	if len(vm.Spec.Template.Spec.Networks) > 0 {
+		vm.Spec.Template.Spec.Networks = []kubevirtv1.Network{}
+	}
+	if len(vm.Spec.DataVolumeTemplates) > 0 {
+		vm.Spec.DataVolumeTemplates = []cdiv1.DataVolume{}
+	}
 	return vm, nil
 }
