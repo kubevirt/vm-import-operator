@@ -27,7 +27,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		vm = createVM()
 		mappings = createMappings()
 		mapper := mapper.NewOvirtMapper(vm, &mappings, provider.DataVolumeCredentials{}, "")
-		vmSpec = mapper.MapVM(&targetVMName)
+		vmSpec = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 	})
 
 	It("should map name", func() {

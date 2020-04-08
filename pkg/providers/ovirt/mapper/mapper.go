@@ -61,12 +61,9 @@ func NewOvirtMapper(vm *ovirtsdk.Vm, mappings *v2vv1alpha1.OvirtMappings, creds 
 	}
 }
 
-// MapVM map oVirt API VM definition to kubevirt VM definition
-func (o *OvirtMapper) MapVM(targetVMName *string) *kubevirtv1.VirtualMachine {
-	vmSpec := kubevirtv1.VirtualMachine{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: o.namespace,
-		},
+// CreateEmptyVM creates empty virtual machine definition
+func (o *OvirtMapper) CreateEmptyVM() *kubevirtv1.VirtualMachine {
+	return &kubevirtv1.VirtualMachine{
 		Spec: kubevirtv1.VirtualMachineSpec{
 			Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
 				Spec: kubevirtv1.VirtualMachineInstanceSpec{
@@ -75,6 +72,12 @@ func (o *OvirtMapper) MapVM(targetVMName *string) *kubevirtv1.VirtualMachine {
 			},
 		},
 	}
+}
+
+// MapVM map oVirt API VM definition to kubevirt VM definition
+func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachine) *kubevirtv1.VirtualMachine {
+	// Set Namespace
+	vmSpec.ObjectMeta.Namespace = o.namespace
 
 	// Map name
 	vmName, shouldGenerate := o.resolveVMName(targetVMName, o.vm)
@@ -87,6 +90,10 @@ func (o *OvirtMapper) MapVM(targetVMName *string) *kubevirtv1.VirtualMachine {
 	// Map hostname
 	if fqdn, ok := o.vm.Fqdn(); ok {
 		vmSpec.Spec.Template.Spec.Hostname = fqdn
+	}
+
+	if vmSpec.Spec.Template == nil {
+		vmSpec.Spec.Template = &kubevirtv1.VirtualMachineInstanceTemplateSpec{}
 	}
 
 	// Map CPU
@@ -111,7 +118,7 @@ func (o *OvirtMapper) MapVM(targetVMName *string) *kubevirtv1.VirtualMachine {
 	vmSpec.Spec.Template.Spec.Domain.Devices = *o.mapGraphicalConsoles()
 
 	// Map labels like origin, instance_type
-	vmSpec.ObjectMeta.Labels = o.mapLabels()
+	vmSpec.ObjectMeta.Labels = o.mapLabels(vmSpec.ObjectMeta.Labels)
 
 	// Map annotations like sso
 	vmSpec.ObjectMeta.Annotations = o.mapAnnotations()
@@ -128,7 +135,7 @@ func (o *OvirtMapper) MapVM(targetVMName *string) *kubevirtv1.VirtualMachine {
 	// Map networks
 	vmSpec.Spec.Template.Spec.Networks = o.mapNetworks()
 
-	return &vmSpec
+	return vmSpec
 }
 
 // MapDisks map the oVirt VM disks to the map of CDI DataVolumes specification, where
@@ -446,9 +453,13 @@ func (o *OvirtMapper) mapGraphicalConsoles() *kubevirtv1.Devices {
 	return devices
 }
 
-func (o *OvirtMapper) mapLabels() map[string]string {
-	labels := map[string]string{}
-
+func (o *OvirtMapper) mapLabels(vmLabels map[string]string) map[string]string {
+	var labels map[string]string
+	if vmLabels == nil {
+		labels = map[string]string{}
+	} else {
+		labels = vmLabels
+	}
 	// Origin
 	labels[LabelOrigin], _ = o.vm.Origin()
 
