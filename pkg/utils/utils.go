@@ -101,5 +101,5 @@ func WithMessage(message string, newMessage string) string {
 
 // MakeLabelFrom creates label value from given namespace and name
 func MakeLabelFrom(namespace string, name string) string {
-	return fmt.Sprintf("%s/%s", namespace, name)
+	return fmt.Sprintf("%s-%s", namespace, name)
 }
