@@ -233,33 +233,8 @@ func (o *OvirtProvider) UpdateVM(vmspec *kubevirtv1.VirtualMachine, dvs map[stri
 
 		i++
 	}
-	running := false
-	vmspec.Spec = kubevirtv1.VirtualMachineSpec{
-		Running: &running,
-		Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels: labels,
-			},
-			Spec: kubevirtv1.VirtualMachineInstanceSpec{
-				Domain: kubevirtv1.DomainSpec{
-					CPU: &kubevirtv1.CPU{
-						Cores: uint32(o.vm.MustCpu().MustTopology().MustCores()),
-					},
-					Devices: kubevirtv1.Devices{
-						Disks: disks,
-						// Memory:  &kubevirtv1.Memory{},
-						// Machine:   kubevirtv1.Machine{},
-						// Firmware:  &kubevirtv1.Firmware{},
-						// Clock:     &kubevirtv1.Clock{},
-						// Features:  &kubevirtv1.Features{},
-						// Chassis:   &kubevirtv1.Chassis{},
-						// IOThreadsPolicy: &kubevirtv1.IOThreadsPolicy{},
-					},
-				},
-				Volumes: volumes,
-			},
-		},
-	}
+	vmspec.Spec.Template.Spec.Domain.Devices.Disks = disks
+	vmspec.Spec.Template.Spec.Volumes = volumes
 }
 
 // StartVM starts the source VM

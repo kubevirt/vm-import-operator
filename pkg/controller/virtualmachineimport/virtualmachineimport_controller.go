@@ -2,8 +2,8 @@ package virtualmachineimport
 
 import (
 	"context"
-	langerr "errors"
 	"fmt"
+	"strconv"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 	"kubevirt.io/client-go/kubecli"
-
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -32,6 +32,15 @@ import (
 
 const (
 	sourceVMInitialState = "vmimport.v2v.kubevirt.io/source-vm-initial-state"
+	// AnnCurrentProgress is annotations storing current progress of the vm import
+	AnnCurrentProgress = "vmimport.v2v.kubevirt.io/progress"
+	// constants
+	progressStart        = "0"
+	progressCreatingVM   = "30"
+	progressCopyingDisks = "40"
+	progressStartVM      = "90"
+	progressDone         = "100"
+	progressForCopyDisk  = 40
 )
 
 var (
@@ -75,17 +84,34 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource VirtualMachineImport
-	err = c.Watch(&source.Kind{Type: &v2vv1alpha1.VirtualMachineImport{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(
+		&source.Kind{Type: &v2vv1alpha1.VirtualMachineImport{}},
+		&handler.EnqueueRequestForObject{},
+	)
 	if err != nil {
 		return err
 	}
 
-	// TODO(user): Modify this to be the types you create that are owned by the primary resource
-	// Watch for changes to secondary resource Pods and requeue the owner VirtualMachineImport
-	err = c.Watch(&source.Kind{Type: &kubevirtv1.VirtualMachine{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
-		OwnerType:    &v2vv1alpha1.VirtualMachineImport{},
-	})
+	// Watch for VM events:
+	err = c.Watch(
+		&source.Kind{Type: &kubevirtv1.VirtualMachine{}},
+		&handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    &v2vv1alpha1.VirtualMachineImport{},
+		},
+	)
+	if err != nil {
+		return err
+	}
+
+	// Watch for DV events:
+	err = c.Watch(
+		&source.Kind{Type: &cdiv1.DataVolume{}},
+		&handler.EnqueueRequestForOwner{
+			IsController: true,
+			OwnerType:    &v2vv1alpha1.VirtualMachineImport{},
+		},
+	)
 	if err != nil {
 		return err
 	}
@@ -113,9 +139,6 @@ type ReconcileVirtualMachineImport struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (reconcile.Result, error) {
-	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling VirtualMachineImport")
-
 	// Fetch the VirtualMachineImport instance
 	instance := &v2vv1alpha1.VirtualMachineImport{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -130,80 +153,75 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		return reconcile.Result{}, err
 	}
 
-	// Fetch source provider secret
-	sourceProviderSecretObj, err := r.fetchSecret(instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	provider, err := r.createProvider(instance)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	err = provider.Connect(sourceProviderSecretObj)
+	// Init provider:
+	provider, err := r.initProvider(instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 	defer provider.Close()
 
-	// Load source VM:
-	err = provider.LoadVM(instance.Spec.Source)
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// Load the external resource mapping
-	resourceMapping, err := r.fetchResourceMapping(instance.Spec.ResourceMapping, instance.Namespace)
-	if err != nil {
-		//TODO: update Validating status condition
-		return reconcile.Result{}, err
-	}
-
-	// Prepare/merge the resourceMapping
-	provider.PrepareResourceMapping(resourceMapping, instance.Spec.Source)
-
-	// Validate if it's needed at this stage of processing
-	if shouldValidate(&instance.Status) {
-		conditions, err := provider.Validate()
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		err = r.upsertStatusConditions(request.NamespacedName, conditions)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		if valid, message := shouldFailWith(conditions); !valid {
-			return reconcile.Result{}, langerr.New(message)
-		}
-
-		vmStatus, err := provider.GetVMStatus()
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		reqLogger.Info("Storing source VM status", "status", vmStatus)
-		err = r.storeSourceVMStatus(instance, string(vmStatus))
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-	} else {
-		reqLogger.Info("VirtualMachineImport has already been validated positively. Skipping re-validation")
-	}
-
-	// Stop VM
-	err = provider.StopVM()
-	if err != nil {
-		return reconcile.Result{}, err
-	}
-
-	// Define VM spec
+	// Create mapper:
 	mapper, err := provider.CreateMapper()
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+
+	vmName := types.NamespacedName{Name: instance.Status.TargetVMName, Namespace: request.Namespace}
+	if instance.Status.TargetVMName == "" {
+		newName, err := r.createVM(provider, instance, mapper)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		vmName.Name = newName
+	}
+
+	// Import disks:
+	dvs := mapper.MapDisks()
+	dvsDone := make(map[string]bool)
+	for dvID := range dvs {
+		foundDv, err := r.kubeClient.CdiClient().CdiV1alpha1().DataVolumes(instance.Namespace).Get(dvID, metav1.GetOptions{})
+		if err != nil && errors.IsNotFound(err) {
+			if err = r.createDataVolumes(provider, instance, dvs, vmName); err != nil {
+				return reconcile.Result{}, err
+			}
+		} else if err == nil {
+			// Set dataVolume as done, if it's in Succeeded state:
+			if foundDv.Status.Phase == cdiv1.Succeeded {
+				dvsDone[dvID] = true
+				if err = r.manageDataVolumeState(instance, dvsDone, len(dvs)); err != nil {
+					return reconcile.Result{}, err
+				}
+
+				// Cleanup if user don't want to start the VM
+				if !*instance.Spec.StartVM {
+					if err := r.updateProgress(instance, progressDone); err != nil {
+						return reconcile.Result{}, err
+					}
+					if err := r.afterSuccess(vmName, request.NamespacedName, provider); err != nil {
+						return reconcile.Result{}, err
+					}
+				}
+			}
+		} else {
+			return reconcile.Result{}, err
+		}
+	}
+
+	if err = r.startVM(provider, instance, vmName); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, mapper provider.Mapper) (string, error) {
+	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
+	reqLogger := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
+	reqLogger.Info("Reconciling VirtualMachineImport")
+
+	// Define VM spec
 	template, err := provider.FindTemplate()
-	var spec = &kubevirtv1.VirtualMachine{}
+	var spec *kubevirtv1.VirtualMachine
 	if err != nil {
 		reqLogger.Info("No matching template was found for the virtual machine using empty vm definition")
 		spec = mapper.CreateEmptyVM()
@@ -216,55 +234,170 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 	vmSpec := mapper.MapVM(instance.Spec.TargetVMName, spec)
 
+	// Update progress:
+	if err = r.updateProgress(instance, progressStart); err != nil {
+		return "", err
+	}
+
 	// Set VirtualMachineImport instance as the owner and controller
 	if err := controllerutil.SetControllerReference(instance, vmSpec, r.scheme); err != nil {
-		return reconcile.Result{}, err
+		return "", err
 	}
 
-	// Check if this VM already exists
+	// Update condition to creating VM:
+	cond := conditions.NewProccessingCondition(string(v2vv1alpha1.CreatingTargetVM), "Creating virtual machine")
+	if err = r.upsertStatusCondition(instanceNamespacedName, cond); err != nil {
+		return "", err
+	}
+
+	// Create kubevirt VM from source VM:
+	reqLogger.Info("Creating a new VM", "VM.Namespace", vmSpec.Namespace, "VM.Name", vmSpec.Name)
+	if err = r.client.Create(context.TODO(), vmSpec); err != nil {
+		// Update condition to failed state:
+		cond = conditions.NewSucceededCondition(string(v2vv1alpha1.VMCreationFailed), fmt.Sprintf("Error while creating virtual machine: %s", err))
+		err = r.upsertStatusCondition(instanceNamespacedName, cond)
+
+		// Cleanup after failure
+		if err = r.afterFailure(instanceNamespacedName, provider); err != nil {
+			return "", err
+		}
+
+		// Reconcile
+		return "", err
+	}
+
+	// Get created VM Name
 	found := &kubevirtv1.VirtualMachine{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: vmSpec.Name, Namespace: vmSpec.Namespace}, found)
-
-	if err != nil && errors.IsNotFound(err) {
-
-		// Create kubevirt VM from source VM:
-		reqLogger.Info("Creating a new VM", "VM.Namespace", vmSpec.Namespace, "VM.Name", vmSpec.Name)
-		err = r.client.Create(context.TODO(), vmSpec)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		// Import disks:
-		dvs := mapper.MapDisks()
-		for _, dv := range dvs {
-			_, err := r.kubeClient.CdiClient().CdiV1alpha1().DataVolumes(instance.Namespace).Create(&dv)
-			if err != nil {
-				return reconcile.Result{}, err
-			}
-		}
-
-		// Update VM spec with disks:
-		vmDef := &kubevirtv1.VirtualMachine{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: vmSpec.Namespace, Name: vmSpec.Name}, vmDef)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		provider.UpdateVM(vmDef, dvs)
-		err = r.client.Update(context.TODO(), vmDef)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		// Pod created successfully - don't requeue
-		return reconcile.Result{}, nil
-	} else if err != nil {
-		return reconcile.Result{}, err
+	if err != nil {
+		return "", err
 	}
 
-	// VM already exists - don't requeue
-	reqLogger.Info("Skip reconcile: VM already exists", "VM.Namespace", found.Namespace, "VM.Name", found.Name)
+	// Set target name:
+	if err = r.updateTargetVMName(instanceNamespacedName, found.Name); err != nil {
+		return "", err
+	}
 
-	return reconcile.Result{}, nil
+	// Update progress to creating vm
+	if err = r.updateProgress(instance, progressCreatingVM); err != nil {
+		return "", err
+	}
+
+	return found.Name, nil
+}
+
+// startVM start the VM if was requested to be started and VM disks are imported and ready:
+func (r *ReconcileVirtualMachineImport) startVM(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, vmName types.NamespacedName) error {
+	if *instance.Spec.StartVM && conditions.HasSucceededConditionOfReason(instance.Status.Conditions, v2vv1alpha1.VirtualMachineReady) {
+		vmi := &kubevirtv1.VirtualMachineInstance{}
+		err := r.client.Get(context.TODO(), vmName, vmi)
+		if err != nil && errors.IsNotFound(err) {
+			if err = r.updateProgress(instance, progressStartVM); err != nil {
+				return err
+			}
+			if err = r.updateToRunning(vmName); err != nil {
+				return err
+			}
+		} else if err == nil {
+			if vmi.Status.Phase == kubevirtv1.Running || vmi.Status.Phase == kubevirtv1.Scheduled {
+				instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
+				cond := conditions.NewSucceededCondition(string(v2vv1alpha1.VirtualMachineRunning), "Virtual machine running")
+				err = r.upsertStatusCondition(instanceNamespacedName, cond)
+				if err != nil {
+					return err
+				}
+				if err = r.updateProgress(instance, progressDone); err != nil {
+					return err
+				}
+				if err = r.afterSuccess(vmName, instanceNamespacedName, provider); err != nil {
+					return err
+				}
+			}
+		} else {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// manageDataVolumeState update current state according to progress of import
+func (r *ReconcileVirtualMachineImport) manageDataVolumeState(instance *v2vv1alpha1.VirtualMachineImport, dvsDone map[string]bool, numberOfDvs int) error {
+	// Count successfully imported dvs:
+	done := utils.CountImportedDataVolumes(dvsDone)
+
+	// Update progress, progress of CopyingDisks starts at 40% and we update the proccess,
+	// based on number of disks. Each disk updates state as 40/numberOfDisks. So we end at 80%.
+	if done > 0 {
+		progressCopyingDisksInt, _ := strconv.Atoi(progressCopyingDisks)
+		if err := r.updateProgress(instance, strconv.FormatInt(int64(progressCopyingDisksInt+(progressForCopyDisk/done)), 10)); err != nil {
+			return err
+		}
+	}
+
+	// If all DVs was imported - update state
+	allDone := done == numberOfDvs
+	if allDone && !conditions.HasSucceededConditionOfReason(instance.Status.Conditions, v2vv1alpha1.VirtualMachineReady, v2vv1alpha1.VirtualMachineRunning) {
+		cond := conditions.NewSucceededCondition(string(v2vv1alpha1.VirtualMachineReady), "Virtual machine disks import done")
+		vmImportName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
+		if err := r.upsertStatusCondition(vmImportName, cond); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, dvs map[string]cdiv1.DataVolume, vmName types.NamespacedName) error {
+	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
+	// Update condition to create VM:
+	cond := conditions.NewProccessingCondition(string(v2vv1alpha1.CopyingDisks), "Copying virtual machine disks")
+	err := r.upsertStatusCondition(instanceNamespacedName, cond)
+	if err != nil {
+		return err
+	}
+	// Update progress to copying disks:
+	if err = r.updateProgress(instance, progressCopyingDisks); err != nil {
+		return err
+	}
+	for _, dv := range dvs {
+		if err := controllerutil.SetControllerReference(instance, &dv, r.scheme); err != nil {
+			return err
+		}
+		_, err := r.kubeClient.CdiClient().CdiV1alpha1().DataVolumes(instance.Namespace).Create(&dv)
+		if err != nil {
+			// Update condition to failed:
+			cond = conditions.NewSucceededCondition(string(v2vv1alpha1.DataVolumeCreationFailed), fmt.Sprintf("Data volume creationg faield: %s", err))
+			err = r.upsertStatusCondition(instanceNamespacedName, cond)
+			if err != nil {
+				return err
+			}
+
+			// Cleanup
+			if err = r.afterFailure(instanceNamespacedName, provider); err != nil {
+				return err
+			}
+			return err
+		}
+	}
+	// Update datavolume in VM import CR status:
+	if err = r.updateDVs(instanceNamespacedName, dvs); err != nil {
+		return err
+	}
+
+	// Update VM spec with imported disks:
+	vmDef := &kubevirtv1.VirtualMachine{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, vmDef)
+	if err != nil {
+		return err
+	}
+	provider.UpdateVM(vmDef, dvs)
+	err = r.client.Update(context.TODO(), vmDef)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *ReconcileVirtualMachineImport) fetchSecret(vmImport *v2vv1alpha1.VirtualMachineImport) (*corev1.Secret, error) {
@@ -314,6 +447,63 @@ func (r *ReconcileVirtualMachineImport) createProvider(vmi *v2vv1alpha1.VirtualM
 	return nil, fmt.Errorf("Invalid source type. only Ovirt type is supported")
 }
 
+func (r *ReconcileVirtualMachineImport) updateToRunning(vmName types.NamespacedName) error {
+	var vm kubevirtv1.VirtualMachine
+	err := r.client.Get(context.TODO(), vmName, &vm)
+	if err != nil {
+		return err
+	}
+
+	copy := vm.DeepCopy()
+	running := true
+	copy.Spec.Running = &running
+
+	patch := client.MergeFrom(&vm)
+	err = r.client.Patch(context.TODO(), copy, patch)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *ReconcileVirtualMachineImport) updateDVs(vmiName types.NamespacedName, dvs map[string]cdiv1.DataVolume) error {
+	var instance v2vv1alpha1.VirtualMachineImport
+	err := r.client.Get(context.TODO(), vmiName, &instance)
+	if err != nil {
+		return err
+	}
+
+	copy := instance.DeepCopy()
+	for dvName := range dvs {
+		copy.Status.DataVolumes = append(copy.Status.DataVolumes, v2vv1alpha1.DataVolumeItem{Name: dvName})
+	}
+
+	patch := client.MergeFrom(&instance)
+	err = r.client.Status().Patch(context.TODO(), copy, patch)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *ReconcileVirtualMachineImport) updateTargetVMName(vmiName types.NamespacedName, vmName string) error {
+	var instance v2vv1alpha1.VirtualMachineImport
+	err := r.client.Get(context.TODO(), vmiName, &instance)
+	if err != nil {
+		return err
+	}
+
+	copy := instance.DeepCopy()
+	copy.Status.TargetVMName = vmName
+
+	patch := client.MergeFrom(&instance)
+	err = r.client.Status().Patch(context.TODO(), copy, patch)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *ReconcileVirtualMachineImport) upsertStatusConditions(vmiName types.NamespacedName, newConditions []v2vv1alpha1.VirtualMachineImportCondition) error {
 	var instance v2vv1alpha1.VirtualMachineImport
 	err := r.client.Get(context.TODO(), vmiName, &instance)
@@ -345,7 +535,32 @@ func (r *ReconcileVirtualMachineImport) storeSourceVMStatus(instance *v2vv1alpha
 	return r.client.Patch(context.TODO(), vmiCopy, patch)
 }
 
-//TODO: use in proper place
+func (r *ReconcileVirtualMachineImport) updateProgress(instance *v2vv1alpha1.VirtualMachineImport, progress string) error {
+	currentProgress, ok := instance.Annotations[AnnCurrentProgress]
+	if !ok {
+		currentProgress = "0"
+	}
+	currentProgressInt, err := strconv.Atoi(currentProgress)
+	if err != nil {
+		return err
+	}
+	newProgressInt, err := strconv.Atoi(progress)
+	if err != nil {
+		return err
+	}
+	if currentProgressInt < newProgressInt {
+		vmiCopy := instance.DeepCopy()
+		if vmiCopy.Annotations == nil {
+			vmiCopy.Annotations = make(map[string]string)
+		}
+		vmiCopy.Annotations[AnnCurrentProgress] = progress
+
+		patch := client.MergeFrom(instance)
+		return r.client.Patch(context.TODO(), vmiCopy, patch)
+	}
+	return nil
+}
+
 func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName, vmiName types.NamespacedName, p provider.Provider) error {
 	var errs []error
 	err := p.CleanUp()
@@ -490,6 +705,10 @@ func foldErrors(errs []error, prefix string, vmiName types.NamespacedName) error
 	return fmt.Errorf("%s clean-up for %v failed: %s", prefix, utils.ToLoggableResourceName(vmiName.Name, &vmiName.Namespace), message)
 }
 
+func (r *ReconcileVirtualMachineImport) upsertStatusCondition(vmiName types.NamespacedName, newCondition v2vv1alpha1.VirtualMachineImportCondition) error {
+	return r.upsertStatusConditions(vmiName, []v2vv1alpha1.VirtualMachineImportCondition{newCondition})
+}
+
 func shouldFailWith(conditions []v2vv1alpha1.VirtualMachineImportCondition) (bool, string) {
 	var message string
 	valid := true
@@ -502,4 +721,72 @@ func shouldFailWith(conditions []v2vv1alpha1.VirtualMachineImportCondition) (boo
 		}
 	}
 	return valid, message
+}
+
+func (r *ReconcileVirtualMachineImport) initProvider(instance *v2vv1alpha1.VirtualMachineImport) (provider.Provider, error) {
+	// Fetch source provider secret
+	sourceProviderSecretObj, err := r.fetchSecret(instance)
+	if err != nil {
+		return nil, err
+	}
+
+	provider, err := r.createProvider(instance)
+	if err != nil {
+		return nil, err
+	}
+
+	err = provider.Connect(sourceProviderSecretObj)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load source VM:
+	err = provider.LoadVM(instance.Spec.Source)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load the external resource mapping
+	resourceMapping, err := r.fetchResourceMapping(instance.Spec.ResourceMapping, instance.Namespace)
+	if err != nil {
+		//TODO: update Validating status condition
+		return nil, err
+	}
+
+	// Prepare/merge the resourceMapping
+	provider.PrepareResourceMapping(resourceMapping, instance.Spec.Source)
+
+	// Validate if it's needed at this stage of processing
+	if shouldValidate(&instance.Status) {
+		conditions, err := provider.Validate()
+		if err != nil {
+			return nil, err
+		}
+		err = r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, conditions)
+		if err != nil {
+			return nil, err
+		}
+		if valid, message := shouldFailWith(conditions); !valid {
+			return nil, fmt.Errorf(message)
+		}
+
+		vmStatus, err := provider.GetVMStatus()
+		if err != nil {
+			return nil, err
+		}
+
+		log.Info("Storing source VM status", "status", vmStatus)
+		err = r.storeSourceVMStatus(instance, string(vmStatus))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		log.Info("VirtualMachineImport has already been validated positively. Skipping re-validation")
+	}
+
+	if err = provider.StopVM(); err != nil {
+		return nil, err
+	}
+
+	return provider, nil
 }
