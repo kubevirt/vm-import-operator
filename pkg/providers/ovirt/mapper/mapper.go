@@ -18,6 +18,8 @@ import (
 const (
 	cdiAPIVersion           = "cdi.kubevirt.io/v1alpha1"
 	customPropertyHugePages = "hugepages"
+	networkTypePod          = "pod"
+	networkTypeMultus       = "multus"
 	// LabelOrigin define name of the label which holds value of origin attribute of oVirt VM
 	LabelOrigin = "origin"
 	// LabelInstanceType define name of the label which holds value of instance type attribute of oVirt VM
@@ -138,11 +140,12 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 	// Map timezone
 	vmSpec.Spec.Template.Spec.Domain.Clock = o.mapTimeZone()
 
-	// Map network interfaces
-	vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces = o.mapNics()
-
 	// Map networks
 	vmSpec.Spec.Template.Spec.Networks = o.mapNetworks()
+
+	// Map network interfaces
+	networkToType := o.mapNetworksToTypes(vmSpec.Spec.Template.Spec.Networks)
+	vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces = o.mapNics(networkToType)
 
 	return vmSpec
 }
@@ -198,7 +201,7 @@ func (o *OvirtMapper) MapDisks() map[string]cdiv1.DataVolume {
 	return dvs
 }
 
-func (o *OvirtMapper) mapNics() []kubevirtv1.Interface {
+func (o *OvirtMapper) mapNics(networkToType map[string]string) []kubevirtv1.Interface {
 	var kubevirtNics []kubevirtv1.Interface
 	nics, _ := o.vm.Nics()
 	for _, nic := range nics.Slice() {
@@ -215,6 +218,14 @@ func (o *OvirtMapper) mapNics() []kubevirtv1.Interface {
 		if nicInterface, ok := nic.Interface(); ok {
 			kubevirtNic.Model = string(nicInterface)
 		}
+
+		switch networkToType[kubevirtNic.Name] {
+		case networkTypeMultus:
+			kubevirtNic.Bridge = &kubevirtv1.InterfaceBridge{}
+		case networkTypePod:
+			kubevirtNic.Masquerade = &kubevirtv1.InterfaceMasquerade{}
+		}
+
 		kubevirtNics = append(kubevirtNics, kubevirtNic)
 	}
 
@@ -239,6 +250,18 @@ func (o *OvirtMapper) mapNetworks() []kubevirtv1.Network {
 	return kubevirtNetworks
 }
 
+func (o *OvirtMapper) mapNetworksToTypes(networks []kubevirtv1.Network) map[string]string {
+	networkToType := make(map[string]string)
+	for _, network := range networks {
+		if network.Multus != nil {
+			networkToType[network.Name] = networkTypeMultus
+		} else if network.Pod != nil {
+			networkToType[network.Name] = networkTypePod
+		}
+	}
+	return networkToType
+}
+
 func (o *OvirtMapper) getNetworkForNic(vnicProfile *ovirtsdk.VnicProfile) kubevirtv1.Network {
 	kubevirtNet := kubevirtv1.Network{}
 	network, _ := vnicProfile.Network()
@@ -258,9 +281,9 @@ func (o *OvirtMapper) getNetworkForNic(vnicProfile *ovirtsdk.VnicProfile) kubevi
 }
 
 func (o *OvirtMapper) mapNetworkType(mapping v2vv1alpha1.ResourceMappingItem, kubevirtNet *kubevirtv1.Network) {
-	if *mapping.Type == "pod" {
+	if *mapping.Type == networkTypePod {
 		kubevirtNet.Pod = &kubevirtv1.PodNetwork{}
-	} else if *mapping.Type == "multus" {
+	} else if *mapping.Type == networkTypeMultus {
 		kubevirtNet.Multus = &kubevirtv1.MultusNetwork{
 			NetworkName: mapping.Target.Name,
 		}

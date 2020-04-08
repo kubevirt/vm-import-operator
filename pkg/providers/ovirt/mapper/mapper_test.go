@@ -97,12 +97,24 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		interfaces := vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces
 		networks := vmSpec.Spec.Template.Spec.Networks
 		networkMapping := *mappings.NetworkMappings
-		nic := vm.MustNics().Slice()[0]
+		nic1 := vm.MustNics().Slice()[0]
+		nic2 := vm.MustNics().Slice()[1]
 
-		Expect(interfaces[0].Name).To(Equal(nic.MustName()))
-		Expect(interfaces[0].Model).To(Equal(string(nic.MustInterface())))
-		Expect(networks[0].Name).To(Equal(nic.MustName()))
+		Expect(interfaces[0].Name).To(Equal(nic1.MustName()))
+		Expect(interfaces[0].Model).To(Equal(string(nic1.MustInterface())))
+		// It's a multus network
+		Expect(interfaces[0].Bridge).To(Not(BeNil()))
+		Expect(interfaces[0].Masquerade).To(BeNil())
+		Expect(networks[0].Name).To(Equal(nic1.MustName()))
 		Expect(networks[0].Multus.NetworkName).To(Equal(networkMapping[0].Target.Name))
+
+		Expect(interfaces[1].Name).To(Equal(nic2.MustName()))
+		Expect(interfaces[1].Model).To(Equal(string(nic2.MustInterface())))
+		// It's a pod network
+		Expect(interfaces[1].Masquerade).To(Not(BeNil()))
+		Expect(interfaces[1].Bridge).To(BeNil())
+		Expect(networks[1].Name).To(Equal(nic2.MustName()))
+		Expect(networks[1].Pod).To(Not(BeNil()))
 	})
 })
 
@@ -167,6 +179,16 @@ func createVM() *ovirtsdk.Vm {
 							ovirtsdk.NewNetworkBuilder().
 								Name("network1").MustBuild()).
 						MustBuild()).
+				MustBuild(),
+			ovirtsdk.NewNicBuilder().
+				Name("nic2").
+				Interface("virtio").
+				VnicProfile(
+					ovirtsdk.NewVnicProfileBuilder().
+						Network(
+							ovirtsdk.NewNetworkBuilder().
+								Name("network2").MustBuild()).
+						MustBuild()).
 				MustBuild()).
 		DiskAttachmentsOfAny(
 			ovirtsdk.NewDiskAttachmentBuilder().
@@ -188,16 +210,25 @@ func createMappings() v2vv1alpha1.OvirtMappings {
 	// network mappings
 	var networks []v2vv1alpha1.ResourceMappingItem
 	multusNetwork := "multus"
-	networkName := "network1"
-	networks = append(networks, v2vv1alpha1.ResourceMappingItem{
-		Source: v2vv1alpha1.Source{
-			Name: &networkName,
+	podNetwork := "pod"
+	multusNetworkName := "network1"
+	podNetworkName := "network2"
+	networks = append(networks,
+		v2vv1alpha1.ResourceMappingItem{
+			Source: v2vv1alpha1.Source{
+				Name: &multusNetworkName,
+			},
+			Target: v2vv1alpha1.ObjectIdentifier{
+				Name: "net-attach-def",
+			},
+			Type: &multusNetwork,
 		},
-		Target: v2vv1alpha1.ObjectIdentifier{
-			Name: "net-attach-def",
-		},
-		Type: &multusNetwork,
-	})
+		v2vv1alpha1.ResourceMappingItem{
+			Source: v2vv1alpha1.Source{
+				Name: &podNetworkName,
+			},
+			Type: &podNetwork,
+		})
 
 	// storage mappings
 	var storages []v2vv1alpha1.ResourceMappingItem
