@@ -102,6 +102,10 @@ func (client *richOvirtClient) GetVM(id *string, name *string, cluster *string, 
 	if err != nil {
 		return nil, err
 	}
+	err = client.populateCluster(vm)
+	if err != nil {
+		return nil, err
+	}
 	return vm, nil
 }
 
@@ -387,6 +391,17 @@ func (client *richOvirtClient) populateTags(vm *ovirtsdk.Vm) error {
 		}
 		tagsPopulated := followed.(*ovirtsdk.TagSlice)
 		vm.SetTags(tagsPopulated)
+	}
+	return nil
+}
+
+func (client *richOvirtClient) populateCluster(vm *ovirtsdk.Vm) error {
+	if cluster, ok := vm.Cluster(); ok {
+		followed, err := client.connection.FollowLink(cluster)
+		if err != nil {
+			return err
+		}
+		vm.SetCluster(followed.(*ovirtsdk.Cluster))
 	}
 	return nil
 }
