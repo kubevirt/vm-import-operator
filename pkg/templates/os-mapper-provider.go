@@ -28,10 +28,9 @@ type OSMapProvider interface {
 }
 
 // NewOSMapProvider creates new OSMapProvider
-func NewOSMapProvider(templateProvider TemplateProvider, osMapProvider OSMapProvider) *TemplateFinder {
-	return &TemplateFinder{
-		templateProvider: templateProvider,
-		osMapProvider:    osMapProvider,
+func NewOSMapProvider(client client.Client) *OSMaps {
+	return &OSMaps{
+		Client: client,
 	}
 }
 

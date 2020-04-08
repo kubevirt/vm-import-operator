@@ -25,9 +25,22 @@ const (
 	otherValue    = "other"
 )
 
-// Templates is responsible for finding templates
+// Templates is responsible for finding and processing templates
 type Templates struct {
 	Client *tempclient.TemplateV1Client
+}
+
+// TemplateProvider searches for and processes templates in Openshift
+type TemplateProvider interface {
+	Find(namespace *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error)
+	Process(namespace string, vmName string, template *templatev1.Template) (*templatev1.Template, error)
+}
+
+// NewTemplateProvider creates new TemplateProvider
+func NewTemplateProvider(client *tempclient.TemplateV1Client) *Templates {
+	return &Templates{
+		Client: client,
+	}
 }
 
 // Find looks for a template based on given namespace and options
