@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/kubevirt/vm-import-operator/pkg/templates"
 	templatev1 "github.com/openshift/api/template/v1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
-	"k8s.io/apimachinery/pkg/runtime"
-	kubevirtv1 "kubevirt.io/client-go/api/v1"
-	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 )
 
 const (
@@ -17,28 +15,16 @@ const (
 	defaultLinux      = "rhel8"
 	defaultWindows    = "windows"
 	defaultFlavor     = "medium"
-
-	// templateNameLabel defines a label of the template name which was used to created the VM
-	templateNameLabel = "vm.kubevirt.io/template"
-
-	// templateNamespaceLabel defines a label of the template namespace which was used to created the VM
-	templateNamespaceLabel = "vm.kubevirt.io/template-namespace"
 )
 
 // TemplateFinder attempts to find a template based on given parameters
 type TemplateFinder struct {
-	templateProvider TemplateProvider
-	osMapProvider    OSMapProvider
-}
-
-// TemplateProvider searches for template in Openshift
-type TemplateProvider interface {
-	Find(namespace *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error)
-	Process(namespace string, vmName string, template *templatev1.Template) (*templatev1.Template, error)
+	templateProvider templates.TemplateProvider
+	osMapProvider    templates.OSMapProvider
 }
 
 // NewTemplateFinder creates new TemplateFinder
-func NewTemplateFinder(templateProvider TemplateProvider, osMapProvider OSMapProvider) *TemplateFinder {
+func NewTemplateFinder(templateProvider templates.TemplateProvider, osMapProvider templates.OSMapProvider) *TemplateFinder {
 	return &TemplateFinder{
 		templateProvider: templateProvider,
 		osMapProvider:    osMapProvider,
@@ -110,46 +96,4 @@ func (f *TemplateFinder) getTemplate(os string, workload string) (*templatev1.Te
 	}
 	// Take first which matches label selector
 	return &templates.Items[0], nil
-}
-
-// ProcessTemplate processes template with provided parameter values
-func (f *TemplateFinder) ProcessTemplate(template *templatev1.Template, vmName string) (*kubevirtv1.VirtualMachine, error) {
-	processed, err := f.templateProvider.Process(TemplateNamespace, vmName, template)
-	if err != nil {
-		return nil, err
-	}
-	var vm = &kubevirtv1.VirtualMachine{}
-	for _, obj := range processed.Objects {
-		decoder := kubevirtv1.Codecs.UniversalDecoder(kubevirtv1.GroupVersion)
-		decoded, err := runtime.Decode(decoder, obj.Raw)
-		if err != nil {
-			return nil, err
-		}
-		done, ok := decoded.(*kubevirtv1.VirtualMachine)
-		if ok {
-			vm = done
-			break
-		}
-	}
-	if len(vm.Spec.Template.Spec.Volumes) > 0 {
-		vm.Spec.Template.Spec.Volumes = []kubevirtv1.Volume{}
-	}
-	if len(vm.Spec.Template.Spec.Networks) > 0 {
-		vm.Spec.Template.Spec.Networks = []kubevirtv1.Network{}
-	}
-	if len(vm.Spec.DataVolumeTemplates) > 0 {
-		vm.Spec.DataVolumeTemplates = []cdiv1.DataVolume{}
-	}
-	addLabels(vm, template)
-	return vm, nil
-}
-
-func addLabels(vm *kubevirtv1.VirtualMachine, template *templatev1.Template) {
-	labels := vm.ObjectMeta.GetLabels()
-	if labels == nil {
-		labels = make(map[string]string)
-		vm.ObjectMeta.SetLabels(labels)
-	}
-	labels[templateNameLabel] = template.GetObjectMeta().GetName()
-	labels[templateNamespaceLabel] = template.GetObjectMeta().GetNamespace()
 }

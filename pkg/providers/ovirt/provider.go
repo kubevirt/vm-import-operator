@@ -16,9 +16,10 @@ import (
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	ovirtclient "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/client"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
-	templates "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/templates"
+	otemplates "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/templates"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
+	templates "github.com/kubevirt/vm-import-operator/pkg/templates"
 	templatev1 "github.com/openshift/api/template/v1"
 	tempclient "github.com/openshift/client-go/template/clientset/versioned/typed/template/v1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
@@ -67,7 +68,8 @@ type OvirtProvider struct {
 	vm                 *ovirtsdk.Vm
 	vmiCrName          types.NamespacedName
 	resourceMapping    *v2vv1alpha1.OvirtMappings
-	templateFinder     *templates.TemplateFinder
+	templateFinder     *otemplates.TemplateFinder
+	templateHandler    *templates.TemplateHandler
 	secretsManager     SecretsManager
 	configMapsManager  ConfigMapsManager
 }
@@ -77,13 +79,12 @@ func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, kube
 	validator := validators.NewValidatorWrapper(kubevirtClient)
 	secretsManager := secrets.NewManager(client)
 	configMapsManager := configmaps.NewManager(client)
+	templateProvider := templates.NewTemplateProvider(tempClient)
 	return OvirtProvider{
-		vmiCrName: vmiCrName,
-		validator: validation.NewVirtualMachineImportValidator(validator),
-		templateFinder: templates.NewTemplateFinder(
-			&templates.Templates{Client: tempClient},
-			&templates.OSMaps{Client: client},
-		),
+		vmiCrName:         vmiCrName,
+		validator:         validation.NewVirtualMachineImportValidator(validator),
+		templateFinder:    otemplates.NewTemplateFinder(templateProvider, templates.NewOSMapProvider(client)),
+		templateHandler:   templates.NewTemplateHandler(templateProvider),
 		secretsManager:    &secretsManager,
 		configMapsManager: &configMapsManager,
 	}
@@ -185,7 +186,7 @@ func (o *OvirtProvider) FindTemplate() (*templatev1.Template, error) {
 
 // ProcessTemplate uses openshift api to process template
 func (o *OvirtProvider) ProcessTemplate(template *templatev1.Template, vmName string) (*kubevirtv1.VirtualMachine, error) {
-	return o.templateFinder.ProcessTemplate(template, vmName)
+	return o.templateHandler.ProcessTemplate(template, vmName)
 }
 
 // CreateMapper create the mapper for ovirt provider
