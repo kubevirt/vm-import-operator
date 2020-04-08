@@ -85,11 +85,18 @@ func ValidateVM(vm *ovirtsdk.Vm) []ValidationFailure {
 
 func isValidBios(vm *ovirtsdk.Vm) []ValidationFailure {
 	var results []ValidationFailure
+
 	if bios, ok := vm.Bios(); ok {
 		if failure, valid := isValidBootMenu(bios); !valid {
 			results = append(results, failure)
 		}
-		if failure, valid := isValidBiosType(bios); !valid {
+		var clusterDefaultBiosType *ovirtsdk.BiosType
+		if cluster, ok := vm.Cluster(); ok {
+			if biosType, ok := cluster.BiosType(); ok {
+				clusterDefaultBiosType = &biosType
+			}
+		}
+		if failure, valid := isValidBiosType(bios, clusterDefaultBiosType); !valid {
 			results = append(results, failure)
 		}
 	}
@@ -125,8 +132,11 @@ func isValidBootMenu(bios *ovirtsdk.Bios) (ValidationFailure, bool) {
 	return ValidationFailure{}, true
 }
 
-func isValidBiosType(bios *ovirtsdk.Bios) (ValidationFailure, bool) {
+func isValidBiosType(bios *ovirtsdk.Bios, clusterDefaultBiosType *ovirtsdk.BiosType) (ValidationFailure, bool) {
 	biosType, _ := bios.Type()
+	if biosType == "cluster_default" && clusterDefaultBiosType != nil {
+		biosType = *clusterDefaultBiosType
+	}
 	if _, found := mapper.BiosTypeMapping[string(biosType)]; !found {
 		return ValidationFailure{
 			ID:      VMBiosTypeID,

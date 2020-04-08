@@ -80,6 +80,17 @@ var _ = Describe("Validating VM", func() {
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMBiosTypeID))
 	})
+	It("should flag vm with unsupported bios type: i440fx_sea_bios ", func() {
+		var vm = newVM()
+		bios := ovirtsdk.Bios{}
+		bios.SetType("i440fx_sea_bios")
+		vm.SetBios(&bios)
+
+		failures := validators.ValidateVM(vm)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.VMBiosTypeID))
+	})
 	It("should flag vm with q35_secure_boot bios ", func() {
 		var vm = newVM()
 		bios := vm.MustBios()
@@ -89,6 +100,27 @@ var _ = Describe("Validating VM", func() {
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMBiosTypeQ35SecureBootID))
+	})
+	It("should accept vm with cluster_default bios type ", func() {
+		var vm = newVM()
+		bios := vm.MustBios()
+		bios.SetType("cluster_default")
+
+		failures := validators.ValidateVM(vm)
+
+		Expect(failures).To(BeEmpty())
+	})
+	It("should flag vm with unsupported cluster default bios type: i440fx_sea_bios ", func() {
+		var vm = newVM()
+		bios := ovirtsdk.Bios{}
+		bios.SetType("cluster_default")
+		vm.SetBios(&bios)
+		vm.MustCluster().SetBiosType("i440fx_sea_bios")
+
+		failures := validators.ValidateVM(vm)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.VMBiosTypeID))
 	})
 	It("should flag vm with s390x CPU ", func() {
 		var vm = newVM()
@@ -459,6 +491,12 @@ func newVMWithStatusControl(withStatus bool) *ovirtsdk.Vm {
 	cdromSlice := ovirtsdk.CdromSlice{}
 	cdromSlice.SetSlice(cdroms)
 	vm.SetCdroms(&cdromSlice)
+
+	cluster := ovirtsdk.NewClusterBuilder().
+		BiosType("q35_sea_bios").
+		MustBuild()
+
+	vm.SetCluster(cluster)
 
 	return &vm
 }
