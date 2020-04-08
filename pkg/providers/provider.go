@@ -23,11 +23,11 @@ type Provider interface {
 	PrepareResourceMapping(*v2vv1alpha1.ResourceMappingSpec, v2vv1alpha1.VirtualMachineImportSourceSpec)
 	Validate() ([]v2vv1alpha1.VirtualMachineImportCondition, error)
 	StopVM() error
-	GetDataVolumeCredentials() DataVolumeCredentials
 	UpdateVM(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume)
-	CreateMapper() Mapper
+	CreateMapper() (Mapper, error)
 	GetVMStatus() (VMStatus, error)
 	StartVM() error
+	CleanUp() error
 	FindTemplate() (*oapiv1.Template, error)
 	ProcessTemplate(*oapiv1.Template, string) (*kubevirtv1.VirtualMachine, error)
 }
@@ -37,16 +37,6 @@ type Mapper interface {
 	CreateEmptyVM() *kubevirtv1.VirtualMachine
 	MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachine) *kubevirtv1.VirtualMachine
 	MapDisks() map[string]cdiv1.DataVolume
-}
-
-// DataVolumeCredentials defines the credentials required for creating a data volume
-type DataVolumeCredentials struct {
-	URL           string
-	CACertificate string
-	KeyAccess     string
-	KeySecret     string
-	ConfigMapName string
-	SecretName    string
 }
 
 // VMStatus represents VM status

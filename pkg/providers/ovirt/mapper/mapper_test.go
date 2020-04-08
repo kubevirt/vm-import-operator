@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
-	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,7 +25,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 	BeforeEach(func() {
 		vm = createVM()
 		mappings = createMappings()
-		mapper := mapper.NewOvirtMapper(vm, &mappings, provider.DataVolumeCredentials{}, "")
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
 		vmSpec = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 	})
 

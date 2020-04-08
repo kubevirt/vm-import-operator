@@ -1,10 +1,14 @@
 package ovirtprovider
 
 import (
-	"crypto/md5"
-	"encoding/hex"
 	"errors"
 	"fmt"
+
+	"github.com/kubevirt/vm-import-operator/pkg/configmaps"
+
+	"github.com/kubevirt/vm-import-operator/pkg/secrets"
+
+	"github.com/kubevirt/vm-import-operator/pkg/utils"
 
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mappings"
 
@@ -29,10 +33,10 @@ import (
 )
 
 const (
-	ovirtSecret    = "ovirt-key"
-	ovirtConfigmap = "ovirt-ca"
 	ovirtLabel     = "oVirt"
 	ovirtSecretKey = "ovirt"
+	keyAccessKey   = "accessKeyId"
+	keySecretKey   = "secretKey"
 )
 
 var (
@@ -40,6 +44,20 @@ var (
 		"origin": ovirtLabel,
 	}
 )
+
+// SecretsManager defines operations on secrets
+type SecretsManager interface {
+	FindFor(types.NamespacedName) (*corev1.Secret, error)
+	CreateFor(*corev1.Secret, types.NamespacedName) error
+	DeleteFor(types.NamespacedName) error
+}
+
+// ConfigMapsManager defines operations on config maps
+type ConfigMapsManager interface {
+	FindFor(types.NamespacedName) (*corev1.ConfigMap, error)
+	CreateFor(*corev1.ConfigMap, types.NamespacedName) error
+	DeleteFor(types.NamespacedName) error
+}
 
 // OvirtProvider is Ovirt implementation of the Provider interface to support importing VM from ovirt
 type OvirtProvider struct {
@@ -50,20 +68,25 @@ type OvirtProvider struct {
 	vmiCrName          types.NamespacedName
 	resourceMapping    *v2vv1alpha1.OvirtMappings
 	templateFinder     *templates.TemplateFinder
+	secretsManager     SecretsManager
+	configMapsManager  ConfigMapsManager
 }
 
 // NewOvirtProvider creates new OvirtProvider configured with dependencies
 func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, kubevirtClient kubecli.KubevirtClient, tempClient *tempclient.TemplateV1Client) OvirtProvider {
 	validator := validators.NewValidatorWrapper(kubevirtClient)
-	provider := OvirtProvider{
+	secretsManager := secrets.NewManager(client)
+	configMapsManager := configmaps.NewManager(client)
+	return OvirtProvider{
 		vmiCrName: vmiCrName,
 		validator: validation.NewVirtualMachineImportValidator(validator),
 		templateFinder: templates.NewTemplateFinder(
 			&templates.Templates{Client: tempClient},
 			&templates.OSMaps{Client: client},
 		),
+		secretsManager:    &secretsManager,
+		configMapsManager: &configMapsManager,
 	}
-	return provider
 }
 
 // GetVMStatus provides source VM status
@@ -77,28 +100,6 @@ func (o *OvirtProvider) GetVMStatus() (provider.VMStatus, error) {
 		}
 	}
 	return "", fmt.Errorf("VM doesn't have a legal status. Allowed statuses: [%v, %v]", ovirtsdk.VMSTATUS_UP, ovirtsdk.VMSTATUS_DOWN)
-}
-
-// GetDataVolumeCredentials returns the data volume credentials based on ovirt secret
-func (o *OvirtProvider) GetDataVolumeCredentials() provider.DataVolumeCredentials {
-	suffix := createSuffix(o.ovirtSecretDataMap["apiUrl"])
-	return provider.DataVolumeCredentials{
-		URL:           o.ovirtSecretDataMap["apiUrl"],
-		CACertificate: o.ovirtSecretDataMap["caCert"],
-		KeyAccess:     o.ovirtSecretDataMap["username"],
-		KeySecret:     o.ovirtSecretDataMap["password"],
-
-		// TODO: name of the two attributes should be unique per vmimport cr
-		// assuming we wish to GC all of the resources related to this cr
-		ConfigMapName: ovirtSecret + suffix,
-		SecretName:    ovirtConfigmap + suffix,
-	}
-}
-
-func createSuffix(s string) string {
-	md5HashInBytes := md5.Sum([]byte(s))
-	md5HashInString := hex.EncodeToString(md5HashInBytes[:])
-	return "-" + md5HashInString[0:8]
 }
 
 // Connect to ovirt provider using given secret
@@ -188,8 +189,12 @@ func (o *OvirtProvider) ProcessTemplate(template *templatev1.Template, vmName st
 }
 
 // CreateMapper create the mapper for ovirt provider
-func (o *OvirtProvider) CreateMapper() provider.Mapper {
-	return mapper.NewOvirtMapper(o.vm, o.resourceMapping, o.GetDataVolumeCredentials(), o.vmiCrName.Namespace)
+func (o *OvirtProvider) CreateMapper() (provider.Mapper, error) {
+	credentials, err := o.prepareDataVolumeCredentials()
+	if err != nil {
+		return nil, err
+	}
+	return mapper.NewOvirtMapper(o.vm, o.resourceMapping, credentials, o.vmiCrName.Namespace), nil
 }
 
 // UpdateVM updates VM specification with data volumes information
@@ -268,6 +273,110 @@ func (o *OvirtProvider) StartVM() error {
 	return nil
 }
 
+// CleanUp removes transient resources created for import
+func (o *OvirtProvider) CleanUp() error {
+	var errs []error
+	err := o.secretsManager.DeleteFor(o.vmiCrName)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	err = o.configMapsManager.DeleteFor(o.vmiCrName)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	if len(errs) > 0 {
+		return foldErrors(errs, o.vmiCrName)
+	}
+	return nil
+}
+
+func (o *OvirtProvider) prepareDataVolumeCredentials() (mapper.DataVolumeCredentials, error) {
+	keyAccess := o.ovirtSecretDataMap["username"]
+	keySecret := o.ovirtSecretDataMap["password"]
+	secret, err := o.ensureSecretIsPresent(keyAccess, keySecret)
+	if err != nil {
+		return mapper.DataVolumeCredentials{}, err
+	}
+
+	caCert := o.ovirtSecretDataMap["caCert"]
+	configMap, err := o.ensureConfigMapIsPresent(caCert)
+	if err != nil {
+		return mapper.DataVolumeCredentials{}, err
+	}
+
+	return mapper.DataVolumeCredentials{
+		URL:           o.ovirtSecretDataMap["apiUrl"],
+		CACertificate: caCert,
+		KeyAccess:     keyAccess,
+		KeySecret:     keySecret,
+		ConfigMapName: configMap.Name,
+		SecretName:    secret.Name,
+	}, nil
+}
+
+func (o *OvirtProvider) ensureSecretIsPresent(keyAccess string, keySecret string) (*corev1.Secret, error) {
+	secret, err := o.secretsManager.FindFor(o.vmiCrName)
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil {
+		secret, err = o.createSecret(keyAccess, keySecret)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return secret, nil
+}
+
+func (o *OvirtProvider) createSecret(keyAccess string, keySecret string) (*corev1.Secret, error) {
+	newSecret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: o.vmiCrName.Namespace,
+		},
+		Data: map[string][]byte{
+			keyAccessKey: []byte(keyAccess),
+			keySecretKey: []byte(keySecret),
+		},
+	}
+	err := o.secretsManager.CreateFor(&newSecret, o.vmiCrName)
+	if err != nil {
+		return nil, err
+	}
+	return &newSecret, nil
+}
+
+func (o *OvirtProvider) ensureConfigMapIsPresent(caCert string) (*corev1.ConfigMap, error) {
+	configMap, err := o.configMapsManager.FindFor(o.vmiCrName)
+	if err != nil {
+		return nil, err
+	}
+	if configMap == nil {
+		configMap, err = o.createConfigMap(caCert)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return configMap, nil
+}
+
+func (o *OvirtProvider) createConfigMap(caCert string) (*corev1.ConfigMap, error) {
+	newConfigMap := corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: o.vmiCrName.Namespace,
+		},
+		Data: map[string]string{
+			"ca.pem": caCert,
+		},
+	}
+	err := o.configMapsManager.CreateFor(&newConfigMap, o.vmiCrName)
+	if err != nil {
+		return nil, err
+	}
+	return &newConfigMap, nil
+}
+
 func getDiskAttachmentByID(id string, diskAttachments *ovirtsdk.DiskAttachmentSlice) *ovirtsdk.DiskAttachment {
 	for _, diskAttachment := range diskAttachments.Slice() {
 		if diskAttachment.MustId() == id {
@@ -275,4 +384,12 @@ func getDiskAttachmentByID(id string, diskAttachments *ovirtsdk.DiskAttachmentSl
 		}
 	}
 	return nil
+}
+
+func foldErrors(errs []error, vmiName types.NamespacedName) error {
+	message := ""
+	for _, e := range errs {
+		message = utils.WithMessage(message, e.Error())
+	}
+	return fmt.Errorf("clean-up for %v failed: %s", utils.ToLoggableResourceName(vmiName.Name, &vmiName.Namespace), message)
 }

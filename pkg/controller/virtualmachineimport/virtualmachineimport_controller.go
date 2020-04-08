@@ -31,8 +31,6 @@ import (
 )
 
 const (
-	keyAccess            = "accessKeyId"
-	keySecret            = "secretKey"
 	sourceVMInitialState = "vmimport.v2v.kubevirt.io/source-vm-initial-state"
 )
 
@@ -200,7 +198,10 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	// Define VM spec
-	mapper := provider.CreateMapper()
+	mapper, err := provider.CreateMapper()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 	template, err := provider.FindTemplate()
 	var spec = &kubevirtv1.VirtualMachine{}
 	if err != nil {
@@ -230,17 +231,6 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		reqLogger.Info("Creating a new VM", "VM.Namespace", vmSpec.Namespace, "VM.Name", vmSpec.Name)
 		err = r.client.Create(context.TODO(), vmSpec)
 		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		// Secret with username/password for the image import:
-		dvCreds := provider.GetDataVolumeCredentials()
-		if err = r.ensureDVSecretExists(instance, vmSpec.Namespace, dvCreds); err != nil {
-			return reconcile.Result{}, err
-		}
-
-		// CM containing CA for the image import:
-		if err = r.ensureDVConfigMapExists(instance, vmSpec.Namespace, dvCreds); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -302,53 +292,6 @@ func (r *ReconcileVirtualMachineImport) fetchResourceMapping(resourceMappingID *
 	return &resourceMapping.Spec, nil
 }
 
-func (r *ReconcileVirtualMachineImport) ensureDVSecretExists(instance *v2vv1alpha1.VirtualMachineImport, namespace string, dvCreds provider.DataVolumeCredentials) error {
-	secretObj := &corev1.Secret{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: dvCreds.SecretName, Namespace: namespace}, secretObj)
-	if err != nil && errors.IsNotFound(err) {
-		dvSecret := createDVSecret(dvCreds, instance)
-		return r.client.Create(context.TODO(), dvSecret)
-	}
-	return err
-}
-
-func (r *ReconcileVirtualMachineImport) ensureDVConfigMapExists(instance *v2vv1alpha1.VirtualMachineImport, namespace string, dvCreds provider.DataVolumeCredentials) error {
-	cm := &corev1.ConfigMap{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: dvCreds.ConfigMapName, Namespace: namespace}, cm)
-	if err != nil && errors.IsNotFound(err) {
-		dvCm := createDVConfigMap(dvCreds, instance)
-		return r.client.Create(context.TODO(), dvCm)
-	}
-	return err
-}
-
-func createDVConfigMap(creds provider.DataVolumeCredentials, vmImport *v2vv1alpha1.VirtualMachineImport) *corev1.ConfigMap {
-	// TODO: resource should be GC'ed after the import is done
-	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      creds.ConfigMapName,
-			Namespace: vmImport.Namespace,
-		},
-		Data: map[string]string{
-			"ca.pem": creds.CACertificate,
-		},
-	}
-}
-
-func createDVSecret(creds provider.DataVolumeCredentials, vmImport *v2vv1alpha1.VirtualMachineImport) *corev1.Secret {
-	// TODO: resource should be GC'ed after the import is done
-	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      creds.SecretName,
-			Namespace: vmImport.Namespace,
-		},
-		Data: map[string][]byte{
-			keyAccess: []byte(creds.KeyAccess),
-			keySecret: []byte(creds.KeySecret),
-		},
-	}
-}
-
 func shouldValidate(vmiStatus *v2vv1alpha1.VirtualMachineImportStatus) bool {
 	validatingCondition := conditions.FindConditionOfType(vmiStatus.Conditions, v2vv1alpha1.Validating)
 	rulesCheckingCondition := conditions.FindConditionOfType(vmiStatus.Conditions, v2vv1alpha1.MappingRulesChecking)
@@ -405,7 +348,7 @@ func (r *ReconcileVirtualMachineImport) storeSourceVMStatus(instance *v2vv1alpha
 //TODO: use in proper place
 func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName, vmiName types.NamespacedName, p provider.Provider) error {
 	var errs []error
-	err := r.afterImport(p, vmiName.Namespace)
+	err := p.CleanUp()
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -495,7 +438,7 @@ func (r *ReconcileVirtualMachineImport) removeDataVolumeOwnerReference(namespace
 //TODO: use in proper places
 func (r *ReconcileVirtualMachineImport) afterFailure(vmiName types.NamespacedName, p provider.Provider) error {
 	var errs []error
-	err := r.afterImport(p, vmiName.Namespace)
+	err := p.CleanUp()
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -526,38 +469,6 @@ func (r *ReconcileVirtualMachineImport) restoreInitialVMState(vmiName types.Name
 	}
 	// VM was already down
 	return nil
-}
-
-// afterImport should be called in both failure and success scenario. a.k.a common clean-up
-func (r *ReconcileVirtualMachineImport) afterImport(p provider.Provider, namespace string) error {
-	credentials := p.GetDataVolumeCredentials()
-	err := r.deleteDVConfigMap(credentials.ConfigMapName, namespace)
-	if err != nil {
-		return err
-	}
-	err = r.deleteDVSecret(credentials.SecretName, namespace)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *ReconcileVirtualMachineImport) deleteDVConfigMap(configMapName string, namespace string) error {
-	cm := &corev1.ConfigMap{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: configMapName, Namespace: namespace}, cm)
-	if err != nil {
-		return nil
-	}
-	return r.client.Delete(context.TODO(), cm)
-}
-
-func (r *ReconcileVirtualMachineImport) deleteDVSecret(secretName string, namespace string) error {
-	secret := &corev1.Secret{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: secretName, Namespace: namespace}, secret)
-	if err != nil {
-		return nil
-	}
-	return r.client.Delete(context.TODO(), secret)
 }
 
 func removeControllerReference(refs []metav1.OwnerReference) []metav1.OwnerReference {
