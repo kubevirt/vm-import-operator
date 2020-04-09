@@ -193,7 +193,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 				}
 
 				// Cleanup if user don't want to start the VM
-				if !*instance.Spec.StartVM {
+				if instance.Spec.StartVM == nil || !*instance.Spec.StartVM {
 					if err := r.updateProgress(instance, progressDone); err != nil {
 						return reconcile.Result{}, err
 					}
@@ -288,7 +288,7 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 
 // startVM start the VM if was requested to be started and VM disks are imported and ready:
 func (r *ReconcileVirtualMachineImport) startVM(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, vmName types.NamespacedName) error {
-	if *instance.Spec.StartVM && conditions.HasSucceededConditionOfReason(instance.Status.Conditions, v2vv1alpha1.VirtualMachineReady) {
+	if shouldStartVM(instance) {
 		vmi := &kubevirtv1.VirtualMachineInstance{}
 		err := r.client.Get(context.TODO(), vmName, vmi)
 		if err != nil && errors.IsNotFound(err) {
@@ -319,6 +319,10 @@ func (r *ReconcileVirtualMachineImport) startVM(provider provider.Provider, inst
 	}
 
 	return nil
+}
+
+func shouldStartVM(instance *v2vv1alpha1.VirtualMachineImport) bool {
+	return instance.Spec.StartVM != nil && *instance.Spec.StartVM && conditions.HasSucceededConditionOfReason(instance.Status.Conditions, v2vv1alpha1.VirtualMachineReady)
 }
 
 // manageDataVolumeState update current state according to progress of import
