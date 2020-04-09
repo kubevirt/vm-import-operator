@@ -3,7 +3,7 @@ package validators
 import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
-	"kubevirt.io/client-go/kubecli"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // ValidatorWrapper exposes validator package API as a struct
@@ -13,12 +13,12 @@ type ValidatorWrapper struct {
 }
 
 // NewValidatorWrapper creates new, configured ValidatorWrapper
-func NewValidatorWrapper(kubevirt kubecli.KubevirtClient) *ValidatorWrapper {
+func NewValidatorWrapper(client client.Client) *ValidatorWrapper {
 	netAttachDefProvider := NetworkAttachmentDefinitions{
-		Client: kubevirt.NetworkClient(),
+		Client: client,
 	}
 	storageClassesProvider := StorageClasses{
-		Client: kubevirt.StorageV1().StorageClasses(),
+		Client: client,
 	}
 	return &ValidatorWrapper{
 		networkMappingValidator: NewNetworkMappingValidator(&netAttachDefProvider),

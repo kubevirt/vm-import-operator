@@ -1,17 +1,21 @@
 package validators
 
 import (
+	"context"
+
 	v1 "k8s.io/api/storage/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	storage "k8s.io/client-go/kubernetes/typed/storage/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // StorageClasses is responsible for finding storage classes
 type StorageClasses struct {
-	Client storage.StorageClassInterface
+	Client client.Client
 }
 
 // Find retrieves storage class with provided name
 func (finder *StorageClasses) Find(name string) (*v1.StorageClass, error) {
-	return finder.Client.Get(name, metav1.GetOptions{})
+	sc := &v1.StorageClass{}
+	err := finder.Client.Get(context.TODO(), types.NamespacedName{Name: name}, sc)
+	return sc, err
 }

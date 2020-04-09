@@ -20,6 +20,7 @@ const (
 	customPropertyHugePages = "hugepages"
 	networkTypePod          = "pod"
 	networkTypeMultus       = "multus"
+	dataVolumeKind          = "DataVolume"
 	// LabelOrigin define name of the label which holds value of origin attribute of oVirt VM
 	LabelOrigin = "origin"
 	// LabelInstanceType define name of the label which holds value of instance type attribute of oVirt VM
@@ -168,6 +169,7 @@ func (o *OvirtMapper) MapDisks() map[string]cdiv1.DataVolume {
 		dvs[attachID] = cdiv1.DataVolume{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: cdiAPIVersion,
+				Kind:       dataVolumeKind,
 			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      attachID,

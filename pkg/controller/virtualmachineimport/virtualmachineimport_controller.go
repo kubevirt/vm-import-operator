@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
-	"kubevirt.io/client-go/kubecli"
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -60,11 +59,6 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	kubeClient, err := kubecli.GetKubevirtClientFromRESTConfig(mgr.GetConfig())
-	if err != nil {
-		log.Error(err, "Unable to get KubeVirt client")
-		panic("Controller cannot operate without KubeVirt")
-	}
 	tempClient, err := templatev1.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		log.Error(err, "Unable to get OC client")
@@ -72,7 +66,7 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	}
 	client := mgr.GetClient()
 	finder := mappings.NewResourceMappingsFinder(client)
-	return &ReconcileVirtualMachineImport{client: client, scheme: mgr.GetScheme(), kubeClient: kubeClient, resourceMappingsFinder: finder, ocClient: tempClient}
+	return &ReconcileVirtualMachineImport{client: client, scheme: mgr.GetScheme(), resourceMappingsFinder: finder, ocClient: tempClient}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -128,7 +122,6 @@ type ReconcileVirtualMachineImport struct {
 	// that reads objects from the cache and writes to the apiserver
 	client                 client.Client
 	scheme                 *runtime.Scheme
-	kubeClient             kubecli.KubevirtClient
 	resourceMappingsFinder mappings.ResourceMappingsFinder
 	ocClient               *templatev1.TemplateV1Client
 }
@@ -139,6 +132,9 @@ type ReconcileVirtualMachineImport struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
+	reqLogger.Info("Reconciling VirtualMachineImport")
+
 	// Fetch the VirtualMachineImport instance
 	instance := &v2vv1alpha1.VirtualMachineImport{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -179,7 +175,8 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	dvs := mapper.MapDisks()
 	dvsDone := make(map[string]bool)
 	for dvID := range dvs {
-		foundDv, err := r.kubeClient.CdiClient().CdiV1alpha1().DataVolumes(instance.Namespace).Get(dvID, metav1.GetOptions{})
+		foundDv := &cdiv1.DataVolume{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: dvID}, foundDv)
 		if err != nil && errors.IsNotFound(err) {
 			if err = r.createDataVolumes(provider, instance, dvs, vmName); err != nil {
 				return reconcile.Result{}, err
@@ -217,7 +214,6 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, mapper provider.Mapper) (string, error) {
 	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	reqLogger := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
-	reqLogger.Info("Reconciling VirtualMachineImport")
 
 	// Define VM spec
 	template, err := provider.FindTemplate()
@@ -330,21 +326,21 @@ func (r *ReconcileVirtualMachineImport) manageDataVolumeState(instance *v2vv1alp
 	// Count successfully imported dvs:
 	done := utils.CountImportedDataVolumes(dvsDone)
 
-	// Update progress, progress of CopyingDisks starts at 40% and we update the proccess,
-	// based on number of disks. Each disk updates state as 40/numberOfDisks. So we end at 80%.
-	if done > 0 {
-		progressCopyingDisksInt, _ := strconv.Atoi(progressCopyingDisks)
-		if err := r.updateProgress(instance, strconv.FormatInt(int64(progressCopyingDisksInt+(progressForCopyDisk/done)), 10)); err != nil {
-			return err
-		}
-	}
-
 	// If all DVs was imported - update state
 	allDone := done == numberOfDvs
 	if allDone && !conditions.HasSucceededConditionOfReason(instance.Status.Conditions, v2vv1alpha1.VirtualMachineReady, v2vv1alpha1.VirtualMachineRunning) {
 		cond := conditions.NewSucceededCondition(string(v2vv1alpha1.VirtualMachineReady), "Virtual machine disks import done")
 		vmImportName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 		if err := r.upsertStatusCondition(vmImportName, cond); err != nil {
+			return err
+		}
+	}
+
+	// Update progress, progress of CopyingDisks starts at 40% and we update the proccess,
+	// based on number of disks. Each disk updates state as 40/numberOfDisks. So we end at 80%.
+	if done > 0 {
+		progressCopyingDisksInt, _ := strconv.Atoi(progressCopyingDisks)
+		if err := r.updateProgress(instance, strconv.FormatInt(int64(progressCopyingDisksInt+(progressForCopyDisk/done)), 10)); err != nil {
 			return err
 		}
 	}
@@ -368,7 +364,8 @@ func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Prov
 		if err := controllerutil.SetControllerReference(instance, &dv, r.scheme); err != nil {
 			return err
 		}
-		_, err := r.kubeClient.CdiClient().CdiV1alpha1().DataVolumes(instance.Namespace).Create(&dv)
+
+		err = r.client.Create(context.TODO(), &dv)
 		if err != nil {
 			// Update condition to failed:
 			cond = conditions.NewSucceededCondition(string(v2vv1alpha1.DataVolumeCreationFailed), fmt.Sprintf("Data volume creationg faield: %s", err))
@@ -444,7 +441,7 @@ func (r *ReconcileVirtualMachineImport) createProvider(vmi *v2vv1alpha1.VirtualM
 	// The type of the provider is evaluated based on the source field from the CR
 	if vmi.Spec.Source.Ovirt != nil {
 		namespacedName := types.NamespacedName{Name: vmi.Name, Namespace: vmi.Namespace}
-		provider := ovirtprovider.NewOvirtProvider(namespacedName, r.client, r.kubeClient, r.ocClient)
+		provider := ovirtprovider.NewOvirtProvider(namespacedName, r.client, r.ocClient)
 		return &provider, nil
 	}
 
@@ -631,8 +628,8 @@ func (r *ReconcileVirtualMachineImport) removeVMOwnerReference(vm *kubevirtv1.Vi
 }
 
 func (r *ReconcileVirtualMachineImport) removeDataVolumeOwnerReference(namespace string, dvName string) error {
-	dvClient := r.kubeClient.CdiClient().CdiV1alpha1().DataVolumes(namespace)
-	dv, err := dvClient.Get(dvName, metav1.GetOptions{})
+	dv := &cdiv1.DataVolume{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: dvName}, dv)
 	if err != nil {
 		return err
 	}
@@ -642,14 +639,8 @@ func (r *ReconcileVirtualMachineImport) removeDataVolumeOwnerReference(namespace
 	if len(newRefs) < len(refs) {
 		dvCopy := dv.DeepCopy()
 		dvCopy.SetOwnerReferences(newRefs)
-
 		patch := client.MergeFrom(dv)
-		data, e := patch.Data(dvCopy)
-		if e != nil {
-			return e
-		}
-		_, e = dvClient.Patch(dvName, types.MergePatchType, data)
-		return e
+		return r.client.Patch(context.TODO(), dvCopy, patch)
 	}
 	return nil
 }
