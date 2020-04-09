@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
@@ -35,12 +36,13 @@ const (
 	// AnnCurrentProgress is annotations storing current progress of the vm import
 	AnnCurrentProgress = "vmimport.v2v.kubevirt.io/progress"
 	// constants
-	progressStart        = "0"
-	progressCreatingVM   = "30"
-	progressCopyingDisks = "40"
-	progressStartVM      = "90"
-	progressDone         = "100"
-	progressForCopyDisk  = 40
+	progressStart                     = "0"
+	progressCreatingVM                = "30"
+	progressCopyingDisks              = "40"
+	progressStartVM                   = "90"
+	progressDone                      = "100"
+	progressForCopyDisk               = 40
+	requeueAfterValidationFailureTime = 5 * time.Second
 )
 
 var (
@@ -159,6 +161,20 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		return reconcile.Result{}, err
 	}
 	defer provider.Close()
+
+	// Validate if it's needed at this stage of processing
+	valid, err := r.validate(instance, provider)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if !valid {
+		return reconcile.Result{RequeueAfter: requeueAfterValidationFailureTime}, nil
+	}
+
+	// Stop the VM
+	if err = provider.StopVM(); err != nil {
+		return reconcile.Result{}, err
+	}
 
 	// Create mapper:
 	mapper, err := provider.CreateMapper()
@@ -756,37 +772,37 @@ func (r *ReconcileVirtualMachineImport) initProvider(instance *v2vv1alpha1.Virtu
 	// Prepare/merge the resourceMapping
 	provider.PrepareResourceMapping(resourceMapping, instance.Spec.Source)
 
-	// Validate if it's needed at this stage of processing
+	return provider, nil
+}
+
+func (r *ReconcileVirtualMachineImport) validate(instance *v2vv1alpha1.VirtualMachineImport, provider provider.Provider) (bool, error) {
+	logger := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
 	if shouldValidate(&instance.Status) {
 		conditions, err := provider.Validate()
 		if err != nil {
-			return nil, err
+			return true, err
 		}
 		err = r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, conditions)
 		if err != nil {
-			return nil, err
+			return true, err
 		}
 		if valid, message := shouldFailWith(conditions); !valid {
-			return nil, fmt.Errorf(message)
+			logger.Info("Import blocked. " + message)
+			return false, nil
 		}
 
 		vmStatus, err := provider.GetVMStatus()
 		if err != nil {
-			return nil, err
+			return true, err
 		}
 
-		log.Info("Storing source VM status", "status", vmStatus)
+		logger.Info("Storing source VM status", "status", vmStatus)
 		err = r.storeSourceVMStatus(instance, string(vmStatus))
 		if err != nil {
-			return nil, err
+			return true, err
 		}
 	} else {
-		log.Info("VirtualMachineImport has already been validated positively. Skipping re-validation")
+		logger.Info("VirtualMachineImport has already been validated positively. Skipping re-validation")
 	}
-
-	if err = provider.StopVM(); err != nil {
-		return nil, err
-	}
-
-	return provider, nil
+	return true, nil
 }
