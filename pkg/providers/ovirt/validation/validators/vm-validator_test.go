@@ -1,6 +1,8 @@
 package validators_test
 
 import (
+	"fmt"
+
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
@@ -367,7 +369,10 @@ var _ = Describe("Validating VM", func() {
 	})
 	It("should flag vm's reported devices", func() {
 		var vm = newVM()
-		devices := []*ovirtsdk.ReportedDevice{&ovirtsdk.ReportedDevice{}}
+		rdName := "rd-name"
+		rdID := "rd-id"
+		reportedDevice := ovirtsdk.NewReportedDeviceBuilder().Name(rdName).Id(rdID).MustBuild()
+		devices := []*ovirtsdk.ReportedDevice{reportedDevice}
 		reportedDevices := ovirtsdk.ReportedDeviceSlice{}
 		reportedDevices.SetSlice(devices)
 		vm.SetReportedDevices(&reportedDevices)
@@ -376,6 +381,7 @@ var _ = Describe("Validating VM", func() {
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMReportedDevicesID))
+		Expect(failures[0].Message).To(ContainSubstring(fmt.Sprintf("%s(%s)", rdName, rdID)))
 	})
 	It("should flag vm with quota", func() {
 		var vm = newVM()
