@@ -195,6 +195,9 @@ func (client *richOvirtClient) fetchVM(id *string, name *string, clusterName *st
 		response *ovirtsdk.VmsServiceListResponse
 		err      error
 	)
+	if name == nil {
+		return nil, fmt.Errorf("both ID and name of the VM are missing")
+	}
 	if clusterName != nil {
 		response, err = client.connection.SystemService().VmsService().List().Search(fmt.Sprintf("name=%v and cluster=%v", *name, *clusterName)).Send()
 	} else {
