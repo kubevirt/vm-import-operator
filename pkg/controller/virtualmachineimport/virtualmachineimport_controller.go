@@ -257,7 +257,7 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 	}
 
 	// Update condition to creating VM:
-	cond := conditions.NewProccessingCondition(string(v2vv1alpha1.CreatingTargetVM), "Creating virtual machine")
+	cond := conditions.NewProcessingCondition(string(v2vv1alpha1.CreatingTargetVM), "Creating virtual machine")
 	if err = r.upsertStatusCondition(instanceNamespacedName, cond); err != nil {
 		return "", err
 	}
@@ -266,7 +266,7 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 	reqLogger.Info("Creating a new VM", "VM.Namespace", vmSpec.Namespace, "VM.Name", vmSpec.Name)
 	if err = r.client.Create(context.TODO(), vmSpec); err != nil {
 		// Update condition to failed state:
-		cond = conditions.NewSucceededCondition(string(v2vv1alpha1.VMCreationFailed), fmt.Sprintf("Error while creating virtual machine: %s", err))
+		cond = conditions.NewSucceededCondition(string(v2vv1alpha1.VMCreationFailed), fmt.Sprintf("Error while creating virtual machine: %s", err), corev1.ConditionFalse)
 		err = r.upsertStatusCondition(instanceNamespacedName, cond)
 
 		// Cleanup after failure
@@ -313,7 +313,7 @@ func (r *ReconcileVirtualMachineImport) startVM(provider provider.Provider, inst
 		} else if err == nil {
 			if vmi.Status.Phase == kubevirtv1.Running || vmi.Status.Phase == kubevirtv1.Scheduled {
 				instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
-				cond := conditions.NewSucceededCondition(string(v2vv1alpha1.VirtualMachineRunning), "Virtual machine running")
+				cond := conditions.NewSucceededCondition(string(v2vv1alpha1.VirtualMachineRunning), "Virtual machine running", corev1.ConditionTrue)
 				err = r.upsertStatusCondition(instanceNamespacedName, cond)
 				if err != nil {
 					return err
@@ -345,7 +345,7 @@ func (r *ReconcileVirtualMachineImport) manageDataVolumeState(instance *v2vv1alp
 	// If all DVs was imported - update state
 	allDone := done == numberOfDvs
 	if allDone && !conditions.HasSucceededConditionOfReason(instance.Status.Conditions, v2vv1alpha1.VirtualMachineReady, v2vv1alpha1.VirtualMachineRunning) {
-		cond := conditions.NewSucceededCondition(string(v2vv1alpha1.VirtualMachineReady), "Virtual machine disks import done")
+		cond := conditions.NewSucceededCondition(string(v2vv1alpha1.VirtualMachineReady), "Virtual machine disks import done", corev1.ConditionTrue)
 		vmImportName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 		if err := r.upsertStatusCondition(vmImportName, cond); err != nil {
 			return err
@@ -367,7 +367,7 @@ func (r *ReconcileVirtualMachineImport) manageDataVolumeState(instance *v2vv1alp
 func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, dvs map[string]cdiv1.DataVolume, vmName types.NamespacedName) error {
 	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	// Update condition to create VM:
-	cond := conditions.NewProccessingCondition(string(v2vv1alpha1.CopyingDisks), "Copying virtual machine disks")
+	cond := conditions.NewProcessingCondition(string(v2vv1alpha1.CopyingDisks), "Copying virtual machine disks")
 	err := r.upsertStatusCondition(instanceNamespacedName, cond)
 	if err != nil {
 		return err
@@ -384,7 +384,7 @@ func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Prov
 		err = r.client.Create(context.TODO(), &dv)
 		if err != nil {
 			// Update condition to failed:
-			cond = conditions.NewSucceededCondition(string(v2vv1alpha1.DataVolumeCreationFailed), fmt.Sprintf("Data volume creationg faield: %s", err))
+			cond = conditions.NewSucceededCondition(string(v2vv1alpha1.DataVolumeCreationFailed), fmt.Sprintf("Data volume creation failed: %s", err), corev1.ConditionFalse)
 			err = r.upsertStatusCondition(instanceNamespacedName, cond)
 			if err != nil {
 				return err

@@ -22,13 +22,13 @@ func NewCondition(conditionType v2vv1alpha1.VirtualMachineImportConditionType, r
 	return condition
 }
 
-// NewSucceededCondition create a condition of type succeded of specific reason and message
-func NewSucceededCondition(reason string, message string) v2vv1alpha1.VirtualMachineImportCondition {
-	return NewCondition(v2vv1alpha1.Succeeded, reason, message, v1.ConditionTrue)
+// NewSucceededCondition creates a condition of type Succeeded of specific reason, message and status
+func NewSucceededCondition(reason string, message string, status v1.ConditionStatus) v2vv1alpha1.VirtualMachineImportCondition {
+	return NewCondition(v2vv1alpha1.Succeeded, reason, message, status)
 }
 
-// NewProccessingCondition create a condition of type succeded of specific reason and message
-func NewProccessingCondition(reason string, message string) v2vv1alpha1.VirtualMachineImportCondition {
+// NewProcessingCondition create a condition of type Processing of specific reason and message
+func NewProcessingCondition(reason string, message string) v2vv1alpha1.VirtualMachineImportCondition {
 	return NewCondition(v2vv1alpha1.Processing, reason, message, v1.ConditionTrue)
 }
 
