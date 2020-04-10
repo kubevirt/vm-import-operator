@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/kubevirt/vm-import-operator/pkg/utils"
+
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
@@ -443,10 +445,29 @@ func isValidReportedDevices(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
 	if devices, ok := vm.ReportedDevices(); ok && len(devices.Slice()) > 0 {
 		return ValidationFailure{
 			ID:      VMReportedDevicesID,
-			Message: fmt.Sprintf("VM has following reported devices: %v", devices),
+			Message: fmt.Sprintf("VM has following reported devices: %v", reportedDevicesToStrings(devices.Slice())),
 		}, false
 	}
 	return ValidationFailure{}, true
+}
+
+func reportedDevicesToStrings(devices []*ovirtsdk.ReportedDevice) []string {
+	var strings []string
+	for _, rd := range devices {
+		strings = append(strings, reportedDeviceToString(rd))
+	}
+	return strings
+}
+
+func reportedDeviceToString(rd *ovirtsdk.ReportedDevice) string {
+	var id, name *string
+	if rdId, ok := rd.Id(); ok {
+		id = &rdId
+	}
+	if rdName, ok := rd.Name(); ok {
+		name = &rdName
+	}
+	return utils.ToLoggableID(id, name)
 }
 
 func isValidQuota(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
