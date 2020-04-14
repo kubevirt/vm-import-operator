@@ -27,20 +27,28 @@ func NewStorageMappingValidator(provider StorageClassProvider) StorageMappingVal
 	}
 }
 
+type sourceType string
+
+const (
+	diskSourceType          = sourceType("disk")
+	storageDomainSourceType = sourceType("storage domain")
+)
+
+type mappingSource struct {
+	ID   *string
+	Name *string
+	Type sourceType
+}
+
 // ValidateStorageMapping validates storage domain mapping and disk mapping
 func (v *StorageMappingValidator) ValidateStorageMapping(
 	attachments []*ovirtsdk.DiskAttachment,
 	storageMapping *[]v2vv1alpha1.ResourceMappingItem,
 	diskMapping *[]v2vv1alpha1.ResourceMappingItem,
 ) []ValidationFailure {
-	var failures []ValidationFailure
-	// Check whether mapping for storage is required and was provided
-	if storageMapping == nil && diskMapping == nil && len(attachments) > 0 {
-		failures = append(failures, ValidationFailure{
-			ID:      StorageMappingID,
-			Message: "Storage and Disk mappings are missing",
-		})
-		return failures
+	// Don't validate lack of mapping
+	if isNilOrEmpty(storageMapping) && isNilOrEmpty(diskMapping) && len(attachments) > 0 {
+		return []ValidationFailure{}
 	}
 	if storageMapping == nil {
 		storageMapping = &[]v2vv1alpha1.ResourceMappingItem{}
@@ -48,178 +56,84 @@ func (v *StorageMappingValidator) ValidateStorageMapping(
 	if diskMapping == nil {
 		diskMapping = &[]v2vv1alpha1.ResourceMappingItem{}
 	}
-	// requiredDomains holds the domains needed by disks that are not listed in diskMapping
-	requiredDomains := v.getRequiredStorageDomains(attachments, diskMapping)
-	requiredTargetsSet, sourceFailures := v.validateSourceStorageMapping(storageMapping, requiredDomains)
-	failures = append(failures, sourceFailures...)
+	// requiredTargetsSet holds the storage classes required for mapping
+	requiredTargetsSet := v.getRequiredStorageClasses(attachments, diskMapping, storageMapping)
+	storageFailures := v.validateStorageClasses(requiredTargetsSet)
 
-	storageFailures := v.validateTargetStorageMapping(requiredTargetsSet)
-	failures = append(failures, storageFailures...)
-
-	// check disk mappings for violations
-	if len(*diskMapping) > 0 {
-		disksByStorageClass, missingDiskFailures := v.validateSourcesDiskMapping(diskMapping, attachments)
-		failures = append(failures, missingDiskFailures...)
-
-		// validate disk mapping target storage classes
-		targetFailures := v.validateTargetDiskMapping(disksByStorageClass)
-		failures = append(failures, targetFailures...)
-	}
-
-	return failures
+	return storageFailures
 }
 
-func (v *StorageMappingValidator) validateSourceStorageMapping(
+// getRequiredStorageClasses returns a set of required storage classes mapped to source description
+func (v *StorageMappingValidator) getRequiredStorageClasses(
+	attachments []*ovirtsdk.DiskAttachment,
+	diskMapping *[]v2vv1alpha1.ResourceMappingItem,
 	storageMapping *[]v2vv1alpha1.ResourceMappingItem,
-	requiredDomains []v2vv1alpha1.Source,
-) ([]v2vv1alpha1.ObjectIdentifier, []ValidationFailure) {
-	var failures []ValidationFailure
-	// Map storageMappings source id and name to ResourceMappingItem
-	mapByID, mapByName := utils.IndexByIDAndName(storageMapping)
-	requiredTargetsSet := make(map[v2vv1alpha1.ObjectIdentifier]bool)
-	// Validate that all vm storage domains are mapped and populate requiredTargetsSet for target existence check
-	for _, domain := range requiredDomains {
-		if domain.ID != nil {
-			if item, found := mapByID[*domain.ID]; found {
-				requiredTargetsSet[item.Target] = true
-				continue
-			}
-		}
-		if domain.Name != nil {
-			if item, found := mapByName[*domain.Name]; found {
-				requiredTargetsSet[item.Target] = true
-				continue
-			}
-		}
-		failures = append(failures, ValidationFailure{
-			ID:      StorageMappingID,
-			Message: fmt.Sprintf("Required source storage domain '%s' lacks mapping", utils.ToLoggableID(domain.ID, domain.Name)),
-		})
-	}
-	requiredTargets := []v2vv1alpha1.ObjectIdentifier{}
-	for t := range requiredTargetsSet {
-		requiredTargets = append(requiredTargets, t)
-	}
-	return requiredTargets, failures
-}
-
-func (v *StorageMappingValidator) validateTargetStorageMapping(requiredTargetsSet []v2vv1alpha1.ObjectIdentifier) []ValidationFailure {
-	var failures []ValidationFailure
-	for _, className := range requiredTargetsSet {
-		if _, err := v.provider.Find(className.Name); err != nil {
-			failures = append(failures, ValidationFailure{
-				ID:      StorageTargetID,
-				Message: fmt.Sprintf("Storage class %s has not been found. Error: %v", className.Name, err),
-			})
-		}
-	}
-	return failures
-}
-
-// validateSourcesDiskMapping reports failures for missing disks and returns a map of storage domain to disk
-func (v *StorageMappingValidator) validateSourcesDiskMapping(
-	diskMapping *[]v2vv1alpha1.ResourceMappingItem,
-	attachments []*ovirtsdk.DiskAttachment,
-) (map[string]*ovirtsdk.Disk, []ValidationFailure) {
-	var failures []ValidationFailure
-	diskByStorageClass := make(map[string]*ovirtsdk.Disk)
-	disksByID, disksByName := v.getRequiredDisks(attachments)
-	for _, mapping := range *diskMapping {
-		if mapping.Source.ID != nil {
-			if disk, ok := disksByID[*mapping.Source.ID]; ok {
-				diskByStorageClass[mapping.Target.Name] = disk
-				continue
-			}
-		}
-		if mapping.Source.Name != nil {
-			if disk, ok := disksByName[*mapping.Source.Name]; ok {
-				diskByStorageClass[mapping.Target.Name] = disk
-				continue
-			}
-		}
-		failures = append(failures, ValidationFailure{
-			ID:      DiskMappingID,
-			Message: fmt.Sprintf("Source disk %s has not been found for the VM.", utils.ToLoggableID(mapping.Source.ID, mapping.Source.Name)),
-		})
-	}
-	return diskByStorageClass, failures
-}
-
-func (v *StorageMappingValidator) validateTargetDiskMapping(disksByStorageClass map[string]*ovirtsdk.Disk) []ValidationFailure {
-	var failures []ValidationFailure
-	for className, disk := range disksByStorageClass {
-		if _, err := v.provider.Find(className); err != nil {
-			diskID, _ := disk.Id()
-			failures = append(failures, ValidationFailure{
-				ID:      DiskTargetID,
-				Message: fmt.Sprintf("Storage class %s has not been found for disk %s. Error: %v", className, diskID, err),
-			})
-		}
-	}
-	return failures
-}
-
-func (v *StorageMappingValidator) getRequiredDisks(
-	attachments []*ovirtsdk.DiskAttachment,
-) (map[string]*ovirtsdk.Disk, map[string]*ovirtsdk.Disk) {
-	disksByID := make(map[string]*ovirtsdk.Disk)
-	disksByName := make(map[string]*ovirtsdk.Disk)
-	for _, da := range attachments {
-		if disk, ok := da.Disk(); ok {
-			id, okID := disk.Id()
-			if okID {
-				disksByID[id] = disk
-			}
-			name, okName := disk.Alias()
-			if okName {
-				disksByName[name] = disk
-			}
-		}
-	}
-	return disksByID, disksByName
-}
-
-// getRequiredStorageDomains returns a set of required storage domains for storageMappings
-func (v *StorageMappingValidator) getRequiredStorageDomains(
-	attachments []*ovirtsdk.DiskAttachment,
-	diskMapping *[]v2vv1alpha1.ResourceMappingItem,
-) []v2vv1alpha1.Source {
+) map[v2vv1alpha1.ObjectIdentifier][]mappingSource {
 	// Map diskMapping source id and name to ResourceMappingItem
-	mapByID, mapByName := utils.IndexByIDAndName(diskMapping)
-	storageMappingSourcesSet := make(map[v2vv1alpha1.Source]bool)
+	mapDiskByID, mapDiskByName := utils.IndexByIDAndName(diskMapping)
+	mapDomainByID, mapDomainByName := utils.IndexByIDAndName(storageMapping)
+	storageMappingTargetSet := make(map[v2vv1alpha1.ObjectIdentifier][]mappingSource)
 	for _, da := range attachments {
 		if disk, ok := da.Disk(); ok {
-			// skip storage domains for disks specified in diskMapping for later inspection
 			diskID, _ := disk.Id()
-			if _, ok := mapByID[diskID]; ok {
+			if mapping, ok := mapDiskByID[diskID]; ok {
+				source := mappingSource{ID: mapping.Source.ID, Name: mapping.Source.Name, Type: diskSourceType}
+				storageMappingTargetSet[mapping.Target] = append(storageMappingTargetSet[mapping.Target], source)
 				continue
 			}
 			diskName, _ := disk.Alias()
-			if _, ok := mapByName[diskName]; ok {
+			if mapping, ok := mapDiskByName[diskName]; ok {
+				source := mappingSource{ID: mapping.Source.ID, Name: mapping.Source.Name, Type: diskSourceType}
+				storageMappingTargetSet[mapping.Target] = append(storageMappingTargetSet[mapping.Target], source)
 				continue
 			}
 			if sd, ok := disk.StorageDomain(); ok {
-				if src, ok := createSourceStorageDomainIdentifier(sd); ok {
-					storageMappingSourcesSet[*src] = true
+				id, _ := sd.Id()
+				if mapping, ok := mapDomainByID[id]; ok {
+					source := mappingSource{ID: mapping.Source.ID, Name: mapping.Source.Name, Type: storageDomainSourceType}
+					storageMappingTargetSet[mapping.Target] = append(storageMappingTargetSet[mapping.Target], source)
+					continue
 				}
+				name, _ := sd.Name()
+				if mapping, ok := mapDomainByName[name]; ok {
+					source := mappingSource{ID: mapping.Source.ID, Name: mapping.Source.Name, Type: storageDomainSourceType}
+					storageMappingTargetSet[mapping.Target] = append(storageMappingTargetSet[mapping.Target], source)
+				}
+			}
+			// Ignore lack of mapping
+		}
+	}
+	return storageMappingTargetSet
+}
+
+func (v *StorageMappingValidator) validateStorageClasses(requiredTargetsSet map[v2vv1alpha1.ObjectIdentifier][]mappingSource) []ValidationFailure {
+	var failures []ValidationFailure
+	for className, sources := range requiredTargetsSet {
+		if _, err := v.provider.Find(className.Name); err != nil {
+			for _, source := range sources {
+				checkID := getCheckID(source)
+				resourceName := utils.ToLoggableID(source.ID, source.Name)
+				failures = append(failures, ValidationFailure{
+					ID:      checkID,
+					Message: fmt.Sprintf("Storage class %s has not been found for %v: %s. Error: %v", className.Name, source.Type, resourceName, err),
+				})
 			}
 		}
 	}
-	var sources []v2vv1alpha1.Source
-	for source := range storageMappingSourcesSet {
-		sources = append(sources, source)
-	}
-	return sources
+	return failures
 }
 
-func createSourceStorageDomainIdentifier(domain *ovirtsdk.StorageDomain) (*v2vv1alpha1.Source, bool) {
-	id, okID := domain.Id()
-	name, okName := domain.Name()
-	if okID || okName {
-		src := v2vv1alpha1.Source{
-			ID:   &id,
-			Name: &name}
-		return &src, true
+func getCheckID(source mappingSource) CheckID {
+	switch source.Type {
+	case diskSourceType:
+		return DiskTargetID
+	case storageDomainSourceType:
+		fallthrough
+	default:
+		return StorageTargetID
 	}
-	return nil, false
+}
+
+func isNilOrEmpty(mapping *[]v2vv1alpha1.ResourceMappingItem) bool {
+	return mapping == nil || len(*mapping) == 0
 }
