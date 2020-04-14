@@ -113,28 +113,20 @@ func (client *richOvirtClient) GetVM(id *string, name *string, cluster *string, 
 func (client *richOvirtClient) StopVM(id string) error {
 	vmService := client.connection.SystemService().VmsService().VmService(id)
 
-	// Return if VM is already stopped:
-	vmResponse, _ := vmService.Get().Send()
-	vm, vmAvailable := vmResponse.Vm()
-	if !vmAvailable {
-		return fmt.Errorf("Failed to stop vm %s, vm is not available", id)
-	}
-	if status, _ := vm.Status(); status == ovirtsdk.VMSTATUS_DOWN {
-		return nil
-	}
-
 	// Stop the VM gracefully:
 	_, err := vmService.Shutdown().Send()
 	if err != nil {
 		return err
 	}
 
+	var vm *ovirtsdk.Vm
+	var vmAvailable bool
 	// Wait for VM to be stopped
 	c := make(chan bool, 1)
 	go func() {
 		for {
 			time.Sleep(vmPollInterval * time.Second)
-			vmResponse, _ = vmService.Get().Send()
+			vmResponse, _ := vmService.Get().Send()
 			vm, vmAvailable = vmResponse.Vm()
 			if !vmAvailable {
 				c <- false
@@ -148,11 +140,17 @@ func (client *richOvirtClient) StopVM(id string) error {
 	select {
 	case success := <-c:
 		if !success {
-			return fmt.Errorf("Failed to stop vm %s", vm.MustName())
+			return fmt.Errorf("Failed to stop vm %s", id)
 		}
 		return nil
 	case <-time.After(vmStopTimeout * time.Minute):
-		return fmt.Errorf("Failed to stop vm %s, current status is %s", vm.MustName(), vm.MustStatus())
+		status := ovirtsdk.VMSTATUS_UNKNOWN
+		if vm != nil {
+			if vmStatus, ok := vm.Status(); ok {
+				status = vmStatus
+			}
+		}
+		return fmt.Errorf("Failed to stop vm %s, current status is %s", id, status)
 	}
 }
 
