@@ -171,6 +171,10 @@ func (o *OvirtProvider) Validate() ([]v2vv1alpha1.VirtualMachineImportCondition,
 // StopVM stop the source VM on ovirt
 func (o *OvirtProvider) StopVM() error {
 	vmID, _ := o.vm.Id()
+	status, _ := o.vm.Status()
+	if status == ovirtsdk.VMSTATUS_DOWN {
+		return nil
+	}
 	err := o.ovirtClient.StopVM(vmID)
 	if err != nil {
 		return err
