@@ -10,9 +10,6 @@ import (
 	. "github.com/onsi/gomega"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -373,8 +370,8 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 			diskMapping *[]v2vv1alpha1.ResourceMappingItem,
 		) []validators.ValidationFailure {
 			return []validators.ValidationFailure{
-				validators.ValidationFailure{
-					ID:      validators.StorageMappingID,
+				{
+					ID:      validators.StorageTargetID,
 					Message: message,
 				},
 			}
@@ -421,11 +418,4 @@ func newNamespacedName() *types.NamespacedName {
 		Namespace: "bar",
 	}
 	return &nn
-}
-
-func decoderFor(gv schema.GroupVersion) runtime.Decoder {
-	scheme := runtime.NewScheme()
-	scheme.AddKnownTypes(gv)
-	codecs := serializer.NewCodecFactory(scheme)
-	return codecs.UniversalDecoder()
 }

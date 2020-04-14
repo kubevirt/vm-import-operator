@@ -40,14 +40,14 @@ var _ = Describe("Validating Storage mapping", func() {
 			return &sc, nil
 		}
 	})
-	table.DescribeTable("should reject missing mapping for: ", func(sd *ovirtsdk.StorageDomain, domainName *string, domainID *string) {
+	table.DescribeTable("should ignore missing mapping for: ", func(sd *ovirtsdk.StorageDomain, domainName *string, domainID *string) {
 		da := createDiskAttachment(sd)
 		das := []*ovirtsdk.DiskAttachment{
 			da,
 		}
 
 		mapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Source: v2vv1alpha1.Source{
 					Name: domainName,
 					ID:   domainID,
@@ -60,8 +60,7 @@ var _ = Describe("Validating Storage mapping", func() {
 
 		failures := validator.ValidateStorageMapping(das, &mapping, nil)
 
-		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(validators.StorageMappingID))
+		Expect(failures).To(BeEmpty())
 	},
 		table.Entry("No mapping", createDomain(&domainName, &domainID), nil, nil),
 		table.Entry("ID mismatch", createDomain(&domainName, &domainID), nil, &wrongDomainID),
@@ -75,7 +74,7 @@ var _ = Describe("Validating Storage mapping", func() {
 		}
 
 		mapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Source: v2vv1alpha1.Source{
 					Name: domainName,
 					ID:   domainID,
@@ -102,7 +101,7 @@ var _ = Describe("Validating Storage mapping", func() {
 		}
 
 		mapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Source: v2vv1alpha1.Source{
 					Name: &domainName,
 					ID:   &domainID,
@@ -122,7 +121,50 @@ var _ = Describe("Validating Storage mapping", func() {
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.StorageTargetID))
 	})
-	It("should reject nil mapping", func() {
+	It("should reject multiple mapping for storage class retrieval error", func() {
+		otherDomainName := "other-domain"
+		otherDomainID := "other-domain-id"
+		das := []*ovirtsdk.DiskAttachment{
+			createDiskAttachment(createDomain(&domainName, &domainID)),
+			createDiskAttachment(createDomain(&otherDomainName, &otherDomainID)),
+		}
+
+		mapping := []v2vv1alpha1.ResourceMappingItem{
+			{
+				Source: v2vv1alpha1.Source{
+					Name: &domainName,
+					ID:   &domainID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: targetStorageClass,
+				},
+			},
+			{
+				Source: v2vv1alpha1.Source{
+					Name: &otherDomainName,
+					ID:   &otherDomainID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: targetStorageClass,
+				},
+			},
+		}
+
+		findStorageClassMock = func(name string) (*v1.StorageClass, error) {
+			return nil, fmt.Errorf("boom")
+		}
+
+		failures := validator.ValidateStorageMapping(das, &mapping, nil)
+
+		Expect(failures).To(HaveLen(2))
+		Expect(failures[0].ID).To(Equal(validators.StorageTargetID))
+		Expect(failures[0].Message).To(ContainSubstring(domainID))
+		Expect(failures[0].Message).To(ContainSubstring(domainName))
+		Expect(failures[1].ID).To(Equal(validators.StorageTargetID))
+		Expect(failures[1].Message).To(ContainSubstring(otherDomainID))
+		Expect(failures[1].Message).To(ContainSubstring(otherDomainName))
+	})
+	It("should accept nil mapping", func() {
 		sd := createDomain(&domainName, &domainID)
 		da := createDiskAttachment(sd)
 		das := []*ovirtsdk.DiskAttachment{
@@ -131,8 +173,7 @@ var _ = Describe("Validating Storage mapping", func() {
 
 		failures := validator.ValidateStorageMapping(das, nil, nil)
 
-		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(validators.StorageMappingID))
+		Expect(failures).To(BeEmpty())
 	})
 })
 
@@ -148,14 +189,14 @@ var _ = Describe("Validating Disk mapping", func() {
 			return &sc, nil
 		}
 	})
-	table.DescribeTable("should reject missing mapping for: ", func(diskName *string, diskID *string) {
+	table.DescribeTable("should accept missing mapping for: ", func(diskName *string, diskID *string) {
 		da := createDiskAttachment(createDomain(&domainName, &domainID))
 		das := []*ovirtsdk.DiskAttachment{
 			da,
 		}
 
 		diskMapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Source: v2vv1alpha1.Source{
 					Name: diskName,
 					ID:   diskID,
@@ -168,9 +209,7 @@ var _ = Describe("Validating Disk mapping", func() {
 
 		failures := validator.ValidateStorageMapping(das, nil, &diskMapping)
 
-		Expect(failures).To(HaveLen(2))
-		Expect(failures[0].ID).To(Equal(validators.StorageMappingID))
-		Expect(failures[1].ID).To(Equal(validators.DiskMappingID))
+		Expect(failures).To(BeEmpty())
 	},
 		table.Entry("No mapping", nil, nil),
 		table.Entry("ID mismatch", nil, &wrongDiskID),
@@ -184,7 +223,7 @@ var _ = Describe("Validating Disk mapping", func() {
 		}
 
 		diskMapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Source: v2vv1alpha1.Source{
 					Name: diskName,
 					ID:   diskID,
@@ -203,14 +242,14 @@ var _ = Describe("Validating Disk mapping", func() {
 		table.Entry("mapping with name", &diskName, nil),
 		table.Entry("mapping with both name and ID", &diskName, &diskID),
 	)
-	It("should reject mapping for storage class retrieval error", func() {
+	It("should reject disk mapping for storage class retrieval error", func() {
 		da := createDiskAttachment(createDomain(&domainName, &domainID))
 		das := []*ovirtsdk.DiskAttachment{
 			da,
 		}
 
 		diskMapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Source: v2vv1alpha1.Source{
 					Name: &diskName,
 					ID:   &diskID,
@@ -230,7 +269,49 @@ var _ = Describe("Validating Disk mapping", func() {
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.DiskTargetID))
 	})
-	It("should reject nil mapping", func() {
+	It("should reject multiple mapping for storage class retrieval error", func() {
+		otherDiskID := "disk-id"
+		otherDiskName := "disk-name"
+		das := []*ovirtsdk.DiskAttachment{
+			createCustomDiskAttachment(createDomain(&domainName, &domainID), diskID, diskName),
+			createCustomDiskAttachment(createDomain(&domainName, &domainID), otherDiskID, otherDiskName),
+		}
+		diskMapping := []v2vv1alpha1.ResourceMappingItem{
+			{
+				Source: v2vv1alpha1.Source{
+					Name: &diskName,
+					ID:   &diskID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: targetStorageClass,
+				},
+			},
+			{
+				Source: v2vv1alpha1.Source{
+					Name: &otherDiskName,
+					ID:   &otherDiskID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: targetStorageClass,
+				},
+			},
+		}
+
+		findStorageClassMock = func(name string) (*v1.StorageClass, error) {
+			return nil, fmt.Errorf("boom")
+		}
+
+		failures := validator.ValidateStorageMapping(das, nil, &diskMapping)
+
+		Expect(failures).To(HaveLen(2))
+		Expect(failures[0].ID).To(Equal(validators.DiskTargetID))
+		Expect(failures[0].Message).To(ContainSubstring(diskID))
+		Expect(failures[0].Message).To(ContainSubstring(diskName))
+		Expect(failures[1].ID).To(Equal(validators.DiskTargetID))
+		Expect(failures[1].Message).To(ContainSubstring(otherDiskID))
+		Expect(failures[1].Message).To(ContainSubstring(otherDiskName))
+	})
+	It("should accept nil mapping", func() {
 		da := createDiskAttachment(createDomain(&domainName, &domainID))
 		das := []*ovirtsdk.DiskAttachment{
 			da,
@@ -238,8 +319,7 @@ var _ = Describe("Validating Disk mapping", func() {
 
 		failures := validator.ValidateStorageMapping(das, &[]v2vv1alpha1.ResourceMappingItem{}, nil)
 
-		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(validators.StorageMappingID))
+		Expect(failures).To(BeEmpty())
 	})
 	It("should accept mapping for storage class and disk mapping", func() {
 		sd := createDomain(&domainName, &domainID)
@@ -257,7 +337,7 @@ var _ = Describe("Validating Disk mapping", func() {
 		}
 
 		storageMapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Source: v2vv1alpha1.Source{
 					Name: &domainName,
 					ID:   &domainID,
@@ -269,7 +349,7 @@ var _ = Describe("Validating Disk mapping", func() {
 		}
 
 		diskMapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Source: v2vv1alpha1.Source{
 					Name: &customName,
 					ID:   &customID,
