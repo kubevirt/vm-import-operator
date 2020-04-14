@@ -3,6 +3,10 @@ package mapper_test
 import (
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
+	corev1 "k8s.io/api/core/v1"
+
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
 	. "github.com/onsi/ginkgo"
@@ -118,6 +122,80 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 	})
 })
 
+var _ = Describe("Test mapping disks", func() {
+	var (
+		vm *ovirtsdk.Vm
+	)
+
+	BeforeEach(func() {
+		vm = createVM()
+	})
+
+	It("should map disk", func() {
+		mappings := createMappings()
+		credentials := mapper.DataVolumeCredentials{
+			URL:           "any-url",
+			SecretName:    "secret-name",
+			ConfigMapName: "config-map",
+		}
+		namespace := "the-namespace"
+		mapper := mapper.NewOvirtMapper(vm, &mappings, credentials, namespace)
+		daName := "123"
+		dvs := mapper.MapDisks()
+
+		Expect(dvs).To(HaveLen(1))
+		Expect(dvs).To(HaveKey(daName))
+
+		dv := dvs[daName]
+		Expect(dv.Namespace).To(Equal(namespace))
+		Expect(dv.Name).To(Equal(daName))
+
+		Expect(dv.Spec.Source.Imageio).To(Not(BeNil()))
+		imageio := *dv.Spec.Source.Imageio
+		Expect(imageio.URL).To(Equal(credentials.URL))
+		Expect(imageio.CertConfigMap).To(Equal(credentials.ConfigMapName))
+		Expect(imageio.SecretRef).To(Equal(credentials.SecretName))
+		Expect(imageio.DiskID).To(Equal("disk-ID"))
+
+		Expect(dv.Spec.PVC.AccessModes).To(ContainElement(corev1.ReadWriteOnce))
+		Expect(dv.Spec.PVC.AccessModes).To(HaveLen(1))
+		Expect(dv.Spec.PVC.Resources.Requests).To(HaveKey(corev1.ResourceStorage))
+		storageResource := dv.Spec.PVC.Resources.Requests[corev1.ResourceStorage]
+		Expect(storageResource.Format).To(Equal(resource.DecimalSI))
+		Expect(storageResource.Value()).To(BeEquivalentTo(memoryGI))
+
+		Expect(dv.Spec.PVC.StorageClassName).To(Not(BeNil()))
+		Expect(*dv.Spec.PVC.StorageClassName).To(Equal("storageclassname"))
+	})
+
+	It("should map disk storage class from disk", func() {
+		diskID := "disk-ID"
+		targetStorageClass := "storageclassname"
+		disks := []v2vv1alpha1.ResourceMappingItem{
+			{
+				Source: v2vv1alpha1.Source{
+					ID: &diskID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: targetStorageClass,
+				},
+			},
+		}
+		mappings := v2vv1alpha1.OvirtMappings{
+			DiskMappings:    &disks,
+			StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{},
+		}
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+
+		dvs := mapper.MapDisks()
+
+		Expect(dvs).To(HaveLen(1))
+		Expect(dvs["123"].Spec.PVC.StorageClassName).To(Not(BeNil()))
+		Expect(*dvs["123"].Spec.PVC.StorageClassName).To(Equal(targetStorageClass))
+	})
+
+})
+
 func createVM() *ovirtsdk.Vm {
 	return ovirtsdk.NewVmBuilder().
 		Name("myvm").
@@ -195,11 +273,11 @@ func createVM() *ovirtsdk.Vm {
 				Id("123").
 				Disk(
 					ovirtsdk.NewDiskBuilder().
-						Id("123").
+						Id("disk-ID").
 						Name("mydisk").
 						Bootable(true).
 						ProvisionedSize(memoryGI).
-						StorageDomainsOfAny(
+						StorageDomain(
 							ovirtsdk.NewStorageDomainBuilder().
 								Name("mystoragedomain").MustBuild()).
 						MustBuild()).MustBuild()).
@@ -245,5 +323,6 @@ func createMappings() v2vv1alpha1.OvirtMappings {
 	return v2vv1alpha1.OvirtMappings{
 		NetworkMappings: &networks,
 		StorageMappings: &storages,
+		DiskMappings:    &[]v2vv1alpha1.ResourceMappingItem{},
 	}
 }
