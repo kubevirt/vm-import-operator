@@ -9,13 +9,13 @@ import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	"github.com/kubevirt/vm-import-operator/pkg/mappings"
+	"github.com/kubevirt/vm-import-operator/pkg/ownerreferences"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	ovirtprovider "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	templatev1 "github.com/openshift/client-go/template/clientset/versioned/typed/template/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
@@ -68,7 +68,8 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	}
 	client := mgr.GetClient()
 	finder := mappings.NewResourceMappingsFinder(client)
-	return &ReconcileVirtualMachineImport{client: client, scheme: mgr.GetScheme(), resourceMappingsFinder: finder, ocClient: tempClient}
+	ownerreferencesmgr := ownerreferences.NewOwnerReferenceManager(client)
+	return &ReconcileVirtualMachineImport{client: client, scheme: mgr.GetScheme(), resourceMappingsFinder: finder, ocClient: tempClient, ownerreferencesmgr: ownerreferencesmgr}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -126,6 +127,7 @@ type ReconcileVirtualMachineImport struct {
 	scheme                 *runtime.Scheme
 	resourceMappingsFinder mappings.ResourceMappingsFinder
 	ocClient               *templatev1.TemplateV1Client
+	ownerreferencesmgr     ownerreferences.OwnerReferenceManager
 }
 
 // Reconcile reads that state of the cluster for a VirtualMachineImport object and makes changes based on the state read
@@ -376,7 +378,15 @@ func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Prov
 	if err = r.updateProgress(instance, progressCopyingDisks); err != nil {
 		return err
 	}
+	// Fetch VM:
+	vmDef := &kubevirtv1.VirtualMachine{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, vmDef)
+	if err != nil {
+		return err
+	}
+	// Create DVs:
 	for _, dv := range dvs {
+		// Set controller owner reference:
 		if err := controllerutil.SetControllerReference(instance, &dv, r.scheme); err != nil {
 			return err
 		}
@@ -396,6 +406,11 @@ func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Prov
 			}
 			return err
 		}
+
+		// Set VM as owner reference:
+		if err := r.ownerreferencesmgr.AddOwnerReference(vmDef, &dv); err != nil {
+			return err
+		}
 	}
 	// Update datavolume in VM import CR status:
 	if err = r.updateDVs(instanceNamespacedName, dvs); err != nil {
@@ -403,7 +418,6 @@ func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Prov
 	}
 
 	// Update VM spec with imported disks:
-	vmDef := &kubevirtv1.VirtualMachine{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, vmDef)
 	if err != nil {
 		return err
@@ -585,78 +599,13 @@ func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName
 		errs = append(errs, err)
 	}
 
-	e := r.purgeOwnerReferences(vmName)
+	e := r.ownerreferencesmgr.PurgeOwnerReferences(vmName)
 	if len(e) > 0 {
 		errs = append(errs, e...)
 	}
 
 	if len(errs) > 0 {
 		return foldErrors(errs, "Import success", vmiName)
-	}
-	return nil
-}
-
-func (r *ReconcileVirtualMachineImport) purgeOwnerReferences(vmName types.NamespacedName) []error {
-	var errs []error
-
-	vm := kubevirtv1.VirtualMachine{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, &vm)
-	if err != nil {
-		errs = append(errs, err)
-		// Stop here - we can't process further without a VM
-		return errs
-	}
-
-	e := r.removeDataVolumesOwnerReferences(&vm)
-	if len(e) > 0 {
-		errs = append(errs, e...)
-	}
-	err = r.removeVMOwnerReference(&vm)
-	if err != nil {
-		errs = append(errs, err)
-	}
-	return errs
-}
-
-func (r *ReconcileVirtualMachineImport) removeDataVolumesOwnerReferences(vm *kubevirtv1.VirtualMachine) []error {
-	var errs []error
-	for _, v := range vm.Spec.Template.Spec.Volumes {
-		if v.DataVolume != nil {
-			err := r.removeDataVolumeOwnerReference(vm.Namespace, v.DataVolume.Name)
-			if err != nil {
-				errs = append(errs, err)
-			}
-		}
-	}
-	return errs
-}
-
-func (r *ReconcileVirtualMachineImport) removeVMOwnerReference(vm *kubevirtv1.VirtualMachine) error {
-	refs := vm.GetOwnerReferences()
-	newRefs := removeControllerReference(refs)
-	if len(newRefs) < len(refs) {
-		vmCopy := vm.DeepCopy()
-		vmCopy.SetOwnerReferences(newRefs)
-		patch := client.MergeFrom(vm)
-		return r.client.Patch(context.TODO(), vmCopy, patch)
-	}
-	return nil
-}
-
-func (r *ReconcileVirtualMachineImport) removeDataVolumeOwnerReference(namespace string, dvName string) error {
-	dv := &cdiv1.DataVolume{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: namespace, Name: dvName}, dv)
-	if err != nil {
-		return err
-	}
-
-	refs := dv.GetOwnerReferences()
-	newRefs := removeControllerReference(refs)
-	if len(newRefs) < len(refs) {
-		dvCopy := dv.DeepCopy()
-		dvCopy.SetOwnerReferences(newRefs)
-		patch := client.MergeFrom(dv)
-		return r.client.Patch(context.TODO(), dvCopy, patch)
 	}
 	return nil
 }
@@ -695,17 +644,6 @@ func (r *ReconcileVirtualMachineImport) restoreInitialVMState(vmiName types.Name
 	}
 	// VM was already down
 	return nil
-}
-
-func removeControllerReference(refs []metav1.OwnerReference) []metav1.OwnerReference {
-	for i := range refs {
-		isController := refs[i].Controller
-		if isController != nil && *isController {
-			// There can be only one controller reference
-			return append(refs[:i], refs[i+1:]...)
-		}
-	}
-	return refs
 }
 
 func foldErrors(errs []error, prefix string, vmiName types.NamespacedName) error {
