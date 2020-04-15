@@ -2,7 +2,6 @@ package mapper
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
@@ -89,7 +88,8 @@ func (o *OvirtMapper) CreateEmptyVM() *kubevirtv1.VirtualMachine {
 }
 
 // MapVM map oVirt API VM definition to kubevirt VM definition
-func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachine) *kubevirtv1.VirtualMachine {
+func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachine) (*kubevirtv1.VirtualMachine, error) {
+	var err error
 	// Set Namespace
 	vmSpec.ObjectMeta.Namespace = o.namespace
 
@@ -126,7 +126,9 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 	vmSpec.Spec.Template.Spec.Domain.Memory = o.mapMemory()
 
 	// Memory policy set the memory limit
-	vmSpec.Spec.Template.Spec.Domain.Resources = o.mapResourceRequirements()
+	if vmSpec.Spec.Template.Spec.Domain.Resources, err = o.mapResourceRequirements(); err != nil {
+		return vmSpec, err
+	}
 
 	// Devices
 	vmSpec.Spec.Template.Spec.Domain.Devices = *o.mapGraphicalConsoles()
@@ -150,12 +152,12 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 	networkToType := o.mapNetworksToTypes(vmSpec.Spec.Template.Spec.Networks)
 	vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces = o.mapNics(networkToType)
 
-	return vmSpec
+	return vmSpec, nil
 }
 
 // MapDisks map the oVirt VM disks to the map of CDI DataVolumes specification, where
 // map id is the id of the oVirt disk
-func (o *OvirtMapper) MapDisks() map[string]cdiv1.DataVolume {
+func (o *OvirtMapper) MapDisks() (map[string]cdiv1.DataVolume, error) {
 	// TODO: stateless, boot_devices, floppy/cdrom
 	diskAttachments, _ := o.vm.DiskAttachments()
 	dvs := make(map[string]cdiv1.DataVolume, len(diskAttachments.Slice()))
@@ -166,7 +168,11 @@ func (o *OvirtMapper) MapDisks() map[string]cdiv1.DataVolume {
 		diskID, _ := disk.Id()
 		sdClass := o.getStorageClassForDisk(disk, o.mappings)
 		diskSize, _ := disk.ProvisionedSize()
-		quantity, _ := resource.ParseQuantity(strconv.FormatInt(diskSize, 10))
+		diskSizeConverted, err := utils.FormatBytes(diskSize)
+		if err != nil {
+			return dvs, err
+		}
+		quantity, _ := resource.ParseQuantity(diskSizeConverted)
 
 		dvs[attachID] = cdiv1.DataVolume{
 			TypeMeta: metav1.TypeMeta{
@@ -202,7 +208,7 @@ func (o *OvirtMapper) MapDisks() map[string]cdiv1.DataVolume {
 			dvs[attachID].Spec.PVC.StorageClassName = sdClass
 		}
 	}
-	return dvs
+	return dvs, nil
 }
 
 func (o *OvirtMapper) mapNics(networkToType map[string]string) []kubevirtv1.Interface {
@@ -480,12 +486,16 @@ func (o *OvirtMapper) mapHugePages() *kubevirtv1.Hugepages {
 	return nil
 }
 
-func (o *OvirtMapper) mapResourceRequirements() kubevirtv1.ResourceRequirements {
+func (o *OvirtMapper) mapResourceRequirements() (kubevirtv1.ResourceRequirements, error) {
 	reqs := kubevirtv1.ResourceRequirements{}
 
 	// Requests
 	ovirtVMMemory, _ := o.vm.Memory()
-	guestMemory, _ := resource.ParseQuantity(strconv.FormatInt(ovirtVMMemory, 10))
+	vmMemoryConverted, err := utils.FormatBytes(ovirtVMMemory)
+	if err != nil {
+		return reqs, err
+	}
+	guestMemory, _ := resource.ParseQuantity(vmMemoryConverted)
 	reqs.Requests = map[corev1.ResourceName]resource.Quantity{
 		corev1.ResourceMemory: guestMemory,
 	}
@@ -493,12 +503,16 @@ func (o *OvirtMapper) mapResourceRequirements() kubevirtv1.ResourceRequirements 
 	// Limits
 	memoryPolicy, _ := o.vm.MemoryPolicy()
 	maxMemory, _ := memoryPolicy.Max()
-	maxMemoryQuantity, _ := resource.ParseQuantity(strconv.FormatInt(maxMemory, 10))
+	maxMemoryConverted, err := utils.FormatBytes(maxMemory)
+	if err != nil {
+		return reqs, err
+	}
+	maxMemoryQuantity, _ := resource.ParseQuantity(maxMemoryConverted)
 	reqs.Limits = map[corev1.ResourceName]resource.Quantity{
 		corev1.ResourceMemory: maxMemoryQuantity,
 	}
 
-	return reqs
+	return reqs, nil
 }
 
 // Graphical console is attached only in case the VM is not in headless mode
