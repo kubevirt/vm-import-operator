@@ -194,6 +194,67 @@ var _ = Describe("Test mapping disks", func() {
 		Expect(*dvs["123"].Spec.PVC.StorageClassName).To(Equal(targetStorageClass))
 	})
 
+	It("should map empty disk storage class to nil", func() {
+		diskID := "disk-ID"
+		targetStorageClass := ""
+		disks := []v2vv1alpha1.ResourceMappingItem{
+			{
+				Source: v2vv1alpha1.Source{
+					ID: &diskID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: targetStorageClass,
+				},
+			},
+		}
+		mappings := v2vv1alpha1.OvirtMappings{
+			DiskMappings:    &disks,
+			StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{},
+		}
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+
+		dvs := mapper.MapDisks()
+
+		Expect(dvs).To(HaveLen(1))
+		Expect(dvs["123"].Spec.PVC.StorageClassName).To(BeNil())
+	})
+	It("should map empty storage domain storage class to nil", func() {
+		storageDomainName := "mystoragedomain"
+		targetStorageClass := ""
+		domains := []v2vv1alpha1.ResourceMappingItem{
+			{
+				Source: v2vv1alpha1.Source{
+					Name: &storageDomainName,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: targetStorageClass,
+				},
+			},
+		}
+		mappings := v2vv1alpha1.OvirtMappings{
+			DiskMappings:    &[]v2vv1alpha1.ResourceMappingItem{},
+			StorageMappings: &domains,
+		}
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+
+		dvs := mapper.MapDisks()
+
+		Expect(dvs).To(HaveLen(1))
+		Expect(dvs["123"].Spec.PVC.StorageClassName).To(BeNil())
+	})
+	It("should map missing mapping to nil storage class", func() {
+		mappings := v2vv1alpha1.OvirtMappings{
+			DiskMappings:    &[]v2vv1alpha1.ResourceMappingItem{},
+			StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{},
+		}
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+
+		dvs := mapper.MapDisks()
+
+		Expect(dvs).To(HaveLen(1))
+		Expect(dvs["123"].Spec.PVC.StorageClassName).To(BeNil())
+	})
+
 })
 
 func createVM() *ovirtsdk.Vm {
