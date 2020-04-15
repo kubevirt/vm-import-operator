@@ -3,6 +3,7 @@ module github.com/kubevirt/vm-import-operator
 go 1.13
 
 require (
+	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
 	github.com/go-openapi/spec v0.19.4
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20191119172530-79f836b90111
 	github.com/onsi/ginkgo v1.12.0

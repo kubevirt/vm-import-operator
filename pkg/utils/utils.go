@@ -6,6 +6,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/alecthomas/units"
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 )
@@ -114,4 +115,28 @@ func CountImportedDataVolumes(dvsDone map[string]bool) int {
 	}
 
 	return done
+}
+
+// FormatBytes convert bytes to highest suffix
+func FormatBytes(bytes int64) (string, error) {
+	if bytes < 0 {
+		return "", fmt.Errorf("bytes can't be negative")
+	}
+
+	kib := int64(units.KiB)
+	if bytes < kib {
+		return fmt.Sprintf("%d", bytes), nil
+	}
+	suffix := 0
+	n := int64(kib)
+	for i := bytes / kib; i >= kib; i /= kib {
+		n *= kib
+		suffix++
+	}
+	// Return bytes in case we can't express exact number in highest suffix
+	if bytes % n > 0 {
+		return fmt.Sprintf("%d", bytes), nil
+	}
+
+	return fmt.Sprintf("%d%ci", bytes/n, "KMGTPE"[suffix]), nil
 }

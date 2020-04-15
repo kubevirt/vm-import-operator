@@ -190,7 +190,10 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	// Import disks:
-	dvs := mapper.MapDisks()
+	dvs, err := mapper.MapDisks()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
 	dvsDone := make(map[string]bool)
 	for dvID := range dvs {
 		foundDv := &cdiv1.DataVolume{}
@@ -246,7 +249,10 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 			spec = mapper.CreateEmptyVM()
 		}
 	}
-	vmSpec := mapper.MapVM(instance.Spec.TargetVMName, spec)
+	vmSpec, err := mapper.MapVM(instance.Spec.TargetVMName, spec)
+	if err != nil {
+		return "", err
+	}
 
 	// Update progress:
 	if err = r.updateProgress(instance, progressStart); err != nil {

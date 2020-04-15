@@ -30,7 +30,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		vm = createVM()
 		mappings = createMappings()
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
-		vmSpec = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 	})
 
 	It("should map name", func() {
@@ -141,7 +141,7 @@ var _ = Describe("Test mapping disks", func() {
 		namespace := "the-namespace"
 		mapper := mapper.NewOvirtMapper(vm, &mappings, credentials, namespace)
 		daName := "123"
-		dvs := mapper.MapDisks()
+		dvs, _ := mapper.MapDisks()
 
 		Expect(dvs).To(HaveLen(1))
 		Expect(dvs).To(HaveKey(daName))
@@ -161,7 +161,7 @@ var _ = Describe("Test mapping disks", func() {
 		Expect(dv.Spec.PVC.AccessModes).To(HaveLen(1))
 		Expect(dv.Spec.PVC.Resources.Requests).To(HaveKey(corev1.ResourceStorage))
 		storageResource := dv.Spec.PVC.Resources.Requests[corev1.ResourceStorage]
-		Expect(storageResource.Format).To(Equal(resource.DecimalSI))
+		Expect(storageResource.Format).To(Equal(resource.BinarySI))
 		Expect(storageResource.Value()).To(BeEquivalentTo(memoryGI))
 
 		Expect(dv.Spec.PVC.StorageClassName).To(Not(BeNil()))
@@ -187,7 +187,7 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
 
-		dvs := mapper.MapDisks()
+		dvs, _ := mapper.MapDisks()
 
 		Expect(dvs).To(HaveLen(1))
 		Expect(dvs["123"].Spec.PVC.StorageClassName).To(Not(BeNil()))

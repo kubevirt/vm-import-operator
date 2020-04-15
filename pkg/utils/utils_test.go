@@ -3,6 +3,7 @@ package utils_test
 import (
 	"strings"
 
+	"github.com/alecthomas/units"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
@@ -45,6 +46,25 @@ var _ = Describe("Validating Name Normalization", func() {
 		table.Entry("Max length", createStringOfLength(k8svalidation.DNS1123SubdomainMaxLength)),
 		table.Entry("Max length exceeded by 1", createStringOfLength(k8svalidation.DNS1123SubdomainMaxLength+1)),
 		table.Entry("Double the max length", createStringOfLength(k8svalidation.DNS1123SubdomainMaxLength*2)),
+	)
+})
+
+var _ = Describe("Converting of bytes", func() {
+	table.DescribeTable("should convert to proper suffix", func(bytes int64, expected string) {
+		result, _ := utils.FormatBytes(bytes)
+		Expect(result).To(Equal(expected))
+	},
+		table.Entry("To Ki", int64(units.KiB), "1Ki"),
+		table.Entry("To Ki", int64(12*units.KiB), "12Ki"),
+		table.Entry("To Mi", int64(units.MiB), "1Mi"),
+		table.Entry("To Mi", int64(512*units.MiB), "512Mi"),
+		table.Entry("To Gi", int64(units.GiB), "1Gi"),
+		table.Entry("To Gi", int64(4*units.GiB), "4Gi"),
+		table.Entry("To Ti", int64(units.TiB), "1Ti"),
+		table.Entry("To Pi", int64(units.PiB), "1Pi"),
+		table.Entry("To Ei", int64(units.EiB), "1Ei"),
+		table.Entry("To B", int64(1), "1"),
+		table.Entry("No conversion", int64(units.GiB-1), "1073741823"),
 	)
 })
 
