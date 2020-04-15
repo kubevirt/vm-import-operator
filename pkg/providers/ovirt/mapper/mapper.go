@@ -312,29 +312,33 @@ func (o *OvirtMapper) resolveVMName(targetVMName *string, vm *ovirtsdk.Vm) (stri
 }
 
 func (o *OvirtMapper) getStorageClassForDisk(disk *ovirtsdk.Disk, mappings *v2vv1alpha1.OvirtMappings) *string {
-	for _, mapping := range *mappings.DiskMappings {
-		if mapping.Source.ID != nil {
-			if id, _ := disk.Id(); id == *mapping.Source.ID {
-				return &mapping.Target.Name
+	if mappings.DiskMappings != nil {
+		for _, mapping := range *mappings.DiskMappings {
+			if mapping.Source.ID != nil {
+				if id, _ := disk.Id(); id == *mapping.Source.ID {
+					return &mapping.Target.Name
+				}
 			}
-		}
-		if mapping.Source.Name != nil {
-			if name, _ := disk.Alias(); name == *mapping.Source.Name {
-				return &mapping.Target.Name
+			if mapping.Source.Name != nil {
+				if name, _ := disk.Alias(); name == *mapping.Source.Name {
+					return &mapping.Target.Name
+				}
 			}
 		}
 	}
 
-	sd, _ := disk.StorageDomain()
-	for _, mapping := range *mappings.StorageMappings {
-		if mapping.Source.ID != nil {
-			if id, _ := sd.Id(); id == *mapping.Source.ID {
-				return &mapping.Target.Name
+	if mappings.StorageMappings != nil {
+		sd, _ := disk.StorageDomain()
+		for _, mapping := range *mappings.StorageMappings {
+			if mapping.Source.ID != nil {
+				if id, _ := sd.Id(); id == *mapping.Source.ID {
+					return &mapping.Target.Name
+				}
 			}
-		}
-		if mapping.Source.Name != nil {
-			if name, _ := sd.Name(); name == *mapping.Source.Name {
-				return &mapping.Target.Name
+			if mapping.Source.Name != nil {
+				if name, _ := sd.Name(); name == *mapping.Source.Name {
+					return &mapping.Target.Name
+				}
 			}
 		}
 	}
