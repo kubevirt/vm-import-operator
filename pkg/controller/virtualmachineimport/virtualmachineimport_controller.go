@@ -468,9 +468,9 @@ func (r *ReconcileVirtualMachineImport) fetchResourceMapping(resourceMappingID *
 
 func shouldValidate(vmiStatus *v2vv1alpha1.VirtualMachineImportStatus) bool {
 	validCondition := conditions.FindConditionOfType(vmiStatus.Conditions, v2vv1alpha1.Valid)
-	rulesCheckingCondition := conditions.FindConditionOfType(vmiStatus.Conditions, v2vv1alpha1.MappingRulesChecking)
+	rulesVerificationCondition := conditions.FindConditionOfType(vmiStatus.Conditions, v2vv1alpha1.MappingRulesVerified)
 
-	return isIncomplete(validCondition) || isIncomplete(rulesCheckingCondition)
+	return isIncomplete(validCondition) || isIncomplete(rulesVerificationCondition)
 }
 
 func isIncomplete(condition *v2vv1alpha1.VirtualMachineImportCondition) bool {

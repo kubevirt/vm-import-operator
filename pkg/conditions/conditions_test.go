@@ -42,7 +42,7 @@ var _ = Describe("Condition management", func() {
 			processing,
 		}
 
-		found := conditions.FindConditionOfType(vmiConditions, v2vv1alpha1.MappingRulesChecking)
+		found := conditions.FindConditionOfType(vmiConditions, v2vv1alpha1.MappingRulesVerified)
 
 		Expect(found).To(BeNil())
 	})

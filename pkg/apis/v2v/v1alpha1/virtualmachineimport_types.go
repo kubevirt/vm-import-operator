@@ -97,8 +97,8 @@ const (
 	// Valid represents the status of the validation of the mapping rules and eligibility of source VM for import
 	Valid VirtualMachineImportConditionType = "Valid"
 
-	// MappingRulesChecking represents the status of the VM import mapping rules checking
-	MappingRulesChecking VirtualMachineImportConditionType = "MappingRulesChecking"
+	// MappingRulesVerified represents the status of the VM import mapping rules checking
+	MappingRulesVerified VirtualMachineImportConditionType = "MappingRulesVerified"
 
 	// Processing represents the status of the VM import process while in progress
 	Processing VirtualMachineImportConditionType = "Processing"
@@ -154,20 +154,20 @@ const (
 	IncompleteMappingRules ValidConditionReason = "IncompleteMappingRules"
 )
 
-// MappingRulesCheckingReason defines the reasons for the MappingRulesChecking condition of VM import
+// MappingRulesVerifiedReason defines the reasons for the MappingRulesVerified condition of VM import
 // +k8s:openapi-gen=true
-type MappingRulesCheckingReason string
+type MappingRulesVerifiedReason string
 
-// These are valid reasons for the Valid conditions of VM import.
+// These are valid reasons for the MappingRulesVerified conditions of VM import.
 const (
-	// Completed represents the completion of the mapping rules checking without warnings or errors
-	MappingRulesCheckingCompleted MappingRulesCheckingReason = "MappingRulesCheckingCompleted"
+	// MappingRulesVerificationCompleted represents the completion of the mapping rules checking without warnings or errors
+	MappingRulesVerificationCompleted MappingRulesVerifiedReason = "MappingRulesVerificationCompleted"
 
-	// MappingRulesViolated represents the violation of the mapping rules
-	MappingRulesCheckingFailed MappingRulesCheckingReason = "MappingRulesCheckingFailed"
+	// MappingRulesVerificationFailed represents the violation of the mapping rules
+	MappingRulesVerificationFailed MappingRulesVerifiedReason = "MappingRulesVerificationFailed"
 
-	// MappingRulesWarningsReported represents the existence of warnings as a result of checking the mapping rules
-	MappingRulesCheckingReportedWarnings MappingRulesCheckingReason = "MappingRulesCheckingReportedWarnings"
+	// MappingRulesVerificationReportedWarnings represents the existence of warnings as a result of checking the mapping rules
+	MappingRulesVerificationReportedWarnings MappingRulesVerifiedReason = "MappingRulesVerificationReportedWarnings"
 )
 
 // ProcessingConditionReason defines the reasons for the Processing condition of VM import
