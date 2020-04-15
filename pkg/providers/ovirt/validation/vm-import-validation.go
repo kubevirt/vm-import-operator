@@ -159,9 +159,9 @@ func (validator *VirtualMachineImportValidator) processMappingValidationFailures
 		message = utils.WithMessage(message, failure.Message)
 	}
 	if len(failures) > 0 {
-		return conditions.NewCondition(v2vv1alpha1.Validating, incompleteMappingRulesReason, message, v1.ConditionFalse)
+		return conditions.NewCondition(v2vv1alpha1.Valid, incompleteMappingRulesReason, message, v1.ConditionFalse)
 	}
-	return conditions.NewCondition(v2vv1alpha1.Validating, validationCompletedReason, "Validating completed successfully", v1.ConditionTrue)
+	return conditions.NewCondition(v2vv1alpha1.Valid, validationCompletedReason, "Validation completed successfully", v1.ConditionTrue)
 }
 
 func (validator *VirtualMachineImportValidator) processValidationFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) v2vv1alpha1.VirtualMachineImportCondition {

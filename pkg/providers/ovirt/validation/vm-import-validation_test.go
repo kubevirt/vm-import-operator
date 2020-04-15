@@ -55,7 +55,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		Expect(conditions).To(HaveLen(2))
 		By("having positive status of the validation condition")
 		condition := conditions[0]
-		Expect(condition.Type).To(Equal(v2vv1alpha1.Validating))
+		Expect(condition.Type).To(Equal(v2vv1alpha1.Valid))
 		Expect(condition.Status).To(Equal(v1.ConditionTrue))
 		Expect(*condition.Reason).To(Equal(validationCompletedReason))
 
@@ -354,8 +354,8 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 
 		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
 
-		condition := conditions.FindConditionOfType(result, v2vv1alpha1.Validating)
-		Expect(condition.Type).To(Equal(v2vv1alpha1.Validating))
+		condition := conditions.FindConditionOfType(result, v2vv1alpha1.Valid)
+		Expect(condition.Type).To(Equal(v2vv1alpha1.Valid))
 		Expect(condition.Status).To(Equal(v1.ConditionFalse))
 		Expect(*condition.Message).To(ContainSubstring(message))
 		Expect(*condition.Reason).To(Equal(incompleteMappingRulesReason))
@@ -379,8 +379,8 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 
 		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
 
-		condition := conditions.FindConditionOfType(result, v2vv1alpha1.Validating)
-		Expect(condition.Type).To(Equal(v2vv1alpha1.Validating))
+		condition := conditions.FindConditionOfType(result, v2vv1alpha1.Valid)
+		Expect(condition.Type).To(Equal(v2vv1alpha1.Valid))
 		Expect(condition.Status).To(Equal(v1.ConditionFalse))
 		Expect(*condition.Message).To(ContainSubstring(message))
 		Expect(*condition.Reason).To(Equal(incompleteMappingRulesReason))

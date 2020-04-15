@@ -94,8 +94,8 @@ const (
 	// Succeeded represents status of the VM import process being completed successfully
 	Succeeded VirtualMachineImportConditionType = "Succeeded"
 
-	// Validating represents the status of the validation of the mapping rules and eligibility of source VM for import
-	Validating VirtualMachineImportConditionType = "Validating"
+	// Valid represents the status of the validation of the mapping rules and eligibility of source VM for import
+	Valid VirtualMachineImportConditionType = "Valid"
 
 	// MappingRulesChecking represents the status of the VM import mapping rules checking
 	MappingRulesChecking VirtualMachineImportConditionType = "MappingRulesChecking"
@@ -129,36 +129,36 @@ const (
 	VirtualMachineRunning SucceededConditionReason = "VirtualMachineRunning"
 )
 
-// ValidatingConditionReason defines the reasons for the Validating condition of VM import
+// ValidConditionReason defines the reasons for the Valid condition of VM import
 // +k8s:openapi-gen=true
-type ValidatingConditionReason string
+type ValidConditionReason string
 
-// These are valid reasons for the Validating conditions of VM import.
+// These are valid reasons for the Valid conditions of VM import.
 const (
 	// ValidationCompleted represents the completion of the vm import resource validating
-	ValidationCompleted ValidatingConditionReason = "ValidationCompleted"
+	ValidationCompleted ValidConditionReason = "ValidationCompleted"
 
 	// SecretNotFound represents the nonexistence of the provider's secret
-	SecretNotFound ValidatingConditionReason = "SecretNotFound"
+	SecretNotFound ValidConditionReason = "SecretNotFound"
 
 	// MappingResourceNotFound represents the nonexistence of the mapping resource
-	MappingResourceNotFound ValidatingConditionReason = "MappingResourceNotFound"
+	MappingResourceNotFound ValidConditionReason = "MappingResourceNotFound"
 
 	// UnreachableProvider represents a failure to connect to the provider
-	UnreachableProvider ValidatingConditionReason = "UnreachableProvider"
+	UnreachableProvider ValidConditionReason = "UnreachableProvider"
 
 	// SourceVmNotFound represents the nonexistence of the source VM
-	SourceVMNotFound ValidatingConditionReason = "SourceVMNotFound"
+	SourceVMNotFound ValidConditionReason = "SourceVMNotFound"
 
 	// IncompleteMappingRules represents the inability to prepare the mapping rules
-	IncompleteMappingRules ValidatingConditionReason = "IncompleteMappingRules"
+	IncompleteMappingRules ValidConditionReason = "IncompleteMappingRules"
 )
 
 // MappingRulesCheckingReason defines the reasons for the MappingRulesChecking condition of VM import
 // +k8s:openapi-gen=true
 type MappingRulesCheckingReason string
 
-// These are valid reasons for the Validating conditions of VM import.
+// These are valid reasons for the Valid conditions of VM import.
 const (
 	// Completed represents the completion of the mapping rules checking without warnings or errors
 	MappingRulesCheckingCompleted MappingRulesCheckingReason = "MappingRulesCheckingCompleted"

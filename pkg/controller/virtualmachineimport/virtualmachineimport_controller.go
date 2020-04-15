@@ -467,10 +467,10 @@ func (r *ReconcileVirtualMachineImport) fetchResourceMapping(resourceMappingID *
 }
 
 func shouldValidate(vmiStatus *v2vv1alpha1.VirtualMachineImportStatus) bool {
-	validatingCondition := conditions.FindConditionOfType(vmiStatus.Conditions, v2vv1alpha1.Validating)
+	validCondition := conditions.FindConditionOfType(vmiStatus.Conditions, v2vv1alpha1.Valid)
 	rulesCheckingCondition := conditions.FindConditionOfType(vmiStatus.Conditions, v2vv1alpha1.MappingRulesChecking)
 
-	return isIncomplete(validatingCondition) || isIncomplete(rulesCheckingCondition)
+	return isIncomplete(validCondition) || isIncomplete(rulesCheckingCondition)
 }
 
 func isIncomplete(condition *v2vv1alpha1.VirtualMachineImportCondition) bool {
@@ -703,7 +703,7 @@ func (r *ReconcileVirtualMachineImport) initProvider(instance *v2vv1alpha1.Virtu
 	// Load the external resource mapping
 	resourceMapping, err := r.fetchResourceMapping(instance.Spec.ResourceMapping, instance.Namespace)
 	if err != nil {
-		//TODO: update Validating status condition
+		//TODO: update Valid status condition
 		return err
 	}
 
