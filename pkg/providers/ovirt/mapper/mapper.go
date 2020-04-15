@@ -31,6 +31,8 @@ const (
 	AnnotationComment = "comment"
 	// AnnotationSso define name of the annotation which holds sso method of oVirt VM
 	AnnotationSso = "sso"
+	// DefaultStorageClassTargetName define the storage target name value that forces using default storage class
+	DefaultStorageClassTargetName = ""
 )
 
 // BiosTypeMapping defines mapping of BIOS types between oVirt and kubevirt domains
@@ -314,14 +316,19 @@ func (o *OvirtMapper) resolveVMName(targetVMName *string, vm *ovirtsdk.Vm) (stri
 func (o *OvirtMapper) getStorageClassForDisk(disk *ovirtsdk.Disk, mappings *v2vv1alpha1.OvirtMappings) *string {
 	if mappings.DiskMappings != nil {
 		for _, mapping := range *mappings.DiskMappings {
+			targetName := mapping.Target.Name
 			if mapping.Source.ID != nil {
 				if id, _ := disk.Id(); id == *mapping.Source.ID {
-					return &mapping.Target.Name
+					if targetName != DefaultStorageClassTargetName {
+						return &targetName
+					}
 				}
 			}
 			if mapping.Source.Name != nil {
 				if name, _ := disk.Alias(); name == *mapping.Source.Name {
-					return &mapping.Target.Name
+					if targetName != DefaultStorageClassTargetName {
+						return &targetName
+					}
 				}
 			}
 		}
@@ -330,14 +337,19 @@ func (o *OvirtMapper) getStorageClassForDisk(disk *ovirtsdk.Disk, mappings *v2vv
 	if mappings.StorageMappings != nil {
 		sd, _ := disk.StorageDomain()
 		for _, mapping := range *mappings.StorageMappings {
+			targetName := mapping.Target.Name
 			if mapping.Source.ID != nil {
 				if id, _ := sd.Id(); id == *mapping.Source.ID {
-					return &mapping.Target.Name
+					if targetName != DefaultStorageClassTargetName {
+						return &targetName
+					}
 				}
 			}
 			if mapping.Source.Name != nil {
 				if name, _ := sd.Name(); name == *mapping.Source.Name {
-					return &mapping.Target.Name
+					if targetName != DefaultStorageClassTargetName {
+						return &targetName
+					}
 				}
 			}
 		}

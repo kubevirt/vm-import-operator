@@ -3,6 +3,8 @@ package validators
 import (
 	"fmt"
 
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
+
 	v1 "k8s.io/api/storage/v1"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
@@ -109,6 +111,10 @@ func (v *StorageMappingValidator) getRequiredStorageClasses(
 func (v *StorageMappingValidator) validateStorageClasses(requiredTargetsSet map[v2vv1alpha1.ObjectIdentifier][]mappingSource) []ValidationFailure {
 	var failures []ValidationFailure
 	for className, sources := range requiredTargetsSet {
+		if className.Name == mapper.DefaultStorageClassTargetName {
+			// allow for forcing default storage class later on
+			continue
+		}
 		if _, err := v.provider.Find(className.Name); err != nil {
 			for _, source := range sources {
 				checkID := getCheckID(source)

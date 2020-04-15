@@ -93,6 +93,28 @@ var _ = Describe("Validating Storage mapping", func() {
 		table.Entry("mapping with name", createDomain(&domainName, &domainID), &domainName, nil),
 		table.Entry("mapping with both name and ID", createDomain(&domainName, &domainID), &domainName, &domainID),
 	)
+	It("should accept mapping for empty target: ", func() {
+		da := createDiskAttachment(createDomain(&domainName, &domainID))
+		das := []*ovirtsdk.DiskAttachment{
+			da,
+		}
+
+		mapping := []v2vv1alpha1.ResourceMappingItem{
+			{
+				Source: v2vv1alpha1.Source{
+					Name: &domainName,
+					ID:   &domainID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: "",
+				},
+			},
+		}
+
+		failures := validator.ValidateStorageMapping(das, &mapping, nil)
+
+		Expect(failures).To(BeEmpty())
+	})
 	It("should reject mapping for storage class retrieval error", func() {
 		sd := createDomain(&domainName, &domainID)
 		da := createDiskAttachment(sd)
@@ -242,6 +264,28 @@ var _ = Describe("Validating Disk mapping", func() {
 		table.Entry("mapping with name", &diskName, nil),
 		table.Entry("mapping with both name and ID", &diskName, &diskID),
 	)
+	It("should accept mapping for empty target: ", func() {
+		da := createDiskAttachment(createDomain(&domainName, &domainID))
+		das := []*ovirtsdk.DiskAttachment{
+			da,
+		}
+
+		diskMapping := []v2vv1alpha1.ResourceMappingItem{
+			{
+				Source: v2vv1alpha1.Source{
+					Name: &diskName,
+					ID:   &diskID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: "",
+				},
+			},
+		}
+
+		failures := validator.ValidateStorageMapping(das, nil, &diskMapping)
+
+		Expect(failures).To(BeEmpty())
+	})
 	It("should reject disk mapping for storage class retrieval error", func() {
 		da := createDiskAttachment(createDomain(&domainName, &domainID))
 		das := []*ovirtsdk.DiskAttachment{
