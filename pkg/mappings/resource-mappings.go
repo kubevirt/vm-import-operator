@@ -8,14 +8,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// ResourceFinder finds resource mappings
+type ResourceFinder interface {
+	GetResourceMapping(namespacedName types.NamespacedName) (*v2vv1alpha1.ResourceMapping, error)
+}
+
 // ResourceMappingsFinder provides functionality of retrieving Resource Mapping CRs
 type ResourceMappingsFinder struct {
 	client client.Client
 }
 
 // NewResourceMappingsFinder creates new ResourceMappingsFinder configured with given client
-func NewResourceMappingsFinder(client client.Client) ResourceMappingsFinder {
-	return ResourceMappingsFinder{
+func NewResourceMappingsFinder(client client.Client) *ResourceMappingsFinder {
+	return &ResourceMappingsFinder{
 		client: client,
 	}
 }
