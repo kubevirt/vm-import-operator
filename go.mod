@@ -20,6 +20,7 @@ require (
 	kubevirt.io/client-go v0.26.2
 	kubevirt.io/containerized-data-importer v1.13.0
 	sigs.k8s.io/controller-runtime v0.4.0
+	sigs.k8s.io/yaml v1.1.0
 )
 
 replace github.com/ovirt/go-ovirt => github.com/ovirt/go-ovirt v0.0.0-20200320082526-4e97a11ff083

@@ -125,7 +125,7 @@ type ReconcileVirtualMachineImport struct {
 	// that reads objects from the cache and writes to the apiserver
 	client                 client.Client
 	scheme                 *runtime.Scheme
-	resourceMappingsFinder mappings.ResourceMappingsFinder
+	resourceMappingsFinder mappings.ResourceFinder
 	ocClient               *templatev1.TemplateV1Client
 	ownerreferencesmgr     ownerreferences.OwnerReferenceManager
 }
@@ -154,7 +154,11 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	// Init provider:
-	provider, err := r.initProvider(instance)
+	provider, err := r.createProvider(instance)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	err = r.initProvider(instance, provider)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -672,40 +676,35 @@ func shouldFailWith(conditions []v2vv1alpha1.VirtualMachineImportCondition) (boo
 	return valid, message
 }
 
-func (r *ReconcileVirtualMachineImport) initProvider(instance *v2vv1alpha1.VirtualMachineImport) (provider.Provider, error) {
+func (r *ReconcileVirtualMachineImport) initProvider(instance *v2vv1alpha1.VirtualMachineImport, provider provider.Provider) error {
 	// Fetch source provider secret
 	sourceProviderSecretObj, err := r.fetchSecret(instance)
 	if err != nil {
-		return nil, err
-	}
-
-	provider, err := r.createProvider(instance)
-	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = provider.Connect(sourceProviderSecretObj)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Load source VM:
 	err = provider.LoadVM(instance.Spec.Source)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Load the external resource mapping
 	resourceMapping, err := r.fetchResourceMapping(instance.Spec.ResourceMapping, instance.Namespace)
 	if err != nil {
 		//TODO: update Validating status condition
-		return nil, err
+		return err
 	}
 
 	// Prepare/merge the resourceMapping
 	provider.PrepareResourceMapping(resourceMapping, instance.Spec.Source)
 
-	return provider, nil
+	return nil
 }
 
 func (r *ReconcileVirtualMachineImport) validate(instance *v2vv1alpha1.VirtualMachineImport, provider provider.Provider) (bool, error) {
