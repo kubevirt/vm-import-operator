@@ -898,13 +898,13 @@ func (m *mockMapper) CreateEmptyVM() *kubevirtv1.VirtualMachine {
 }
 
 // MapVM implements Mapper.MapVM
-func (m *mockMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachine) *kubevirtv1.VirtualMachine {
-	return vmSpec
+func (m *mockMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachine) (*kubevirtv1.VirtualMachine, error) {
+	return vmSpec, nil
 }
 
 // MapDisks implements Mapper.MapDisks
-func (m *mockMapper) MapDisks() map[string]cdiv1.DataVolume {
-	return map[string]cdiv1.DataVolume{}
+func (m *mockMapper) MapDisks() (map[string]cdiv1.DataVolume, error) {
+	return map[string]cdiv1.DataVolume{}, nil
 }
 
 func getSecret() []byte {

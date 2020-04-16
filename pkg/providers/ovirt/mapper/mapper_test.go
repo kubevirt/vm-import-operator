@@ -213,8 +213,9 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
 
-		dvs := mapper.MapDisks()
+		dvs, err := mapper.MapDisks()
 
+		Expect(err).To(BeNil())
 		Expect(dvs).To(HaveLen(1))
 		Expect(dvs["123"].Spec.PVC.StorageClassName).To(BeNil())
 	})
@@ -237,8 +238,9 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
 
-		dvs := mapper.MapDisks()
+		dvs, err := mapper.MapDisks()
 
+		Expect(err).To(BeNil())
 		Expect(dvs).To(HaveLen(1))
 		Expect(dvs["123"].Spec.PVC.StorageClassName).To(BeNil())
 	})
@@ -249,8 +251,9 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
 
-		dvs := mapper.MapDisks()
+		dvs, err := mapper.MapDisks()
 
+		Expect(err).To(BeNil())
 		Expect(dvs).To(HaveLen(1))
 		Expect(dvs["123"].Spec.PVC.StorageClassName).To(BeNil())
 	})
