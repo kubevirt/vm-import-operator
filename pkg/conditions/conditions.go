@@ -28,8 +28,8 @@ func NewSucceededCondition(reason string, message string, status v1.ConditionSta
 }
 
 // NewProcessingCondition create a condition of type Processing of specific reason and message
-func NewProcessingCondition(reason string, message string) v2vv1alpha1.VirtualMachineImportCondition {
-	return NewCondition(v2vv1alpha1.Processing, reason, message, v1.ConditionTrue)
+func NewProcessingCondition(reason string, message string, status v1.ConditionStatus) v2vv1alpha1.VirtualMachineImportCondition {
+	return NewCondition(v2vv1alpha1.Processing, reason, message, status)
 }
 
 // UpsertCondition updates or creates condition in the virtualMachineImportStatus
