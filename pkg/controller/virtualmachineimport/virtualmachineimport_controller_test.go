@@ -227,11 +227,11 @@ var _ = Describe("Reconcile steps", func() {
 			conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
 			conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
 				Status: corev1.ConditionTrue,
-				Type:   v2vv1alpha1.Validating,
+				Type:   v2vv1alpha1.Valid,
 			})
 			conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
 				Status: corev1.ConditionTrue,
-				Type:   v2vv1alpha1.MappingRulesChecking,
+				Type:   v2vv1alpha1.MappingRulesVerified,
 			})
 			instance.Status.Conditions = conditions
 

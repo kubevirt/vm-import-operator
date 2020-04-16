@@ -25,9 +25,9 @@ const (
 	warn  = 1
 	block = 2
 
-	warnReason  = string(v2vv1alpha1.MappingRulesCheckingReportedWarnings)
-	errorReason = string(v2vv1alpha1.MappingRulesCheckingFailed)
-	okReason    = string(v2vv1alpha1.MappingRulesCheckingCompleted)
+	warnReason  = string(v2vv1alpha1.MappingRulesVerificationReportedWarnings)
+	errorReason = string(v2vv1alpha1.MappingRulesVerificationFailed)
+	okReason    = string(v2vv1alpha1.MappingRulesVerificationCompleted)
 
 	incompleteMappingRulesReason = string(v2vv1alpha1.IncompleteMappingRules)
 	validationCompletedReason    = string(v2vv1alpha1.ValidationCompleted)
@@ -159,9 +159,9 @@ func (validator *VirtualMachineImportValidator) processMappingValidationFailures
 		message = utils.WithMessage(message, failure.Message)
 	}
 	if len(failures) > 0 {
-		return conditions.NewCondition(v2vv1alpha1.Validating, incompleteMappingRulesReason, message, v1.ConditionFalse)
+		return conditions.NewCondition(v2vv1alpha1.Valid, incompleteMappingRulesReason, message, v1.ConditionFalse)
 	}
-	return conditions.NewCondition(v2vv1alpha1.Validating, validationCompletedReason, "Validating completed successfully", v1.ConditionTrue)
+	return conditions.NewCondition(v2vv1alpha1.Valid, validationCompletedReason, "Validation completed successfully", v1.ConditionTrue)
 }
 
 func (validator *VirtualMachineImportValidator) processValidationFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) v2vv1alpha1.VirtualMachineImportCondition {
@@ -181,10 +181,10 @@ func (validator *VirtualMachineImportValidator) processValidationFailures(failur
 	}
 
 	if !valid {
-		return conditions.NewCondition(v2vv1alpha1.MappingRulesChecking, errorReason, errorMessage, v1.ConditionFalse)
+		return conditions.NewCondition(v2vv1alpha1.MappingRulesVerified, errorReason, errorMessage, v1.ConditionFalse)
 	} else if warnMessage != "" {
-		return conditions.NewCondition(v2vv1alpha1.MappingRulesChecking, warnReason, warnMessage, v1.ConditionTrue)
+		return conditions.NewCondition(v2vv1alpha1.MappingRulesVerified, warnReason, warnMessage, v1.ConditionTrue)
 	} else {
-		return conditions.NewCondition(v2vv1alpha1.MappingRulesChecking, okReason, "All mapping rules checks passed", v1.ConditionTrue)
+		return conditions.NewCondition(v2vv1alpha1.MappingRulesVerified, okReason, "All mapping rules checks passed", v1.ConditionTrue)
 	}
 }
