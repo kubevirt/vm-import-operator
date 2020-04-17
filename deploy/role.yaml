@@ -64,6 +64,7 @@ rules:
   - kubevirt.io
   resources:
   - 'virtualmachines'
+  - 'virtualmachineinstances'
   verbs:
   - '*'
 - apiGroups:
