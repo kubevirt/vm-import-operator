@@ -78,7 +78,48 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 	It("should create UTC clock", func() {
 		clock := vmSpec.Spec.Template.Spec.Domain.Clock
 		Expect(clock.Timezone).To(BeNil())
-		Expect(clock.UTC).To(Not(BeNil()))
+		Expect(clock.UTC).NotTo(BeNil())
+		Expect(clock.UTC.OffsetSeconds).NotTo(BeNil())
+		// +01:00
+		Expect(*clock.UTC.OffsetSeconds).To(BeEquivalentTo(3600))
+	})
+
+	It("should create UTC clock without offset", func() {
+		vm = createVM()
+		vm.SetTimeZone(ovirtsdk.NewTimeZoneBuilder().
+			Name("Etc/GMT").MustBuild())
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+
+		clock := vmSpec.Spec.Template.Spec.Domain.Clock
+		Expect(clock.Timezone).To(BeNil())
+		Expect(clock.UTC).NotTo(BeNil())
+		Expect(clock.UTC.OffsetSeconds).To(BeNil())
+	})
+
+	It("should create UTC clock without offset for offset parsing problem", func() {
+		vm = createVM()
+		vm.SetTimeZone(ovirtsdk.NewTimeZoneBuilder().
+			UtcOffset("illegal").MustBuild())
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+
+		clock := vmSpec.Spec.Template.Spec.Domain.Clock
+		Expect(clock.Timezone).To(BeNil())
+		Expect(clock.UTC).NotTo(BeNil())
+		Expect(clock.UTC.OffsetSeconds).To(BeNil())
+	})
+
+	It("should create UTC clock when no clock in source VM", func() {
+		vm = createVM()
+		vm.SetTimeZone(nil)
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+
+		clock := vmSpec.Spec.Template.Spec.Domain.Clock
+		Expect(clock.Timezone).To(BeNil())
+		Expect(clock.UTC).NotTo(BeNil())
+		Expect(clock.UTC.OffsetSeconds).To(BeNil())
 	})
 
 	It("should map placement policy", func() {
@@ -289,7 +330,8 @@ func createVM() *ovirtsdk.Vm {
 				Name("testConsole").MustBuild()).
 		TimeZone(
 			ovirtsdk.NewTimeZoneBuilder().
-				Name(">Etc/GMT").MustBuild()).
+				UtcOffset("+01:00").
+				MustBuild()).
 		PlacementPolicy(
 			ovirtsdk.NewVmPlacementPolicyBuilder().
 				Affinity(ovirtsdk.VMAFFINITY_MIGRATABLE).MustBuild()).

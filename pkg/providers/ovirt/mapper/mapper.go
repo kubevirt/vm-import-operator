@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
@@ -45,6 +47,8 @@ var archMapping = map[string]string{
 	"x86_64": "q35",
 	"ppc64":  "pseries",
 }
+
+var log = logf.Log.WithName("mapper")
 
 // DataVolumeCredentials defines the credentials required for creating a data volume
 type DataVolumeCredentials struct {
@@ -594,10 +598,19 @@ func (o *OvirtMapper) mapPlacementPolicy() *kubevirtv1.EvictionStrategy {
 }
 
 func (o *OvirtMapper) mapTimeZone() *kubevirtv1.Clock {
-	clock := kubevirtv1.Clock{
-		ClockOffset: kubevirtv1.ClockOffset{
-			UTC: &kubevirtv1.ClockOffsetUTC{},
-		},
+	offset := kubevirtv1.ClockOffsetUTC{}
+	if tz, ok := o.vm.TimeZone(); ok {
+		if utcOffset, ok := tz.UtcOffset(); ok {
+			parsedOffset, err := utils.ParseUtcOffsetToSeconds(utcOffset)
+			if err == nil {
+				offset.OffsetSeconds = &parsedOffset
+			} else {
+				log.Info("VM's utc offset is malformed: " + err.Error())
+			}
+		}
 	}
+	clock := kubevirtv1.Clock{}
+	clock.UTC = &offset
+
 	return &clock
 }

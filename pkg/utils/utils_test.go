@@ -114,6 +114,49 @@ var _ = Describe("UTC detection ", func() {
 	)
 })
 
+var _ = Describe("UTC Offset string parsing", func() {
+	table.DescribeTable("should parse correct offsets: ", func(offset string, expected int) {
+		parsed, err := utils.ParseUtcOffsetToSeconds(offset)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(parsed).To(BeEquivalentTo(expected))
+	},
+
+		table.Entry("+00:00", "+00:00", 0),
+		table.Entry("-00:00", "-00:00", 0),
+
+		table.Entry("+24:00", "+24:00", 24*60*60),
+		table.Entry("-24:00", "-24:00", -24*60*60),
+
+		table.Entry("+00:01", "+00:01", 60),
+		table.Entry("+00:10", "+00:10", 10*60),
+		table.Entry("+01:00", "+01:00", 60*60),
+		table.Entry("+10:00", "+10:00", 10*60*60),
+		table.Entry("+12:34", "+12:34", 12*60*60+34*60),
+
+		table.Entry("-00:01", "-00:01", -60),
+		table.Entry("-00:10", "-00:10", -10*60),
+		table.Entry("-01:00", "-01:00", -60*60),
+		table.Entry("-10:00", "-10:00", -10*60*60),
+		table.Entry("-12:34", "-12:34", -(12*60*60+34*60)),
+	)
+
+	table.DescribeTable("should fail on parsing incorrect offsets: ", func(offset string) {
+		_, err := utils.ParseUtcOffsetToSeconds(offset)
+		Expect(err).To(HaveOccurred())
+	},
+		table.Entry("Too short", "+00:0"),
+		table.Entry("Too long", "+00:000"),
+
+		table.Entry("No sign", "00:000"),
+		table.Entry("*00:00", "*00:00"),
+		table.Entry("00;00", "00;00"),
+
+		table.Entry("non-numeric hours", "+ab:00"),
+		table.Entry("non-numeric minutes", "+00:ab"),
+		table.Entry("three segmens", "+a:b:0"),
+	)
+})
+
 func createStringOfLength(n int) string {
 	return strings.Repeat("x", n)
 }
