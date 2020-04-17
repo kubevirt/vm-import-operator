@@ -53,6 +53,8 @@ const (
 	VMBiosTypeID = CheckID("vm.bios.type")
 	// VMBiosTypeQ35SecureBootID defines an ID of a vm.bios.type != q35_secure_boot check
 	VMBiosTypeQ35SecureBootID = CheckID("vm.bios.type.q35_secure_boot")
+	// VMTimezoneID defines an ID of a check whether VM timezone is UTC-compatible
+	VMTimezoneID = CheckID("vm.timezone")
 	// VMCpuArchitectureID defines an ID of a vm.cpu.architecture != s390x check
 	VMCpuArchitectureID = CheckID("vm.cpu.architecture")
 	// VMCpuTuneID defines an ID of a vm.cpu.cpu_tune mapping check

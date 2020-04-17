@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/alecthomas/units"
@@ -134,9 +135,28 @@ func FormatBytes(bytes int64) (string, error) {
 		suffix++
 	}
 	// Return bytes in case we can't express exact number in highest suffix
-	if bytes % n > 0 {
+	if bytes%n > 0 {
 		return fmt.Sprintf("%d", bytes), nil
 	}
 
 	return fmt.Sprintf("%d%ci", bytes/n, "KMGTPE"[suffix]), nil
+}
+
+// IsUtcCompatible checks whether given timezone behaves like UTC - has the same offset of 0 and does not observer daylight saving time
+func IsUtcCompatible(timezone string) bool {
+	loc, err := time.LoadLocation(timezone)
+	if err != nil {
+		return false
+	}
+	now := time.Now().In(loc)
+	_, offset := now.Zone()
+	return offset == 0 && hasNoTimeChange(now)
+}
+
+func hasNoTimeChange(timeInTimezone time.Time) bool {
+	location := timeInTimezone.Location()
+	year := timeInTimezone.Year()
+	_, winterOffset := time.Date(year, 1, 1, 0, 0, 0, 0, location).Zone()
+	_, summerOffset := time.Date(year, 7, 1, 0, 0, 0, 0, location).Zone()
+	return winterOffset == summerOffset
 }

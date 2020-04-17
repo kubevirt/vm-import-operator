@@ -68,6 +68,52 @@ var _ = Describe("Converting of bytes", func() {
 	)
 })
 
+var _ = Describe("UTC detection ", func() {
+	table.DescribeTable("should detect UTC-compatible timezone: ", func(timezone string) {
+		isUtc := utils.IsUtcCompatible(timezone)
+		Expect(isUtc).To(BeTrue())
+	},
+		table.Entry("Empty string", ""),
+
+		table.Entry("Etc/GMT", "Etc/GMT"),
+		table.Entry("Etc/GMT+0", "Etc/GMT+0"),
+		table.Entry("Etc/UCT", "Etc/UCT"),
+		table.Entry("Etc/UTC", "Etc/UTC"),
+		table.Entry("Etc/Zulu", "Etc/Zulu"),
+		table.Entry("Etc/Greenwich", "Etc/Greenwich"),
+
+		table.Entry("GMT", "GMT"),
+		table.Entry("GMT0", "GMT0"),
+		table.Entry("GMT+0", "GMT+0"),
+		table.Entry("GMT-0", "GMT-0"),
+		table.Entry("Greenwich", "Greenwich"),
+
+		table.Entry("Africa/Abidjan", "Africa/Abidjan"),
+		table.Entry("Africa/Conakry", "Africa/Conakry"),
+		table.Entry("America/Danmarkshavn", "America/Danmarkshavn"),
+	)
+
+	table.DescribeTable("should detect non UTC-compatible timezone: ", func(timezone string) {
+		isUtc := utils.IsUtcCompatible(timezone)
+		Expect(isUtc).To(BeFalse())
+	},
+		table.Entry("Etc/GMT+1", "Etc/GMT+1"),
+		table.Entry("America/New_York", "America/New_York"),
+		table.Entry("Australia/Yancowinna", "Australia/Yancowinna"),
+
+		table.Entry("DST: Africa/El_Aaiun", "Africa/El_Aaiun"),
+		table.Entry("DST: America/Scoresbysund", "America/Scoresbysund"),
+		table.Entry("DST: Antarctica/Troll", "Antarctica/Troll"),
+		table.Entry("DST: Atlantic/Madeira", "Atlantic/Madeira"),
+		table.Entry("DST: Europe/Belfast", "Europe/Belfast"),
+		table.Entry("DST: Europe/London", "Europe/London"),
+
+		table.Entry("Foo/Bar", "Foo/Bar"),
+		table.Entry("FooBar", "FooBar"),
+		table.Entry("FooBar+0", "FooBar+0"),
+	)
+})
+
 func createStringOfLength(n int) string {
 	return strings.Repeat("x", n)
 }
