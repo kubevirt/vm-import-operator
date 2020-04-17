@@ -276,7 +276,7 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 
 	// Create kubevirt VM from source VM:
 	reqLogger.Info("Creating a new VM", "VM.Namespace", vmSpec.Namespace, "VM.Name", vmSpec.Name)
-	if err = r.client.Create(context.TODO(), vmSpec); err != nil {
+	if err = r.client.Create(context.TODO(), vmSpec); err != nil && !errors.IsAlreadyExists(err) {
 		// Update condition to failed state:
 		succeededCond := conditions.NewSucceededCondition(string(v2vv1alpha1.VMCreationFailed), fmt.Sprintf("Error while creating virtual machine: %s", err), corev1.ConditionFalse)
 		processingCond.Status = corev1.ConditionFalse
