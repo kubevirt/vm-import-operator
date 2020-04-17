@@ -75,9 +75,10 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(*graphicsEnabled).To(Equal(len(vm.MustGraphicsConsoles().Slice()) > 0))
 	})
 
-	It("should map timezone", func() {
-		timezone := vmSpec.Spec.Template.Spec.Domain.Clock.Timezone
-		Expect(string(*timezone)).To(Equal(vm.MustTimeZone().MustName()))
+	It("should create UTC clock", func() {
+		clock := vmSpec.Spec.Template.Spec.Domain.Clock
+		Expect(clock.Timezone).To(BeNil())
+		Expect(clock.UTC).To(Not(BeNil()))
 	})
 
 	It("should map placement policy", func() {

@@ -594,11 +594,10 @@ func (o *OvirtMapper) mapPlacementPolicy() *kubevirtv1.EvictionStrategy {
 }
 
 func (o *OvirtMapper) mapTimeZone() *kubevirtv1.Clock {
-	clock := &kubevirtv1.Clock{}
-	if timezone, ok := o.vm.TimeZone(); ok {
-		timezoneName, _ := timezone.Name()
-		clockOffsetTimezone := kubevirtv1.ClockOffsetTimezone(timezoneName)
-		clock.Timezone = &clockOffsetTimezone
+	clock := kubevirtv1.Clock{
+		ClockOffset: kubevirtv1.ClockOffset{
+			UTC: &kubevirtv1.ClockOffsetUTC{},
+		},
 	}
-	return clock
+	return &clock
 }

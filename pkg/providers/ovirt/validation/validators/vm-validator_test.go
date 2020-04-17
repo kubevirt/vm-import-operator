@@ -26,6 +26,23 @@ var _ = Describe("Validating VM", func() {
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMStatusID))
 	})
+	It("should accept VM with no timezone ", func() {
+		var vm = newVM()
+		vm.SetTimeZone(ovirtsdk.NewTimeZoneBuilder().MustBuild())
+
+		failures := validators.ValidateVM(vm)
+
+		Expect(failures).To(BeEmpty())
+	})
+	It("should reject VM with wrong timezone ", func() {
+		var vm = newVM()
+		vm.SetTimeZone(ovirtsdk.NewTimeZoneBuilder().Name("Etc/GMT+1").MustBuild())
+
+		failures := validators.ValidateVM(vm)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.VMTimezoneID))
+	})
 	table.DescribeTable("should accept VM with legal status", func(status ovirtsdk.VmStatus) {
 		vm := newVM()
 		vm.SetStatus(status)
@@ -503,6 +520,8 @@ func newVMWithStatusControl(withStatus bool) *ovirtsdk.Vm {
 		MustBuild()
 
 	vm.SetCluster(cluster)
+
+	vm.SetTimeZone(ovirtsdk.NewTimeZoneBuilder().Name("Etc/GMT").MustBuild())
 
 	return &vm
 }
