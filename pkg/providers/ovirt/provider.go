@@ -4,22 +4,19 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kubevirt/vm-import-operator/pkg/configmaps"
-
-	"github.com/kubevirt/vm-import-operator/pkg/secrets"
-
-	"github.com/kubevirt/vm-import-operator/pkg/utils"
-
-	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mappings"
-
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	aclient "github.com/kubevirt/vm-import-operator/pkg/client"
+	"github.com/kubevirt/vm-import-operator/pkg/configmaps"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	ovirtclient "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/client"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mappings"
 	otemplates "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/templates"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
+	"github.com/kubevirt/vm-import-operator/pkg/secrets"
 	templates "github.com/kubevirt/vm-import-operator/pkg/templates"
+	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	templatev1 "github.com/openshift/api/template/v1"
 	tempclient "github.com/openshift/client-go/template/clientset/versioned/typed/template/v1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
@@ -63,7 +60,7 @@ type ConfigMapsManager interface {
 // OvirtProvider is Ovirt implementation of the Provider interface to support importing VM from ovirt
 type OvirtProvider struct {
 	ovirtSecretDataMap map[string]string
-	ovirtClient        ovirtclient.OvirtClient
+	ovirtClient        aclient.VMClient
 	validator          validation.VirtualMachineImportValidator
 	vm                 *ovirtsdk.Vm
 	vmiCrName          types.NamespacedName
@@ -72,10 +69,11 @@ type OvirtProvider struct {
 	templateHandler    *templates.TemplateHandler
 	secretsManager     SecretsManager
 	configMapsManager  ConfigMapsManager
+	factory            aclient.Factory
 }
 
 // NewOvirtProvider creates new OvirtProvider configured with dependencies
-func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, tempClient *tempclient.TemplateV1Client) OvirtProvider {
+func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, tempClient *tempclient.TemplateV1Client, factory aclient.Factory) OvirtProvider {
 	validator := validators.NewValidatorWrapper(client)
 	secretsManager := secrets.NewManager(client)
 	configMapsManager := configmaps.NewManager(client)
@@ -87,6 +85,7 @@ func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, temp
 		templateHandler:   templates.NewTemplateHandler(templateProvider),
 		secretsManager:    &secretsManager,
 		configMapsManager: &configMapsManager,
+		factory:           factory,
 	}
 }
 
@@ -116,14 +115,7 @@ func (o *OvirtProvider) Connect(secret *corev1.Secret) error {
 	if len(o.ovirtSecretDataMap["caCert"]) == 0 {
 		return fmt.Errorf("oVirt secret caCert cannot be empty")
 	}
-	o.ovirtClient, err = ovirtclient.NewRichOvirtClient(
-		&ovirtclient.ConnectionSettings{
-			URL:      o.ovirtSecretDataMap["apiUrl"],
-			Username: o.ovirtSecretDataMap["username"],
-			Password: o.ovirtSecretDataMap["password"],
-			CACert:   []byte(o.ovirtSecretDataMap["caCert"]),
-		},
-	)
+	o.ovirtClient, err = o.factory.NewOvirtClient(o.ovirtSecretDataMap)
 	if err != nil {
 		return err
 	}
@@ -152,7 +144,7 @@ func (o *OvirtProvider) LoadVM(sourceSpec v2vv1alpha1.VirtualMachineImportSource
 	if err != nil {
 		return err
 	}
-	o.vm = vm
+	o.vm = vm.(*ovirtsdk.Vm)
 	return nil
 }
 
@@ -372,4 +364,22 @@ func foldErrors(errs []error, vmiName types.NamespacedName) error {
 		message = utils.WithMessage(message, e.Error())
 	}
 	return fmt.Errorf("clean-up for %v failed: %s", utils.ToLoggableResourceName(vmiName.Name, &vmiName.Namespace), message)
+}
+
+// SourceClientFactory provides default client factory implementation
+type SourceClientFactory struct{}
+
+// NewSourceClientFactory creates new factory
+func NewSourceClientFactory() *SourceClientFactory {
+	return &SourceClientFactory{}
+}
+
+// NewOvirtClient creates new Ovirt clients
+func (f *SourceClientFactory) NewOvirtClient(dataMap map[string]string) (aclient.VMClient, error) {
+	return ovirtclient.NewRichOvirtClient(&ovirtclient.ConnectionSettings{
+		URL:      dataMap["apiUrl"],
+		Username: dataMap["username"],
+		Password: dataMap["password"],
+		CACert:   []byte(dataMap["caCert"]),
+	})
 }
