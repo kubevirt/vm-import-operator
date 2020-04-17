@@ -184,6 +184,12 @@ const (
 
 	// CopyingDisks represents the creation of data volumes based on source VM disks
 	CopyingDisks ProcessingConditionReason = "CopyingDisks"
+
+	// ProcessingCompleted represents the successful import processing
+	ProcessingCompleted ProcessingConditionReason = "ProcessingCompleted"
+
+	// ProcessingFailed represents failed import processing
+	ProcessingFailed ProcessingConditionReason = "ProcessingFailed"
 )
 
 // VirtualMachineImportCondition defines the observed state of VirtualMachineImport conditions

@@ -280,6 +280,8 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 		// Update condition to failed state:
 		succeededCond := conditions.NewSucceededCondition(string(v2vv1alpha1.VMCreationFailed), fmt.Sprintf("Error while creating virtual machine: %s", err), corev1.ConditionFalse)
 		processingCond.Status = corev1.ConditionFalse
+		processingFailedReason := string(v2vv1alpha1.ProcessingFailed)
+		processingCond.Reason = &processingFailedReason
 		if err = r.upsertStatusConditions(instanceNamespacedName, succeededCond, processingCond); err != nil {
 			return "", err
 		}
@@ -353,6 +355,8 @@ func (r *ReconcileVirtualMachineImport) updateConditionsAfterSuccess(instance *v
 	processingCond := conditions.FindConditionOfType(instance.Status.Conditions, v2vv1alpha1.Processing)
 	if processingCond != nil {
 		processingCond.Status = corev1.ConditionFalse
+		processingCompletedReason := string(v2vv1alpha1.ProcessingCompleted)
+		processingCond.Reason = &processingCompletedReason
 		conds = append(conds, *processingCond)
 	}
 
@@ -419,6 +423,8 @@ func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Prov
 			// Update condition to failed:
 			succeededCond := conditions.NewSucceededCondition(string(v2vv1alpha1.DataVolumeCreationFailed), fmt.Sprintf("Data volume creation failed: %s", err), corev1.ConditionFalse)
 			processingCond.Status = corev1.ConditionFalse
+			processingFailedReason := string(v2vv1alpha1.ProcessingFailed)
+			processingCond.Reason = &processingFailedReason
 			if err = r.upsertStatusConditions(instanceNamespacedName, processingCond, succeededCond); err != nil {
 				return err
 			}
