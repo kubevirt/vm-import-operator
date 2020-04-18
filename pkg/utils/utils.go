@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -159,4 +160,36 @@ func hasNoTimeChange(timeInTimezone time.Time) bool {
 	_, winterOffset := time.Date(year, 1, 1, 0, 0, 0, 0, location).Zone()
 	_, summerOffset := time.Date(year, 7, 1, 0, 0, 0, 0, location).Zone()
 	return winterOffset == summerOffset
+}
+
+// ParseUtcOffsetToSeconds parses UTC offset string ([+|-]HH:MM) into representation in seconds. Only syntactical validation is performed on input string.
+func ParseUtcOffsetToSeconds(offset string) (int, error) {
+	if len(offset) != 6 {
+		return 0, fmt.Errorf("utc offset string has illegal length: %s", offset)
+	}
+	sign := offset[0]
+	multiplier := 0
+	switch sign {
+	case '+':
+		multiplier = 1
+	case '-':
+		multiplier = -1
+	default:
+		return 0, fmt.Errorf("utc offset string does not start with a sign character: %s", offset)
+	}
+	parts := strings.Split(offset[1:], ":")
+	if len(parts) != 2 {
+		return 0, fmt.Errorf("utc offset string is malformed: %s", offset)
+	}
+	hours, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, fmt.Errorf("utc offset hours segment is malformed: %s", offset)
+	}
+
+	minutes, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, fmt.Errorf("utc offset minutes segment is malformed: %s", offset)
+	}
+
+	return multiplier * 60 * (hours*60 + minutes), nil
 }
