@@ -13,9 +13,6 @@ const (
 
 	// templateNameLabel defines a label of the template name which was used to created the VM
 	templateNameLabel = "vm.kubevirt.io/template"
-
-	// templateNamespaceLabel defines a label of the template namespace which was used to created the VM
-	templateNamespaceLabel = "vm.kubevirt.io/template-namespace"
 )
 
 // TemplateHandler attempts to process templates based on given parameters
@@ -69,5 +66,4 @@ func addLabels(vm *kubevirtv1.VirtualMachine, template *templatev1.Template) {
 		vm.ObjectMeta.SetLabels(labels)
 	}
 	labels[templateNameLabel] = template.GetObjectMeta().GetName()
-	labels[templateNamespaceLabel] = template.GetObjectMeta().GetNamespace()
 }
