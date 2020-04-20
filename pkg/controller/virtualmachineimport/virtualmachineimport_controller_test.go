@@ -699,9 +699,26 @@ var _ = Describe("Reconcile steps", func() {
 		})
 
 		It("should fail to update virtual machine: ", func() {
-			update = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-				return fmt.Errorf("Not updated")
+			counter := 5
+			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
+				counter--
+				if counter == 0 {
+					return fmt.Errorf("Not modified")
+				}
+				return nil
 			}
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *kubevirtv1.VirtualMachine:
+					obj.(*kubevirtv1.VirtualMachine).Spec.Template = &kubevirtv1.VirtualMachineInstanceTemplateSpec{
+						Spec: kubevirtv1.VirtualMachineInstanceSpec{
+							Volumes: []kubevirtv1.Volume{},
+						},
+					}
+				}
+				return nil
+			}
+
 			dvs["test"] = cdiv1.DataVolume{}
 
 			err := reconciler.createDataVolumes(mock, instance, dvs, vmName)
@@ -710,6 +727,21 @@ var _ = Describe("Reconcile steps", func() {
 		})
 
 		It("should succeed to create data volumes: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *kubevirtv1.VirtualMachine:
+					obj.(*kubevirtv1.VirtualMachine).Spec.Template = &kubevirtv1.VirtualMachineInstanceTemplateSpec{
+						Spec: kubevirtv1.VirtualMachineInstanceSpec{
+							Volumes: []kubevirtv1.Volume{},
+						},
+					}
+				}
+				return nil
+			}
+			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
+				return nil
+			}
+
 			dvs["test"] = cdiv1.DataVolume{}
 
 			err := reconciler.createDataVolumes(mock, instance, dvs, vmName)
