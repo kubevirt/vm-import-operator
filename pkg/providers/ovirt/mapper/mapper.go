@@ -159,9 +159,51 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 	return vmSpec, nil
 }
 
-// MapDisks map the oVirt VM disks to the map of CDI DataVolumes specification, where
+// MapDisks map VM disks
+func (o *OvirtMapper) MapDisks(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume) {
+	// Map volumes
+	volumes := make([]kubevirtv1.Volume, len(dvs))
+	i := 0
+	for _, dv := range dvs {
+		volumes[i] = kubevirtv1.Volume{
+			Name: fmt.Sprintf("dv-%v", i),
+			VolumeSource: kubevirtv1.VolumeSource{
+				DataVolume: &kubevirtv1.DataVolumeSource{
+					Name: dv.Name,
+				},
+			},
+		}
+		i++
+	}
+
+	// Map disks
+	i = 0
+	disks := make([]kubevirtv1.Disk, len(dvs))
+	for id := range dvs {
+		diskAttachment := getDiskAttachmentByID(id, o.vm.MustDiskAttachments())
+		disks[i] = kubevirtv1.Disk{
+			Name: fmt.Sprintf("dv-%v", i),
+			DiskDevice: kubevirtv1.DiskDevice{
+				Disk: &kubevirtv1.DiskTarget{
+					Bus: string(diskAttachment.MustInterface()),
+				},
+			},
+		}
+		if diskAttachment.MustBootable() {
+			bootOrder := uint(1)
+			disks[i].BootOrder = &bootOrder
+		}
+
+		i++
+	}
+
+	vmSpec.Spec.Template.Spec.Volumes = volumes
+	vmSpec.Spec.Template.Spec.Domain.Devices.Disks = disks
+}
+
+// MapDataVolumes map the oVirt VM disks to the map of CDI DataVolumes specification, where
 // map id is the id of the oVirt disk
-func (o *OvirtMapper) MapDisks() (map[string]cdiv1.DataVolume, error) {
+func (o *OvirtMapper) MapDataVolumes() (map[string]cdiv1.DataVolume, error) {
 	// TODO: stateless, boot_devices, floppy/cdrom
 	diskAttachments, _ := o.vm.DiskAttachments()
 	dvs := make(map[string]cdiv1.DataVolume, len(diskAttachments.Slice()))
@@ -614,4 +656,13 @@ func (o *OvirtMapper) mapTimeZone() *kubevirtv1.Clock {
 	clock.UTC = &offset
 
 	return &clock
+}
+
+func getDiskAttachmentByID(id string, diskAttachments *ovirtsdk.DiskAttachmentSlice) *ovirtsdk.DiskAttachment {
+	for _, diskAttachment := range diskAttachments.Slice() {
+		if diskAttachment.MustId() == id {
+			return diskAttachment
+		}
+	}
+	return nil
 }
