@@ -156,6 +156,10 @@ func IsUtcCompatible(timezone string) bool {
 
 func hasNoTimeChange(timeInTimezone time.Time) bool {
 	location := timeInTimezone.Location()
+	// Africa/El_Aaiun is off DST during Ramadan - a non-fixed date period
+	if location.String() == "Africa/El_Aaiun" {
+		return false
+	}
 	year := timeInTimezone.Year()
 	_, winterOffset := time.Date(year, 1, 1, 0, 0, 0, 0, location).Zone()
 	_, summerOffset := time.Date(year, 7, 1, 0, 0, 0, 0, location).Zone()
