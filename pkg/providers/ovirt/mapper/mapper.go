@@ -187,7 +187,7 @@ func (o *OvirtMapper) MapDisks(vmSpec *kubevirtv1.VirtualMachine, dvs map[string
 			Name: fmt.Sprintf("dv-%v", i),
 			DiskDevice: kubevirtv1.DiskDevice{
 				Disk: &kubevirtv1.DiskTarget{
-					Bus: string(iface),
+					Bus: o.mapDiskInterface(iface),
 				},
 			},
 		}
@@ -201,6 +201,13 @@ func (o *OvirtMapper) MapDisks(vmSpec *kubevirtv1.VirtualMachine, dvs map[string
 
 	vmSpec.Spec.Template.Spec.Volumes = volumes
 	vmSpec.Spec.Template.Spec.Domain.Devices.Disks = disks
+}
+
+func (o *OvirtMapper) mapDiskInterface(iface ovirtsdk.DiskInterface) string {
+	if iface == ovirtsdk.DISKINTERFACE_VIRTIO_SCSI {
+		return string(ovirtsdk.DISKINTERFACE_VIRTIO)
+	}
+	return string(iface)
 }
 
 // MapDataVolumes map the oVirt VM disks to the map of CDI DataVolumes specification, where
