@@ -180,16 +180,18 @@ func (o *OvirtMapper) MapDisks(vmSpec *kubevirtv1.VirtualMachine, dvs map[string
 	i = 0
 	disks := make([]kubevirtv1.Disk, len(dvs))
 	for id := range dvs {
-		diskAttachment := getDiskAttachmentByID(id, o.vm.MustDiskAttachments())
+		diskAttachments, _ := o.vm.DiskAttachments()
+		diskAttachment := getDiskAttachmentByID(id, diskAttachments)
+		iface, _ := diskAttachment.Interface()
 		disks[i] = kubevirtv1.Disk{
 			Name: fmt.Sprintf("dv-%v", i),
 			DiskDevice: kubevirtv1.DiskDevice{
 				Disk: &kubevirtv1.DiskTarget{
-					Bus: string(diskAttachment.MustInterface()),
+					Bus: string(iface),
 				},
 			},
 		}
-		if diskAttachment.MustBootable() {
+		if bootable, ok := diskAttachment.Bootable(); ok && bootable {
 			bootOrder := uint(1)
 			disks[i].BootOrder = &bootOrder
 		}
@@ -413,7 +415,8 @@ func (o *OvirtMapper) getStorageClassForDisk(disk *ovirtsdk.Disk, mappings *v2vv
 }
 
 func (o *OvirtMapper) mapArchitecture() *kubevirtv1.Machine {
-	arch, _ := o.vm.MustCpu().Architecture()
+	cpu, _ := o.vm.Cpu()
+	arch, _ := cpu.Architecture()
 	machine := &kubevirtv1.Machine{
 		Type: archMapping[string(arch)],
 	}
@@ -660,7 +663,7 @@ func (o *OvirtMapper) mapTimeZone() *kubevirtv1.Clock {
 
 func getDiskAttachmentByID(id string, diskAttachments *ovirtsdk.DiskAttachmentSlice) *ovirtsdk.DiskAttachment {
 	for _, diskAttachment := range diskAttachments.Slice() {
-		if diskAttachment.MustId() == id {
+		if diskID, ok := diskAttachment.Id(); ok && diskID == id {
 			return diskAttachment
 		}
 	}
