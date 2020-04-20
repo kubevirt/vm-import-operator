@@ -198,34 +198,46 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	dvsDone := make(map[string]bool)
-	for dvID := range dvs {
-		foundDv := &cdiv1.DataVolume{}
-		err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: dvID}, foundDv)
-		if err != nil && errors.IsNotFound(err) {
-			if err = r.createDataVolumes(provider, instance, dvs, vmName); err != nil {
-				return reconcile.Result{}, err
-			}
-		} else if err == nil {
-			// Set dataVolume as done, if it's in Succeeded state:
-			if foundDv.Status.Phase == cdiv1.Succeeded {
-				dvsDone[dvID] = true
-				if err = r.manageDataVolumeState(instance, dvsDone, len(dvs)); err != nil {
+	if len(dvs) == 0 {
+		if err := r.updateProgress(instance, progressDone); err != nil {
+			return reconcile.Result{}, err
+		}
+		if err := r.updateConditionsAfterSuccess(instance, "Virtual machine has no disks", v2vv1alpha1.VirtualMachineReady); err != nil {
+			return reconcile.Result{}, err
+		}
+		if err := r.afterSuccess(vmName, request.NamespacedName, provider); err != nil {
+			return reconcile.Result{}, err
+		}
+	} else {
+		dvsDone := make(map[string]bool)
+		for dvID := range dvs {
+			foundDv := &cdiv1.DataVolume{}
+			err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: dvID}, foundDv)
+			if err != nil && errors.IsNotFound(err) {
+				if err = r.createDataVolumes(provider, instance, dvs, vmName); err != nil {
 					return reconcile.Result{}, err
 				}
-
-				// Cleanup if user don't want to start the VM
-				if instance.Spec.StartVM == nil || !*instance.Spec.StartVM {
-					if err := r.updateProgress(instance, progressDone); err != nil {
+			} else if err == nil {
+				// Set dataVolume as done, if it's in Succeeded state:
+				if foundDv.Status.Phase == cdiv1.Succeeded {
+					dvsDone[dvID] = true
+					if err = r.manageDataVolumeState(instance, dvsDone, len(dvs)); err != nil {
 						return reconcile.Result{}, err
 					}
-					if err := r.afterSuccess(vmName, request.NamespacedName, provider); err != nil {
-						return reconcile.Result{}, err
+
+					// Cleanup if user don't want to start the VM
+					if instance.Spec.StartVM == nil || !*instance.Spec.StartVM {
+						if err := r.updateProgress(instance, progressDone); err != nil {
+							return reconcile.Result{}, err
+						}
+						if err := r.afterSuccess(vmName, request.NamespacedName, provider); err != nil {
+							return reconcile.Result{}, err
+						}
 					}
 				}
+			} else {
+				return reconcile.Result{}, err
 			}
-		} else {
-			return reconcile.Result{}, err
 		}
 	}
 
@@ -447,12 +459,7 @@ func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Prov
 	}
 
 	// Update VM spec with imported disks:
-	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, vmDef)
-	if err != nil {
-		return err
-	}
-	provider.UpdateVM(vmDef, dvs)
-	err = r.client.Update(context.TODO(), vmDef)
+	err = r.updateVMSpecDataVolumes(provider, types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, dvs)
 	if err != nil {
 		return err
 	}
@@ -558,6 +565,23 @@ func (r *ReconcileVirtualMachineImport) updateTargetVMName(vmiName types.Namespa
 
 	patch := client.MergeFrom(&instance)
 	err = r.client.Status().Patch(context.TODO(), copy, patch)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *ReconcileVirtualMachineImport) updateVMSpecDataVolumes(provider provider.Provider, vmName types.NamespacedName, dvs map[string]cdiv1.DataVolume) error {
+	var vm kubevirtv1.VirtualMachine
+	err := r.client.Get(context.TODO(), vmName, &vm)
+	if err != nil {
+		return err
+	}
+	copy := vm.DeepCopy()
+	provider.UpdateVM(copy, dvs)
+
+	patch := client.MergeFrom(&vm)
+	err = r.client.Patch(context.TODO(), copy, patch)
 	if err != nil {
 		return err
 	}

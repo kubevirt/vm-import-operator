@@ -37,6 +37,7 @@ const (
 	ovirtSecretKey = "ovirt"
 	keyAccessKey   = "accessKeyId"
 	keySecretKey   = "secretKey"
+	diskNameFormat = "disk-%v"
 )
 
 var (
@@ -208,7 +209,7 @@ func (o *OvirtProvider) UpdateVM(vmspec *kubevirtv1.VirtualMachine, dvs map[stri
 	i := 0
 	for _, dv := range dvs {
 		volumes[i] = kubevirtv1.Volume{
-			Name: fmt.Sprintf("dv-%v", i),
+			Name: fmt.Sprintf(diskNameFormat, i),
 			VolumeSource: kubevirtv1.VolumeSource{
 				DataVolume: &kubevirtv1.DataVolumeSource{
 					Name: dv.Name,
@@ -223,7 +224,7 @@ func (o *OvirtProvider) UpdateVM(vmspec *kubevirtv1.VirtualMachine, dvs map[stri
 	for id := range dvs {
 		diskAttachment := getDiskAttachmentByID(id, o.vm.MustDiskAttachments())
 		disks[i] = kubevirtv1.Disk{
-			Name: fmt.Sprintf("dv-%v", i),
+			Name: fmt.Sprintf(diskNameFormat, i),
 			DiskDevice: kubevirtv1.DiskDevice{
 				Disk: &kubevirtv1.DiskTarget{
 					Bus: string(diskAttachment.MustInterface()),
