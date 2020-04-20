@@ -103,7 +103,7 @@ func (t *mockTemplateProvider) Find(
 }
 
 // Process mocks the behavior of the client for calling process API
-func (t *mockTemplateProvider) Process(namespace string, vmName string, template *templatev1.Template) (*templatev1.Template, error) {
+func (t *mockTemplateProvider) Process(namespace string, vmName *string, template *templatev1.Template) (*templatev1.Template, error) {
 	return &templatev1.Template{}, nil
 }
 

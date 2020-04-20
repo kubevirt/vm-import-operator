@@ -33,7 +33,7 @@ type Templates struct {
 // TemplateProvider searches for and processes templates in Openshift
 type TemplateProvider interface {
 	Find(namespace *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error)
-	Process(namespace string, vmName string, template *templatev1.Template) (*templatev1.Template, error)
+	Process(namespace string, vmName *string, template *templatev1.Template) (*templatev1.Template, error)
 }
 
 // NewTemplateProvider creates new TemplateProvider
@@ -53,12 +53,14 @@ func (t *Templates) Find(namespace *string, os *string, workload *string, flavor
 }
 
 // Process calls the openshift api to process parameters
-func (t *Templates) Process(namespace string, vmName string, template *templatev1.Template) (*templatev1.Template, error) {
+func (t *Templates) Process(namespace string, vmName *string, template *templatev1.Template) (*templatev1.Template, error) {
 	temp := template.DeepCopy()
 	params := temp.Parameters
 	for i, param := range params {
 		if param.Name == nameParameter {
-			temp.Parameters[i].Value = vmName
+			if vmName != nil {
+				temp.Parameters[i].Value = *vmName
+			}
 		} else {
 			temp.Parameters[i].Value = otherValue
 		}

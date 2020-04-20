@@ -28,7 +28,7 @@ func NewTemplateHandler(templateProvider TemplateProvider) *TemplateHandler {
 }
 
 // ProcessTemplate processes template with provided parameter values
-func (f *TemplateHandler) ProcessTemplate(template *templatev1.Template, vmName string) (*kubevirtv1.VirtualMachine, error) {
+func (f *TemplateHandler) ProcessTemplate(template *templatev1.Template, vmName *string) (*kubevirtv1.VirtualMachine, error) {
 	processed, err := f.templateProvider.Process(TemplateNamespace, vmName, template)
 	if err != nil {
 		return nil, err

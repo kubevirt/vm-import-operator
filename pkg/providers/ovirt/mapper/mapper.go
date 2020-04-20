@@ -22,6 +22,7 @@ const (
 	networkTypePod          = "pod"
 	networkTypeMultus       = "multus"
 	dataVolumeKind          = "DataVolume"
+	vmNamePrefix            = "ovirt-"
 	// LabelOrigin define name of the label which holds value of origin attribute of oVirt VM
 	LabelOrigin = "origin"
 	// LabelInstanceType define name of the label which holds value of instance type attribute of oVirt VM
@@ -98,11 +99,10 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 	vmSpec.ObjectMeta.Namespace = o.namespace
 
 	// Map name
-	vmName, shouldGenerate := o.resolveVMName(targetVMName, o.vm)
-	if shouldGenerate {
-		vmSpec.ObjectMeta.GenerateName = "ovirt-"
+	if targetVMName == nil {
+		vmSpec.ObjectMeta.GenerateName = vmNamePrefix
 	} else {
-		vmSpec.ObjectMeta.Name = vmName
+		vmSpec.ObjectMeta.Name = *targetVMName
 	}
 
 	// Map hostname
@@ -304,23 +304,24 @@ func (o *OvirtMapper) mapNetworkType(mapping v2vv1alpha1.ResourceMappingItem, ku
 	}
 }
 
-func (o *OvirtMapper) resolveVMName(targetVMName *string, vm *ovirtsdk.Vm) (string, bool) {
+// ResolveVMName resolves the target VM name
+func (o *OvirtMapper) ResolveVMName(targetVMName *string) *string {
 	if targetVMName != nil {
-		return *targetVMName, false
+		return targetVMName
 	}
 
-	name, ok := vm.Name()
+	name, ok := o.vm.Name()
 	if !ok {
-		return "", true
+		return nil
 	}
 
 	name, err := utils.NormalizeName(name)
 	if err != nil {
 		// TODO: should name validation be included in condition ?
-		return "", true
+		return nil
 	}
 
-	return name, false
+	return &name
 }
 
 func (o *OvirtMapper) getStorageClassForDisk(disk *ovirtsdk.Disk, mappings *v2vv1alpha1.OvirtMappings) *string {

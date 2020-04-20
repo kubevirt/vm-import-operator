@@ -252,6 +252,9 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	reqLogger := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
 
+	// Resolve VM Name
+	targetVMName := mapper.ResolveVMName(instance.Spec.TargetVMName)
+
 	// Define VM spec
 	template, err := provider.FindTemplate()
 	var spec *kubevirtv1.VirtualMachine
@@ -259,13 +262,17 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 		reqLogger.Info("No matching template was found for the virtual machine using empty vm definition")
 		spec = mapper.CreateEmptyVM()
 	} else {
-		spec, err = provider.ProcessTemplate(template, *instance.Spec.TargetVMName)
+		spec, err = provider.ProcessTemplate(template, targetVMName)
 		if err != nil {
 			reqLogger.Info("Failed to process the template using empty vm definition")
 			spec = mapper.CreateEmptyVM()
+		} else {
+			if len(spec.ObjectMeta.Name) > 0 {
+				targetVMName = &spec.ObjectMeta.Name
+			}
 		}
 	}
-	vmSpec, err := mapper.MapVM(instance.Spec.TargetVMName, spec)
+	vmSpec, err := mapper.MapVM(targetVMName, spec)
 	if err != nil {
 		return "", err
 	}
