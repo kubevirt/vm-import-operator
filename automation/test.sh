@@ -67,5 +67,6 @@ kubectl version
 
 # Run functional tests
 kubectl create -f tests/cirros/secret.yml
-kubectl create -f tests/cirros/mapping.yml
-kubectl create -f tests/cirros/cirros.yml
+
+KUBECONFIG=$(./cluster-up/kubeconfig.sh)
+go test ./tests --v -kubeconfig "$KUBECONFIG" -ovirt-secret "default/ovirt-secret"

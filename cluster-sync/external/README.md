@@ -31,6 +31,6 @@ export KUBEVIRT_PROVIDER=external
 
 # A note about kubernetes local-up-cluster.sh
 
-The external provider isn't quite appropriate for use with the local-up-cluster.sh script used 
-in the Kubernetes source repo.  We'll need to add an additional `local` provider for this to 
+The external provider isn't quite appropriate for use with the local-up-cluster.sh script used
+in the Kubernetes source repo.  We'll need to add an additional `local` provider for this to
 handle some of the specifics.

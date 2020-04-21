@@ -13,6 +13,7 @@ require (
 	github.com/openshift/client-go v0.0.0
 	github.com/operator-framework/operator-sdk v0.15.2
 	github.com/ovirt/go-ovirt v4.3.4+incompatible
+	github.com/pkg/errors v0.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
 	github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2 // indirect
@@ -23,6 +24,7 @@ require (
 	k8s.io/apimachinery v0.17.1
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/code-generator v0.17.1
+	k8s.io/klog v1.0.0
 	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
 	kubevirt.io/client-go v0.26.2
 	kubevirt.io/containerized-data-importer v1.15.0

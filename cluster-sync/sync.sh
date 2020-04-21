@@ -26,7 +26,7 @@ if [ "${KUBEVIRT_PROVIDER}" != "external" ]; then
 fi
 
 # TODO: fetch it dynamically
-export OPERATOR_VERSION=0.0.1
+export OPERATOR_VERSION=v0.0.1
 
 _kubectl apply -f manifests/vm-import-operator/${OPERATOR_VERSION}/v2v_v1alpha1_resourcemapping_crd.yaml
 _kubectl apply -f manifests/vm-import-operator/${OPERATOR_VERSION}/v2v_v1alpha1_virtualmachineimport_crd.yaml
