@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
-	aclient "github.com/kubevirt/vm-import-operator/pkg/client"
+	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	"github.com/kubevirt/vm-import-operator/pkg/configmaps"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	ovirtclient "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/client"
@@ -60,7 +60,7 @@ type ConfigMapsManager interface {
 // OvirtProvider is Ovirt implementation of the Provider interface to support importing VM from ovirt
 type OvirtProvider struct {
 	ovirtSecretDataMap map[string]string
-	ovirtClient        aclient.VMClient
+	ovirtClient        pclient.VMClient
 	validator          validation.VirtualMachineImportValidator
 	vm                 *ovirtsdk.Vm
 	vmiCrName          types.NamespacedName
@@ -69,11 +69,11 @@ type OvirtProvider struct {
 	templateHandler    *templates.TemplateHandler
 	secretsManager     SecretsManager
 	configMapsManager  ConfigMapsManager
-	factory            aclient.Factory
+	factory            pclient.Factory
 }
 
 // NewOvirtProvider creates new OvirtProvider configured with dependencies
-func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, tempClient *tempclient.TemplateV1Client, factory aclient.Factory) OvirtProvider {
+func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, tempClient *tempclient.TemplateV1Client, factory pclient.Factory) OvirtProvider {
 	validator := validators.NewValidatorWrapper(client)
 	secretsManager := secrets.NewManager(client)
 	configMapsManager := configmaps.NewManager(client)
@@ -375,7 +375,7 @@ func NewSourceClientFactory() *SourceClientFactory {
 }
 
 // NewOvirtClient creates new Ovirt clients
-func (f *SourceClientFactory) NewOvirtClient(dataMap map[string]string) (aclient.VMClient, error) {
+func (f *SourceClientFactory) NewOvirtClient(dataMap map[string]string) (pclient.VMClient, error) {
 	return ovirtclient.NewRichOvirtClient(&ovirtclient.ConnectionSettings{
 		URL:      dataMap["apiUrl"],
 		Username: dataMap["username"],
