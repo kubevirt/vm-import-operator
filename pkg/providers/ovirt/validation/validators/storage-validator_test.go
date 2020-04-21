@@ -12,6 +12,14 @@ import (
 )
 
 var _ = Describe("Validating Disk Attachment", func() {
+	It("should flag vm without disk attachments: ", func() {
+		attachments := []*ovirtsdk.DiskAttachment{}
+
+		failures := validators.ValidateDiskAttachments(attachments)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.DiskAttachmentsExistID))
+	})
 	table.DescribeTable("should flag disk attachment with illegal interface: ", func(iface string) {
 		var attachment = newDiskAttachment()
 		attachment.SetInterface(ovirtsdk.DiskInterface(iface))

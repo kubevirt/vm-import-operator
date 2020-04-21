@@ -44,6 +44,7 @@ var checkToAction = map[validators.CheckID]action{
 	validators.NicVNicNetworkFilterID:    warn,
 	validators.NicVNicQosID:              log,
 	// Storage rules
+	validators.DiskAttachmentsExistID:              block,
 	validators.DiskAttachmentInterfaceID:           block,
 	validators.DiskAttachmentLogicalNameID:         log,
 	validators.DiskAttachmentPassDiscardID:         log,

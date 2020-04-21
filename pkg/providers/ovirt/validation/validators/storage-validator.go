@@ -28,6 +28,10 @@ type usesScsiReservationOwner interface {
 // ValidateDiskAttachments validates disk attachments
 func ValidateDiskAttachments(diskAttachments []*ovirtsdk.DiskAttachment) []ValidationFailure {
 	var failures []ValidationFailure
+	if len(diskAttachments) == 0 {
+		failures = append(failures, ValidationFailure{ID: DiskAttachmentsExistID, Message: "VM has no disks"})
+		return failures
+	}
 	for _, da := range diskAttachments {
 		failures = append(failures, validateDiskAttachment(da)...)
 	}
