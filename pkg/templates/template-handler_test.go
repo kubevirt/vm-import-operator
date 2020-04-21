@@ -16,20 +16,20 @@ import (
 )
 
 var (
-	processTemplateMock func(namespace string, vmName string, template *templatev1.Template) (*templatev1.Template, error)
+	processTemplateMock func(namespace string, vmName *string, template *templatev1.Template) (*templatev1.Template, error)
 )
 var _ = Describe("Processing a template", func() {
 	templateFinder := templates.NewTemplateHandler(&mockTemplateProvider{})
 
 	It("should process a template: ", func() {
-		processTemplateMock = func(namespace string, vmName string, template *templatev1.Template) (*templatev1.Template, error) {
+		processTemplateMock = func(namespace string, vmName *string, template *templatev1.Template) (*templatev1.Template, error) {
 			objects := []runtime.RawExtension{}
 			encoder := v1.Codecs.LegacyCodec(v1.GroupVersion)
-			raw, _ := runtime.Encode(encoder, createVM(namespace, vmName))
+			raw, _ := runtime.Encode(encoder, createVM(namespace, *vmName))
 
 			result := templatev1.Template{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      vmName,
+					Name:      *vmName,
 					Namespace: namespace,
 					Labels:    template.Labels,
 				},
@@ -43,7 +43,7 @@ var _ = Describe("Processing a template", func() {
 		os := "centos8"
 		workload := "server"
 		flavor := "medium"
-		vm, err := templateFinder.ProcessTemplate(createTemplate(&vmName, &os, &workload, &flavor), vmName)
+		vm, err := templateFinder.ProcessTemplate(createTemplate(&vmName, &os, &workload, &flavor), &vmName)
 
 		Expect(vm.GetName()).To(Equal(vmName))
 		Expect(vm.Spec.Template.Spec.Volumes).To(BeEmpty())
@@ -52,10 +52,10 @@ var _ = Describe("Processing a template", func() {
 		Expect(err).To(BeNil())
 	})
 	It("should fail to process a template: ", func() {
-		processTemplateMock = func(namespace string, vmName string, template *templatev1.Template) (*templatev1.Template, error) {
+		processTemplateMock = func(namespace string, vmName *string, template *templatev1.Template) (*templatev1.Template, error) {
 			return nil, fmt.Errorf("oh my!")
 		}
-		vm, err := templateFinder.ProcessTemplate(&templatev1.Template{}, "")
+		vm, err := templateFinder.ProcessTemplate(&templatev1.Template{}, nil)
 
 		Expect(vm).To(BeNil())
 		Expect(err).To(Not(BeNil()))
@@ -151,6 +151,6 @@ func createNetworks() []v1.Network {
 }
 
 // Process mocks the behavior of the client for calling process API
-func (t *mockTemplateProvider) Process(namespace string, vmName string, template *templatev1.Template) (*templatev1.Template, error) {
+func (t *mockTemplateProvider) Process(namespace string, vmName *string, template *templatev1.Template) (*templatev1.Template, error) {
 	return processTemplateMock(namespace, vmName, template)
 }

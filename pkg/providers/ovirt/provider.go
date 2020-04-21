@@ -189,7 +189,7 @@ func (o *OvirtProvider) FindTemplate() (*templatev1.Template, error) {
 }
 
 // ProcessTemplate uses openshift api to process template
-func (o *OvirtProvider) ProcessTemplate(template *templatev1.Template, vmName string) (*kubevirtv1.VirtualMachine, error) {
+func (o *OvirtProvider) ProcessTemplate(template *templatev1.Template, vmName *string) (*kubevirtv1.VirtualMachine, error) {
 	return o.templateHandler.ProcessTemplate(template, vmName)
 }
 

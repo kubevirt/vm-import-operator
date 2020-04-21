@@ -33,7 +33,7 @@ var (
 	statusPatch        func(ctx context.Context, obj runtime.Object, patch client.Patch) error
 	getVMStatus        func() (provider.VMStatus, error)
 	findTemplate       func() (*oapiv1.Template, error)
-	processTemplate    func(template *oapiv1.Template, name string) (*kubevirtv1.VirtualMachine, error)
+	processTemplate    func(template *oapiv1.Template, name *string) (*kubevirtv1.VirtualMachine, error)
 	create             func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error
 	cleanUp            func() error
 	update             func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error
@@ -322,7 +322,7 @@ var _ = Describe("Reconcile steps", func() {
 			findTemplate = func() (*oapiv1.Template, error) {
 				return &oapiv1.Template{}, nil
 			}
-			processTemplate = func(template *oapiv1.Template, name string) (*kubevirtv1.VirtualMachine, error) {
+			processTemplate = func(template *oapiv1.Template, name *string) (*kubevirtv1.VirtualMachine, error) {
 				return &kubevirtv1.VirtualMachine{}, nil
 			}
 			mapper = &mockMapper{}
@@ -349,7 +349,7 @@ var _ = Describe("Reconcile steps", func() {
 		})
 
 		It("should fail to update condition: ", func() {
-			processTemplate = func(template *oapiv1.Template, name string) (*kubevirtv1.VirtualMachine, error) {
+			processTemplate = func(template *oapiv1.Template, name *string) (*kubevirtv1.VirtualMachine, error) {
 				return nil, fmt.Errorf("Failed")
 			}
 			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
@@ -920,13 +920,18 @@ func (p *mockProvider) FindTemplate() (*oapiv1.Template, error) {
 }
 
 // ProcessTemplate implements Provider.ProcessTemplate
-func (p *mockProvider) ProcessTemplate(template *oapiv1.Template, name string) (*kubevirtv1.VirtualMachine, error) {
+func (p *mockProvider) ProcessTemplate(template *oapiv1.Template, name *string) (*kubevirtv1.VirtualMachine, error) {
 	return processTemplate(template, name)
 }
 
 // CreateEmptyVM implements Mapper.CreateEmptyVM
 func (m *mockMapper) CreateEmptyVM() *kubevirtv1.VirtualMachine {
 	return &kubevirtv1.VirtualMachine{}
+}
+
+// ResolveVMName implements Mapper.ResolveVMName
+func (m *mockMapper) ResolveVMName(targetVMName *string) *string {
+	return targetVMName
 }
 
 // MapVM implements Mapper.MapVM
