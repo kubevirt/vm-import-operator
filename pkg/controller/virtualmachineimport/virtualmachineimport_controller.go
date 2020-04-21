@@ -7,7 +7,7 @@ import (
 	"time"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
-	aclient "github.com/kubevirt/vm-import-operator/pkg/client"
+	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	"github.com/kubevirt/vm-import-operator/pkg/mappings"
 	"github.com/kubevirt/vm-import-operator/pkg/ownerreferences"
@@ -130,7 +130,7 @@ type ReconcileVirtualMachineImport struct {
 	resourceMappingsFinder mappings.ResourceFinder
 	ocClient               *templatev1.TemplateV1Client
 	ownerreferencesmgr     ownerreferences.OwnerReferenceManager
-	factory                aclient.Factory
+	factory                pclient.Factory
 }
 
 // Reconcile reads that state of the cluster for a VirtualMachineImport object and makes changes based on the state read

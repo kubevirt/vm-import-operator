@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
-	aclient "github.com/kubevirt/vm-import-operator/pkg/client"
+	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	"github.com/kubevirt/vm-import-operator/pkg/mappings"
 	"github.com/kubevirt/vm-import-operator/pkg/ownerreferences"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
@@ -1208,7 +1208,7 @@ var _ = Describe("Reconcile steps", func() {
 	})
 })
 
-func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory aclient.Factory) *ReconcileVirtualMachineImport {
+func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory pclient.Factory) *ReconcileVirtualMachineImport {
 	return &ReconcileVirtualMachineImport{
 		client:                 client,
 		resourceMappingsFinder: finder,
@@ -1356,7 +1356,7 @@ func (m *mockMapper) MapDisks() (map[string]cdiv1.DataVolume, error) {
 }
 
 // NewOvirtClient implements Factory.NewOvirtClient
-func (f *mockFactory) NewOvirtClient(dataMap map[string]string) (aclient.VMClient, error) {
+func (f *mockFactory) NewOvirtClient(dataMap map[string]string) (pclient.VMClient, error) {
 	return &mockOvirtClient{}, nil
 }
 
