@@ -228,6 +228,7 @@ type DataVolumeItem struct {
 
 // VirtualMachineImport is the Schema for the virtualmachineimports API
 // +k8s:openapi-gen=true
+// +genclient
 // +kubebuilder:subresource:status
 type VirtualMachineImport struct {
 	metav1.TypeMeta   `json:",inline"`

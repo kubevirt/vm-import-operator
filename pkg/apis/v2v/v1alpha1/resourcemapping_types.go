@@ -68,6 +68,7 @@ type ResourceMappingStatus struct {
 
 // ResourceMapping is the Schema for the ResourceMappings API
 // +k8s:openapi-gen=true
+// +genclient
 // +kubebuilder:subresource:status
 type ResourceMapping struct {
 	metav1.TypeMeta   `json:",inline"`
