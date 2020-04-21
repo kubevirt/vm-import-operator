@@ -488,7 +488,7 @@ k8s.io/utils/trace
 # kubevirt.io/client-go v0.26.2
 kubevirt.io/client-go/api/v1
 kubevirt.io/client-go/precond
-# kubevirt.io/containerized-data-importer v1.13.0 => github.com/pkliczewski/containerized-data-importer v1.10.2-0.20200302082837-f4b489dba1bc
+# kubevirt.io/containerized-data-importer v1.15.0
 kubevirt.io/containerized-data-importer/pkg/apis/core
 kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1
 # sigs.k8s.io/controller-runtime v0.4.0
