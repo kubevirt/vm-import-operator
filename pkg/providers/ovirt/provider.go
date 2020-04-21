@@ -69,6 +69,7 @@ type OvirtProvider struct {
 	secretsManager     SecretsManager
 	configMapsManager  ConfigMapsManager
 	factory            pclient.Factory
+	instance           *v2vv1alpha1.VirtualMachineImport
 }
 
 // NewOvirtProvider creates new OvirtProvider configured with dependencies
@@ -90,7 +91,11 @@ func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, temp
 
 // GetVMStatus provides source VM status
 func (o *OvirtProvider) GetVMStatus() (provider.VMStatus, error) {
-	if status, ok := o.vm.Status(); ok {
+	vm, err := o.getVM()
+	if err != nil {
+		return "", err
+	}
+	if status, ok := vm.Status(); ok {
 		switch status {
 		case ovirtsdk.VMSTATUS_DOWN:
 			return provider.VMStatusDown, nil
@@ -101,8 +106,8 @@ func (o *OvirtProvider) GetVMStatus() (provider.VMStatus, error) {
 	return "", fmt.Errorf("VM doesn't have a legal status. Allowed statuses: [%v, %v]", ovirtsdk.VMSTATUS_UP, ovirtsdk.VMSTATUS_DOWN)
 }
 
-// Connect to ovirt provider using given secret
-func (o *OvirtProvider) Connect(secret *corev1.Secret) error {
+// Init ovirt provider using given secret
+func (o *OvirtProvider) Init(secret *corev1.Secret, instance *v2vv1alpha1.VirtualMachineImport) error {
 	o.ovirtSecretDataMap = make(map[string]string)
 	err := yaml.Unmarshal(secret.Data[ovirtSecretKey], &o.ovirtSecretDataMap)
 	if err != nil {
@@ -114,11 +119,29 @@ func (o *OvirtProvider) Connect(secret *corev1.Secret) error {
 	if len(o.ovirtSecretDataMap["caCert"]) == 0 {
 		return fmt.Errorf("oVirt secret caCert cannot be empty")
 	}
-	o.ovirtClient, err = o.factory.NewOvirtClient(o.ovirtSecretDataMap)
-	if err != nil {
-		return err
-	}
+	o.instance = instance
 	return nil
+}
+
+func (o *OvirtProvider) getClient() (pclient.VMClient, error) {
+	if o.ovirtClient == nil {
+		client, err := o.factory.NewOvirtClient(o.ovirtSecretDataMap)
+		if err != nil {
+			return nil, err
+		}
+		o.ovirtClient = client
+	}
+	return o.ovirtClient, nil
+}
+
+func (o *OvirtProvider) getVM() (*ovirtsdk.Vm, error) {
+	if o.vm == nil {
+		err := o.LoadVM(o.instance.Spec.Source)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return o.vm, nil
 }
 
 // Close the connection to ovirt provider
@@ -139,7 +162,11 @@ func (o *OvirtProvider) LoadVM(sourceSpec v2vv1alpha1.VirtualMachineImportSource
 		sourceVMClusterName = ovirtSourceSpec.VM.Cluster.Name
 		sourceVMClusterID = ovirtSourceSpec.VM.Cluster.ID
 	}
-	vm, err := o.ovirtClient.GetVM(sourceVMID, sourceVMName, sourceVMClusterName, sourceVMClusterID)
+	client, err := o.getClient()
+	if err != nil {
+		return err
+	}
+	vm, err := client.GetVM(sourceVMID, sourceVMName, sourceVMClusterName, sourceVMClusterID)
 	if err != nil {
 		return err
 	}
@@ -154,20 +181,32 @@ func (o *OvirtProvider) PrepareResourceMapping(externalResourceMapping *v2vv1alp
 
 // Validate validates whether loaded previously VM and resource mapping is valid. The validation results are recorded in th VMI CR identified by vmiCrName and in case of a validation failure error is returned.
 func (o *OvirtProvider) Validate() ([]v2vv1alpha1.VirtualMachineImportCondition, error) {
-	if o.vm == nil {
+	vm, err := o.getVM()
+	if err != nil {
+		return nil, err
+	}
+	if vm == nil {
 		return []v2vv1alpha1.VirtualMachineImportCondition{}, errors.New("VM has not been loaded")
 	}
-	return o.validator.Validate(o.vm, &o.vmiCrName, o.resourceMapping), nil
+	return o.validator.Validate(vm, &o.vmiCrName, o.resourceMapping), nil
 }
 
 // StopVM stop the source VM on ovirt
 func (o *OvirtProvider) StopVM() error {
-	vmID, _ := o.vm.Id()
-	status, _ := o.vm.Status()
+	vm, err := o.getVM()
+	if err != nil {
+		return err
+	}
+	vmID, _ := vm.Id()
+	status, _ := vm.Status()
 	if status == ovirtsdk.VMSTATUS_DOWN {
 		return nil
 	}
-	err := o.ovirtClient.StopVM(vmID)
+	client, err := o.getClient()
+	if err != nil {
+		return err
+	}
+	err = client.StopVM(vmID)
 	if err != nil {
 		return err
 	}
@@ -176,7 +215,11 @@ func (o *OvirtProvider) StopVM() error {
 
 // FindTemplate attempts to find best match for a template based on the source VM
 func (o *OvirtProvider) FindTemplate() (*templatev1.Template, error) {
-	return o.templateFinder.FindTemplate(o.vm)
+	vm, err := o.getVM()
+	if err != nil {
+		return nil, err
+	}
+	return o.templateFinder.FindTemplate(vm)
 }
 
 // ProcessTemplate uses openshift api to process template
@@ -190,13 +233,25 @@ func (o *OvirtProvider) CreateMapper() (provider.Mapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	return mapper.NewOvirtMapper(o.vm, o.resourceMapping, credentials, o.vmiCrName.Namespace), nil
+	vm, err := o.getVM()
+	if err != nil {
+		return nil, err
+	}
+	return mapper.NewOvirtMapper(vm, o.resourceMapping, credentials, o.vmiCrName.Namespace), nil
 }
 
 // StartVM starts the source VM
 func (o *OvirtProvider) StartVM() error {
-	if id, ok := o.vm.Id(); ok {
-		err := o.ovirtClient.StartVM(id)
+	vm, err := o.getVM()
+	if err != nil {
+		return err
+	}
+	if id, ok := vm.Id(); ok {
+		client, err := o.getClient()
+		if err != nil {
+			return err
+		}
+		err = client.StartVM(id)
 		if err != nil {
 			return err
 		}
