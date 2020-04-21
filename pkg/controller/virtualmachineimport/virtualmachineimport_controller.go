@@ -7,6 +7,7 @@ import (
 	"time"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	aclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	"github.com/kubevirt/vm-import-operator/pkg/mappings"
 	"github.com/kubevirt/vm-import-operator/pkg/ownerreferences"
@@ -69,7 +70,8 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	client := mgr.GetClient()
 	finder := mappings.NewResourceMappingsFinder(client)
 	ownerreferencesmgr := ownerreferences.NewOwnerReferenceManager(client)
-	return &ReconcileVirtualMachineImport{client: client, scheme: mgr.GetScheme(), resourceMappingsFinder: finder, ocClient: tempClient, ownerreferencesmgr: ownerreferencesmgr}
+	factory := ovirtprovider.NewSourceClientFactory()
+	return &ReconcileVirtualMachineImport{client: client, scheme: mgr.GetScheme(), resourceMappingsFinder: finder, ocClient: tempClient, ownerreferencesmgr: ownerreferencesmgr, factory: factory}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -128,6 +130,7 @@ type ReconcileVirtualMachineImport struct {
 	resourceMappingsFinder mappings.ResourceFinder
 	ocClient               *templatev1.TemplateV1Client
 	ownerreferencesmgr     ownerreferences.OwnerReferenceManager
+	factory                aclient.Factory
 }
 
 // Reconcile reads that state of the cluster for a VirtualMachineImport object and makes changes based on the state read
@@ -194,19 +197,32 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	// Import disks:
-	dvs, err := mapper.MapDisks()
+	err = r.importDisks(provider, instance, mapper, vmName, request.NamespacedName)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+
+	if err = r.startVM(provider, instance, vmName); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName, vmiName types.NamespacedName) error {
+	dvs, err := mapper.MapDisks()
+	if err != nil {
+		return err
+	}
 	if len(dvs) == 0 {
 		if err := r.updateProgress(instance, progressDone); err != nil {
-			return reconcile.Result{}, err
+			return err
 		}
 		if err := r.updateConditionsAfterSuccess(instance, "Virtual machine has no disks", v2vv1alpha1.VirtualMachineReady); err != nil {
-			return reconcile.Result{}, err
+			return err
 		}
-		if err := r.afterSuccess(vmName, request.NamespacedName, provider); err != nil {
-			return reconcile.Result{}, err
+		if err := r.afterSuccess(vmName, vmiName, provider); err != nil {
+			return err
 		}
 	} else {
 		dvsDone := make(map[string]bool)
@@ -215,37 +231,33 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 			err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: dvID}, foundDv)
 			if err != nil && errors.IsNotFound(err) {
 				if err = r.createDataVolumes(provider, instance, dvs, vmName); err != nil {
-					return reconcile.Result{}, err
+					return err
 				}
 			} else if err == nil {
 				// Set dataVolume as done, if it's in Succeeded state:
 				if foundDv.Status.Phase == cdiv1.Succeeded {
 					dvsDone[dvID] = true
 					if err = r.manageDataVolumeState(instance, dvsDone, len(dvs)); err != nil {
-						return reconcile.Result{}, err
+						return err
 					}
 
 					// Cleanup if user don't want to start the VM
 					if instance.Spec.StartVM == nil || !*instance.Spec.StartVM {
 						if err := r.updateProgress(instance, progressDone); err != nil {
-							return reconcile.Result{}, err
+							return err
 						}
-						if err := r.afterSuccess(vmName, request.NamespacedName, provider); err != nil {
-							return reconcile.Result{}, err
+						if err := r.afterSuccess(vmName, vmiName, provider); err != nil {
+							return err
 						}
 					}
 				}
 			} else {
-				return reconcile.Result{}, err
+				return err
 			}
 		}
 	}
 
-	if err = r.startVM(provider, instance, vmName); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	return reconcile.Result{}, nil
+	return nil
 }
 
 func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, mapper provider.Mapper) (string, error) {
@@ -514,7 +526,7 @@ func (r *ReconcileVirtualMachineImport) createProvider(vmi *v2vv1alpha1.VirtualM
 	// The type of the provider is evaluated based on the source field from the CR
 	if vmi.Spec.Source.Ovirt != nil {
 		namespacedName := types.NamespacedName{Name: vmi.Name, Namespace: vmi.Namespace}
-		provider := ovirtprovider.NewOvirtProvider(namespacedName, r.client, r.ocClient)
+		provider := ovirtprovider.NewOvirtProvider(namespacedName, r.client, r.ocClient, r.factory)
 		return &provider, nil
 	}
 

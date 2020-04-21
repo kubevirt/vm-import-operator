@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/kubevirt/vm-import-operator/pkg/client"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
 
@@ -13,14 +14,6 @@ const (
 	// Vm poll interval in seconds
 	vmPollInterval = 5
 )
-
-// OvirtClient retrieves rich VM object - with all necessary links have been followed
-type OvirtClient interface {
-	GetVM(id *string, name *string, cluster *string, clusterID *string) (*ovirtsdk.Vm, error)
-	StopVM(id string) error
-	StartVM(id string) error
-	Close() error
-}
 
 // ConnectionSettings wrap information required to make oVirt API connection
 type ConnectionSettings struct {
@@ -36,7 +29,7 @@ type richOvirtClient struct {
 }
 
 // NewRichOvirtClient creates new, connected rich oVirt client. After it is no longer needed, call Close().
-func NewRichOvirtClient(cs *ConnectionSettings) (OvirtClient, error) {
+func NewRichOvirtClient(cs *ConnectionSettings) (client.VMClient, error) {
 	con, err := connect(cs.URL, cs.Username, cs.Password, cs.CACert)
 	if err != nil {
 		return nil, err
@@ -53,7 +46,7 @@ func (client *richOvirtClient) Close() error {
 }
 
 // GetVM rertrieves oVirt VM data for given id or name and cluster. VM will have certain links followed and updated.
-func (client *richOvirtClient) GetVM(id *string, name *string, cluster *string, clusterID *string) (*ovirtsdk.Vm, error) {
+func (client *richOvirtClient) GetVM(id *string, name *string, cluster *string, clusterID *string) (interface{}, error) {
 	vm, err := client.fetchVM(id, name, cluster, clusterID)
 	if err != nil {
 		return nil, err

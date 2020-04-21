@@ -5,10 +5,12 @@ import (
 	"fmt"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	aclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	"github.com/kubevirt/vm-import-operator/pkg/mappings"
 	"github.com/kubevirt/vm-import-operator/pkg/ownerreferences"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	oapiv1 "github.com/openshift/api/template/v1"
+	ovirtsdk "github.com/ovirt/go-ovirt"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,6 +20,7 @@ import (
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/onsi/ginkgo"
@@ -37,6 +40,10 @@ var (
 	create             func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error
 	cleanUp            func() error
 	update             func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error
+	mapDisks           func() (map[string]cdiv1.DataVolume, error)
+	getVM              func(id *string, name *string, cluster *string, clusterID *string) (interface{}, error)
+	stopVM             func(id string) error
+	list               func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error
 )
 var _ = Describe("Reconcile steps", func() {
 	var (
@@ -51,11 +58,15 @@ var _ = Describe("Reconcile steps", func() {
 		mockClient := &mockClient{}
 		finder := &mockFinder{}
 		scheme := runtime.NewScheme()
+		factory := &mockFactory{}
 		scheme.AddKnownTypes(v2vv1alpha1.SchemeGroupVersion,
 			&v2vv1alpha1.VirtualMachineImport{},
 		)
 		scheme.AddKnownTypes(cdiv1.SchemeGroupVersion,
 			&cdiv1.DataVolume{},
+		)
+		scheme.AddKnownTypes(kubevirtv1.GroupVersion,
+			&kubevirtv1.VirtualMachine{},
 		)
 
 		get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
@@ -85,7 +96,7 @@ var _ = Describe("Reconcile steps", func() {
 			return nil
 		}
 		vmName = types.NamespacedName{Name: "test", Namespace: "default"}
-		reconciler = NewReconciler(mockClient, finder, scheme, ownerreferences.NewOwnerReferenceManager(mockClient))
+		reconciler = NewReconciler(mockClient, finder, scheme, ownerreferences.NewOwnerReferenceManager(mockClient), factory)
 	})
 
 	Describe("Init steps", func() {
@@ -800,14 +811,410 @@ var _ = Describe("Reconcile steps", func() {
 			Expect(err).To(Not(BeNil()))
 		})
 	})
+
+	Describe("importDisks step", func() {
+		var (
+			mockMap *mockMapper
+			vmName  types.NamespacedName
+			vmiName types.NamespacedName
+		)
+
+		BeforeEach(func() {
+			mockMap = &mockMapper{}
+			vmName = types.NamespacedName{Name: "test", Namespace: "default"}
+			vmiName = types.NamespacedName{Name: "test", Namespace: "default"}
+			mapDisks = func() (map[string]cdiv1.DataVolume, error) {
+				return map[string]cdiv1.DataVolume{
+					"test": cdiv1.DataVolume{},
+				}, nil
+			}
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *kubevirtv1.VirtualMachine:
+					volumes := []kubevirtv1.Volume{}
+					volumes = append(volumes, kubevirtv1.Volume{
+						Name: "test",
+						VolumeSource: kubevirtv1.VolumeSource{
+							DataVolume: &kubevirtv1.DataVolumeSource{
+								Name: "test",
+							},
+						},
+					})
+					obj.(*kubevirtv1.VirtualMachine).Spec.Template = &kubevirtv1.VirtualMachineInstanceTemplateSpec{
+						Spec: kubevirtv1.VirtualMachineInstanceSpec{
+							Volumes: volumes,
+						},
+					}
+					refs := []v1.OwnerReference{}
+					isController := true
+					refs = append(refs, v1.OwnerReference{
+						Controller: &isController,
+					})
+					obj.(*kubevirtv1.VirtualMachine).ObjectMeta.OwnerReferences = refs
+				}
+				return nil
+			}
+
+		})
+
+		It("should do nothing: ", func() {
+			mapDisks = func() (map[string]cdiv1.DataVolume, error) {
+				return map[string]cdiv1.DataVolume{}, nil
+			}
+
+			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
+
+			Expect(err).To(BeNil())
+		})
+
+		It("should fail to create new dv: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *cdiv1.DataVolume:
+					return errors.NewNotFound(schema.GroupResource{}, "")
+				}
+				return nil
+			}
+			create = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+				return fmt.Errorf("Not created")
+			}
+
+			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
+
+			Expect(err).To(Not(BeNil()))
+		})
+
+		It("should not find a dv: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *cdiv1.DataVolume:
+					return fmt.Errorf("Something went wrong")
+				}
+				return nil
+			}
+
+			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
+
+			Expect(err).To(Not(BeNil()))
+		})
+
+		It("should fail to manage state: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *cdiv1.DataVolume:
+					obj.(*cdiv1.DataVolume).Status = cdiv1.DataVolumeStatus{
+						Phase: cdiv1.Succeeded,
+					}
+				}
+				return nil
+			}
+			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
+				return fmt.Errorf("Not modified")
+			}
+
+			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
+
+			Expect(err).To(Not(BeNil()))
+		})
+
+		It("should cleanup: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *cdiv1.DataVolume:
+					obj.(*cdiv1.DataVolume).Status = cdiv1.DataVolumeStatus{
+						Phase: cdiv1.Succeeded,
+					}
+				case *kubevirtv1.VirtualMachine:
+					obj.(*kubevirtv1.VirtualMachine).Spec = kubevirtv1.VirtualMachineSpec{
+						Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
+							Spec: kubevirtv1.VirtualMachineInstanceSpec{
+								Volumes: []kubevirtv1.Volume{},
+							},
+						},
+					}
+				}
+				return nil
+			}
+
+			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
+
+			Expect(err).To(BeNil())
+		})
+	})
+
+	Describe("Reconcile step", func() {
+
+		var (
+			request reconcile.Request
+		)
+
+		BeforeEach(func() {
+			request = reconcile.Request{}
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *v2vv1alpha1.VirtualMachineImport:
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
+						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+						},
+					}
+					conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
+					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+						Status: corev1.ConditionTrue,
+						Type:   v2vv1alpha1.Valid,
+					})
+					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+						Status: corev1.ConditionTrue,
+						Type:   v2vv1alpha1.MappingRulesVerified,
+					})
+					obj.(*v2vv1alpha1.VirtualMachineImport).Status.Conditions = conditions
+				case *corev1.Secret:
+					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
+				}
+				return nil
+			}
+			getVM = func(id *string, name *string, cluster *string, clusterID *string) (interface{}, error) {
+				return newVM(), nil
+			}
+			stopVM = func(id string) error {
+				return nil
+			}
+			list = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+				switch list.(type) {
+				case *corev1.SecretList:
+					list.(*corev1.SecretList).Items = []corev1.Secret{
+						corev1.Secret{},
+					}
+				case *corev1.ConfigMapList:
+					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{
+						corev1.ConfigMap{},
+					}
+				}
+				return nil
+			}
+			create = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+				return nil
+			}
+		})
+
+		It("should fail to find vm import: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				return errors.NewNotFound(schema.GroupResource{}, "")
+			}
+
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(BeNil())
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
+
+		It("should fail to get vm import: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				return fmt.Errorf("Not found")
+			}
+
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(Not(BeNil()))
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
+
+		It("should fail to create a provider: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *v2vv1alpha1.VirtualMachineImport:
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
+						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
+							Ovirt: nil,
+						},
+					}
+				}
+				return nil
+			}
+
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(Not(BeNil()))
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
+
+		It("should fail to initiate a provider: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *v2vv1alpha1.VirtualMachineImport:
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
+						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+						},
+					}
+				case *corev1.Secret:
+					return fmt.Errorf("Not found")
+
+				}
+				return nil
+			}
+
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(Not(BeNil()))
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
+
+		It("should fail to validate: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *v2vv1alpha1.VirtualMachineImport:
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
+						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+						},
+					}
+				case *corev1.Secret:
+					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
+				}
+				return nil
+			}
+			getVM = func(id *string, name *string, cluster *string, clusterID *string) (interface{}, error) {
+				return ovirtsdk.NewVmBuilder().Name("myvm").MustBuild(), nil
+			}
+
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(BeNil())
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: requeueAfterValidationFailureTime}))
+		})
+
+		It("should fail to stop vm: ", func() {
+			stopVM = func(id string) error {
+				return fmt.Errorf("Not so fast")
+			}
+
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(Not(BeNil()))
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
+
+		It("should fail to create mapper: ", func() {
+			list = func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
+				return fmt.Errorf("Not found")
+			}
+
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(Not(BeNil()))
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
+
+		It("should fail to create vm: ", func() {
+			create = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+				return fmt.Errorf("Not created")
+			}
+
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(Not(BeNil()))
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
+
+		It("should fail to import disks: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *v2vv1alpha1.VirtualMachineImport:
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
+						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+						},
+					}
+					conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
+					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+						Status: corev1.ConditionTrue,
+						Type:   v2vv1alpha1.Valid,
+					})
+					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+						Status: corev1.ConditionTrue,
+						Type:   v2vv1alpha1.MappingRulesVerified,
+					})
+					obj.(*v2vv1alpha1.VirtualMachineImport).Status.Conditions = conditions
+				case *corev1.Secret:
+					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
+				case *cdiv1.DataVolume:
+					return errors.NewNotFound(schema.GroupResource{}, "")
+				}
+				return nil
+			}
+			counter := 2
+			create = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+				counter--
+				if counter == 0 {
+					return fmt.Errorf("Not created")
+				}
+				return nil
+			}
+
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(Not(BeNil()))
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
+
+		It("should fail to start vm: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *v2vv1alpha1.VirtualMachineImport:
+					conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
+					reason := string(v2vv1alpha1.VirtualMachineReady)
+					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+						Status: corev1.ConditionTrue,
+						Reason: &reason,
+						Type:   v2vv1alpha1.Succeeded,
+					})
+					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+						Status: corev1.ConditionTrue,
+						Type:   v2vv1alpha1.Valid,
+					})
+					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+						Status: corev1.ConditionTrue,
+						Type:   v2vv1alpha1.MappingRulesVerified,
+					})
+					obj.(*v2vv1alpha1.VirtualMachineImport).Status.Conditions = conditions
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
+						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+						},
+					}
+					start := true
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec.StartVM = &start
+				case *corev1.Secret:
+					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
+				case *kubevirtv1.VirtualMachineInstance:
+					return fmt.Errorf("Not found")
+				}
+				return nil
+			}
+
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(Not(BeNil()))
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
+
+		It("should succeed: ", func() {
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(BeNil())
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
+	})
 })
 
-func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager) *ReconcileVirtualMachineImport {
+func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory aclient.Factory) *ReconcileVirtualMachineImport {
 	return &ReconcileVirtualMachineImport{
 		client:                 client,
 		resourceMappingsFinder: finder,
 		scheme:                 scheme,
 		ownerreferencesmgr:     ownerreferencesmgr,
+		factory:                factory,
 	}
 }
 
@@ -818,6 +1225,10 @@ type mockFinder struct{}
 type mockProvider struct{}
 
 type mockMapper struct{}
+
+type mockFactory struct{}
+
+type mockOvirtClient struct{}
 
 // Create implements client.Client
 func (c *mockClient) Create(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
@@ -850,8 +1261,8 @@ func (c *mockClient) Get(ctx context.Context, key client.ObjectKey, obj runtime.
 }
 
 // List implements client.Client
-func (c *mockClient) List(ctx context.Context, list runtime.Object, opts ...client.ListOption) error {
-	return nil
+func (c *mockClient) List(ctx context.Context, objectList runtime.Object, opts ...client.ListOption) error {
+	return list(ctx, objectList)
 }
 
 // Status implements client.StatusClient
@@ -941,11 +1352,80 @@ func (m *mockMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachi
 
 // MapDisks implements Mapper.MapDisks
 func (m *mockMapper) MapDisks() (map[string]cdiv1.DataVolume, error) {
-	return map[string]cdiv1.DataVolume{}, nil
+	return mapDisks()
+}
+
+// NewOvirtClient implements Factory.NewOvirtClient
+func (f *mockFactory) NewOvirtClient(dataMap map[string]string) (aclient.VMClient, error) {
+	return &mockOvirtClient{}, nil
+}
+
+func (c *mockOvirtClient) GetVM(id *string, name *string, cluster *string, clusterID *string) (interface{}, error) {
+	return getVM(id, name, cluster, clusterID)
+}
+
+func (c *mockOvirtClient) StopVM(id string) error {
+	return stopVM(id)
+}
+
+func (c *mockOvirtClient) StartVM(id string) error {
+	return nil
+}
+
+func (c *mockOvirtClient) Close() error {
+	return nil
 }
 
 func getSecret() []byte {
 	contents := []byte(`{"apiUrl": "https://test", "username": "admin@internal", "password": "password", "caCert": "ABC"}`)
 	secret, _ := yaml.JSONToYAML(contents)
 	return secret
+}
+
+func newVM() *ovirtsdk.Vm {
+	vm := ovirtsdk.Vm{}
+	nicSlice := ovirtsdk.NicSlice{}
+	nicSlice.SetSlice([]*ovirtsdk.Nic{&ovirtsdk.Nic{}})
+	vm.SetNics(&nicSlice)
+	diskAttachement := ovirtsdk.NewDiskAttachmentBuilder().
+		Id("123").
+		Disk(
+			ovirtsdk.NewDiskBuilder().
+				Id("disk-ID").
+				Name("mydisk").
+				Bootable(true).
+				ProvisionedSize(1024).
+				StorageDomain(
+					ovirtsdk.NewStorageDomainBuilder().
+						Name("mystoragedomain").MustBuild()).
+				MustBuild()).MustBuild()
+	daSlice := ovirtsdk.DiskAttachmentSlice{}
+	daSlice.SetSlice([]*ovirtsdk.DiskAttachment{diskAttachement})
+	vm.SetDiskAttachments(&daSlice)
+	bios := ovirtsdk.NewBiosBuilder().
+		Type(ovirtsdk.BIOSTYPE_Q35_SEA_BIOS).MustBuild()
+	vm.SetBios(bios)
+	cpu := ovirtsdk.NewCpuBuilder().
+		Topology(
+			ovirtsdk.NewCpuTopologyBuilder().
+				Cores(1).
+				Sockets(2).
+				Threads(4).
+				MustBuild()).MustBuild()
+	vm.SetCpu(cpu)
+	ha := ovirtsdk.NewHighAvailabilityBuilder().
+		Enabled(true).
+		MustBuild()
+	vm.SetHighAvailability(ha)
+	vm.SetMemory(1024)
+	vm.SetMemoryPolicy(ovirtsdk.NewMemoryPolicyBuilder().
+		Max(1024).MustBuild())
+	gc := ovirtsdk.NewGraphicsConsoleBuilder().
+		Name("testConsole").MustBuild()
+	gcSlice := ovirtsdk.GraphicsConsoleSlice{}
+	gcSlice.SetSlice([]*ovirtsdk.GraphicsConsole{gc})
+	vm.SetGraphicsConsoles(&gcSlice)
+	vm.SetPlacementPolicy(ovirtsdk.NewVmPlacementPolicyBuilder().
+		Affinity(ovirtsdk.VMAFFINITY_MIGRATABLE).MustBuild())
+	return &vm
 }
