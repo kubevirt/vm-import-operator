@@ -23,7 +23,6 @@ type Provider interface {
 	PrepareResourceMapping(*v2vv1alpha1.ResourceMappingSpec, v2vv1alpha1.VirtualMachineImportSourceSpec)
 	Validate() ([]v2vv1alpha1.VirtualMachineImportCondition, error)
 	StopVM() error
-	UpdateVM(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume)
 	CreateMapper() (Mapper, error)
 	GetVMStatus() (VMStatus, error)
 	StartVM() error
@@ -37,7 +36,8 @@ type Mapper interface {
 	CreateEmptyVM() *kubevirtv1.VirtualMachine
 	ResolveVMName(targetVMName *string) *string
 	MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachine) (*kubevirtv1.VirtualMachine, error)
-	MapDisks() (map[string]cdiv1.DataVolume, error)
+	MapDataVolumes() (map[string]cdiv1.DataVolume, error)
+	MapDisks(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume)
 }
 
 // VMStatus represents VM status

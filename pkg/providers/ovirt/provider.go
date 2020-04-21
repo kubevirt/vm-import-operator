@@ -25,7 +25,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
-	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -194,46 +193,6 @@ func (o *OvirtProvider) CreateMapper() (provider.Mapper, error) {
 	return mapper.NewOvirtMapper(o.vm, o.resourceMapping, credentials, o.vmiCrName.Namespace), nil
 }
 
-// UpdateVM updates VM specification with data volumes information
-func (o *OvirtProvider) UpdateVM(vmspec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume) {
-	// Volumes definition:
-	volumes := make([]kubevirtv1.Volume, len(dvs))
-	i := 0
-	for _, dv := range dvs {
-		volumes[i] = kubevirtv1.Volume{
-			Name: fmt.Sprintf(diskNameFormat, i),
-			VolumeSource: kubevirtv1.VolumeSource{
-				DataVolume: &kubevirtv1.DataVolumeSource{
-					Name: dv.Name,
-				},
-			},
-		}
-		i++
-	}
-	// Disks definition:
-	i = 0
-	disks := make([]kubevirtv1.Disk, len(dvs))
-	for id := range dvs {
-		diskAttachment := getDiskAttachmentByID(id, o.vm.MustDiskAttachments())
-		disks[i] = kubevirtv1.Disk{
-			Name: fmt.Sprintf(diskNameFormat, i),
-			DiskDevice: kubevirtv1.DiskDevice{
-				Disk: &kubevirtv1.DiskTarget{
-					Bus: string(diskAttachment.MustInterface()),
-				},
-			},
-		}
-		if diskAttachment.MustBootable() {
-			bootOrder := uint(1)
-			disks[i].BootOrder = &bootOrder
-		}
-
-		i++
-	}
-	vmspec.Spec.Template.Spec.Domain.Devices.Disks = disks
-	vmspec.Spec.Template.Spec.Volumes = volumes
-}
-
 // StartVM starts the source VM
 func (o *OvirtProvider) StartVM() error {
 	if id, ok := o.vm.Id(); ok {
@@ -347,15 +306,6 @@ func (o *OvirtProvider) createConfigMap(caCert string) (*corev1.ConfigMap, error
 		return nil, err
 	}
 	return &newConfigMap, nil
-}
-
-func getDiskAttachmentByID(id string, diskAttachments *ovirtsdk.DiskAttachmentSlice) *ovirtsdk.DiskAttachment {
-	for _, diskAttachment := range diskAttachments.Slice() {
-		if diskAttachment.MustId() == id {
-			return diskAttachment
-		}
-	}
-	return nil
 }
 
 func foldErrors(errs []error, vmiName types.NamespacedName) error {

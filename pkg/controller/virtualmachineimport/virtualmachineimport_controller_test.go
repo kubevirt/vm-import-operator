@@ -610,12 +610,14 @@ var _ = Describe("Reconcile steps", func() {
 
 	Describe("createDataVolumes step", func() {
 		var (
-			dvs map[string]cdiv1.DataVolume
+			dvs    map[string]cdiv1.DataVolume
+			mapper provider.Mapper
 		)
 		BeforeEach(func() {
 			update = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 				return nil
 			}
+			mapper = &mockMapper{}
 			dvs = map[string]cdiv1.DataVolume{}
 		})
 
@@ -623,8 +625,7 @@ var _ = Describe("Reconcile steps", func() {
 			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
 				return fmt.Errorf("Not modified")
 			}
-
-			err := reconciler.createDataVolumes(mock, instance, dvs, vmName)
+			err := reconciler.createDataVolumes(mock, mapper, instance, dvs, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -639,7 +640,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.createDataVolumes(mock, instance, dvs, vmName)
+			err := reconciler.createDataVolumes(mock, mapper, instance, dvs, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -658,7 +659,7 @@ var _ = Describe("Reconcile steps", func() {
 			}
 			dvs["test"] = cdiv1.DataVolume{}
 
-			err := reconciler.createDataVolumes(mock, instance, dvs, vmName)
+			err := reconciler.createDataVolumes(mock, mapper, instance, dvs, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -672,7 +673,7 @@ var _ = Describe("Reconcile steps", func() {
 			}
 			dvs["test"] = cdiv1.DataVolume{}
 
-			err := reconciler.createDataVolumes(mock, instance, dvs, vmName)
+			err := reconciler.createDataVolumes(mock, mapper, instance, dvs, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -688,7 +689,7 @@ var _ = Describe("Reconcile steps", func() {
 			}
 			dvs["test"] = cdiv1.DataVolume{}
 
-			err := reconciler.createDataVolumes(mock, instance, dvs, vmName)
+			err := reconciler.createDataVolumes(mock, mapper, instance, dvs, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -704,7 +705,7 @@ var _ = Describe("Reconcile steps", func() {
 			}
 			dvs["test"] = cdiv1.DataVolume{}
 
-			err := reconciler.createDataVolumes(mock, instance, dvs, vmName)
+			err := reconciler.createDataVolumes(mock, mapper, instance, dvs, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -732,7 +733,7 @@ var _ = Describe("Reconcile steps", func() {
 
 			dvs["test"] = cdiv1.DataVolume{}
 
-			err := reconciler.createDataVolumes(mock, instance, dvs, vmName)
+			err := reconciler.createDataVolumes(mock, mapper, instance, dvs, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -755,7 +756,7 @@ var _ = Describe("Reconcile steps", func() {
 
 			dvs["test"] = cdiv1.DataVolume{}
 
-			err := reconciler.createDataVolumes(mock, instance, dvs, vmName)
+			err := reconciler.createDataVolumes(mock, mapper, instance, dvs, vmName)
 
 			Expect(err).To(BeNil())
 		})
@@ -1350,9 +1351,13 @@ func (m *mockMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachi
 	return vmSpec, nil
 }
 
-// MapDisks implements Mapper.MapDisks
-func (m *mockMapper) MapDisks() (map[string]cdiv1.DataVolume, error) {
-	return mapDisks()
+// MapDataVolumes implements Mapper.MapDataVolumes
+func (m *mockMapper) MapDataVolumes() (map[string]cdiv1.DataVolume, error) {
+	return map[string]cdiv1.DataVolume{"123": {}}, nil
+}
+
+// MapDisks implements Mapper.MapDataVolumes
+func (m *mockMapper) MapDisks(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume) {
 }
 
 // NewOvirtClient implements Factory.NewOvirtClient

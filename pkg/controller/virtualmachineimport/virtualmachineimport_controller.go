@@ -210,7 +210,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 }
 
 func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName, vmiName types.NamespacedName) error {
-	dvs, err := mapper.MapDisks()
+	dvs, err := mapper.MapDataVolumes()
 	if err != nil {
 		return err
 	}
@@ -230,7 +230,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 			foundDv := &cdiv1.DataVolume{}
 			err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: dvID}, foundDv)
 			if err != nil && errors.IsNotFound(err) {
-				if err = r.createDataVolumes(provider, instance, dvs, vmName); err != nil {
+				if err = r.createDataVolumes(provider, mapper, instance, dvs, vmName); err != nil {
 					return err
 				}
 			} else if err == nil {
@@ -424,7 +424,7 @@ func (r *ReconcileVirtualMachineImport) manageDataVolumeState(instance *v2vv1alp
 	return nil
 }
 
-func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, dvs map[string]cdiv1.DataVolume, vmName types.NamespacedName) error {
+func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Provider, mapper provider.Mapper, instance *v2vv1alpha1.VirtualMachineImport, dvs map[string]cdiv1.DataVolume, vmName types.NamespacedName) error {
 	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	// Update condition to create VM:
 	processingCond := conditions.NewProcessingCondition(string(v2vv1alpha1.CopyingDisks), "Copying virtual machine disks", corev1.ConditionTrue)
@@ -472,13 +472,14 @@ func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Prov
 			return err
 		}
 	}
+
 	// Update datavolume in VM import CR status:
 	if err = r.updateDVs(instanceNamespacedName, dvs); err != nil {
 		return err
 	}
 
 	// Update VM spec with imported disks:
-	err = r.updateVMSpecDataVolumes(provider, types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, dvs)
+	err = r.updateVMSpecDataVolumes(mapper, types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, dvs)
 	if err != nil {
 		return err
 	}
@@ -590,14 +591,14 @@ func (r *ReconcileVirtualMachineImport) updateTargetVMName(vmiName types.Namespa
 	return nil
 }
 
-func (r *ReconcileVirtualMachineImport) updateVMSpecDataVolumes(provider provider.Provider, vmName types.NamespacedName, dvs map[string]cdiv1.DataVolume) error {
+func (r *ReconcileVirtualMachineImport) updateVMSpecDataVolumes(mapper provider.Mapper, vmName types.NamespacedName, dvs map[string]cdiv1.DataVolume) error {
 	var vm kubevirtv1.VirtualMachine
 	err := r.client.Get(context.TODO(), vmName, &vm)
 	if err != nil {
 		return err
 	}
 	copy := vm.DeepCopy()
-	provider.UpdateVM(copy, dvs)
+	mapper.MapDisks(copy, dvs)
 
 	patch := client.MergeFrom(&vm)
 	err = r.client.Patch(context.TODO(), copy, patch)

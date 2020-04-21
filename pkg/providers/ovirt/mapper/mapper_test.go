@@ -183,7 +183,7 @@ var _ = Describe("Test mapping disks", func() {
 		namespace := "the-namespace"
 		mapper := mapper.NewOvirtMapper(vm, &mappings, credentials, namespace)
 		daName := "123"
-		dvs, _ := mapper.MapDisks()
+		dvs, _ := mapper.MapDataVolumes()
 
 		Expect(dvs).To(HaveLen(1))
 		Expect(dvs).To(HaveKey(daName))
@@ -229,7 +229,7 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
 
-		dvs, _ := mapper.MapDisks()
+		dvs, _ := mapper.MapDataVolumes()
 
 		Expect(dvs).To(HaveLen(1))
 		Expect(dvs["123"].Spec.PVC.StorageClassName).To(Not(BeNil()))
@@ -255,7 +255,7 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
 
-		dvs, err := mapper.MapDisks()
+		dvs, err := mapper.MapDataVolumes()
 
 		Expect(err).To(BeNil())
 		Expect(dvs).To(HaveLen(1))
@@ -280,7 +280,7 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
 
-		dvs, err := mapper.MapDisks()
+		dvs, err := mapper.MapDataVolumes()
 
 		Expect(err).To(BeNil())
 		Expect(dvs).To(HaveLen(1))
@@ -293,7 +293,7 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
 
-		dvs, err := mapper.MapDisks()
+		dvs, err := mapper.MapDataVolumes()
 
 		Expect(err).To(BeNil())
 		Expect(dvs).To(HaveLen(1))
