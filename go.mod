@@ -18,16 +18,13 @@ require (
 	k8s.io/apimachinery v0.17.1
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
-	k8s.io/kubectl v0.0.0
 	kubevirt.io/client-go v0.26.2
-	kubevirt.io/containerized-data-importer v1.13.0
+	kubevirt.io/containerized-data-importer v1.15.0
 	sigs.k8s.io/controller-runtime v0.4.0
 	sigs.k8s.io/yaml v1.1.0
 )
 
 replace github.com/ovirt/go-ovirt => github.com/ovirt/go-ovirt v0.0.0-20200320082526-4e97a11ff083
-
-replace kubevirt.io/containerized-data-importer => github.com/pkliczewski/containerized-data-importer v1.10.2-0.20200302082837-f4b489dba1bc
 
 // Pinned to kubernetes-1.16.2
 replace (
