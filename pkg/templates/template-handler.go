@@ -8,9 +8,6 @@ import (
 )
 
 const (
-	// TemplateNamespace stores the default namespace for kubevirt templates
-	TemplateNamespace = "openshift"
-
 	// templateNameLabel defines a label of the template name which was used to created the VM
 	templateNameLabel = "vm.kubevirt.io/template"
 )

@@ -74,3 +74,15 @@ rules:
   - 'datavolumes'
   verbs:
   - '*'
+- apiGroups:
+  - template.openshift.io
+  resources:
+  - templates
+  verbs:
+  - 'get'
+- apiGroups:
+  - template.openshift.io
+  resources:
+  - processedtemplates
+  verbs:
+  - 'create'

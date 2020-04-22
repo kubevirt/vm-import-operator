@@ -72,7 +72,7 @@ func createTemplate(name *string, os *string, workload *string, flavor *string) 
 	template := templatev1.Template{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      *name,
-			Namespace: templates.TemplateNamespace,
+			Namespace: "testns",
 			Labels:    templates.OSLabelBuilder(os, workload, flavor),
 		},
 	}
