@@ -29,7 +29,7 @@ import (
 
 var (
 	get                func(context.Context, client.ObjectKey, runtime.Object) error
-	connect            func(*corev1.Secret) error
+	pinit              func(*corev1.Secret, *v2vv1alpha1.VirtualMachineImport) error
 	loadVM             func(v2vv1alpha1.VirtualMachineImportSourceSpec) error
 	getResourceMapping func(types.NamespacedName) (*v2vv1alpha1.ResourceMapping, error)
 	validate           func() ([]v2vv1alpha1.VirtualMachineImportCondition, error)
@@ -127,7 +127,28 @@ var _ = Describe("Reconcile steps", func() {
 	Describe("Create steps", func() {
 
 		BeforeEach(func() {
-			connect = func(*corev1.Secret) error {
+			instance.Spec.Source.Ovirt = &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{}
+			instance.Name = "test"
+			instance.Namespace = "test"
+
+			mock = &mockProvider{}
+		})
+
+		It("should fail to initate provider with missing secret: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				return fmt.Errorf("Not there")
+			}
+
+			err := reconciler.initProvider(instance, mock)
+
+			Expect(err).To(Not(BeNil()))
+		})
+	})
+
+	Describe("fetchVM step", func() {
+
+		BeforeEach(func() {
+			pinit = func(*corev1.Secret, *v2vv1alpha1.VirtualMachineImport) error {
 				return nil
 			}
 			loadVM = func(v2vv1alpha1.VirtualMachineImportSourceSpec) error {
@@ -145,18 +166,8 @@ var _ = Describe("Reconcile steps", func() {
 			mock = &mockProvider{}
 		})
 
-		It("should fail to initate provider with missing secret: ", func() {
-			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-				return fmt.Errorf("Not there")
-			}
-
-			err := reconciler.initProvider(instance, mock)
-
-			Expect(err).To(Not(BeNil()))
-		})
-
 		It("should fail to connect: ", func() {
-			connect = func(*corev1.Secret) error {
+			pinit = func(*corev1.Secret, *v2vv1alpha1.VirtualMachineImport) error {
 				return fmt.Errorf("Not connected")
 			}
 
@@ -170,7 +181,7 @@ var _ = Describe("Reconcile steps", func() {
 				return fmt.Errorf("Not loaded")
 			}
 
-			err := reconciler.initProvider(instance, mock)
+			err := reconciler.fetchVM(instance, mock)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -181,7 +192,7 @@ var _ = Describe("Reconcile steps", func() {
 			}
 			instance.Spec.ResourceMapping = &v2vv1alpha1.ObjectIdentifier{}
 
-			err := reconciler.initProvider(instance, mock)
+			err := reconciler.fetchVM(instance, mock)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -189,10 +200,11 @@ var _ = Describe("Reconcile steps", func() {
 		It("should init provider: ", func() {
 			instance.Spec.ResourceMapping = &v2vv1alpha1.ObjectIdentifier{}
 
-			err := reconciler.initProvider(instance, mock)
+			err := reconciler.fetchVM(instance, mock)
 
 			Expect(err).To(BeNil())
 		})
+
 	})
 
 	Describe("validate step", func() {
@@ -1276,9 +1288,9 @@ func (m *mockFinder) GetResourceMapping(namespacedName types.NamespacedName) (*v
 	return getResourceMapping(namespacedName)
 }
 
-// Connect implements Provider.Connect
-func (p *mockProvider) Connect(secret *corev1.Secret) error {
-	return connect(secret)
+// Init implements Provider.Init
+func (p *mockProvider) Init(secret *corev1.Secret, instance *v2vv1alpha1.VirtualMachineImport) error {
+	return pinit(secret, instance)
 }
 
 // Close implements Provider.Close
@@ -1304,7 +1316,9 @@ func (p *mockProvider) StopVM() error {
 }
 
 // UpdateVM implements Provider.UpdateVM
-func (p *mockProvider) UpdateVM(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume) {}
+func (p *mockProvider) UpdateVM(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume) error {
+	return nil
+}
 
 // CreateMapper implements Provider.CreateMapper
 func (p *mockProvider) CreateMapper() (provider.Mapper, error) {

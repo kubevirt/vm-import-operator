@@ -17,7 +17,7 @@ const (
 
 // Provider defines the methods required by source providers for importing a VM
 type Provider interface {
-	Connect(*corev1.Secret) error
+	Init(*corev1.Secret, *v2vv1alpha1.VirtualMachineImport) error
 	Close()
 	LoadVM(v2vv1alpha1.VirtualMachineImportSourceSpec) error
 	PrepareResourceMapping(*v2vv1alpha1.ResourceMappingSpec, v2vv1alpha1.VirtualMachineImportSourceSpec)

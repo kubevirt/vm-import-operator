@@ -167,6 +167,12 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 	defer provider.Close()
 
+	// fetch source vm
+	err = r.fetchVM(instance, provider)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	// Validate if it's needed at this stage of processing
 	valid, err := r.validate(instance, provider)
 	if err != nil {
@@ -513,7 +519,7 @@ func (r *ReconcileVirtualMachineImport) fetchResourceMapping(resourceMappingID *
 	return &resourceMapping.Spec, nil
 }
 
-func shouldValidate(vmiStatus *v2vv1alpha1.VirtualMachineImportStatus) bool {
+func shouldInvoke(vmiStatus *v2vv1alpha1.VirtualMachineImportStatus) bool {
 	validCondition := conditions.FindConditionOfType(vmiStatus.Conditions, v2vv1alpha1.Valid)
 	rulesVerificationCondition := conditions.FindConditionOfType(vmiStatus.Conditions, v2vv1alpha1.MappingRulesVerified)
 
@@ -749,15 +755,23 @@ func (r *ReconcileVirtualMachineImport) initProvider(instance *v2vv1alpha1.Virtu
 		return err
 	}
 
-	err = provider.Connect(sourceProviderSecretObj)
+	err = provider.Init(sourceProviderSecretObj, instance)
 	if err != nil {
 		return err
 	}
+	return nil
+}
 
-	// Load source VM:
-	err = provider.LoadVM(instance.Spec.Source)
-	if err != nil {
-		return err
+func (r *ReconcileVirtualMachineImport) fetchVM(instance *v2vv1alpha1.VirtualMachineImport, provider provider.Provider) error {
+	logger := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
+	if shouldInvoke(&instance.Status) {
+		// Load source VM:
+		err := provider.LoadVM(instance.Spec.Source)
+		if err != nil {
+			return err
+		}
+	} else {
+		logger.Info("No need to fetch virtual machine - skipping")
 	}
 
 	// Load the external resource mapping
@@ -775,7 +789,7 @@ func (r *ReconcileVirtualMachineImport) initProvider(instance *v2vv1alpha1.Virtu
 
 func (r *ReconcileVirtualMachineImport) validate(instance *v2vv1alpha1.VirtualMachineImport, provider provider.Provider) (bool, error) {
 	logger := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
-	if shouldValidate(&instance.Status) {
+	if shouldInvoke(&instance.Status) {
 		conditions, err := provider.Validate()
 		if err != nil {
 			return true, err
