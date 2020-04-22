@@ -269,7 +269,7 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 		spec = mapper.CreateEmptyVM()
 	} else {
 		reqLogger.Info("A template was found for creating the virtual machine", "Template.Name", template.ObjectMeta.Name)
-		spec, err = provider.ProcessTemplate(template, targetVMName)
+		spec, err = provider.ProcessTemplate(template, targetVMName, instance.Namespace)
 		if err != nil {
 			reqLogger.Info("Failed to process the template. Using empty VM definition. Error: " + err.Error())
 			spec = mapper.CreateEmptyVM()
