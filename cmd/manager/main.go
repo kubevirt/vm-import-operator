@@ -7,6 +7,12 @@ import (
 	"os"
 	"runtime"
 
+	"k8s.io/client-go/kubernetes"
+
+	controllercfg "github.com/kubevirt/vm-import-operator/pkg/config"
+
+	clientutil "kubevirt.io/client-go/util"
+
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
@@ -128,8 +134,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	kubevirtNamespace, err := clientutil.GetNamespace()
+	if err != nil {
+		log.Error(err, "Cannot get operator's namespace")
+		os.Exit(1)
+	}
+
+	k8sClient := kubernetes.NewForConfigOrDie(mgr.GetConfig())
+	stop := make(chan struct{})
+	defer close(stop)
+	kvConfigProvider := controllercfg.NewKubeVirtConfigProvider(stop, k8sClient, kubevirtNamespace)
+
 	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
+	if err := controller.AddToManager(mgr, &kvConfigProvider); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}
