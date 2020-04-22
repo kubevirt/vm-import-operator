@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/kubevirt/vm-import-operator/pkg/config"
+
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
@@ -56,12 +58,12 @@ var (
 
 // Add creates a new VirtualMachineImport Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
+func Add(mgr manager.Manager, configProvider config.KubeVirtConfigProvider) error {
+	return add(mgr, newReconciler(mgr, configProvider))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, kvConfigProvider config.KubeVirtConfigProvider) reconcile.Reconciler {
 	tempClient, err := templatev1.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		log.Error(err, "Unable to get OC client")
@@ -71,7 +73,14 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	finder := mappings.NewResourceMappingsFinder(client)
 	ownerreferencesmgr := ownerreferences.NewOwnerReferenceManager(client)
 	factory := ovirtprovider.NewSourceClientFactory()
-	return &ReconcileVirtualMachineImport{client: client, scheme: mgr.GetScheme(), resourceMappingsFinder: finder, ocClient: tempClient, ownerreferencesmgr: ownerreferencesmgr, factory: factory}
+	return &ReconcileVirtualMachineImport{client: client,
+		scheme:                 mgr.GetScheme(),
+		resourceMappingsFinder: finder,
+		ocClient:               tempClient,
+		ownerreferencesmgr:     ownerreferencesmgr,
+		factory:                factory,
+		kvConfigProvider:       kvConfigProvider,
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -131,6 +140,7 @@ type ReconcileVirtualMachineImport struct {
 	ocClient               *templatev1.TemplateV1Client
 	ownerreferencesmgr     ownerreferences.OwnerReferenceManager
 	factory                pclient.Factory
+	kvConfigProvider       config.KubeVirtConfigProvider
 }
 
 // Reconcile reads that state of the cluster for a VirtualMachineImport object and makes changes based on the state read

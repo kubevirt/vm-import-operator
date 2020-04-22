@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/kubevirt/vm-import-operator/pkg/config"
+
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	"github.com/kubevirt/vm-import-operator/pkg/mappings"
@@ -59,6 +61,7 @@ var _ = Describe("Reconcile steps", func() {
 		finder := &mockFinder{}
 		scheme := runtime.NewScheme()
 		factory := &mockFactory{}
+		kvConfigProviderMock := &mockKubeVirtConfigProvider{}
 		scheme.AddKnownTypes(v2vv1alpha1.SchemeGroupVersion,
 			&v2vv1alpha1.VirtualMachineImport{},
 		)
@@ -96,7 +99,7 @@ var _ = Describe("Reconcile steps", func() {
 			return nil
 		}
 		vmName = types.NamespacedName{Name: "test", Namespace: "default"}
-		reconciler = NewReconciler(mockClient, finder, scheme, ownerreferences.NewOwnerReferenceManager(mockClient), factory)
+		reconciler = NewReconciler(mockClient, finder, scheme, ownerreferences.NewOwnerReferenceManager(mockClient), factory, kvConfigProviderMock)
 	})
 
 	Describe("Init steps", func() {
@@ -1221,13 +1224,14 @@ var _ = Describe("Reconcile steps", func() {
 	})
 })
 
-func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory pclient.Factory) *ReconcileVirtualMachineImport {
+func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory pclient.Factory, kvConfigProvider config.KubeVirtConfigProvider) *ReconcileVirtualMachineImport {
 	return &ReconcileVirtualMachineImport{
 		client:                 client,
 		resourceMappingsFinder: finder,
 		scheme:                 scheme,
 		ownerreferencesmgr:     ownerreferencesmgr,
 		factory:                factory,
+		kvConfigProvider:       kvConfigProvider,
 	}
 }
 
@@ -1240,6 +1244,8 @@ type mockProvider struct{}
 type mockMapper struct{}
 
 type mockFactory struct{}
+
+type mockKubeVirtConfigProvider struct{}
 
 type mockOvirtClient struct{}
 
@@ -1393,6 +1399,10 @@ func (c *mockOvirtClient) StartVM(id string) error {
 
 func (c *mockOvirtClient) Close() error {
 	return nil
+}
+
+func (c *mockKubeVirtConfigProvider) GetConfig() (config.KubeVirtConfig, error) {
+	return config.KubeVirtConfig{}, nil
 }
 
 func getSecret() []byte {
