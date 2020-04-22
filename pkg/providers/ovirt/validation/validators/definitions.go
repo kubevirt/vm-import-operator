@@ -87,6 +87,8 @@ const (
 	VMNumaTuneModeID = CheckID("vm.numa_tune_mode")
 	// VMOriginID defines an ID of a vm.origin == kubevirt check
 	VMOriginID = CheckID("vm.origin")
+	// VMPlacementPolicyAffinityID defines an ID of a vm.placement_policy.affinity == migratable check
+	VMPlacementPolicyAffinityID = CheckID("vm.placement_policy.affinity")
 	// VMRngDeviceSourceID defines an ID of a vm.rng_device.source != urandom check
 	VMRngDeviceSourceID = CheckID("vm.rng_device.source")
 	// VMSoundcardEnabledID defines an ID of a vm.soundcard_enabled == true check

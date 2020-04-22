@@ -532,7 +532,7 @@ func (r *ReconcileVirtualMachineImport) createProvider(vmi *v2vv1alpha1.VirtualM
 	// The type of the provider is evaluated based on the source field from the CR
 	if vmi.Spec.Source.Ovirt != nil {
 		namespacedName := types.NamespacedName{Name: vmi.Name, Namespace: vmi.Namespace}
-		provider := ovirtprovider.NewOvirtProvider(namespacedName, r.client, r.ocClient, r.factory)
+		provider := ovirtprovider.NewOvirtProvider(namespacedName, r.client, r.ocClient, r.factory, r.kvConfigProvider)
 		return &provider, nil
 	}
 

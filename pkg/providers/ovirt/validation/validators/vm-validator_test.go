@@ -3,6 +3,8 @@ package validators_test
 import (
 	"fmt"
 
+	"github.com/kubevirt/vm-import-operator/pkg/config"
+
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
@@ -11,17 +13,18 @@ import (
 )
 
 var _ = Describe("Validating VM", func() {
+	kvConfig := config.KubeVirtConfig{}
 	It("should accept vm ", func() {
 		var vm = newVM()
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(BeEmpty())
 	})
 	It("should reject VM with no status ", func() {
 		var vm = newVMWithStatusControl(false)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMStatusID))
@@ -30,7 +33,7 @@ var _ = Describe("Validating VM", func() {
 		var vm = newVM()
 		vm.SetTimeZone(ovirtsdk.NewTimeZoneBuilder().MustBuild())
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(BeEmpty())
 	})
@@ -38,7 +41,7 @@ var _ = Describe("Validating VM", func() {
 		var vm = newVM()
 		vm.SetTimeZone(ovirtsdk.NewTimeZoneBuilder().Name("Etc/GMT+1").MustBuild())
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMTimezoneID))
@@ -47,7 +50,7 @@ var _ = Describe("Validating VM", func() {
 		vm := newVM()
 		vm.SetStatus(status)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(BeEmpty())
 	},
@@ -58,7 +61,7 @@ var _ = Describe("Validating VM", func() {
 		vm := newVM()
 		vm.SetStatus(status)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMStatusID))
@@ -84,7 +87,7 @@ var _ = Describe("Validating VM", func() {
 		bootMenu.SetEnabled(true)
 		bios.SetBootMenu(&bootMenu)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMBiosBootMenuID))
@@ -94,7 +97,7 @@ var _ = Describe("Validating VM", func() {
 		bios := ovirtsdk.Bios{}
 		vm.SetBios(&bios)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMBiosTypeID))
@@ -105,7 +108,7 @@ var _ = Describe("Validating VM", func() {
 		bios.SetType("i440fx_sea_bios")
 		vm.SetBios(&bios)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMBiosTypeID))
@@ -115,7 +118,7 @@ var _ = Describe("Validating VM", func() {
 		bios := vm.MustBios()
 		bios.SetType("q35_secure_boot")
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMBiosTypeQ35SecureBootID))
@@ -125,7 +128,7 @@ var _ = Describe("Validating VM", func() {
 		bios := vm.MustBios()
 		bios.SetType("cluster_default")
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(BeEmpty())
 	})
@@ -136,7 +139,7 @@ var _ = Describe("Validating VM", func() {
 		vm.SetBios(&bios)
 		vm.MustCluster().SetBiosType("i440fx_sea_bios")
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMBiosTypeID))
@@ -147,7 +150,7 @@ var _ = Describe("Validating VM", func() {
 		cpu.SetArchitecture("s390x")
 		vm.SetCpu(&cpu)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMCpuArchitectureID))
@@ -156,7 +159,7 @@ var _ = Describe("Validating VM", func() {
 		vm := newVM()
 		vm.MustCpu().MustCpuTune().MustVcpuPins().SetSlice(pins)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMCpuTuneID))
@@ -170,7 +173,7 @@ var _ = Describe("Validating VM", func() {
 		var vm = newVM()
 		vm.SetCpuShares(1024)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMCpuSharesID))
@@ -183,7 +186,7 @@ var _ = Describe("Validating VM", func() {
 		cps.SetSlice(properties)
 		vm.SetCustomProperties(&cps)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMCustomPropertiesID))
@@ -194,7 +197,7 @@ var _ = Describe("Validating VM", func() {
 		display.SetType("spice")
 		vm.SetDisplay(&display)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMDisplayTypeID))
@@ -203,7 +206,7 @@ var _ = Describe("Validating VM", func() {
 		var vm = newVM()
 		vm.SetHasIllegalImages(true)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMHasIllegalImagesID))
@@ -212,7 +215,7 @@ var _ = Describe("Validating VM", func() {
 		var vm = newVM()
 		vm.MustHighAvailability().SetPriority(1)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMHighAvailabilityPriorityID))
@@ -223,7 +226,7 @@ var _ = Describe("Validating VM", func() {
 		io.SetThreads(4)
 		vm.SetIo(&io)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMIoThreadsID))
@@ -234,7 +237,7 @@ var _ = Describe("Validating VM", func() {
 		memPolicy.SetBallooning(true)
 		vm.SetMemoryPolicy(&memPolicy)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMMemoryPolicyBallooningID))
@@ -245,7 +248,7 @@ var _ = Describe("Validating VM", func() {
 		memPolicy.SetGuaranteed(1024)
 		vm.SetMemoryPolicy(&memPolicy)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMMemoryPolicyGuaranteedID))
@@ -258,7 +261,7 @@ var _ = Describe("Validating VM", func() {
 		memPolicy.SetOverCommit(&memOverCommit)
 		vm.SetMemoryPolicy(&memPolicy)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMMemoryPolicyOvercommitPercentID))
@@ -268,7 +271,7 @@ var _ = Describe("Validating VM", func() {
 		migration := ovirtsdk.MigrationOptions{}
 		vm.SetMigration(&migration)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMMigrationID))
@@ -277,7 +280,7 @@ var _ = Describe("Validating VM", func() {
 		var vm = newVM()
 		vm.SetMigrationDowntime(5)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMMigrationDowntimeID))
@@ -286,7 +289,7 @@ var _ = Describe("Validating VM", func() {
 		var vm = newVM()
 		vm.SetNumaTuneMode("strict")
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMNumaTuneModeID))
@@ -295,16 +298,37 @@ var _ = Describe("Validating VM", func() {
 		var vm = newVM()
 		vm.SetOrigin("kubevirt")
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMOriginID))
+	})
+	It("should flag vm with placement_policy.affinity == migratable  and live migration disabled", func() {
+		var vm = newVM()
+		vm.SetPlacementPolicy(
+			ovirtsdk.NewVmPlacementPolicyBuilder().Affinity(ovirtsdk.VMAFFINITY_MIGRATABLE).MustBuild())
+
+		failures := validators.ValidateVM(vm, kvConfig)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.VMPlacementPolicyAffinityID))
+	})
+	It("should accept vm with placement_policy.affinity == migratable and live migration enabled", func() {
+		var vm = newVM()
+		vm.SetPlacementPolicy(
+			ovirtsdk.NewVmPlacementPolicyBuilder().Affinity(ovirtsdk.VMAFFINITY_MIGRATABLE).MustBuild())
+
+		kvConfig := config.KubeVirtConfig{FeatureGates: "LiveMigration"}
+
+		failures := validators.ValidateVM(vm, kvConfig)
+
+		Expect(failures).To(BeEmpty())
 	})
 	table.DescribeTable("should flag VM with illegal random number generator source", func(source string) {
 		vm := newVM()
 		vm.MustRngDevice().SetSource(ovirtsdk.RngSource(source))
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMRngDeviceSourceID))
@@ -319,7 +343,7 @@ var _ = Describe("Validating VM", func() {
 		var vm = newVM()
 		vm.SetSoundcardEnabled(true)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMSoundcardEnabledID))
@@ -328,7 +352,7 @@ var _ = Describe("Validating VM", func() {
 		var vm = newVM()
 		vm.SetStartPaused(true)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMStartPausedID))
@@ -337,7 +361,7 @@ var _ = Describe("Validating VM", func() {
 		var vm = newVM()
 		vm.SetStorageErrorResumeBehaviour("auto_resume")
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMStorageErrorResumeBehaviourID))
@@ -346,7 +370,7 @@ var _ = Describe("Validating VM", func() {
 		var vm = newVM()
 		vm.SetTunnelMigration(true)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMTunnelMigrationID))
@@ -357,7 +381,7 @@ var _ = Describe("Validating VM", func() {
 		usb.SetEnabled(true)
 		vm.SetUsb(&usb)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMUsbID))
@@ -367,7 +391,7 @@ var _ = Describe("Validating VM", func() {
 		consoles := []*ovirtsdk.GraphicsConsole{newGraphicsConsole("spice"), newGraphicsConsole("vnc")}
 		vm.MustGraphicsConsoles().SetSlice(consoles)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMGraphicConsolesID))
@@ -379,7 +403,7 @@ var _ = Describe("Validating VM", func() {
 		hostDevices.SetSlice(devices)
 		vm.SetHostDevices(&hostDevices)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMHostDevicesID))
@@ -394,7 +418,7 @@ var _ = Describe("Validating VM", func() {
 		reportedDevices.SetSlice(devices)
 		vm.SetReportedDevices(&reportedDevices)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMReportedDevicesID))
@@ -406,7 +430,7 @@ var _ = Describe("Validating VM", func() {
 		quota.SetId("quota_id")
 		vm.SetQuota(&quota)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMQuotaID))
@@ -417,7 +441,7 @@ var _ = Describe("Validating VM", func() {
 		watchdog.SetModel("diag288")
 		vm.MustWatchdogs().SetSlice([]*ovirtsdk.Watchdog{&watchdog})
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMWatchdogsID))
@@ -434,7 +458,7 @@ var _ = Describe("Validating VM", func() {
 		cdroms := []*ovirtsdk.Cdrom{&cdrom}
 		vm.MustCdroms().SetSlice(cdroms)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMCdromsID))
@@ -447,7 +471,7 @@ var _ = Describe("Validating VM", func() {
 		floppySlice.SetSlice(floppies)
 		vm.SetFloppies(&floppySlice)
 
-		failures := validators.ValidateVM(vm)
+		failures := validators.ValidateVM(vm, kvConfig)
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMFloppiesID))

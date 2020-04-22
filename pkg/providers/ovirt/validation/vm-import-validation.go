@@ -79,6 +79,7 @@ var checkToAction = map[validators.CheckID]action{
 	validators.VMMigrationDowntimeID:             log,
 	validators.VMNumaTuneModeID:                  warn,
 	validators.VMOriginID:                        block,
+	validators.VMPlacementPolicyAffinityID:       block,
 	validators.VMRngDeviceSourceID:               log,
 	validators.VMSoundcardEnabledID:              warn,
 	validators.VMStartPausedID:                   log,

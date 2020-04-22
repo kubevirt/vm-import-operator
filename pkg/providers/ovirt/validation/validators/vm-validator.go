@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/kubevirt/vm-import-operator/pkg/config"
+
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
@@ -11,7 +13,7 @@ import (
 )
 
 // ValidateVM validates given VM
-func ValidateVM(vm *ovirtsdk.Vm) []ValidationFailure {
+func ValidateVM(vm *ovirtsdk.Vm, config config.KubeVirtConfig) []ValidationFailure {
 	var results = isValidBios(vm)
 	if failure, valid := isValidStatus(vm); !valid {
 		results = append(results, failure)
@@ -49,6 +51,9 @@ func ValidateVM(vm *ovirtsdk.Vm) []ValidationFailure {
 		results = append(results, failure)
 	}
 	if failure, valid := isValidOrigin(vm); !valid {
+		results = append(results, failure)
+	}
+	if failure, valid := isValidPlacementPolicy(vm, config.LiveMigrationEnabled()); !valid {
 		results = append(results, failure)
 	}
 	if failure, valid := isValidRandomNumberGeneratorSource(vm); !valid {
@@ -365,6 +370,20 @@ func isValidOrigin(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
 			ID:      VMOriginID,
 			Message: "VM has origin set to 'kubevirt'",
 		}, false
+	}
+	return ValidationFailure{}, true
+}
+
+func isValidPlacementPolicy(vm *ovirtsdk.Vm, liveMigrationEnabled bool) (ValidationFailure, bool) {
+	if pp, ok := vm.PlacementPolicy(); ok {
+		if affinity, _ := pp.Affinity(); affinity == ovirtsdk.VMAFFINITY_MIGRATABLE {
+			if !liveMigrationEnabled {
+				return ValidationFailure{
+					ID:      VMPlacementPolicyAffinityID,
+					Message: "VM has placement policy affinity set to `migratable`",
+				}, false
+			}
+		}
 	}
 	return ValidationFailure{}, true
 }

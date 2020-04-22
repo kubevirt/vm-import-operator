@@ -148,6 +148,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		table.Entry("CPU Architecture", validators.VMCpuArchitectureID),
 		table.Entry("Illegal images", validators.VMHasIllegalImagesID),
 		table.Entry("Origin ID", validators.VMOriginID),
+		table.Entry("Placement policy affinity", validators.VMPlacementPolicyAffinityID),
 		table.Entry("USB", validators.VMUsbID),
 		table.Entry("Watchdog", validators.VMWatchdogsID),
 	)

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/kubevirt/vm-import-operator/pkg/config"
+
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	"github.com/kubevirt/vm-import-operator/pkg/configmaps"
@@ -73,8 +75,8 @@ type OvirtProvider struct {
 }
 
 // NewOvirtProvider creates new OvirtProvider configured with dependencies
-func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, tempClient *tempclient.TemplateV1Client, factory pclient.Factory) OvirtProvider {
-	validator := validators.NewValidatorWrapper(client)
+func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, tempClient *tempclient.TemplateV1Client, factory pclient.Factory, kvConfigProvider config.KubeVirtConfigProvider) OvirtProvider {
+	validator := validators.NewValidatorWrapper(client, kvConfigProvider)
 	secretsManager := secrets.NewManager(client)
 	configMapsManager := configmaps.NewManager(client)
 	templateProvider := templates.NewTemplateProvider(tempClient)
