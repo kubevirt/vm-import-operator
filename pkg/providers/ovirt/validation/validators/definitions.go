@@ -17,6 +17,8 @@ const (
 	NicVNicNetworkFilterID = CheckID("nic.vnic_profile.network_filter")
 	// NicVNicQosID defines an ID of a vnic_profile.qos presence check
 	NicVNicQosID = CheckID("nic.vnic_profile.qos")
+	// DiskAttachmentsExistID defines an ID of a disk attachment existence check
+	DiskAttachmentsExistID = CheckID("disk_attachments.exist")
 	// DiskAttachmentInterfaceID defines an ID of a disk attachment interface check
 	DiskAttachmentInterfaceID = CheckID("disk_attachment.interface")
 	// DiskAttachmentLogicalNameID defines an ID of a disk_attachment.logical_name check

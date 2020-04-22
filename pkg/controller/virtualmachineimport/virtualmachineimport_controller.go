@@ -220,46 +220,34 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 	if err != nil {
 		return err
 	}
-	if len(dvs) == 0 {
-		if err := r.updateProgress(instance, progressDone); err != nil {
-			return err
-		}
-		if err := r.updateConditionsAfterSuccess(instance, "Virtual machine has no disks", v2vv1alpha1.VirtualMachineReady); err != nil {
-			return err
-		}
-		if err := r.afterSuccess(vmName, vmiName, provider); err != nil {
-			return err
-		}
-	} else {
-		dvsDone := make(map[string]bool)
-		for dvID := range dvs {
-			foundDv := &cdiv1.DataVolume{}
-			err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: dvID}, foundDv)
-			if err != nil && errors.IsNotFound(err) {
-				if err = r.createDataVolumes(provider, mapper, instance, dvs, vmName); err != nil {
-					return err
-				}
-			} else if err == nil {
-				// Set dataVolume as done, if it's in Succeeded state:
-				if foundDv.Status.Phase == cdiv1.Succeeded {
-					dvsDone[dvID] = true
-					if err = r.manageDataVolumeState(instance, dvsDone, len(dvs)); err != nil {
-						return err
-					}
-
-					// Cleanup if user don't want to start the VM
-					if instance.Spec.StartVM == nil || !*instance.Spec.StartVM {
-						if err := r.updateProgress(instance, progressDone); err != nil {
-							return err
-						}
-						if err := r.afterSuccess(vmName, vmiName, provider); err != nil {
-							return err
-						}
-					}
-				}
-			} else {
+	dvsDone := make(map[string]bool)
+	for dvID := range dvs {
+		foundDv := &cdiv1.DataVolume{}
+		err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: dvID}, foundDv)
+		if err != nil && errors.IsNotFound(err) {
+			if err = r.createDataVolumes(provider, mapper, instance, dvs, vmName); err != nil {
 				return err
 			}
+		} else if err == nil {
+			// Set dataVolume as done, if it's in Succeeded state:
+			if foundDv.Status.Phase == cdiv1.Succeeded {
+				dvsDone[dvID] = true
+				if err = r.manageDataVolumeState(instance, dvsDone, len(dvs)); err != nil {
+					return err
+				}
+
+				// Cleanup if user don't want to start the VM
+				if instance.Spec.StartVM == nil || !*instance.Spec.StartVM {
+					if err := r.updateProgress(instance, progressDone); err != nil {
+						return err
+					}
+					if err := r.afterSuccess(vmName, vmiName, provider); err != nil {
+						return err
+					}
+				}
+			}
+		} else {
+			return err
 		}
 	}
 
