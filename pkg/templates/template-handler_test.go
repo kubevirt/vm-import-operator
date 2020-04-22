@@ -40,10 +40,11 @@ var _ = Describe("Processing a template", func() {
 			return &result, nil
 		}
 		vmName := "testName"
+		namespace := "default"
 		os := "centos8"
 		workload := "server"
 		flavor := "medium"
-		vm, err := templateFinder.ProcessTemplate(createTemplate(&vmName, &os, &workload, &flavor), &vmName)
+		vm, err := templateFinder.ProcessTemplate(createTemplate(&vmName, &os, &workload, &flavor), &vmName, namespace)
 
 		Expect(vm.GetName()).To(Equal(vmName))
 		Expect(vm.Spec.Template.Spec.Volumes).To(BeEmpty())
@@ -55,7 +56,7 @@ var _ = Describe("Processing a template", func() {
 		processTemplateMock = func(namespace string, vmName *string, template *templatev1.Template) (*templatev1.Template, error) {
 			return nil, fmt.Errorf("oh my!")
 		}
-		vm, err := templateFinder.ProcessTemplate(&templatev1.Template{}, nil)
+		vm, err := templateFinder.ProcessTemplate(&templatev1.Template{}, nil, "")
 
 		Expect(vm).To(BeNil())
 		Expect(err).To(Not(BeNil()))

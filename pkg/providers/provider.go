@@ -28,7 +28,7 @@ type Provider interface {
 	StartVM() error
 	CleanUp() error
 	FindTemplate() (*oapiv1.Template, error)
-	ProcessTemplate(*oapiv1.Template, *string) (*kubevirtv1.VirtualMachine, error)
+	ProcessTemplate(*oapiv1.Template, *string, string) (*kubevirtv1.VirtualMachine, error)
 }
 
 // Mapper is interface to be used for mapping external VM to kubevirt VM
