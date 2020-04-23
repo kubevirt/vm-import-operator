@@ -3,6 +3,10 @@ vm-import-operator
 
 Operator which imports a VM from oVirt to KubeVirt.
 
+# Designs
+* [Operator and custom resource design](docs/design.md)
+* [Virtual machine import rules](docs/rules.md)
+
 # Installation
 ```bash
 kubectl create -f deploy/crds/v2v_v1alpha1_resourcemapping_crd.yaml
