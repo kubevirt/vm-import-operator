@@ -12,8 +12,10 @@ Operator which imports a VM from oVirt to KubeVirt.
 kubectl create -f deploy/crds/v2v_v1alpha1_resourcemapping_crd.yaml
 kubectl create -f deploy/crds/v2v_v1alpha1_virtualmachineimport_crd.yaml
 kubectl create -f deploy/service_account.yaml
-kubectl create -f deploy/role.yaml
-kubectl create -f deploy/role_binding.yaml
+kubectl create -f deploy/cluster_role.yaml
+
+# replace REPLACE_NAMESPACE with target namespace
+kubectl create -f deploy/cluster_role_binding.yaml
 kubectl create -f deploy/config_map.yaml
 kubectl create -f deploy/operator.yaml
 ```
