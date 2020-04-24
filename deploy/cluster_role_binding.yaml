@@ -5,7 +5,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: vm-import-operator
-  namespace: REPLACE_NAMESPACE
+  namespace: REPLACE_KUBEVIRT_NAMESPACE
 roleRef:
   kind: ClusterRole
   name: vm-import-operator
