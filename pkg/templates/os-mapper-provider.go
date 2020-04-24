@@ -3,10 +3,10 @@ package templates
 import (
 	"context"
 
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	clientutil "kubevirt.io/client-go/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -37,10 +37,10 @@ func NewOSMapProvider(client client.Client) *OSMaps {
 // GetOSMaps retrieve the OS mapping config map
 func (o *OSMaps) GetOSMaps() (map[string]string, map[string]string, error) {
 	osConfigMap := &corev1.ConfigMap{}
-	namespace, _ := k8sutil.GetWatchNamespace()
+	kubevirtNamespace, _ := clientutil.GetNamespace()
 	err := o.Client.Get(
 		context.TODO(),
-		types.NamespacedName{Name: osConfigMapName, Namespace: namespace},
+		types.NamespacedName{Name: osConfigMapName, Namespace: kubevirtNamespace},
 		osConfigMap,
 	)
 	if err != nil {
