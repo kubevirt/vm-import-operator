@@ -8,16 +8,20 @@ Operator which imports a VM from oVirt to KubeVirt.
 * [Virtual machine import rules](docs/rules.md)
 
 # Installation
+Installation has to be made into KubeVirt installation namespace
 ```bash
+# replace REPLACE_KUBEVIRT_NAMESPACE with namespace name where KubeVirt is installed
+
 kubectl create -f deploy/crds/v2v_v1alpha1_resourcemapping_crd.yaml
 kubectl create -f deploy/crds/v2v_v1alpha1_virtualmachineimport_crd.yaml
-kubectl create -f deploy/service_account.yaml
+kubectl create -f deploy/service_account.yaml -n REPLACE_KUBEVIRT_NAMESPACE
 kubectl create -f deploy/cluster_role.yaml
 
-# replace REPLACE_NAMESPACE with target namespace
+# replace REPLACE_KUBEVIRT_NAMESPACE with target namespace - KubeVirt installation namespace
 kubectl create -f deploy/cluster_role_binding.yaml
-kubectl create -f deploy/config_map.yaml
-kubectl create -f deploy/operator.yaml
+kubectl create -f deploy/config_map.yaml -n REPLACE_KUBEVIRT_NAMESPACE
+
+kubectl create -f deploy/operator.yaml -n REPLACE_KUBEVIRT_NAMESPACE
 ```
 
 # Import virtual machine from oVirt
