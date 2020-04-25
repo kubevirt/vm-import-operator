@@ -18,7 +18,7 @@ The description of the actions is following:
 
 ### Rules
 
-ID | Predicate | Action 
+ID | Predicate | Action
 --- | --- | ---
 1 | Source network can’t be mapped to exactly one target network. Each network’s name linked to VM’s Nics (VM.nics[].name) has corresponding network with the same name in target cluster OR mapping between these names has been provided in the migration manifest. | Block
 2 | VM.nics[].interface not in [e1000, rtl8139, virtio] | Block
@@ -34,7 +34,7 @@ ID | Predicate | Action
 
 ### Rules
 
-ID | Predicate | Action 
+ID | Predicate | Action
 --- | --- | ---
 1 | Vm.disk_attachments[].disk.interface (deprecated) or Vm.disk_attachments[].interface is other than [sata, virtio_scsi, virtio] | Block
 2 | Vm.disk_attachments[].disk.backup == incremental | Warn
@@ -59,7 +59,7 @@ ID | Predicate | Action
 
 ### Rules
 
-ID | Predicate | Action 
+ID | Predicate | Action
 --- | --- | ---
 1 | VM.bios.boot_menu.enabled == true | Log
 2 | VM.bios.type not matching ClusterConfig.EmulatedMachines (i.e. i440fx_sea_bios by default) | Block
