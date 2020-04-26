@@ -9,8 +9,8 @@ export TARGET_NAMESPACE := $(TARGET_NAMESPACE)
 
 DEPLOY_DIR ?= manifests
 
-# replace with quay.io/kubevirt once permissions are granted
-IMAGE_REGISTRY ?= quay.io/$(USER)
+QUAY_USER ?= $(USER)
+IMAGE_REGISTRY ?= quay.io/$(QUAY_USER)
 IMAGE_TAG ?= latest
 OPERATOR_IMAGE ?= vm-import-operator
 
