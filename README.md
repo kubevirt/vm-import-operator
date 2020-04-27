@@ -8,20 +8,19 @@ Operator which imports a VM from oVirt to KubeVirt.
 * [Virtual machine import rules](docs/rules.md)
 
 # Installation
-Installation has to be made into KubeVirt installation namespace
+Installation has to be made into KubeVirt installation namespace.
+Default kubevirt namespace is assumed to be 'kubevirt-hyperconverged'.
+In order to generate manifests for a different namespace run:
 ```bash
-# replace REPLACE_KUBEVIRT_NAMESPACE with namespace name where KubeVirt is installed
+TARGET_NAMESPACE=YOUR_DESIRED_NAMESPACE make gen-manifests
+```
 
-kubectl create -f deploy/crds/v2v_v1alpha1_resourcemapping_crd.yaml
-kubectl create -f deploy/crds/v2v_v1alpha1_virtualmachineimport_crd.yaml
-kubectl create -f deploy/service_account.yaml -n REPLACE_KUBEVIRT_NAMESPACE
-kubectl create -f deploy/cluster_role.yaml
-
-# replace REPLACE_KUBEVIRT_NAMESPACE with target namespace - KubeVirt installation namespace
-kubectl create -f deploy/cluster_role_binding.yaml
-kubectl create -f deploy/config_map.yaml -n REPLACE_KUBEVIRT_NAMESPACE
-
-kubectl create -f deploy/operator.yaml -n REPLACE_KUBEVIRT_NAMESPACE
+Deploy vm-import-operator resources:
+```bash
+kubectl apply -f manifests/vm-import-operator/0.0.1/v2v_v1alpha1_resourcemapping_crd.yaml
+kubectl apply -f manifests/vm-import-operator/0.0.1/v2v_v1alpha1_virtualmachineimport_crd.yaml
+kubectl apply -f manifests/vm-import-operator/0.0.1/config_map.yaml
+kubectl apply -f manifests/vm-import-operator/0.0.1/operator.yaml
 ```
 
 # Import virtual machine from oVirt
@@ -143,22 +142,20 @@ kubectl logs import-vm-oprator-xyz
 # Development
 ### After cloning the repository, run the operator locally using:
 ```bash
-export GO111MODULE=on
-go mod vendor
+make vendor
 operator-sdk run --local --namespace=default
 ```
 
-### After applying changes to types file run:
+### After applying changes to file run:
 ```bash
-operator-sdk generate k8s
+make
 ```
 
 ### In order to debug the operator locally using 'dlv', start the operator locally:
 Kubernetes cluster should be available and pointed by `~/.kube/config` or by `$KUBECONFIG`
-The CRDs of `./deploy/crds/` should be applied on it.
 
 ```bash
-operator-sdk build quay.io/$USER/vm-import-operator:v0.0.1
+make docker-build
 operator-sdk run --local --enable-delve
 ```
 Connect to the debug session, i.e. if using vscode, create launch.json as:
@@ -182,3 +179,8 @@ Connect to the debug session, i.e. if using vscode, create launch.json as:
     ]
 }
 ```
+# Release
+1. Checkout a public branch
+2. Call `make prepare-patch|minor|major` and prepare release notes
+3. Open a new PR
+4. Once the PR is merged, create a new release in GitHub and attach new manifests

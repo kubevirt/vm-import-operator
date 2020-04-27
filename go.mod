@@ -3,6 +3,7 @@ module github.com/kubevirt/vm-import-operator
 go 1.13
 
 require (
+	github.com/aktau/github-release v0.7.2
 	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
 	github.com/go-openapi/spec v0.19.4
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20191119172530-79f836b90111
@@ -13,7 +14,10 @@ require (
 	github.com/operator-framework/operator-sdk v0.15.2
 	github.com/ovirt/go-ovirt v4.3.4+incompatible
 	github.com/spf13/pflag v1.0.5
+	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
+	github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2 // indirect
 	golang.org/x/sys v0.0.0-20191210023423-ac6580df4449 // indirect
+	golang.org/x/tools v0.0.0-20191029190741-b9c20aec41a5
 	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.17.1
 	k8s.io/apimachinery v0.17.1

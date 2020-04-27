@@ -146,7 +146,7 @@ stringData:
 Due to the fact that oVirt provides a wider set of features that aren’t supported by kubevirt, the target VM might be created differently than the source VM configuration. That requires to warn the user or to block the import process.
 
 The admission rules will be split into three categories: log, warn and block:
-* Log - a validation rule that cannot map ovirt behavior to kubevirt, however, it is harmless. In that case, that violation will be logged. E.g.. nic_boot set to false on source VM, a logical name set to a disk on the source, Rng_device other than urandom and more. 
+* Log - a validation rule that cannot map ovirt behavior to kubevirt, however, it is harmless. In that case, that violation will be logged. E.g.. nic_boot set to false on source VM, a logical name set to a disk on the source, Rng_device other than urandom and more.
 * Warn - a validation rule that might introduce an issue. The violation will be recorded to the status of the CR, letting the user decide if the import should be cancelled. E.g., vm nic was unplugged on ovirt. In that case, the interface is not added to the target VM.
 * Block - a validation that fails the import action if violated. In this case, the import is failed. E.g., a missing mapping entry.
 

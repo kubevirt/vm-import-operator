@@ -77,3 +77,12 @@ tags
 .vscode/*
 .history
 # End of https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
+
+# Makefile fake targets
+gen-k8s
+gen-k8s-check
+goimports
+goimports-check
+vet
+whitespace
+whitespace-check
