@@ -24,7 +24,6 @@ import (
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -320,9 +319,6 @@ func (o *OvirtProvider) ensureSecretIsPresent(keyAccess string, keySecret string
 
 func (o *OvirtProvider) createSecret(keyAccess string, keySecret string) (*corev1.Secret, error) {
 	newSecret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: o.vmiCrName.Namespace,
-		},
 		Data: map[string][]byte{
 			keyAccessKey: []byte(keyAccess),
 			keySecretKey: []byte(keySecret),
@@ -351,9 +347,6 @@ func (o *OvirtProvider) ensureConfigMapIsPresent(caCert string) (*corev1.ConfigM
 
 func (o *OvirtProvider) createConfigMap(caCert string) (*corev1.ConfigMap, error) {
 	newConfigMap := corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: o.vmiCrName.Namespace,
-		},
 		Data: map[string]string{
 			"ca.pem": caCert,
 		},

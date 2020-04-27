@@ -8,9 +8,20 @@ import (
 	"time"
 	"unicode"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	"github.com/alecthomas/units"
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
+)
+
+const (
+	// MaxLabelValueLength specifies max length of k8s label value
+	MaxLabelValueLength = 63
+)
+
+var (
+	log = logf.Log.WithName("utils")
 )
 
 // GetMapKeys gets all keys from a map as a slice
@@ -102,9 +113,17 @@ func WithMessage(message string, newMessage string) string {
 	return fmt.Sprintf("%s, %s", message, newMessage)
 }
 
-// MakeLabelFrom creates label value from given namespace and name
-func MakeLabelFrom(namespace string, name string) string {
-	return fmt.Sprintf("%s-%s", namespace, name)
+// MakeLabelFrom creates label value from given CR name
+func MakeLabelFrom(name string) string {
+	n := len(name)
+	if n > MaxLabelValueLength {
+		log.Info("Label value will be shortened to 63 characters", "CR name", name)
+		suffix := strconv.Itoa(n)
+		suffixLen := len(suffix)
+		maxNameLen := MaxLabelValueLength - suffixLen - 1
+		return fmt.Sprintf("%s_%s", name[:maxNameLen], suffix)
+	}
+	return name
 }
 
 // CountImportedDataVolumes return number of true values in map of booleans

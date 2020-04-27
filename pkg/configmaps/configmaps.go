@@ -31,10 +31,10 @@ func NewManager(client client.Client) Manager {
 func (m *Manager) FindFor(vmiCrName types.NamespacedName) (*corev1.ConfigMap, error) {
 	mapList := corev1.ConfigMapList{}
 	labels := client.MatchingLabels{
-		vmiNameLabel: utils.MakeLabelFrom(vmiCrName.Namespace, vmiCrName.Name),
+		vmiNameLabel: utils.MakeLabelFrom(vmiCrName.Name),
 	}
 
-	err := m.client.List(context.TODO(), &mapList, labels)
+	err := m.client.List(context.TODO(), &mapList, labels, client.InNamespace(vmiCrName.Namespace))
 	if err != nil {
 		return nil, err
 	}
@@ -50,6 +50,7 @@ func (m *Manager) FindFor(vmiCrName types.NamespacedName) (*corev1.ConfigMap, er
 
 // CreateFor creates given config map, overriding given Name with a generated one. The config map will be associated with vmiCrName.
 func (m *Manager) CreateFor(configMap *corev1.ConfigMap, vmiCrName types.NamespacedName) error {
+	configMap.Namespace = vmiCrName.Namespace
 	// Force generation
 	configMap.GenerateName = prefix
 	configMap.Name = ""
@@ -57,7 +58,7 @@ func (m *Manager) CreateFor(configMap *corev1.ConfigMap, vmiCrName types.Namespa
 	if configMap.Labels == nil {
 		configMap.Labels = make(map[string]string)
 	}
-	configMap.Labels[vmiNameLabel] = utils.MakeLabelFrom(vmiCrName.Namespace, vmiCrName.Name)
+	configMap.Labels[vmiNameLabel] = utils.MakeLabelFrom(vmiCrName.Name)
 
 	return m.client.Create(context.TODO(), configMap)
 }
