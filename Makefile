@@ -1,7 +1,7 @@
 all: fmt check
 
 # Always keep the last released version here
-VERSION ?= 0.0.1
+VERSION ?= v0.0.1
 export VERSION := $(VERSION)
 
 TARGET_NAMESPACE ?= kubevirt-hyperconverged
