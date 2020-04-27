@@ -157,6 +157,31 @@ var _ = Describe("UTC Offset string parsing", func() {
 	)
 })
 
+var _ = Describe("Label generation", func() {
+	table.DescribeTable("should generate labels being unmodified names", func(name string) {
+		label := utils.MakeLabelFrom(name)
+
+		Expect(label).To(BeEquivalentTo(name))
+	},
+
+		table.Entry("empty string", ""),
+		table.Entry("one character", "x"),
+
+		table.Entry("mid-range length", createStringOfLength(34)),
+		table.Entry("max length", createStringOfLength(63)),
+	)
+
+	table.DescribeTable("should generate labels being shortened names", func(name string, expectedName string) {
+		label := utils.MakeLabelFrom(name)
+
+		Expect(label).To(BeEquivalentTo(expectedName))
+	},
+		table.Entry("slightly longer", createStringOfLength(64), createStringOfLength(60)+"_64"),
+		table.Entry("three digits long", createStringOfLength(128), createStringOfLength(59)+"_128"),
+		table.Entry("max resource name", createStringOfLength(253), createStringOfLength(59)+"_253"),
+	)
+})
+
 func createStringOfLength(n int) string {
 	return strings.Repeat("x", n)
 }

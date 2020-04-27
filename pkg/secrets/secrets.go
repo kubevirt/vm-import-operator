@@ -31,10 +31,10 @@ func NewManager(client client.Client) Manager {
 func (m *Manager) FindFor(vmiCrName types.NamespacedName) (*corev1.Secret, error) {
 	secretList := corev1.SecretList{}
 	labels := client.MatchingLabels{
-		vmiNameLabel: utils.MakeLabelFrom(vmiCrName.Namespace, vmiCrName.Name),
+		vmiNameLabel: utils.MakeLabelFrom(vmiCrName.Name),
 	}
 
-	err := m.client.List(context.TODO(), &secretList, labels)
+	err := m.client.List(context.TODO(), &secretList, labels, client.InNamespace(vmiCrName.Namespace))
 	if err != nil {
 		return nil, err
 	}
@@ -50,6 +50,7 @@ func (m *Manager) FindFor(vmiCrName types.NamespacedName) (*corev1.Secret, error
 
 // CreateFor creates given secret, overriding given Name with a generated one. The secret will be associated with vmiCrName.
 func (m *Manager) CreateFor(secret *corev1.Secret, vmiCrName types.NamespacedName) error {
+	secret.Namespace = vmiCrName.Namespace
 	// Force generation
 	secret.GenerateName = prefix
 	secret.Name = ""
@@ -57,7 +58,7 @@ func (m *Manager) CreateFor(secret *corev1.Secret, vmiCrName types.NamespacedNam
 	if secret.Labels == nil {
 		secret.Labels = make(map[string]string)
 	}
-	secret.Labels[vmiNameLabel] = utils.MakeLabelFrom(vmiCrName.Namespace, vmiCrName.Name)
+	secret.Labels[vmiNameLabel] = utils.MakeLabelFrom(vmiCrName.Name)
 
 	return m.client.Create(context.TODO(), secret)
 }
