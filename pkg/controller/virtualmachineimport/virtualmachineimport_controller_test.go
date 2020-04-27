@@ -23,7 +23,11 @@ import (
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 	"sigs.k8s.io/yaml"
 
 	. "github.com/onsi/ginkgo"
@@ -63,6 +67,7 @@ var _ = Describe("Reconcile steps", func() {
 		finder := &mockFinder{}
 		scheme := runtime.NewScheme()
 		factory := &mockFactory{}
+		controller := &mockController{}
 		kvConfigProviderMock := &mockKubeVirtConfigProvider{}
 		scheme.AddKnownTypes(v2vv1alpha1.SchemeGroupVersion,
 			&v2vv1alpha1.VirtualMachineImport{},
@@ -102,7 +107,8 @@ var _ = Describe("Reconcile steps", func() {
 		}
 		vmName = types.NamespacedName{Name: "test", Namespace: "default"}
 		rec := record.NewFakeRecorder(2)
-		reconciler = NewReconciler(mockClient, finder, scheme, ownerreferences.NewOwnerReferenceManager(mockClient), factory, kvConfigProviderMock, rec)
+
+		reconciler = NewReconciler(mockClient, finder, scheme, ownerreferences.NewOwnerReferenceManager(mockClient), factory, kvConfigProviderMock, rec, controller)
 	})
 
 	AfterEach(func() {
@@ -946,6 +952,25 @@ var _ = Describe("Reconcile steps", func() {
 
 			Expect(err).To(BeNil())
 		})
+
+		It("import disk should succeed even if DV failed : ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *cdiv1.DataVolume:
+					obj.(*cdiv1.DataVolume).Status = cdiv1.DataVolumeStatus{
+						Phase: cdiv1.Failed,
+					}
+				case *v2vv1alpha1.VirtualMachineImport:
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{}
+					obj.(*v2vv1alpha1.VirtualMachineImport).Annotations = map[string]string{sourceVMInitialState: string(provider.VMStatusDown)}
+				}
+				return nil
+			}
+
+			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
+
+			Expect(err).To(BeNil())
+		})
 	})
 
 	Describe("Reconcile step", func() {
@@ -1235,6 +1260,39 @@ var _ = Describe("Reconcile steps", func() {
 			Expect(err).To(BeNil())
 			Expect(result).To(Equal(reconcile.Result{}))
 		})
+
+		It("should exit early if vm condition is succeed: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *v2vv1alpha1.VirtualMachineImport:
+					conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
+					reason := string(v2vv1alpha1.VirtualMachineRunning)
+					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+						Status: corev1.ConditionTrue,
+						Reason: &reason,
+						Type:   v2vv1alpha1.Succeeded,
+					})
+					obj.(*v2vv1alpha1.VirtualMachineImport).Status.Conditions = conditions
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
+						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+						},
+					}
+					start := true
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec.StartVM = &start
+					name := "test"
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec.TargetVMName = &name
+				case *corev1.Secret:
+					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
+				}
+				return nil
+			}
+
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(BeNil())
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
 	})
 })
 
@@ -1253,7 +1311,7 @@ var _ = Describe("Disks import progress", func() {
 	)
 })
 
-func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory pclient.Factory, kvConfigProvider config.KubeVirtConfigProvider, recorder record.EventRecorder) *ReconcileVirtualMachineImport {
+func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory pclient.Factory, kvConfigProvider config.KubeVirtConfigProvider, recorder record.EventRecorder, controller controller.Controller) *ReconcileVirtualMachineImport {
 	return &ReconcileVirtualMachineImport{
 		client:                 client,
 		resourceMappingsFinder: finder,
@@ -1262,6 +1320,7 @@ func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme 
 		factory:                factory,
 		kvConfigProvider:       kvConfigProvider,
 		recorder:               recorder,
+		controller:             controller,
 	}
 }
 
@@ -1274,6 +1333,8 @@ type mockProvider struct{}
 type mockMapper struct{}
 
 type mockFactory struct{}
+
+type mockController struct{}
 
 type mockKubeVirtConfigProvider struct{}
 
@@ -1377,7 +1438,7 @@ func (p *mockProvider) StartVM() error {
 }
 
 // CleanUp implements Provider.CleanUp
-func (p *mockProvider) CleanUp() error {
+func (p *mockProvider) CleanUp(failure bool) error {
 	return cleanUp()
 }
 
@@ -1418,6 +1479,18 @@ func (m *mockMapper) MapDisks(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]
 // NewOvirtClient implements Factory.NewOvirtClient
 func (f *mockFactory) NewOvirtClient(dataMap map[string]string) (pclient.VMClient, error) {
 	return &mockOvirtClient{}, nil
+}
+
+func (f *mockController) Watch(src source.Source, eventhandler handler.EventHandler, predicates ...predicate.Predicate) error {
+	return nil
+}
+
+func (f *mockController) Start(stop <-chan struct{}) error {
+	return nil
+}
+
+func (f *mockController) Reconcile(reconcile.Request) (reconcile.Result, error) {
+	return reconcile.Result{}, nil
 }
 
 func (c *mockOvirtClient) GetVM(id *string, name *string, cluster *string, clusterID *string) (interface{}, error) {

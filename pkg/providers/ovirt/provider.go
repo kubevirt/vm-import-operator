@@ -17,6 +17,7 @@ import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	"github.com/kubevirt/vm-import-operator/pkg/configmaps"
+	"github.com/kubevirt/vm-import-operator/pkg/datavolumes"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	ovirtclient "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/client"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
@@ -27,6 +28,7 @@ import (
 	"github.com/kubevirt/vm-import-operator/pkg/secrets"
 	templates "github.com/kubevirt/vm-import-operator/pkg/templates"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
+	"github.com/kubevirt/vm-import-operator/pkg/virtualmachines"
 	templatev1 "github.com/openshift/api/template/v1"
 	tempclient "github.com/openshift/client-go/template/clientset/versioned/typed/template/v1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
@@ -34,6 +36,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -65,22 +68,36 @@ type ConfigMapsManager interface {
 	DeleteFor(types.NamespacedName) error
 }
 
+// DataVolumesManager defines operations on datavolumes
+type DataVolumesManager interface {
+	FindFor(types.NamespacedName) ([]*cdiv1.DataVolume, error)
+	DeleteFor(types.NamespacedName) error
+}
+
+// VirtualMachineManager defines operations on datavolumes
+type VirtualMachineManager interface {
+	FindFor(types.NamespacedName) (*kubevirtv1.VirtualMachine, error)
+	DeleteFor(types.NamespacedName) error
+}
+
 // OvirtProvider is Ovirt implementation of the Provider interface to support importing VM from ovirt
 type OvirtProvider struct {
-	ovirtSecretDataMap map[string]string
-	ovirtClient        pclient.VMClient
-	validator          validation.VirtualMachineImportValidator
-	vm                 *ovirtsdk.Vm
-	vmiObjectMeta      metav1.ObjectMeta
-	vmiTypeMeta        metav1.TypeMeta
-	resourceMapping    *v2vv1alpha1.OvirtMappings
-	osFinder           oos.OSFinder
-	templateFinder     *otemplates.TemplateFinder
-	templateHandler    *templates.TemplateHandler
-	secretsManager     SecretsManager
-	configMapsManager  ConfigMapsManager
-	factory            pclient.Factory
-	instance           *v2vv1alpha1.VirtualMachineImport
+	ovirtSecretDataMap    map[string]string
+	ovirtClient           pclient.VMClient
+	validator             validation.VirtualMachineImportValidator
+	vm                    *ovirtsdk.Vm
+	vmiObjectMeta         metav1.ObjectMeta
+	vmiTypeMeta           metav1.TypeMeta
+	resourceMapping       *v2vv1alpha1.OvirtMappings
+	osFinder              oos.OSFinder
+	templateFinder        *otemplates.TemplateFinder
+	templateHandler       *templates.TemplateHandler
+	secretsManager        SecretsManager
+	configMapsManager     ConfigMapsManager
+	datavolumesManager    DataVolumesManager
+	virtualMachineManager VirtualMachineManager
+	factory               pclient.Factory
+	instance              *v2vv1alpha1.VirtualMachineImport
 }
 
 // NewOvirtProvider creates new OvirtProvider configured with dependencies
@@ -88,18 +105,22 @@ func NewOvirtProvider(vmiObjectMeta metav1.ObjectMeta, vmiTypeMeta metav1.TypeMe
 	validator := validators.NewValidatorWrapper(client, kvConfigProvider)
 	secretsManager := secrets.NewManager(client)
 	configMapsManager := configmaps.NewManager(client)
+	datavolumesManager := datavolumes.NewManager(client)
+	virtualMachineManager := virtualmachines.NewManager(client)
 	templateProvider := templates.NewTemplateProvider(tempClient)
 	osFinder := oos.OVirtOSFinder{OsMapProvider: os.NewOSMapProvider(client)}
 	return OvirtProvider{
-		vmiObjectMeta:     vmiObjectMeta,
-		vmiTypeMeta:       vmiTypeMeta,
-		validator:         validation.NewVirtualMachineImportValidator(validator),
-		osFinder:          &osFinder,
-		templateFinder:    otemplates.NewTemplateFinder(templateProvider, &osFinder),
-		templateHandler:   templates.NewTemplateHandler(templateProvider),
-		secretsManager:    &secretsManager,
-		configMapsManager: &configMapsManager,
-		factory:           factory,
+		vmiObjectMeta:         vmiObjectMeta,
+		vmiTypeMeta:           vmiTypeMeta,
+		validator:             validation.NewVirtualMachineImportValidator(validator),
+		osFinder:              &osFinder,
+		templateFinder:        otemplates.NewTemplateFinder(templateProvider, &osFinder),
+		templateHandler:       templates.NewTemplateHandler(templateProvider),
+		secretsManager:        &secretsManager,
+		configMapsManager:     &configMapsManager,
+		datavolumesManager:    &datavolumesManager,
+		virtualMachineManager: &virtualMachineManager,
+		factory:               factory,
 	}
 }
 
@@ -318,7 +339,7 @@ func (o *OvirtProvider) StartVM() error {
 }
 
 // CleanUp removes transient resources created for import
-func (o *OvirtProvider) CleanUp() error {
+func (o *OvirtProvider) CleanUp(failure bool) error {
 	var errs []error
 	vmiName := o.GetVmiNamespacedName()
 	err := o.secretsManager.DeleteFor(vmiName)
@@ -329,6 +350,18 @@ func (o *OvirtProvider) CleanUp() error {
 	err = o.configMapsManager.DeleteFor(vmiName)
 	if err != nil {
 		errs = append(errs, err)
+	}
+
+	if failure {
+		err = o.datavolumesManager.DeleteFor(vmiName)
+		if err != nil {
+			errs = append(errs, err)
+		}
+
+		err = o.virtualMachineManager.DeleteFor(vmiName)
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	if len(errs) > 0 {

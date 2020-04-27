@@ -50,6 +50,8 @@ const (
 	progressCopyDiskRange = float64(progressForCopyDisk / 100.0)
 
 	requeueAfterValidationFailureTime = 5 * time.Second
+	podCrashLoopBackOff               = "CrashLoopBackOff"
+	importPodName                     = "importer"
 
 	// EventImportScheduled is emitted when import scheduled
 	EventImportScheduled = "ImportScheduled"
@@ -83,7 +85,7 @@ func Add(mgr manager.Manager, configProvider config.KubeVirtConfigProvider) erro
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, kvConfigProvider config.KubeVirtConfigProvider) reconcile.Reconciler {
+func newReconciler(mgr manager.Manager, kvConfigProvider config.KubeVirtConfigProvider) *ReconcileVirtualMachineImport {
 	tempClient, err := templatev1.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		log.Error(err, "Unable to get OC client")
@@ -105,12 +107,13 @@ func newReconciler(mgr manager.Manager, kvConfigProvider config.KubeVirtConfigPr
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
+func add(mgr manager.Manager, r *ReconcileVirtualMachineImport) error {
 	// Create a new controller
 	c, err := controller.New("virtualmachineimport-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
+	r.controller = c
 
 	// Watch for changes to primary resource VirtualMachineImport
 	err = c.Watch(
@@ -163,6 +166,7 @@ type ReconcileVirtualMachineImport struct {
 	factory                pclient.Factory
 	kvConfigProvider       config.KubeVirtConfigProvider
 	recorder               record.EventRecorder
+	controller             controller.Controller
 }
 
 // Reconcile reads that state of the cluster for a VirtualMachineImport object and makes changes based on the state read
@@ -186,6 +190,12 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		}
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
+	}
+
+	// Exit if we should not run reconcile:
+	if !shouldReconcile(instance) {
+		reqLogger.Info("Not running reconcile")
+		return reconcile.Result{}, nil
 	}
 
 	// Init provider:
@@ -249,14 +259,38 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	return reconcile.Result{}, nil
 }
 
+func (r *ReconcileVirtualMachineImport) addWatchForImportPod(instance *v2vv1alpha1.VirtualMachineImport, dvID string) error {
+	return r.controller.Watch(
+		&source.Kind{Type: &corev1.Pod{}},
+		&handler.EnqueueRequestsFromMapFunc{
+			ToRequests: handler.ToRequestsFunc(func(a handler.MapObject) []reconcile.Request {
+				if a.Meta.GetName() == importerPodNameFromDv(dvID) {
+					return []reconcile.Request{
+						{NamespacedName: types.NamespacedName{
+							Name:      instance.Name,
+							Namespace: instance.Namespace,
+						}},
+					}
+				}
+				return nil
+			}),
+		},
+	)
+}
+
 func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName, vmiName types.NamespacedName) error {
 	dvs, err := mapper.MapDataVolumes()
 	if err != nil {
 		return err
 	}
+
 	dvsDone := make(map[string]bool)
 	dvsImportProgress := make(map[string]float64)
 	for dvID := range dvs {
+		if err = r.addWatchForImportPod(instance, dvID); err != nil {
+			return err
+		}
+
 		foundDv := &cdiv1.DataVolume{}
 		err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: dvID}, foundDv)
 		if err != nil && errors.IsNotFound(err) {
@@ -283,6 +317,24 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 					// Emit event vm is successfully imported
 					r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportSucceeded, "Virtual Machine %s/%s import successful", vmName.Namespace, vmName.Name)
 				}
+			} else if foundDv.Status.Phase == cdiv1.Failed {
+				if err = r.endImportAsFailed(provider, instance, foundDv); err != nil {
+					return err
+				}
+			} else if foundDv.Status.Phase == cdiv1.ImportInProgress {
+				// During ImportInProgress phase importer pod can be in crashloppbackoff, so we need
+				// to check the state of the pod and fail the import:
+				foundPod := &corev1.Pod{}
+				err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: importerPodNameFromDv(dvID)}, foundPod)
+				if err == nil {
+					for _, cs := range foundPod.Status.ContainerStatuses {
+						if cs.State.Waiting != nil && cs.State.Waiting.Reason == podCrashLoopBackOff {
+							if err = r.endImportAsFailed(provider, instance, foundDv); err != nil {
+								return err
+							}
+						}
+					}
+				}
 			}
 			// Get current progress of the import:
 			progress := string(foundDv.Status.Progress)
@@ -304,6 +356,39 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 	}
 
 	return nil
+}
+
+func (r *ReconcileVirtualMachineImport) endImportAsFailed(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, dv *cdiv1.DataVolume) error {
+	errorMessage := fmt.Sprintf("Error while importing disk image: %s", dv.Name)
+	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
+
+	// Update processing condition to failed:
+	proccessingCond := conditions.NewProcessingCondition(string(v2vv1alpha1.ProcessingFailed), errorMessage, corev1.ConditionFalse)
+	if err := r.upsertStatusConditions(instanceNamespacedName, proccessingCond); err != nil {
+		return err
+	}
+
+	// Update succeed condition to failed:
+	succeededCond := conditions.NewSucceededCondition(string(v2vv1alpha1.DataVolumeCreationFailed), errorMessage, corev1.ConditionFalse)
+	if err := r.upsertStatusConditions(instanceNamespacedName, succeededCond); err != nil {
+		return err
+	}
+
+	// Update progress to done.
+	if err := r.updateProgress(instance, progressDone); err != nil {
+		return err
+	}
+
+	// Cleanup
+	if err := r.afterFailure(instanceNamespacedName, provider); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func importerPodNameFromDv(dvID string) string {
+	return fmt.Sprintf("%s-%s", importPodName, dvID)
 }
 
 func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, mapper provider.Mapper) (string, error) {
@@ -441,7 +526,7 @@ func (r *ReconcileVirtualMachineImport) updateConditionsAfterSuccess(instance *v
 
 	processingCond := conditions.FindConditionOfType(instance.Status.Conditions, v2vv1alpha1.Processing)
 	if processingCond != nil {
-		processingCond.Status = corev1.ConditionFalse
+		processingCond.Status = corev1.ConditionTrue
 		processingCompletedReason := string(v2vv1alpha1.ProcessingCompleted)
 		processingCond.Reason = &processingCompletedReason
 		conds = append(conds, *processingCond)
@@ -449,6 +534,18 @@ func (r *ReconcileVirtualMachineImport) updateConditionsAfterSuccess(instance *v
 
 	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	return r.upsertStatusConditions(instanceNamespacedName, conds...)
+}
+
+func shouldReconcile(instance *v2vv1alpha1.VirtualMachineImport) bool {
+	cond := conditions.FindConditionOfType(instance.Status.Conditions, v2vv1alpha1.Succeeded)
+
+	// If VM is ready, but not yet started run reconcile
+	if cond != nil {
+		if (cond.Reason != nil && *cond.Reason == string(v2vv1alpha1.VirtualMachineReady)) && (instance.Spec.StartVM != nil && *instance.Spec.StartVM) {
+			return true
+		}
+	}
+	return cond == nil
 }
 
 func shouldStartVM(instance *v2vv1alpha1.VirtualMachineImport) bool {
@@ -720,7 +817,7 @@ func (r *ReconcileVirtualMachineImport) updateProgress(instance *v2vv1alpha1.Vir
 
 func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName, vmiName types.NamespacedName, p provider.Provider) error {
 	var errs []error
-	err := p.CleanUp()
+	err := p.CleanUp(false)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -739,7 +836,7 @@ func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName
 //TODO: use in proper places
 func (r *ReconcileVirtualMachineImport) afterFailure(vmiName types.NamespacedName, p provider.Provider) error {
 	var errs []error
-	err := p.CleanUp()
+	err := p.CleanUp(true)
 	if err != nil {
 		errs = append(errs, err)
 	}

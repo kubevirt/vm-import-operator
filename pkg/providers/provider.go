@@ -27,7 +27,7 @@ type Provider interface {
 	GetVMStatus() (VMStatus, error)
 	GetVMName() (string, error)
 	StartVM() error
-	CleanUp() error
+	CleanUp(bool) error
 	FindTemplate() (*oapiv1.Template, error)
 	ProcessTemplate(*oapiv1.Template, *string, string) (*kubevirtv1.VirtualMachine, error)
 }
