@@ -113,9 +113,6 @@ const (
 	// ValidationFailed represents a failure to validate the eligibility of the VM for import
 	ValidationFailed SucceededConditionReason = "ValidationFailed"
 
-	// UpdatingSourceVMFailed represents a failure to stop source VM
-	UpdatingSourceVMFailed SucceededConditionReason = "UpdatingSourceVMFailed"
-
 	// VMCreationFailed represents a failure to create the VM entity
 	VMCreationFailed SucceededConditionReason = "VMCreationFailed"
 
@@ -176,9 +173,6 @@ type ProcessingConditionReason string
 
 // These are valid reasons for the Processing conditions of VM import.
 const (
-	// UpdatingSourceVM represents the renaming of source vm to be prefixed with 'imported_' and shutting it down
-	UpdatingSourceVM ProcessingConditionReason = "UpdatingSourceVM"
-
 	// CreatingTargetVM represents the creation of the VM spec
 	CreatingTargetVM ProcessingConditionReason = "CreatingTargetVM"
 
