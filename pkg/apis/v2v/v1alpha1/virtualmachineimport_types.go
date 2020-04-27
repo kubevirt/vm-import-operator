@@ -138,11 +138,11 @@ const (
 	// SecretNotFound represents the nonexistence of the provider's secret
 	SecretNotFound ValidConditionReason = "SecretNotFound"
 
-	// MappingResourceNotFound represents the nonexistence of the mapping resource
-	MappingResourceNotFound ValidConditionReason = "MappingResourceNotFound"
+	// ResourceMappingNotFound represents the nonexistence of the mapping resource
+	ResourceMappingNotFound ValidConditionReason = "ResourceMappingNotFound"
 
-	// UnreachableProvider represents a failure to connect to the provider
-	UnreachableProvider ValidConditionReason = "UnreachableProvider"
+	// UninitializedProvider represents a failure to initialize the provider
+	UninitializedProvider ValidConditionReason = "UninitializedProvider"
 
 	// SourceVmNotFound represents the nonexistence of the source VM
 	SourceVMNotFound ValidConditionReason = "SourceVMNotFound"
