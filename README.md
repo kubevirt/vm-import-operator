@@ -17,10 +17,10 @@ TARGET_NAMESPACE=YOUR_DESIRED_NAMESPACE make gen-manifests
 
 Deploy vm-import-operator resources:
 ```bash
-kubectl apply -f manifests/vm-import-operator/0.0.1/v2v_v1alpha1_resourcemapping_crd.yaml
-kubectl apply -f manifests/vm-import-operator/0.0.1/v2v_v1alpha1_virtualmachineimport_crd.yaml
-kubectl apply -f manifests/vm-import-operator/0.0.1/config_map.yaml
-kubectl apply -f manifests/vm-import-operator/0.0.1/operator.yaml
+kubectl apply -f manifests/vm-import-operator/v0.0.1/v2v_v1alpha1_resourcemapping_crd.yaml
+kubectl apply -f manifests/vm-import-operator/v0.0.1/v2v_v1alpha1_virtualmachineimport_crd.yaml
+kubectl apply -f manifests/vm-import-operator/v0.0.1/config_map.yaml
+kubectl apply -f manifests/vm-import-operator/v0.0.1/operator.yaml
 ```
 
 # Import virtual machine from oVirt
