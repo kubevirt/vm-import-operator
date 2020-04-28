@@ -86,6 +86,23 @@ docker-build:
 docker-push:
 	docker push $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE):$(IMAGE_TAG)
 
+cluster-up:
+	./cluster/up.sh
+
+cluster-down:
+	./cluster/down.sh
+
+cluster-sync: cluster-operator-push cluster-operator-install
+
+cluster-operator-push:
+	./cluster/operator-push.sh
+
+cluster-operator-install:
+	./cluster/operator-install.sh
+
+cluster-clean:
+	./cluster/clean.sh
+
 gen-manifests:
 	DEPLOY_DIR=$(DEPLOY_DIR) \
 	CONTAINER_PREFIX=$(IMAGE_REGISTRY) \
