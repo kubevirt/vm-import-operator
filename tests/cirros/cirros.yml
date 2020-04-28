@@ -1,0 +1,18 @@
+apiVersion: v2v.kubevirt.io/v1alpha1
+kind: VirtualMachineImport
+metadata:
+ name: myvm
+ namespace: default
+spec:
+ providerCredentialsSecret:
+   name: ovirt-secret
+ resourceMapping:
+   name: myvm-mapping
+ targetVmName: testvm
+ startVm: false
+ source:
+   ovirt:
+     vm:
+       name: cirrosvm
+       cluster:
+         name: local

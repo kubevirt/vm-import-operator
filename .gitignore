@@ -86,3 +86,5 @@ goimports-check
 vet
 whitespace
 whitespace-check
+### Test ###
+_ci-configs/

@@ -1,0 +1,13 @@
+apiVersion: v2v.kubevirt.io/v1alpha1
+kind: ResourceMapping
+metadata:
+  name: myvm-mapping
+  namespace: default
+spec:
+  ovirt:
+    networkMappings:
+      - source:
+          name: ovirtmgmt
+        target:
+          name: pod
+        type: pod

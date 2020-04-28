@@ -1,0 +1,48 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: imageio-deployment
+  namespace: cdi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: imageio
+  template:
+    metadata:
+      labels:
+        app: imageio
+    spec:
+      serviceAccountName: cdi-sa
+      containers:
+      - name: imageiotest
+        image: machacekondra/imageiotest:test
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 12345
+      - name: fakeovirt
+        image: machacekondra/fakeovirt:test
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 12346
+        env:
+          - name: NAMESPACE
+            value: cdi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: imageio
+  namespace: cdi
+spec:
+  selector:
+    app: imageio
+  type: NodePort
+  ports:
+  - name: imageio
+    port: 12345
+    targetPort: 12345
+  - name: fakeovirt
+    port: 12346
+    targetPort: 12346
