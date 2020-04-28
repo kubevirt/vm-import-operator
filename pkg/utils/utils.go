@@ -126,6 +126,13 @@ func MakeLabelFrom(name string) string {
 	return name
 }
 
+// AddLabels adds labels
+func AddLabels(labels map[string]string, newLabels map[string]string) {
+	for key, value := range newLabels {
+		labels[key] = value
+	}
+}
+
 // CountImportedDataVolumes return number of true values in map of booleans
 func CountImportedDataVolumes(dvsDone map[string]bool) int {
 	done := 0
