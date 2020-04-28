@@ -137,7 +137,7 @@ spec:
       containers:
         - name: vm-import-operator
           # Replace this with the built image name
-          image: quay.io/masayag/vm-import-operator:latest
+          image: quay.io/kubevirt/vm-import-operator:v0.0.1
           command:
           - vm-import-operator
           imagePullPolicy: Always
