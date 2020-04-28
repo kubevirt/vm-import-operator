@@ -97,3 +97,14 @@ func (f *TemplateFinder) getTemplate(os string, workload string) (*templatev1.Te
 	// Take first which matches label selector
 	return &templates.Items[0], nil
 }
+
+// GetLabels fetches OS and workload specific labels
+func (f *TemplateFinder) GetLabels(vm *ovirtsdk.Vm) (map[string]string, error) {
+	os, err := f.findOperatingSystem(vm)
+	if err != nil {
+		return map[string]string{}, err
+	}
+	workload := getWorkload(vm)
+	flavor := defaultFlavor
+	return templates.OSLabelBuilder(&os, &workload, &flavor), nil
+}

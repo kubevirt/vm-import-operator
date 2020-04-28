@@ -225,7 +225,25 @@ func (o *OvirtProvider) FindTemplate() (*templatev1.Template, error) {
 
 // ProcessTemplate uses openshift api to process template
 func (o *OvirtProvider) ProcessTemplate(template *templatev1.Template, vmName *string, namespace string) (*kubevirtv1.VirtualMachine, error) {
-	return o.templateHandler.ProcessTemplate(template, vmName, namespace)
+	vm, err := o.templateHandler.ProcessTemplate(template, vmName, namespace)
+	if err != nil {
+		return nil, err
+	}
+	sourceVM, err := o.getVM()
+	if err != nil {
+		return nil, err
+	}
+	labels, err := o.templateFinder.GetLabels(sourceVM)
+	if err != nil {
+		return nil, err
+	}
+	return updateLabels(vm, labels), nil
+}
+
+func updateLabels(vm *kubevirtv1.VirtualMachine, labels map[string]string) *kubevirtv1.VirtualMachine {
+	utils.AddLabels(vm.ObjectMeta.GetLabels(), labels)
+	utils.AddLabels(vm.Spec.Template.ObjectMeta.GetLabels(), labels)
+	return vm
 }
 
 // CreateMapper create the mapper for ovirt provider
