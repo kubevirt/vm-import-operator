@@ -18,6 +18,7 @@ import (
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	templatev1 "github.com/openshift/client-go/template/clientset/versioned/typed/template/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -750,11 +751,23 @@ func (r *ReconcileVirtualMachineImport) initProvider(instance *v2vv1alpha1.Virtu
 	// Fetch source provider secret
 	sourceProviderSecretObj, err := r.fetchSecret(instance)
 	if err != nil {
+		if errors.IsNotFound(err) {
+			condition := newValidationCondition(v2vv1alpha1.SecretNotFound, "Secret not found")
+			cerr := r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, condition)
+			if cerr != nil {
+				return cerr
+			}
+		}
 		return err
 	}
 
 	err = provider.Init(sourceProviderSecretObj, instance)
 	if err != nil {
+		condition := newValidationCondition(v2vv1alpha1.UninitializedProvider, "Failed to initialize the source provider")
+		cerr := r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, condition)
+		if cerr != nil {
+			return cerr
+		}
 		return err
 	}
 	return nil
@@ -766,6 +779,11 @@ func (r *ReconcileVirtualMachineImport) fetchVM(instance *v2vv1alpha1.VirtualMac
 		// Load source VM:
 		err := provider.LoadVM(instance.Spec.Source)
 		if err != nil {
+			condition := newValidationCondition(v2vv1alpha1.SourceVMNotFound, "Failed to load source VM: "+err.Error())
+			cerr := r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, condition)
+			if cerr != nil {
+				return cerr
+			}
 			return err
 		}
 	} else {
@@ -775,7 +793,13 @@ func (r *ReconcileVirtualMachineImport) fetchVM(instance *v2vv1alpha1.VirtualMac
 	// Load the external resource mapping
 	resourceMapping, err := r.fetchResourceMapping(instance.Spec.ResourceMapping, instance.Namespace)
 	if err != nil {
-		//TODO: update Valid status condition
+		if errors.IsNotFound(err) {
+			condition := newValidationCondition(v2vv1alpha1.ResourceMappingNotFound, "Resource mapping not found")
+			cerr := r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, condition)
+			if cerr != nil {
+				return cerr
+			}
+		}
 		return err
 	}
 
@@ -815,4 +839,13 @@ func (r *ReconcileVirtualMachineImport) validate(instance *v2vv1alpha1.VirtualMa
 		logger.Info("VirtualMachineImport has already been validated positively. Skipping re-validation")
 	}
 	return true, nil
+}
+
+func newValidationCondition(reason v2vv1alpha1.ValidConditionReason, message string) v2vv1alpha1.VirtualMachineImportCondition {
+	return conditions.NewCondition(
+		v2vv1alpha1.Valid,
+		string(reason),
+		message,
+		v1.ConditionFalse,
+	)
 }
