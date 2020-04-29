@@ -96,6 +96,7 @@ gen-manifests:
 
 gen-k8s: $(OPERATOR_SDK) $(apis_sources)
 	$(OPERATOR_SDK) generate k8s
+	GOFLAGS=-mod= ./hack/update-codegen.sh
 	touch $@
 
 gen-k8s-check: $(apis_sources)
