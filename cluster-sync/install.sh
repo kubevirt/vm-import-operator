@@ -21,7 +21,7 @@ function wait_cdi_crd_installed {
   if [ $crd_defined -eq 0 ]; then
      echo "ERROR - CDI CRD is not defined after timeout"
      exit 1
-  fi  
+  fi
 }
 
 function install_kubevirt {

@@ -1,5 +1,5 @@
 #!/bin/bash -e
-  
+
 source ./hack/build/config.sh
 source ./cluster-up/hack/common.sh
 source ./cluster-up/cluster/${KUBEVIRT_PROVIDER}/provider.sh
@@ -64,7 +64,7 @@ if [ -n "$(_kubectl get ns | grep "cdi ")" ]; then
 
     start_time=0
     sample=10
-    timeout=120 
+    timeout=120
     echo "Waiting for cdi namespace to disappear ..."
     while [ -n "$(_kubectl get ns | grep "$NAMESPACE ")" ]; do
         sleep $sample
