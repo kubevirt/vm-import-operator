@@ -19,18 +19,10 @@ set -o nounset
 set -o pipefail
 
 SCRIPT_ROOT=$(dirname "${BASH_SOURCE[0]}")/..
-if [ ! -d "$GOPATH/src/github.com/kubernetes/code-generator" ]
-then
-    wget https://github.com/kubernetes/code-generator/archive/v0.16.4.tar.gz -P /tmp
-    tar -zxf /tmp/v0.16.4.tar.gz -C /tmp
-    rm /tmp/v0.16.4.tar.gz
-    if [ ! -d "$GOPATH/src/github.com/kubernetes" ]
-    then
-      mkdir -p $GOPATH/src/github.com/kubernetes
-    fi
-    mv /tmp/code-generator-0.16.4 $GOPATH/src/github.com/kubernetes/code-generator
-fi
-CODEGEN_PKG=$GOPATH/src/github.com/kubernetes/code-generator
+CODEGEN_PKG=${CODEGEN_PKG:-$(
+    cd ${SCRIPT_ROOT}
+    ls -d -1 vendor/k8s.io/code-generator 2>/dev/null || echo ../code-generator
+)}
 
 # generate the code with:
 # --output-base    because this script should also be able to run inside the vendor dir of
