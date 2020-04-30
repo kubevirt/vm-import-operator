@@ -82,6 +82,9 @@ var _ = Describe("Processing a template", func() {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "win2k12r2-server-medium-v0.7.0",
 				Namespace: "kubevirt-hyperconverged",
+				Annotations: map[string]string{
+					"name.os.template.kubevirt.io/win2k12r2": "Microsoft Windows Server 2012 R2",
+				},
 			},
 		}
 
@@ -106,8 +109,12 @@ var _ = Describe("Processing a template", func() {
 			"os.template.kubevirt.io/win2k12r2":    "true",
 			"vm.kubevirt.io/name":                  "test",
 		}
+		annotations := map[string]string{
+			"name.os.template.kubevirt.io/win2k12r2": "Microsoft Windows Server 2012 R2",
+		}
 		Expect(vm.ObjectMeta.GetLabels()).Should(Equal(vmLabels))
 		Expect(vm.Spec.Template.ObjectMeta.GetLabels()).Should(Equal(specLabels))
+		Expect(vm.ObjectMeta.GetAnnotations()).Should(Equal(annotations))
 	})
 })
 

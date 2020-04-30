@@ -33,7 +33,7 @@ type Provider interface {
 
 // Mapper is interface to be used for mapping external VM to kubevirt VM
 type Mapper interface {
-	CreateEmptyVM() *kubevirtv1.VirtualMachine
+	CreateEmptyVM(vmName *string) *kubevirtv1.VirtualMachine
 	ResolveVMName(targetVMName *string) *string
 	MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachine) (*kubevirtv1.VirtualMachine, error)
 	MapDataVolumes() (map[string]cdiv1.DataVolume, error)

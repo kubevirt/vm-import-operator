@@ -984,6 +984,8 @@ var _ = Describe("Reconcile steps", func() {
 						Type:   v2vv1alpha1.MappingRulesVerified,
 					})
 					obj.(*v2vv1alpha1.VirtualMachineImport).Status.Conditions = conditions
+					name := "test"
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec.TargetVMName = &name
 				case *corev1.Secret:
 					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
 				}
@@ -1152,6 +1154,8 @@ var _ = Describe("Reconcile steps", func() {
 						Type:   v2vv1alpha1.MappingRulesVerified,
 					})
 					obj.(*v2vv1alpha1.VirtualMachineImport).Status.Conditions = conditions
+					name := "test"
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec.TargetVMName = &name
 				case *corev1.Secret:
 					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
 				case *cdiv1.DataVolume:
@@ -1201,6 +1205,8 @@ var _ = Describe("Reconcile steps", func() {
 					}
 					start := true
 					obj.(*v2vv1alpha1.VirtualMachineImport).Spec.StartVM = &start
+					name := "test"
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec.TargetVMName = &name
 				case *corev1.Secret:
 					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
 				case *kubevirtv1.VirtualMachineInstance:
@@ -1357,7 +1363,7 @@ func (p *mockProvider) ProcessTemplate(template *oapiv1.Template, name *string, 
 }
 
 // CreateEmptyVM implements Mapper.CreateEmptyVM
-func (m *mockMapper) CreateEmptyVM() *kubevirtv1.VirtualMachine {
+func (m *mockMapper) CreateEmptyVM(vmName *string) *kubevirtv1.VirtualMachine {
 	return &kubevirtv1.VirtualMachine{}
 }
 

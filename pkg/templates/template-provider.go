@@ -20,6 +20,9 @@ const (
 	// TemplateFlavorLabel is a label that specifies the flavor of the template
 	TemplateFlavorLabel = "flavor.template.kubevirt.io/%s"
 
+	// TemplateNameOsAnnotation is an annotation that specifies human readable os name
+	TemplateNameOsAnnotation = "name.os.template.kubevirt.io/%s"
+
 	processingURI = "processedTemplates"
 	nameParameter = "NAME"
 	otherValue    = "other"
