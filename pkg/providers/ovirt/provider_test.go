@@ -40,10 +40,11 @@ var _ = Describe("Processing a template", func() {
 				},
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
-						"app":                              "test",
-						"vm.kubevirt.io/template":          "win2k12r2-server-medium",
-						"vm.kubevirt.io/template.revision": "1",
-						"vm.kubevirt.io/template.version":  "v0.10.0",
+						"app":                               "test",
+						"vm.kubevirt.io/template":           "win2k12r2-server-medium",
+						"vm.kubevirt.io/template.namespace": "kubevirt-hyperconverged",
+						"vm.kubevirt.io/template.revision":  "1",
+						"vm.kubevirt.io/template.version":   "v0.10.0",
 					},
 					Name: "test",
 				},
@@ -80,7 +81,7 @@ var _ = Describe("Processing a template", func() {
 		template := templatev1.Template{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "win2k12r2-server-medium-v0.7.0",
-				Namespace: "kebevirt-hyperconverged",
+				Namespace: "kubevirt-hyperconverged",
 			},
 		}
 
@@ -93,6 +94,7 @@ var _ = Describe("Processing a template", func() {
 			"workload.template.kubevirt.io/server": "true",
 			"app":                                  "test",
 			"vm.kubevirt.io/template":              "win2k12r2-server-medium-v0.7.0",
+			"vm.kubevirt.io/template.namespace":    "kubevirt-hyperconverged",
 			"vm.kubevirt.io/template.revision":     "1",
 			"vm.kubevirt.io/template.version":      "v0.10.0",
 		}

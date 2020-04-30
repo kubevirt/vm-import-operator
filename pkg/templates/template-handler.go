@@ -69,6 +69,7 @@ func addLabels(vm *kubevirtv1.VirtualMachine, template *templatev1.Template) {
 		vm.ObjectMeta.SetLabels(labels)
 	}
 	labels[templateNameLabel] = template.GetObjectMeta().GetName()
+	labels[templateNamespace] = template.GetObjectMeta().GetNamespace()
 	tempLabels := vm.Spec.Template.ObjectMeta.GetLabels()
 	tempLabels[vmNameLabel] = vm.GetName()
 }
