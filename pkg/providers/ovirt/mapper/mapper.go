@@ -640,11 +640,13 @@ func (o *OvirtMapper) mapAnnotations() map[string]string {
 }
 
 func (o *OvirtMapper) mapPlacementPolicy() *kubevirtv1.EvictionStrategy {
-	placementPolicy, _ := o.vm.PlacementPolicy()
-	affinity, _ := placementPolicy.Affinity()
-	if affinity == ovirtsdk.VMAFFINITY_MIGRATABLE {
-		strategy := kubevirtv1.EvictionStrategyLiveMigrate
-		return &strategy
+	if placementPolicy, ok := o.vm.PlacementPolicy(); ok {
+		if affinity, ok := placementPolicy.Affinity(); ok {
+			if affinity == ovirtsdk.VMAFFINITY_MIGRATABLE {
+				strategy := kubevirtv1.EvictionStrategyLiveMigrate
+				return &strategy
+			}
+		}
 	}
 
 	return nil
