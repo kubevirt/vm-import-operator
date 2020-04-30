@@ -22,7 +22,8 @@ spec:
         ports:
         - containerPort: 12345
       - name: fakeovirt
-        image: machacekondra/fakeovirt:test
+        # update back to original image when changes are merged
+        image: quay.io/jdzon/fakeovirt:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 12346
