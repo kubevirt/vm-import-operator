@@ -233,17 +233,27 @@ func (o *OvirtProvider) ProcessTemplate(template *templatev1.Template, vmName *s
 	if err != nil {
 		return nil, err
 	}
-	labels, err := o.templateFinder.GetLabels(sourceVM)
+	labels, annotations, err := o.templateFinder.GetMetadata(template, sourceVM)
 	if err != nil {
 		return nil, err
 	}
-	return updateLabels(vm, labels), nil
+	updateLabels(vm, labels)
+	updateAnnotations(vm, annotations)
+	return vm, nil
 }
 
-func updateLabels(vm *kubevirtv1.VirtualMachine, labels map[string]string) *kubevirtv1.VirtualMachine {
-	utils.AddLabels(vm.ObjectMeta.GetLabels(), labels)
-	utils.AddLabels(vm.Spec.Template.ObjectMeta.GetLabels(), labels)
-	return vm
+func updateLabels(vm *kubevirtv1.VirtualMachine, labels map[string]string) {
+	utils.AppendMap(vm.ObjectMeta.GetLabels(), labels)
+	utils.AppendMap(vm.Spec.Template.ObjectMeta.GetLabels(), labels)
+}
+
+func updateAnnotations(vm *kubevirtv1.VirtualMachine, annotationMap map[string]string) {
+	annotations := vm.ObjectMeta.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+		vm.ObjectMeta.SetAnnotations(annotations)
+	}
+	utils.AppendMap(annotations, annotationMap)
 }
 
 // CreateMapper create the mapper for ovirt provider

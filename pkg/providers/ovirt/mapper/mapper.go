@@ -35,6 +35,8 @@ const (
 	AnnotationSso = "sso"
 	// DefaultStorageClassTargetName define the storage target name value that forces using default storage class
 	DefaultStorageClassTargetName = ""
+	// CustomFlavorLabel define lable when when template not found
+	CustomFlavorLabel = "flavor.template.kubevirt.io/custom"
 )
 
 // BiosTypeMapping defines mapping of BIOS types between oVirt and kubevirt domains
@@ -80,10 +82,23 @@ func NewOvirtMapper(vm *ovirtsdk.Vm, mappings *v2vv1alpha1.OvirtMappings, creds 
 }
 
 // CreateEmptyVM creates empty virtual machine definition
-func (o *OvirtMapper) CreateEmptyVM() *kubevirtv1.VirtualMachine {
+func (o *OvirtMapper) CreateEmptyVM(vmName *string) *kubevirtv1.VirtualMachine {
 	return &kubevirtv1.VirtualMachine{
+		ObjectMeta: metav1.ObjectMeta{
+			Labels: map[string]string{
+				"app":             *vmName,
+				CustomFlavorLabel: "true",
+			},
+		},
 		Spec: kubevirtv1.VirtualMachineSpec{
 			Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"kubevirt.io/domain":  *vmName,
+						CustomFlavorLabel:     "true",
+						"vm.kubevirt.io/name": *vmName,
+					},
+				},
 				Spec: kubevirtv1.VirtualMachineInstanceSpec{
 					Domain: kubevirtv1.DomainSpec{},
 				},

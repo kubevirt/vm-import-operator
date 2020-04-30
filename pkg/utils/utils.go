@@ -126,10 +126,10 @@ func MakeLabelFrom(name string) string {
 	return name
 }
 
-// AddLabels adds labels
-func AddLabels(labels map[string]string, newLabels map[string]string) {
-	for key, value := range newLabels {
-		labels[key] = value
+// AppendMap adds a map
+func AppendMap(origin map[string]string, newMap map[string]string) {
+	for key, value := range newMap {
+		origin[key] = value
 	}
 }
 

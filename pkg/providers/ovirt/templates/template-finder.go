@@ -98,13 +98,19 @@ func (f *TemplateFinder) getTemplate(os string, workload string) (*templatev1.Te
 	return &templates.Items[0], nil
 }
 
-// GetLabels fetches OS and workload specific labels
-func (f *TemplateFinder) GetLabels(vm *ovirtsdk.Vm) (map[string]string, error) {
+// GetMetadata fetches OS and workload specific labels and annotations
+func (f *TemplateFinder) GetMetadata(template *templatev1.Template, vm *ovirtsdk.Vm) (map[string]string, map[string]string, error) {
 	os, err := f.findOperatingSystem(vm)
 	if err != nil {
-		return map[string]string{}, err
+		return map[string]string{}, map[string]string{}, err
 	}
 	workload := getWorkload(vm)
 	flavor := defaultFlavor
-	return templates.OSLabelBuilder(&os, &workload, &flavor), nil
+	labels := templates.OSLabelBuilder(&os, &workload, &flavor)
+
+	key := fmt.Sprintf(templates.TemplateNameOsAnnotation, os)
+	annotations := map[string]string{
+		key: template.GetAnnotations()[key],
+	}
+	return labels, annotations, nil
 }
