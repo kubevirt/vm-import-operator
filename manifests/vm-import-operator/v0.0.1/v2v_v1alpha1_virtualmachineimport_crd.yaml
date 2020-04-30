@@ -60,10 +60,10 @@ spec:
               description: 'StartVm defines if the VM should be started at the end of the import process'
               type: boolean
             source:
-              description: 'VirtualMachineImportSourceSpec defines the definition of the source provider and mapping resources'
+              description: 'VirtualMachineImportSourceSpec defines the source provider and the internal mapping resources
               properties:
                 ovirt:
-                  description: 'VirtualMachineImportOvirtSourceSpec defines the definition of the VM in oVirt'
+                  description: 'VirtualMachineImportOvirtSourceSpec defines how to identify the VM in oVirt'
                   properties:
                     vm:
                       description: 'VirtualMachineImportOvirtSourceVMSpec defines the identification of the VM in oVirt'

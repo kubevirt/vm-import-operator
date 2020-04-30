@@ -5,12 +5,15 @@ go 1.13
 require (
 	github.com/aktau/github-release v0.7.2
 	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
+	github.com/blang/semver v3.5.1+incompatible
 	github.com/go-openapi/spec v0.19.4
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20191119172530-79f836b90111
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.7.1
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
 	github.com/openshift/client-go v0.0.0
+	github.com/openshift/custom-resource-status v0.0.0-20190822192428-e62f2f3b79f3
+	github.com/operator-framework/operator-lifecycle-manager v0.0.0-20191115003340-16619cd27fa5
 	github.com/operator-framework/operator-sdk v0.15.2
 	github.com/ovirt/go-ovirt v4.3.4+incompatible
 	github.com/pkg/errors v0.8.1
@@ -21,6 +24,7 @@ require (
 	golang.org/x/tools v0.0.0-20191029190741-b9c20aec41a5
 	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.17.1
+	k8s.io/apiextensions-apiserver v0.16.4
 	k8s.io/apimachinery v0.17.1
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/code-generator v0.17.1

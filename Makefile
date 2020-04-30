@@ -1,6 +1,7 @@
 all: fmt check
 
 # Always keep the last released version here
+VERSION_REPLACES ?= v0.0.0
 VERSION ?= v0.0.1
 export VERSION := $(VERSION)
 
@@ -107,6 +108,7 @@ gen-manifests:
 	DEPLOY_DIR=$(DEPLOY_DIR) \
 	CONTAINER_PREFIX=$(IMAGE_REGISTRY) \
 	CONTAINER_TAG=$(IMAGE_TAG) \
+	VERSION_REPLACES=$(VERSION_REPLACES) \
 	REPLACE_KUBEVIRT_NAMESPACE=$(TARGET_NAMESPACE) \
 	OPERATOR_IMAGE=$(OPERATOR_IMAGE) \
 		./hack/generate-manifests.sh

@@ -3,7 +3,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: vm-import-operator
-  namespace: {{NAMESPACE}}
+  namespace: kubevirt-hyperconverged
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -116,14 +116,14 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: vm-import-operator
-  namespace: {{NAMESPACE}}
+  namespace: kubevirt-hyperconverged
 
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vm-import-operator
-  namespace: {{NAMESPACE}}
+  namespace: kubevirt-hyperconverged
 spec:
   replicas: 1
   selector:
@@ -138,10 +138,10 @@ spec:
       containers:
         - name: vm-import-operator
           # Replace this with the built image name
-          image: {{CONTAINER_PREFIX}}/{{OPERATOR_IMAGE}}:{{CONTAINER_TAG}}
+          image: quay.io/masayag/vm-import-operator:v0.0.2
           command:
           - vm-import-operator
-          imagePullPolicy: {{IMAGE_PULL_POLICY}}
+          imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
             - name: POD_NAME
