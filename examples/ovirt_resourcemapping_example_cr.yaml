@@ -7,12 +7,12 @@ spec:
   ovirt:
     networkMappings:
       - source:
-          name: red # maps of ovirt logical network to network attachment definition
+          name: red/profile1  # maps of ovirt 'logic network/vnic profile' to network attachment definition
         target:
           name: xyz
         type: bridge
       - source:
-          name: ovirtmgmt
+          name: ovirtmgmt/ovirtmgmt
         target:
           name: pod
         type: pod
