@@ -360,6 +360,7 @@ func createVM() *ovirtsdk.Vm {
 				Interface("virtio").
 				VnicProfile(
 					ovirtsdk.NewVnicProfileBuilder().
+						Name("profile1").
 						Network(
 							ovirtsdk.NewNetworkBuilder().
 								Name("network1").MustBuild()).
@@ -370,6 +371,7 @@ func createVM() *ovirtsdk.Vm {
 				Interface("virtio").
 				VnicProfile(
 					ovirtsdk.NewVnicProfileBuilder().
+						Name("profile2").
 						Network(
 							ovirtsdk.NewNetworkBuilder().
 								Name("network2").MustBuild()).
@@ -396,8 +398,8 @@ func createMappings() v2vv1alpha1.OvirtMappings {
 	var networks []v2vv1alpha1.ResourceMappingItem
 	multusNetwork := "multus"
 	podNetwork := "pod"
-	multusNetworkName := "network1"
-	podNetworkName := "network2"
+	multusNetworkName := "network1/profile1"
+	podNetworkName := "network2/profile2"
 	networks = append(networks,
 		v2vv1alpha1.ResourceMappingItem{
 			Source: v2vv1alpha1.Source{

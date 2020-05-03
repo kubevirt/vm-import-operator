@@ -7,6 +7,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	outils "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/utils"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	corev1 "k8s.io/api/core/v1"
@@ -285,13 +286,14 @@ func (o *OvirtMapper) mapNics(networkToType map[string]string) []kubevirtv1.Inte
 	var kubevirtNics []kubevirtv1.Interface
 	nics, _ := o.vm.Nics()
 	for _, nic := range nics.Slice() {
-		// This network interface don't have any network specified.
+		// This network interface doesn't have any vnic profile specified.
 		if _, ok := nic.VnicProfile(); !ok {
 			continue
 		}
 
 		kubevirtNic := kubevirtv1.Interface{}
-		kubevirtNic.Name, _ = nic.Name()
+		nicName, _ := nic.Name()
+		kubevirtNic.Name, _ = utils.NormalizeName(nicName)
 		if nicMac, ok := nic.Mac(); ok {
 			kubevirtNic.MacAddress, _ = nicMac.Address()
 		}
@@ -323,7 +325,8 @@ func (o *OvirtMapper) mapNetworks() []kubevirtv1.Network {
 		}
 
 		kubevirtNet := o.getNetworkForNic(nicProfile)
-		kubevirtNet.Name, _ = nic.Name()
+		nicName, _ := nic.Name()
+		kubevirtNet.Name, _ = utils.NormalizeName(nicName)
 		kubevirtNetworks = append(kubevirtNetworks, kubevirtNet)
 	}
 
@@ -345,14 +348,15 @@ func (o *OvirtMapper) mapNetworksToTypes(networks []kubevirtv1.Network) map[stri
 func (o *OvirtMapper) getNetworkForNic(vnicProfile *ovirtsdk.VnicProfile) kubevirtv1.Network {
 	kubevirtNet := kubevirtv1.Network{}
 	network, _ := vnicProfile.Network()
+	nicNetworkName, _ := network.Name()
+	vnicProfileName, _ := vnicProfile.Name()
+	nicMappingName := outils.GetNetworkMappingName(nicNetworkName, vnicProfileName)
 	for _, mapping := range *o.mappings.NetworkMappings {
-		if mapping.Source.Name != nil {
-			if nicNetworkName, _ := network.Name(); nicNetworkName == *mapping.Source.Name {
-				o.mapNetworkType(mapping, &kubevirtNet)
-			}
+		if mapping.Source.Name != nil && nicMappingName == *mapping.Source.Name {
+			o.mapNetworkType(mapping, &kubevirtNet)
 		}
 		if mapping.Source.ID != nil {
-			if nicNetworkID, _ := network.Id(); nicNetworkID == *mapping.Source.ID {
+			if vnicProfileID, _ := vnicProfile.Id(); vnicProfileID == *mapping.Source.ID {
 				o.mapNetworkType(mapping, &kubevirtNet)
 			}
 		}
