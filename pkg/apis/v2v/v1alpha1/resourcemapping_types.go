@@ -21,6 +21,11 @@ type ResourceMappingSpec struct {
 // OvirtMappings defines the mappings of ovirt resources to kubevirt
 // +k8s:openapi-gen=true
 type OvirtMappings struct {
+	// NetworkMappings defines the mapping of vnic profile to network attachment definition
+	// When providing source network by name, the format is 'network name/vnic profile name'.
+	// When providing source network by ID, the ID represents the vnic profile ID.
+	// A logical network from ovirt can be mapped to multiple network attachment definitions
+	// on kubevirt by using vnic profile to network attachment definition mapping.
 	// +optional
 	NetworkMappings *[]ResourceMappingItem `json:"networkMappings,omitempty"`
 

@@ -14,12 +14,17 @@ import (
 )
 
 var (
-	podType          = "pod"
-	multusType       = "multus"
-	networkName      = "some-net"
-	networkID        = "some-net-id"
-	wrongNetworkID   = "some-net-bad-id"
-	wrongNetworkName = "some-net-bad"
+	podType                  = "pod"
+	multusType               = "multus"
+	networkName              = "some-net"
+	vnicProfileName          = "some-vnic-profile-name"
+	srcNetMappingName        = networkName + "/" + vnicProfileName
+	vnicProfileID            = "some-vnic-profile-id"
+	wrongNetworkID           = "some-net-bad-id"
+	wrongNetworkName         = "some-net-bad"
+	wrongVnicProfileName     = "some-vnic-bad"
+	wrongSrcNetMappingName   = wrongNetworkName + "/" + wrongVnicProfileName
+	invalidSrcNetMappingName = "bad-name-without-slash"
 
 	targetNetworkName      = "targetNetwork"
 	targetNetworkNamespace = "targetNamespace"
@@ -41,7 +46,7 @@ var _ = Describe("Validating Network mapping", func() {
 			return &netAttachDef, nil
 		}
 	})
-	table.DescribeTable("should reject missing mapping for: ", func(nic *ovirtsdk.Nic, networkName *string, networkID *string) {
+	table.DescribeTable("should reject missing mapping for: ", func(nic *ovirtsdk.Nic, srcNetMappingName *string, vnicProfileID *string) {
 		nics := []*ovirtsdk.Nic{
 			nic,
 		}
@@ -50,8 +55,8 @@ var _ = Describe("Validating Network mapping", func() {
 			v2vv1alpha1.ResourceMappingItem{
 				Type: &podType,
 				Source: v2vv1alpha1.Source{
-					Name: networkName,
-					ID:   networkID,
+					Name: srcNetMappingName,
+					ID:   vnicProfileID,
 				},
 				Target: v2vv1alpha1.ObjectIdentifier{
 					Name: "targetNetwork",
@@ -64,10 +69,11 @@ var _ = Describe("Validating Network mapping", func() {
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.NetworkMappingID))
 	},
-		table.Entry("Vnic profile network with no mapping", createNic(&networkName, &networkID), nil, nil),
-		table.Entry("Vnic profile network with ID mismatch", createNic(&networkName, &networkID), nil, &wrongNetworkID),
-		table.Entry("Vnic profile network with name mismatch", createNic(&networkName, &networkID), &wrongNetworkName, nil),
-		table.Entry("Vnic profile network with both name and ID wrong", createNic(&networkName, &networkID), &wrongNetworkName, &wrongNetworkID),
+		table.Entry("Vnic profile network with no mapping", createNic(&networkName, &vnicProfileName, &vnicProfileID), nil, nil),
+		table.Entry("Vnic profile network with ID mismatch", createNic(&networkName, &vnicProfileName, &vnicProfileID), nil, &wrongNetworkID),
+		table.Entry("Vnic profile network with name mismatch", createNic(&networkName, &vnicProfileName, &vnicProfileID), &wrongSrcNetMappingName, nil),
+		table.Entry("Vnic profile network with both name and ID wrong", createNic(&networkName, &vnicProfileName, &vnicProfileID), &wrongSrcNetMappingName, &wrongNetworkID),
+		table.Entry("Source network mapping format is illegal", createNic(&networkName, &vnicProfileName, &vnicProfileID), &invalidSrcNetMappingName, nil),
 	)
 	table.DescribeTable("should accept mapping for: ", func(nic *ovirtsdk.Nic, networkName *string, networkID *string) {
 		nics := []*ovirtsdk.Nic{
@@ -91,19 +97,23 @@ var _ = Describe("Validating Network mapping", func() {
 
 		Expect(failures).To(BeEmpty())
 	},
-		table.Entry("Vnic profile network with mapping with name", createNic(&networkName, &networkID), &networkName, nil),
-		table.Entry("Vnic profile network with mapping with ID", createNic(&networkName, &networkID), nil, &networkID),
-		table.Entry("Vnic profile network with mapping with both name and ID", createNic(&networkName, &networkID), &networkName, &networkID),
+		table.Entry("Vnic profile network with mapping with name", createNic(&networkName, &vnicProfileName, &vnicProfileID), &srcNetMappingName, nil),
+		table.Entry("Vnic profile network with mapping with ID", createNic(&networkName, &vnicProfileName, &vnicProfileID), nil, &vnicProfileID),
+		table.Entry("Vnic profile network with mapping with both name and ID",
+			createNic(&networkName, &vnicProfileName, &vnicProfileID),
+			&srcNetMappingName,
+			&vnicProfileID,
+		),
 	)
 	It("should accept mapping for no type", func() {
 		nics := []*ovirtsdk.Nic{
-			createNic(&networkName, &networkID),
+			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 
 		mapping := []v2vv1alpha1.ResourceMappingItem{
 			v2vv1alpha1.ResourceMappingItem{
 				Source: v2vv1alpha1.Source{
-					ID: &networkID,
+					ID: &vnicProfileID,
 				},
 				Target: v2vv1alpha1.ObjectIdentifier{
 					Name: "targetNetwork",
@@ -117,14 +127,14 @@ var _ = Describe("Validating Network mapping", func() {
 	})
 	It("should accept mapping with non-existing, not-required network attachment definition", func() {
 		nics := []*ovirtsdk.Nic{
-			createNic(&networkName, &networkID),
+			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 		otherNetwork := "other-net"
 
 		mapping := []v2vv1alpha1.ResourceMappingItem{
 			v2vv1alpha1.ResourceMappingItem{
 				Source: v2vv1alpha1.Source{
-					ID: &networkID,
+					ID: &vnicProfileID,
 				},
 				Target: v2vv1alpha1.ObjectIdentifier{
 					Name: targetNetworkName,
@@ -136,7 +146,7 @@ var _ = Describe("Validating Network mapping", func() {
 					ID: &otherNetwork,
 				},
 				Target: v2vv1alpha1.ObjectIdentifier{
-					Name: wrongNetworkName,
+					Name: wrongSrcNetMappingName,
 				},
 				Type: &multusType,
 			},
@@ -161,14 +171,14 @@ var _ = Describe("Validating Network mapping", func() {
 	})
 	It("should accept mapping for multus type", func() {
 		nics := []*ovirtsdk.Nic{
-			createNic(&networkName, &networkID),
+			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 
 		mapping := []v2vv1alpha1.ResourceMappingItem{
 			v2vv1alpha1.ResourceMappingItem{
 				Type: &multusType,
 				Source: v2vv1alpha1.Source{
-					ID: &networkID,
+					ID: &vnicProfileID,
 				},
 				Target: v2vv1alpha1.ObjectIdentifier{
 					Name:      targetNetworkName,
@@ -183,14 +193,14 @@ var _ = Describe("Validating Network mapping", func() {
 	})
 	It("should reject mapping for multus type for retrieval error", func() {
 		nics := []*ovirtsdk.Nic{
-			createNic(&networkName, &networkID),
+			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 
 		mapping := []v2vv1alpha1.ResourceMappingItem{
 			v2vv1alpha1.ResourceMappingItem{
 				Type: &multusType,
 				Source: v2vv1alpha1.Source{
-					ID: &networkID,
+					ID: &vnicProfileID,
 				},
 				Target: v2vv1alpha1.ObjectIdentifier{
 					Name:      targetNetworkName,
@@ -210,15 +220,15 @@ var _ = Describe("Validating Network mapping", func() {
 	})
 	It("should reject genie type", func() {
 		nics := []*ovirtsdk.Nic{
-			createNic(&networkName, &networkID),
+			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 		genieType := "genie"
 		mapping := []v2vv1alpha1.ResourceMappingItem{
 			v2vv1alpha1.ResourceMappingItem{
 				Type: &genieType,
 				Source: v2vv1alpha1.Source{
-					ID:   &networkID,
-					Name: &networkName,
+					ID:   &vnicProfileID,
+					Name: &srcNetMappingName,
 				},
 				Target: v2vv1alpha1.ObjectIdentifier{
 					Name: "targetNetwork",
@@ -233,7 +243,7 @@ var _ = Describe("Validating Network mapping", func() {
 	})
 	It("should reject nil mapping", func() {
 		nics := []*ovirtsdk.Nic{
-			createNic(&networkName, &networkID),
+			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 
 		failures := validator.ValidateNetworkMapping(nics, nil, namespace)
@@ -253,16 +263,19 @@ var _ = Describe("Validating Network mapping", func() {
 	})
 })
 
-func createNic(networkName *string, networkID *string) *ovirtsdk.Nic {
+func createNic(networkName *string, vnicProfileName *string, vnicProfileID *string) *ovirtsdk.Nic {
 	nic := ovirtsdk.Nic{}
 	network := ovirtsdk.Network{}
-	if networkID != nil {
-		network.SetId(*networkID)
-	}
 	if networkName != nil {
 		network.SetName(*networkName)
 	}
 	profile := ovirtsdk.VnicProfile{}
+	if vnicProfileID != nil {
+		profile.SetId(*vnicProfileID)
+	}
+	if vnicProfileName != nil {
+		profile.SetName(*vnicProfileName)
+	}
 	profile.SetNetwork(&network)
 	nic.SetVnicProfile(&profile)
 	return &nic

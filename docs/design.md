@@ -54,7 +54,7 @@ Spec:
       mappings:
         networkMappings:
         - source:
-            name: red
+            name: red/profile1
             target: xyz
             type: bridge
         diskMappings: # a mapping of a specific disk to storage class
@@ -94,6 +94,10 @@ Each section specifies the mapping between ovirt entity to kubevirt’s entity, 
 
 The import VM operator will be responsible to deduce the configuration of the target VM based on the configuration of the source and perform the transformation in a way that will preserve the attributes of the source VM, e.g. boot sequence, MAC address, [run strategy](https://kubevirt.io/user-guide/docs/latest/creating-virtual-machines/run-strategies.html), [domain specification](https://kubevirt.io/api-reference/v0.26.1/definitions.html#_v1_domainspec) and hostname if available on ovirt by the guest agent.
 
+“networkMappings“ section under “ovirt“ source describes the mapping of oVirt's vNIC Profile to network attachment definition:
+* name - should follow the format of 'network-name/vnic-profile-name'
+* id - represents the vnic-profile ID
+
 ```yaml
 apiVersion: v2v.kubevirt.io/v1alpha1
 kind: ResourceMapping
@@ -104,7 +108,7 @@ Spec:
   ovirt:
     networkMappings:
     - source:
-        name: red # maps of ovirt logic network to network attachment definition
+        name: red/profile1 # maps of ovirt 'logic network/vnic profile' to network attachment definition
       target: xyz
       type: bridge
     - source:
