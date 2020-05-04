@@ -2,10 +2,12 @@ package tests_test
 
 import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/tests/utils"
+	"github.com/onsi/ginkgo/extensions/table"
+
 	"github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
 	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,9 +26,12 @@ var (
 	storageClass = "local"
 )
 
+type basicVmImportTest struct{}
+
 var _ = Describe("Basic VM import ", func() {
 	var (
 		f         = framework.NewFrameworkOrDie("basic-vm-import")
+		test      = basicVmImportTest{}
 		secret    corev1.Secret
 		namespace string
 	)
@@ -42,7 +47,7 @@ var _ = Describe("Basic VM import ", func() {
 
 	Context(" without resource mapping", func() {
 		It("should create stopped VM", func() {
-			vmi := virtualMachineImportCr(vmID, namespace, secret.Name)
+			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix)
 
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
@@ -55,12 +60,12 @@ var _ = Describe("Basic VM import ", func() {
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).NotTo(BeRunning(f))
 
-			vm := validateTargetMachinConfiguration(f, vmBlueprint.Name, vmBlueprint.Namespace)
-			validateDefaultStorageClassWasRequested(f, vm.Spec.Template.Spec.Volumes[0].DataVolume.Name)
+			vm := test.validateTargetConfiguration(f, vmBlueprint.Name, vmBlueprint.Namespace)
+			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveDefaultStorageClass(f))
 		})
 
 		It("should create started VM", func() {
-			vmi := virtualMachineImportCr(vmID, namespace, secret.Name)
+			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix)
 			vmi.Spec.StartVM = &trueVar
 
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
@@ -74,14 +79,14 @@ var _ = Describe("Basic VM import ", func() {
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).To(BeRunning(f))
 
-			vm := validateTargetMachinConfiguration(f, vmBlueprint.Name, vmBlueprint.Namespace)
-			validateDefaultStorageClassWasRequested(f, vm.Spec.Template.Spec.Volumes[0].DataVolume.Name)
+			vm := test.validateTargetConfiguration(f, vmBlueprint.Name, vmBlueprint.Namespace)
+			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveDefaultStorageClass(f))
 		})
 	})
 
 	Context(" with in-CR resource mapping", func() {
 		table.DescribeTable("should create running VM", func(mappings v2vv1alpha1.OvirtMappings, storageClass string) {
-			vmi := virtualMachineImportCr(vmID, namespace, secret.Name)
+			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix)
 			vmi.Spec.StartVM = &trueVar
 			vmi.Spec.Source.Ovirt.Mappings = &mappings
 
@@ -96,8 +101,8 @@ var _ = Describe("Basic VM import ", func() {
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).To(BeRunning(f))
 
-			vm := validateTargetMachinConfiguration(f, vmBlueprint.Name, vmBlueprint.Namespace)
-			validateVolumeStorageClass(f, vm.Spec.Template.Spec.Volumes[0].DataVolume.Name, &storageClass)
+			vm := test.validateTargetConfiguration(f, vmBlueprint.Name, vmBlueprint.Namespace)
+			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveStorageClass(storageClass, f))
 		},
 			table.Entry(" for disk", v2vv1alpha1.OvirtMappings{
 				DiskMappings: &[]v2vv1alpha1.ResourceMappingItem{
@@ -112,17 +117,7 @@ var _ = Describe("Basic VM import ", func() {
 	})
 })
 
-func validateVolumeStorageClass(f *framework.Framework, dvName string, storageClass *string) {
-	dv, err := f.CdiClient.CdiV1alpha1().DataVolumes(f.Namespace.Name).Get(dvName, metav1.GetOptions{})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(dv.Spec.PVC.StorageClassName).To(BeEquivalentTo(storageClass))
-}
-
-func validateDefaultStorageClassWasRequested(f *framework.Framework, dvName string) {
-	validateVolumeStorageClass(f, dvName, nil)
-}
-
-func validateTargetMachinConfiguration(f *framework.Framework, vmName string, vmNamespace string) *v1.VirtualMachine {
+func (t *basicVmImportTest) validateTargetConfiguration(f *framework.Framework, vmName string, vmNamespace string) *v1.VirtualMachine {
 	vm, _ := f.KubeVirtClient.VirtualMachine(vmNamespace).Get(vmName, &metav1.GetOptions{})
 	spec := vm.Spec.Template.Spec
 
@@ -157,26 +152,4 @@ func validateTargetMachinConfiguration(f *framework.Framework, vmName string, vm
 	Expect(spec.Volumes).To(HaveLen(1))
 
 	return vm
-}
-
-func virtualMachineImportCr(vmID string, namespace string, ovirtSecretName string) v2vv1alpha1.VirtualMachineImport {
-	targetVMName := "target-vm"
-	return v2vv1alpha1.VirtualMachineImport{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "vm-import-basic-no-resources-",
-			Namespace:    namespace,
-		},
-		Spec: v2vv1alpha1.VirtualMachineImportSpec{
-			ProviderCredentialsSecret: v2vv1alpha1.ObjectIdentifier{
-				Name:      ovirtSecretName,
-				Namespace: &namespace,
-			},
-			Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
-				Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{
-					VM: v2vv1alpha1.VirtualMachineImportOvirtSourceVMSpec{ID: &vmID},
-				},
-			},
-			TargetVMName: &targetVMName,
-		},
-	}
 }
