@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	oos "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/os"
+
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
@@ -70,15 +72,17 @@ type OvirtMapper struct {
 	mappings  *v2vv1alpha1.OvirtMappings
 	creds     DataVolumeCredentials
 	namespace string
+	osFinder  oos.OSFinder
 }
 
 // NewOvirtMapper create ovirt mapper object
-func NewOvirtMapper(vm *ovirtsdk.Vm, mappings *v2vv1alpha1.OvirtMappings, creds DataVolumeCredentials, namespace string) *OvirtMapper {
+func NewOvirtMapper(vm *ovirtsdk.Vm, mappings *v2vv1alpha1.OvirtMappings, creds DataVolumeCredentials, namespace string, osFinder oos.OSFinder) *OvirtMapper {
 	return &OvirtMapper{
 		vm:        vm,
 		mappings:  mappings,
 		creds:     creds,
 		namespace: namespace,
+		osFinder:  osFinder,
 	}
 }
 
@@ -150,8 +154,10 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 		return vmSpec, err
 	}
 
+	os, _ := o.osFinder.FindOperatingSystem(o.vm)
+
 	// Devices
-	vmSpec.Spec.Template.Spec.Domain.Devices = *o.mapGraphicalConsoles()
+	vmSpec.Spec.Template.Spec.Domain.Devices = *o.mapGraphicalConsoles(os)
 
 	// Map labels like origin, instance_type
 	vmSpec.ObjectMeta.Labels = o.mapLabels(vmSpec.ObjectMeta.Labels)
@@ -592,14 +598,17 @@ func (o *OvirtMapper) mapResourceRequirements() (kubevirtv1.ResourceRequirements
 }
 
 // Graphical console is attached only in case the VM is not in headless mode
-func (o *OvirtMapper) mapGraphicalConsoles() *kubevirtv1.Devices {
+func (o *OvirtMapper) mapGraphicalConsoles(os string) *kubevirtv1.Devices {
 	// GraphicsConsole
 	vncEnabled := true
 	if gc, _ := o.vm.GraphicsConsoles(); len(gc.Slice()) == 0 {
 		vncEnabled = false
 	}
 	devices := &kubevirtv1.Devices{}
-	devices.AutoattachGraphicsDevice = &vncEnabled
+	if vncEnabled {
+		devices.AutoattachGraphicsDevice = &vncEnabled
+		devices.Inputs = []kubevirtv1.Input{o.prepareTabletInputDevice(os)}
+	}
 
 	// SerialConsole
 	if console, ok := o.vm.Console(); ok {
@@ -608,6 +617,19 @@ func (o *OvirtMapper) mapGraphicalConsoles() *kubevirtv1.Devices {
 	}
 
 	return devices
+}
+
+func (o *OvirtMapper) prepareTabletInputDevice(os string) kubevirtv1.Input {
+	tablet := kubevirtv1.Input{
+		Type: "tablet",
+		Name: "tablet",
+	}
+	if strings.Contains(os, "win") {
+		tablet.Bus = "usb"
+	} else {
+		tablet.Bus = "virtio"
+	}
+	return tablet
 }
 
 func (o *OvirtMapper) mapLabels(vmLabels map[string]string) map[string]string {

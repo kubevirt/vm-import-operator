@@ -69,6 +69,7 @@ type OvirtProvider struct {
 	vm                 *ovirtsdk.Vm
 	vmiCrName          types.NamespacedName
 	resourceMapping    *v2vv1alpha1.OvirtMappings
+	osFinder           oos.OSFinder
 	templateFinder     *otemplates.TemplateFinder
 	templateHandler    *templates.TemplateHandler
 	secretsManager     SecretsManager
@@ -87,6 +88,7 @@ func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, temp
 	return OvirtProvider{
 		vmiCrName:         vmiCrName,
 		validator:         validation.NewVirtualMachineImportValidator(validator),
+		osFinder:          &osFinder,
 		templateFinder:    otemplates.NewTemplateFinder(templateProvider, &osFinder),
 		templateHandler:   templates.NewTemplateHandler(templateProvider),
 		secretsManager:    &secretsManager,
@@ -271,7 +273,7 @@ func (o *OvirtProvider) CreateMapper() (provider.Mapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	return mapper.NewOvirtMapper(vm, o.resourceMapping, credentials, o.vmiCrName.Namespace), nil
+	return mapper.NewOvirtMapper(vm, o.resourceMapping, credentials, o.vmiCrName.Namespace, o.osFinder), nil
 }
 
 // StartVM starts the source VM
