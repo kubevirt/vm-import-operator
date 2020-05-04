@@ -6,6 +6,7 @@ import (
 
 	netv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	outils "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/utils"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
@@ -169,7 +170,7 @@ func (v *NetworkMappingValidator) createSourceNetworkIdentifier(network *ovirtsd
 	networkName, okNetworkName := network.Name()
 	vnicName, okVnicName := vnic.Name()
 	if okID || okNetworkName && okVnicName {
-		name := networkName + "/" + vnicName
+		name := outils.GetNetworkMappingName(networkName, vnicName)
 		src := v2vv1alpha1.Source{
 			ID:   &id,
 			Name: &name}
