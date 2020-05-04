@@ -624,7 +624,8 @@ func (o *OvirtMapper) prepareTabletInputDevice(os string) kubevirtv1.Input {
 		Type: "tablet",
 		Name: "tablet",
 	}
-	if strings.Contains(os, "win") {
+
+	if len(os) >= 3 && strings.EqualFold(os[:3], "win") {
 		tablet.Bus = "usb"
 	} else {
 		tablet.Bus = "virtio"

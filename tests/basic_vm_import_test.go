@@ -151,5 +151,14 @@ func (t *basicVmImportTest) validateTargetConfiguration(f *framework.Framework, 
 	By("having correct volumes")
 	Expect(spec.Volumes).To(HaveLen(1))
 
+	By("having correct VNC setup")
+	Expect(*spec.Domain.Devices.AutoattachGraphicsDevice).To(BeTrue())
+
+	inputDevices := spec.Domain.Devices.Inputs
+	tablet := utils.FindTablet(inputDevices)
+	Expect(tablet).NotTo(BeNil())
+	Expect(tablet.Bus).To(BeEquivalentTo("virtio"))
+	Expect(tablet.Type).To(BeEquivalentTo("tablet"))
+
 	return vm
 }

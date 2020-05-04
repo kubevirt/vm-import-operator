@@ -97,7 +97,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 	It("should map graphics consoles for windows OS", func() {
 		findOs = func(vm *ovirtsdk.Vm) (string, error) {
-			return "win2k19", nil
+			return "Win2k19", nil
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 		vmSpec, _ := mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
