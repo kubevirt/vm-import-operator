@@ -17,6 +17,7 @@ import (
 
 var (
 	process func(namespace string, vmName *string, template *templatev1.Template) (*templatev1.Template, error)
+	findOs  func(vm *ovirtsdk.Vm) (string, error)
 )
 
 var _ = Describe("Processing a template", func() {
@@ -30,7 +31,11 @@ var _ = Describe("Processing a template", func() {
 
 		templateProvider := &mockTemplateProvider{}
 		provider.templateHandler = templates.NewTemplateHandler(templateProvider)
-		provider.templateFinder = otemplates.NewTemplateFinder(templateProvider, &mockOSMapProvider{})
+		provider.templateFinder = otemplates.NewTemplateFinder(templateProvider, &mockOsFinder{})
+
+		findOs = func(vm *ovirtsdk.Vm) (string, error) {
+			return "win2k12r2", nil
+		}
 
 		process = func(namespace string, vmName *string, temp *templatev1.Template) (*templatev1.Template, error) {
 			vm := kubevirtv1.VirtualMachine{
@@ -118,9 +123,13 @@ var _ = Describe("Processing a template", func() {
 	})
 })
 
-type mockTemplateProvider struct{}
+type mockOsFinder struct{}
 
-type mockOSMapProvider struct{}
+func (o *mockOsFinder) FindOperatingSystem(vm *ovirtsdk.Vm) (string, error) {
+	return findOs(vm)
+}
+
+type mockTemplateProvider struct{}
 
 func (t *mockTemplateProvider) Find(namespace *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error) {
 	return nil, nil
@@ -128,10 +137,4 @@ func (t *mockTemplateProvider) Find(namespace *string, os *string, workload *str
 
 func (t *mockTemplateProvider) Process(namespace string, vmName *string, template *templatev1.Template) (*templatev1.Template, error) {
 	return process(namespace, vmName, template)
-}
-
-func (os *mockOSMapProvider) GetOSMaps() (map[string]string, map[string]string, error) {
-	return map[string]string{}, map[string]string{
-		"windows_2012R2x64": "win2k12r2",
-	}, nil
 }
