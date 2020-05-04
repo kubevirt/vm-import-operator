@@ -4,6 +4,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/kubevirt/vm-import-operator/pkg/os"
+
+	oos "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/os"
+
 	"github.com/kubevirt/vm-import-operator/pkg/config"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
@@ -79,10 +83,11 @@ func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, temp
 	secretsManager := secrets.NewManager(client)
 	configMapsManager := configmaps.NewManager(client)
 	templateProvider := templates.NewTemplateProvider(tempClient)
+	osFinder := oos.OVirtOSFinder{OsMapProvider: os.NewOSMapProvider(client)}
 	return OvirtProvider{
 		vmiCrName:         vmiCrName,
 		validator:         validation.NewVirtualMachineImportValidator(validator),
-		templateFinder:    otemplates.NewTemplateFinder(templateProvider, templates.NewOSMapProvider(client)),
+		templateFinder:    otemplates.NewTemplateFinder(templateProvider, &osFinder),
 		templateHandler:   templates.NewTemplateHandler(templateProvider),
 		secretsManager:    &secretsManager,
 		configMapsManager: &configMapsManager,

@@ -15,10 +15,10 @@ import (
 
 var (
 	findTemplatesMock func(name *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error)
-	getOSMaps         func() (map[string]string, map[string]string, error)
+	findOs            func(vm *ovirtsdk.Vm) (string, error)
 )
 var _ = Describe("Finding a Template", func() {
-	templateFinder := otemplates.NewTemplateFinder(&mockTemplateProvider{}, &mockOSMapProvider{})
+	templateFinder := otemplates.NewTemplateFinder(&mockTemplateProvider{}, &mockOsFinder{})
 
 	BeforeEach(func() {
 		findTemplatesMock = func(name *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error) {
@@ -26,11 +26,8 @@ var _ = Describe("Finding a Template", func() {
 			templateList := createTemplatesList(template)
 			return templateList, nil
 		}
-
-		getOSMaps = func() (map[string]string, map[string]string, error) {
-			guest2common := make(map[string]string)
-			os2common := make(map[string]string)
-			return guest2common, os2common, nil
+		findOs = func(vm *ovirtsdk.Vm) (string, error) {
+			return "linux", nil
 		}
 	})
 	It("should find a template for given OS: ", func() {
@@ -107,9 +104,8 @@ func (t *mockTemplateProvider) Process(namespace string, vmName *string, templat
 	return &templatev1.Template{}, nil
 }
 
-type mockOSMapProvider struct{}
+type mockOsFinder struct{}
 
-// GetOSMaps retrives the OS Maps
-func (o *mockOSMapProvider) GetOSMaps() (map[string]string, map[string]string, error) {
-	return getOSMaps()
+func (o *mockOsFinder) FindOperatingSystem(vm *ovirtsdk.Vm) (string, error) {
+	return findOs(vm)
 }

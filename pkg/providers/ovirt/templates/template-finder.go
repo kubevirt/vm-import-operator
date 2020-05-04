@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/os"
+
 	"github.com/kubevirt/vm-import-operator/pkg/templates"
 	templatev1 "github.com/openshift/api/template/v1"
 	ovirtsdk "github.com/ovirt/go-ovirt"
@@ -12,68 +14,31 @@ import (
 const (
 	// TemplateNamespace stores the default namespace for kubevirt templates
 	TemplateNamespace = "openshift"
-	defaultLinux      = "rhel8"
-	defaultWindows    = "windows"
 	defaultFlavor     = "medium"
 )
 
 // TemplateFinder attempts to find a template based on given parameters
 type TemplateFinder struct {
 	templateProvider templates.TemplateProvider
-	osMapProvider    templates.OSMapProvider
+	osFinder         os.OSFinder
 }
 
 // NewTemplateFinder creates new TemplateFinder
-func NewTemplateFinder(templateProvider templates.TemplateProvider, osMapProvider templates.OSMapProvider) *TemplateFinder {
+func NewTemplateFinder(templateProvider templates.TemplateProvider, osFinder os.OSFinder) *TemplateFinder {
 	return &TemplateFinder{
 		templateProvider: templateProvider,
-		osMapProvider:    osMapProvider,
+		osFinder:         osFinder,
 	}
 }
 
 // FindTemplate attempts to find best match for a template based on the source VM
 func (f *TemplateFinder) FindTemplate(vm *ovirtsdk.Vm) (*templatev1.Template, error) {
-	os, err := f.findOperatingSystem(vm)
+	os, err := f.osFinder.FindOperatingSystem(vm)
 	if err != nil {
 		return nil, err
 	}
 	workload := getWorkload(vm)
 	return f.getTemplate(os, workload)
-}
-
-func (f *TemplateFinder) findOperatingSystem(vm *ovirtsdk.Vm) (string, error) {
-	guestOsToCommon, osInfoToCommon, err := f.osMapProvider.GetOSMaps()
-	if err != nil {
-		return "", err
-	}
-	// Attempt resolving OS based on VM Guest OS information
-	if gos, found := vm.GuestOperatingSystem(); found {
-		distribution, _ := gos.Distribution()
-		version, _ := gos.Version()
-		fullVersion, _ := version.FullVersion()
-		os, found := guestOsToCommon[distribution]
-		if found {
-			return fmt.Sprintf("%s%s", os, fullVersion), nil
-		}
-	}
-	// Attempt resolving OS by looking for a match based on OS mapping
-	if os, found := vm.Os(); found {
-		osType, _ := os.Type()
-		mappedOS, found := osInfoToCommon[osType]
-		if found {
-			return mappedOS, nil
-		}
-
-		// limit number of possibilities
-		osType = strings.ToLower(osType)
-		if strings.Contains(osType, "linux") || strings.Contains(osType, "rhel") {
-			return defaultLinux, nil
-		} else if strings.Contains(osType, "win") {
-			return defaultWindows, nil
-		}
-	}
-	// return empty to fail label selector
-	return "", fmt.Errorf("Failed to find operating system for the VM")
 }
 
 func getWorkload(vm *ovirtsdk.Vm) string {
@@ -100,7 +65,7 @@ func (f *TemplateFinder) getTemplate(os string, workload string) (*templatev1.Te
 
 // GetMetadata fetches OS and workload specific labels and annotations
 func (f *TemplateFinder) GetMetadata(template *templatev1.Template, vm *ovirtsdk.Vm) (map[string]string, map[string]string, error) {
-	os, err := f.findOperatingSystem(vm)
+	os, err := f.osFinder.FindOperatingSystem(vm)
 	if err != nil {
 		return map[string]string{}, map[string]string{}, err
 	}
