@@ -19,6 +19,11 @@ const memoryGI = 1024 * 1024 * 1024
 
 var targetVMName = "myvm"
 
+var (
+	findOs   func(vm *ovirtsdk.Vm) (string, error)
+	osFinder = mockOsFinder{}
+)
+
 var _ = Describe("Test mapping virtual machine attributes", func() {
 	var (
 		vm       *ovirtsdk.Vm
@@ -29,7 +34,12 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 	BeforeEach(func() {
 		vm = createVM()
 		mappings = createMappings()
-		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
+
+		findOs = func(vm *ovirtsdk.Vm) (string, error) {
+			return "linux", nil
+		}
+
 		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 	})
 
@@ -70,9 +80,40 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(memLimit).To(Equal(memMax))
 	})
 
-	It("should map graphics consoles", func() {
-		graphicsEnabled := vmSpec.Spec.Template.Spec.Domain.Devices.AutoattachGraphicsDevice
+	It("should map graphics consoles for non-windows OS", func() {
+		devices := vmSpec.Spec.Template.Spec.Domain.Devices
+
+		graphicsEnabled := devices.AutoattachGraphicsDevice
 		Expect(*graphicsEnabled).To(Equal(len(vm.MustGraphicsConsoles().Slice()) > 0))
+
+		Expect(devices.Inputs).To(HaveLen(1))
+		inputDevice := devices.Inputs[0]
+		Expect(inputDevice.Type).To(BeEquivalentTo("tablet"))
+		Expect(inputDevice.Name).To(BeEquivalentTo("tablet"))
+
+		Expect(inputDevice.Bus).To(BeEquivalentTo("virtio"))
+
+	})
+
+	It("should map graphics consoles for windows OS", func() {
+		findOs = func(vm *ovirtsdk.Vm) (string, error) {
+			return "Win2k19", nil
+		}
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
+		vmSpec, _ := mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+
+		devices := vmSpec.Spec.Template.Spec.Domain.Devices
+
+		graphicsEnabled := devices.AutoattachGraphicsDevice
+		Expect(*graphicsEnabled).To(Equal(len(vm.MustGraphicsConsoles().Slice()) > 0))
+
+		Expect(devices.Inputs).To(HaveLen(1))
+		inputDevice := devices.Inputs[0]
+		Expect(inputDevice.Type).To(BeEquivalentTo("tablet"))
+		Expect(inputDevice.Name).To(BeEquivalentTo("tablet"))
+
+		Expect(inputDevice.Bus).To(BeEquivalentTo("usb"))
+
 	})
 
 	It("should create UTC clock", func() {
@@ -88,7 +129,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		vm = createVM()
 		vm.SetTimeZone(ovirtsdk.NewTimeZoneBuilder().
 			Name("Etc/GMT").MustBuild())
-		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 
 		clock := vmSpec.Spec.Template.Spec.Domain.Clock
@@ -101,7 +142,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		vm = createVM()
 		vm.SetTimeZone(ovirtsdk.NewTimeZoneBuilder().
 			UtcOffset("illegal").MustBuild())
-		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 
 		clock := vmSpec.Spec.Template.Spec.Domain.Clock
@@ -113,7 +154,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 	It("should create UTC clock when no clock in source VM", func() {
 		vm = createVM()
 		vm.SetTimeZone(nil)
-		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 
 		clock := vmSpec.Spec.Template.Spec.Domain.Clock
@@ -181,7 +222,7 @@ var _ = Describe("Test mapping disks", func() {
 			ConfigMapName: "config-map",
 		}
 		namespace := "the-namespace"
-		mapper := mapper.NewOvirtMapper(vm, &mappings, credentials, namespace)
+		mapper := mapper.NewOvirtMapper(vm, &mappings, credentials, namespace, &osFinder)
 		daName := "123"
 		dvs, _ := mapper.MapDataVolumes()
 
@@ -227,7 +268,7 @@ var _ = Describe("Test mapping disks", func() {
 			DiskMappings:    &disks,
 			StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{},
 		}
-		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
 		dvs, _ := mapper.MapDataVolumes()
 
@@ -253,7 +294,7 @@ var _ = Describe("Test mapping disks", func() {
 			DiskMappings:    &disks,
 			StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{},
 		}
-		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
 		dvs, err := mapper.MapDataVolumes()
 
@@ -278,7 +319,7 @@ var _ = Describe("Test mapping disks", func() {
 			DiskMappings:    &[]v2vv1alpha1.ResourceMappingItem{},
 			StorageMappings: &domains,
 		}
-		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
 		dvs, err := mapper.MapDataVolumes()
 
@@ -291,7 +332,7 @@ var _ = Describe("Test mapping disks", func() {
 			DiskMappings:    &[]v2vv1alpha1.ResourceMappingItem{},
 			StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{},
 		}
-		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "")
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
 		dvs, err := mapper.MapDataVolumes()
 
@@ -434,4 +475,10 @@ func createMappings() v2vv1alpha1.OvirtMappings {
 		StorageMappings: &storages,
 		DiskMappings:    &[]v2vv1alpha1.ResourceMappingItem{},
 	}
+}
+
+type mockOsFinder struct{}
+
+func (o *mockOsFinder) FindOperatingSystem(vm *ovirtsdk.Vm) (string, error) {
+	return findOs(vm)
 }

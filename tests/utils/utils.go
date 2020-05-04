@@ -3,6 +3,7 @@ package utils
 import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "kubevirt.io/client-go/api/v1"
 )
 
 // VirtualMachineImportCr creates VM import CR
@@ -26,4 +27,16 @@ func VirtualMachineImportCr(vmID string, namespace string, ovirtSecretName strin
 			TargetVMName: &targetVMName,
 		},
 	}
+}
+
+// FindTablet finds tablet device in given slice; nil is returned when tablet can't be found
+func FindTablet(inputDevices []v1.Input) *v1.Input {
+	var tablet *v1.Input
+	for _, input := range inputDevices {
+		if input.Type == "tablet" {
+			tablet = &input
+			break
+		}
+	}
+	return tablet
 }
