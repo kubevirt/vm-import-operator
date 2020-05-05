@@ -26,47 +26,12 @@ set -ex
 
 export KUBEVIRT_PROVIDER=$TARGET
 
-KUBEVIRT_NUM_NODES=1
-KUBEVIRT_MEMORY_SIZE=8192
-
-if [ ! -d "cluster-up/cluster/$KUBEVIRT_PROVIDER" ]; then
-  echo "The cluster provider $KUBEVIRT_PROVIDER does not exist"
-  exit 1
-fi
-
-kubectl() { cluster-up/kubectl.sh "$@"; }
-
-./cluster-up/down.sh
-
-./cluster-up/up.sh
-
-# Wait for nodes to become ready
-set +e
-kubectl_rc=0
-retry_counter=0
-while [[ $retry_counter -lt 30 ]] && [[ $kubectl_rc -ne 0 || -n "$(kubectl get nodes --no-headers | grep NotReady)" ]]; do
-    echo "Waiting for all nodes to become ready ..."
-    kubectl get nodes --no-headers
-    kubectl_rc=$?
-    retry_counter=$((retry_counter + 1))
-    sleep 10
-done
-set -e
-
-if [ $retry_counter -eq 30 ]; then
-	echo "Not all nodes are up"
-	exit 1
-fi
-
-echo "Nodes are ready:"
-kubectl get nodes
-
-./cluster-sync/sync.sh
-
-kubectl version
+make cluster-down
+make cluster-up
+make cluster-sync
 
 # Run functional tests
-kubectl create -f tests/cirros/secret.yml
+./cluster/kubectl.sh create -f tests/cirros/secret.yml
 
-KUBECONFIG=$(./cluster-up/kubeconfig.sh)
+KUBECONFIG=$(./cluster/kubeconfig.sh)
 go test ./tests --v -kubeconfig "$KUBECONFIG" -ovirt-secret "default/ovirt-secret"

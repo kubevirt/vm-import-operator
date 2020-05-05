@@ -1,6 +1,6 @@
-#!/usr/bin/env bash
+#!/bin/bash
 #
-# This file is part of the KubeVirt project
+# Copyright 2018-2019 Red Hat, Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,26 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
-# Copyright 2017 Red Hat, Inc.
-#
 
-set -e
+set -ex
 
-if [ -z "$KUBEVIRTCI_PATH" ]; then
-    KUBEVIRTCI_PATH="$(
-        cd "$(dirname "$BASH_SOURCE[0]")/"
-        echo "$(pwd)/"
-    )"
-fi
+export VERSION=latest
 
-source ${KUBEVIRTCI_PATH}/hack/common.sh
-source ${KUBEVIRTCI_CLUSTER_PATH}/$KUBEVIRT_PROVIDER/provider.sh
-source ${KUBEVIRTCI_PATH}/hack/config.sh
-
-if [ "$1" == "console" ] || [ "$1" == "vnc" ]; then
-    ${KUBEVIRTCI_PATH}/../_out/cmd/virtctl/virtctl --kubeconfig=${kubeconfig} "$@"
-else
-    _kubectl "$@"
-fi
-
+./cluster/kubectl.sh create -f _out/vm-import-operator/${VERSION}/operator.yaml
+./cluster/kubectl.sh wait deploy/vm-import-operator -n kubevirt --for=condition=Available --timeout=600s

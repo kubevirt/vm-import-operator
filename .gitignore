@@ -88,3 +88,6 @@ whitespace
 whitespace-check
 ### Test ###
 _ci-configs/
+_kubevirtci/
+_out/
+manifests/vm-import-operator/latest/
