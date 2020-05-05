@@ -4,7 +4,7 @@ go:
   - 1.x
 
 env:
-  - RELEASE_VERSION=v0.15.2 GO111MODULE=on
+  - RELEASE_VERSION=v0.16.0 GO111MODULE=on
 
 cache:
    directories:
