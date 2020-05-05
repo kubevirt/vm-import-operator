@@ -532,8 +532,7 @@ func isIncomplete(condition *v2vv1alpha1.VirtualMachineImportCondition) bool {
 func (r *ReconcileVirtualMachineImport) createProvider(vmi *v2vv1alpha1.VirtualMachineImport) (provider.Provider, error) {
 	// The type of the provider is evaluated based on the source field from the CR
 	if vmi.Spec.Source.Ovirt != nil {
-		namespacedName := types.NamespacedName{Name: vmi.Name, Namespace: vmi.Namespace}
-		provider := ovirtprovider.NewOvirtProvider(namespacedName, r.client, r.ocClient, r.factory, r.kvConfigProvider)
+		provider := ovirtprovider.NewOvirtProvider(vmi.ObjectMeta, vmi.TypeMeta, r.client, r.ocClient, r.factory, r.kvConfigProvider)
 		return &provider, nil
 	}
 

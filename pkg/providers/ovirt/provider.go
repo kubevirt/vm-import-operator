@@ -4,6 +4,10 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/kubevirt/vm-import-operator/pkg/ownerreferences"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/kubevirt/vm-import-operator/pkg/os"
 
 	oos "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/os"
@@ -67,7 +71,8 @@ type OvirtProvider struct {
 	ovirtClient        pclient.VMClient
 	validator          validation.VirtualMachineImportValidator
 	vm                 *ovirtsdk.Vm
-	vmiCrName          types.NamespacedName
+	vmiObjectMeta      metav1.ObjectMeta
+	vmiTypeMeta        metav1.TypeMeta
 	resourceMapping    *v2vv1alpha1.OvirtMappings
 	osFinder           oos.OSFinder
 	templateFinder     *otemplates.TemplateFinder
@@ -79,14 +84,15 @@ type OvirtProvider struct {
 }
 
 // NewOvirtProvider creates new OvirtProvider configured with dependencies
-func NewOvirtProvider(vmiCrName types.NamespacedName, client client.Client, tempClient *tempclient.TemplateV1Client, factory pclient.Factory, kvConfigProvider config.KubeVirtConfigProvider) OvirtProvider {
+func NewOvirtProvider(vmiObjectMeta metav1.ObjectMeta, vmiTypeMeta metav1.TypeMeta, client client.Client, tempClient *tempclient.TemplateV1Client, factory pclient.Factory, kvConfigProvider config.KubeVirtConfigProvider) OvirtProvider {
 	validator := validators.NewValidatorWrapper(client, kvConfigProvider)
 	secretsManager := secrets.NewManager(client)
 	configMapsManager := configmaps.NewManager(client)
 	templateProvider := templates.NewTemplateProvider(tempClient)
 	osFinder := oos.OVirtOSFinder{OsMapProvider: os.NewOSMapProvider(client)}
 	return OvirtProvider{
-		vmiCrName:         vmiCrName,
+		vmiObjectMeta:     vmiObjectMeta,
+		vmiTypeMeta:       vmiTypeMeta,
 		validator:         validation.NewVirtualMachineImportValidator(validator),
 		osFinder:          &osFinder,
 		templateFinder:    otemplates.NewTemplateFinder(templateProvider, &osFinder),
@@ -196,7 +202,8 @@ func (o *OvirtProvider) Validate() ([]v2vv1alpha1.VirtualMachineImportCondition,
 	if vm == nil {
 		return []v2vv1alpha1.VirtualMachineImportCondition{}, errors.New("VM has not been loaded")
 	}
-	return o.validator.Validate(vm, &o.vmiCrName, o.resourceMapping), nil
+	vmiName := o.GetVmiNamespacedName()
+	return o.validator.Validate(vm, &vmiName, o.resourceMapping), nil
 }
 
 // StopVM stop the source VM on ovirt
@@ -249,6 +256,10 @@ func (o *OvirtProvider) ProcessTemplate(template *templatev1.Template, vmName *s
 	return vm, nil
 }
 
+func (o *OvirtProvider) GetVmiNamespacedName() types.NamespacedName {
+	return types.NamespacedName{Name: o.vmiObjectMeta.Name, Namespace: o.vmiObjectMeta.Namespace}
+}
+
 func updateLabels(vm *kubevirtv1.VirtualMachine, labels map[string]string) {
 	utils.AppendMap(vm.ObjectMeta.GetLabels(), labels)
 	utils.AppendMap(vm.Spec.Template.ObjectMeta.GetLabels(), labels)
@@ -273,7 +284,7 @@ func (o *OvirtProvider) CreateMapper() (provider.Mapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	return mapper.NewOvirtMapper(vm, o.resourceMapping, credentials, o.vmiCrName.Namespace, o.osFinder), nil
+	return mapper.NewOvirtMapper(vm, o.resourceMapping, credentials, o.vmiObjectMeta.Namespace, o.osFinder), nil
 }
 
 // StartVM starts the source VM
@@ -298,18 +309,19 @@ func (o *OvirtProvider) StartVM() error {
 // CleanUp removes transient resources created for import
 func (o *OvirtProvider) CleanUp() error {
 	var errs []error
-	err := o.secretsManager.DeleteFor(o.vmiCrName)
+	vmiName := o.GetVmiNamespacedName()
+	err := o.secretsManager.DeleteFor(vmiName)
 	if err != nil {
 		errs = append(errs, err)
 	}
 
-	err = o.configMapsManager.DeleteFor(o.vmiCrName)
+	err = o.configMapsManager.DeleteFor(vmiName)
 	if err != nil {
 		errs = append(errs, err)
 	}
 
 	if len(errs) > 0 {
-		return foldErrors(errs, o.vmiCrName)
+		return foldErrors(errs, vmiName)
 	}
 	return nil
 }
@@ -339,7 +351,7 @@ func (o *OvirtProvider) prepareDataVolumeCredentials() (mapper.DataVolumeCredent
 }
 
 func (o *OvirtProvider) ensureSecretIsPresent(keyAccess string, keySecret string) (*corev1.Secret, error) {
-	secret, err := o.secretsManager.FindFor(o.vmiCrName)
+	secret, err := o.secretsManager.FindFor(o.GetVmiNamespacedName())
 	if err != nil {
 		return nil, err
 	}
@@ -359,7 +371,10 @@ func (o *OvirtProvider) createSecret(keyAccess string, keySecret string) (*corev
 			keySecretKey: []byte(keySecret),
 		},
 	}
-	err := o.secretsManager.CreateFor(&newSecret, o.vmiCrName)
+	newSecret.OwnerReferences = []metav1.OwnerReference{
+		ownerreferences.NewVMImportOwnerReference(o.vmiTypeMeta, o.vmiObjectMeta),
+	}
+	err := o.secretsManager.CreateFor(&newSecret, o.GetVmiNamespacedName())
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +382,7 @@ func (o *OvirtProvider) createSecret(keyAccess string, keySecret string) (*corev
 }
 
 func (o *OvirtProvider) ensureConfigMapIsPresent(caCert string) (*corev1.ConfigMap, error) {
-	configMap, err := o.configMapsManager.FindFor(o.vmiCrName)
+	configMap, err := o.configMapsManager.FindFor(o.GetVmiNamespacedName())
 	if err != nil {
 		return nil, err
 	}
@@ -386,7 +401,11 @@ func (o *OvirtProvider) createConfigMap(caCert string) (*corev1.ConfigMap, error
 			"ca.pem": caCert,
 		},
 	}
-	err := o.configMapsManager.CreateFor(&newConfigMap, o.vmiCrName)
+	newConfigMap.OwnerReferences = []metav1.OwnerReference{
+		ownerreferences.NewVMImportOwnerReference(o.vmiTypeMeta, o.vmiObjectMeta),
+	}
+
+	err := o.configMapsManager.CreateFor(&newConfigMap, o.GetVmiNamespacedName())
 	if err != nil {
 		return nil, err
 	}

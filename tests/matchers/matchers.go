@@ -7,6 +7,7 @@ import (
 )
 
 type pollingMatcher struct {
+	pollInterval  time.Duration
 	timeout       time.Duration
 	testFramework *framework.Framework
 }

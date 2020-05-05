@@ -51,7 +51,7 @@ func (m *OwnerReferenceManager) AddOwnerReference(vm *kubevirtv1.VirtualMachine,
 	if ownerRefs == nil {
 		ownerRefs = []metav1.OwnerReference{}
 	}
-	ownerRefs = append(ownerRefs, *newOwnerReference(vm))
+	ownerRefs = append(ownerRefs, newVMOwnerReference(vm))
 	dvCopy := dv.DeepCopy()
 	dvCopy.SetOwnerReferences(ownerRefs)
 	patch := client.MergeFrom(dv)
@@ -112,15 +112,28 @@ func removeControllerReference(refs []metav1.OwnerReference) []metav1.OwnerRefer
 	return refs
 }
 
-func newOwnerReference(vm *kubevirtv1.VirtualMachine) *metav1.OwnerReference {
+func newVMOwnerReference(vm *kubevirtv1.VirtualMachine) metav1.OwnerReference {
 	blockOwnerDeletion := true
 	isController := false
-	return &metav1.OwnerReference{
+	return metav1.OwnerReference{
 		APIVersion:         vm.GroupVersionKind().GroupVersion().String(),
 		Kind:               vm.GetObjectKind().GroupVersionKind().Kind,
 		Name:               vm.GetName(),
 		UID:                vm.GetUID(),
 		BlockOwnerDeletion: &blockOwnerDeletion,
 		Controller:         &isController,
+	}
+}
+
+func NewVMImportOwnerReference(typeMeta metav1.TypeMeta, objectMeta metav1.ObjectMeta) metav1.OwnerReference {
+	blockOwnerDeletion := true
+	isController := false
+	return metav1.OwnerReference{
+		APIVersion:         typeMeta.APIVersion,
+		Kind:               typeMeta.GetObjectKind().GroupVersionKind().Kind,
+		Name:               objectMeta.GetName(),
+		UID:                objectMeta.GetUID(),
+		Controller:         &isController,
+		BlockOwnerDeletion: &blockOwnerDeletion,
 	}
 }
