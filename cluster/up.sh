@@ -31,3 +31,4 @@ fi
 
 install_cdi
 install_kubevirt
+install_imageio
