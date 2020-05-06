@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export KUBEVIRT_PROVIDER=${KUBEVIRT_PROVIDER:-'k8s-1.16.2'}
+export KUBEVIRT_PROVIDER=${KUBEVIRT_PROVIDER:-'k8s-1.16'}
 
 KUBEVIRTCI_PATH="${PWD}/_kubevirtci"
 
