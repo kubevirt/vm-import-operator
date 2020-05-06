@@ -14,9 +14,10 @@ type VirtualMachineImportSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	ProviderCredentialsSecret ObjectIdentifier               `json:"providerCredentialsSecret"`
-	ResourceMapping           *ObjectIdentifier              `json:"resourceMapping,omitempty"`
-	Source                    VirtualMachineImportSourceSpec `json:"source"`
+	ProviderCredentialsSecret ObjectIdentifier `json:"providerCredentialsSecret"`
+	// +optional
+	ResourceMapping *ObjectIdentifier              `json:"resourceMapping,omitempty"`
+	Source          VirtualMachineImportSourceSpec `json:"source"`
 
 	// +optional
 	TargetVMName *string `json:"targetVmName,omitempty"`
@@ -25,14 +26,14 @@ type VirtualMachineImportSpec struct {
 	StartVM *bool `json:"startVm,omitempty"`
 }
 
-// VirtualMachineImportSourceSpec defines the definition of the source provider and mapping resources
+// VirtualMachineImportSourceSpec defines the source provider and the internal mapping resources
 // +k8s:openapi-gen=true
 // +optional
 type VirtualMachineImportSourceSpec struct {
 	Ovirt *VirtualMachineImportOvirtSourceSpec `json:"ovirt,omitempty"`
 }
 
-// VirtualMachineImportOvirtSourceSpec defines the definition of the VM in oVirt and the credentials to oVirt
+// VirtualMachineImportOvirtSourceSpec defines the mapping resources and the VM identity for oVirt source provider
 // +k8s:openapi-gen=true
 type VirtualMachineImportOvirtSourceSpec struct {
 	VM VirtualMachineImportOvirtSourceVMSpec `json:"vm"`
@@ -50,7 +51,7 @@ type ObjectIdentifier struct {
 	Namespace *string `json:"namespace,omitempty"`
 }
 
-// VirtualMachineImportOvirtSourceVMSpec defines the definition of the VM info in oVirt
+// VirtualMachineImportOvirtSourceVMSpec defines how to identify the VM in oVirt
 // +k8s:openapi-gen=true
 type VirtualMachineImportOvirtSourceVMSpec struct {
 	// +optional
@@ -63,7 +64,7 @@ type VirtualMachineImportOvirtSourceVMSpec struct {
 	Cluster *VirtualMachineImportOvirtSourceVMClusterSpec `json:"cluster,omitempty"`
 }
 
-// VirtualMachineImportOvirtSourceVMClusterSpec defines the definition of the source cluster of the VM in oVirt
+// VirtualMachineImportOvirtSourceVMClusterSpec defines the source cluster's identity of the VM in oVirt
 // +k8s:openapi-gen=true
 // +optional
 type VirtualMachineImportOvirtSourceVMClusterSpec struct {
@@ -80,9 +81,14 @@ type VirtualMachineImportStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book-v1.book.kubebuilder.io/beyond_basics/generating_crd.html
-	TargetVMName string                          `json:"targetVmName"`
-	Conditions   []VirtualMachineImportCondition `json:"conditions"`
-	DataVolumes  []DataVolumeItem                `json:"dataVolumes"`
+	// +optional
+	TargetVMName string `json:"targetVmName"`
+
+	// +optional
+	Conditions []VirtualMachineImportCondition `json:"conditions"`
+
+	// +optional
+	DataVolumes []DataVolumeItem `json:"dataVolumes"`
 }
 
 // VirtualMachineImportConditionType defines the condition of VM import

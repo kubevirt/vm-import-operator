@@ -8,6 +8,8 @@ CONTAINER_TAG="${CONTAINER_TAG:-latest}"
 IMAGE_PULL_POLICY="${IMAGE_PULL_POLICY:-Always}"
 KUBEVIRT_NAMESPACE="${REPLACE_KUBEVIRT_NAMESPACE:-kubevirt-hyperconverged}"
 OPERATOR_IMAGE="${OPERATOR_IMAGE:-vm-import-operator}"
+CSV_VERSION_REPLACES=${VERSION_REPLACES//v}
+CSV_VERSION=${VERSION//v}
 
 templates=$(cd ${PROJECT_ROOT}/templates && find . -type f -name "*.yaml.in")
 for template in $templates; do
@@ -28,12 +30,19 @@ for template in $templates; do
 	$infile > $file
 done
 
-# TODO: Will be useful once examples are generated per version
-templates=$(cd ${PROJECT_ROOT}/templates && find . -type f -name "*example_cr.yaml")
-for template in $templates; do
-    infile="${PROJECT_ROOT}/templates/${template}"
-	dir="$(dirname ${DEPLOY_DIR}/${template})"
-	dir=${dir/VERSION/$VERSION/examples}
-	mkdir -p ${dir}
-	cp $infile ${dir}
-done
+go build -o ${PROJECT_ROOT}/tools/csv-generator/csv-generator ${PROJECT_ROOT}/tools/csv-generator/csv-generator.go
+file="${DEPLOY_DIR}/vm-import-operator/${VERSION}/vm-import-operator.${CSV_VERSION}.clusterserviceversion.yaml"
+rendered=$( \
+	${PROJECT_ROOT}/tools/csv-generator/csv-generator \
+	--csv-version=${CSV_VERSION} \
+	--replaces-csv-version=${CSV_VERSION_REPLACES} \
+	--namespace=${KUBEVIRT_NAMESPACE} \
+	--operator-version=${CONTAINER_TAG} \
+	--operator-image="${CONTAINER_PREFIX}/${OPERATOR_IMAGE}" \
+	--image-pull-policy=${IMAGE_PULL_POLICY} \
+)
+if [[ ! -z "$rendered" ]]; then
+	echo -e "$rendered" > $file
+fi
+
+(cd ${PROJECT_ROOT}/tools/csv-generator && go clean)
