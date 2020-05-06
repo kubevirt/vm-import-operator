@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -99,7 +100,15 @@ var _ = Describe("Reconcile steps", func() {
 			return nil
 		}
 		vmName = types.NamespacedName{Name: "test", Namespace: "default"}
-		reconciler = NewReconciler(mockClient, finder, scheme, ownerreferences.NewOwnerReferenceManager(mockClient), factory, kvConfigProviderMock)
+		rec := record.NewFakeRecorder(1)
+		reconciler = NewReconciler(mockClient, finder, scheme, ownerreferences.NewOwnerReferenceManager(mockClient), factory, kvConfigProviderMock, rec)
+	})
+
+	AfterEach(func() {
+		if reconciler != nil {
+			close(reconciler.recorder.(*record.FakeRecorder).Events)
+			reconciler = nil
+		}
 	})
 
 	Describe("Init steps", func() {
@@ -1013,6 +1022,15 @@ var _ = Describe("Reconcile steps", func() {
 			create = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 				return nil
 			}
+			rec := record.NewFakeRecorder(1)
+			reconciler.recorder = rec
+		})
+
+		AfterEach(func() {
+			if reconciler != nil {
+				close(reconciler.recorder.(*record.FakeRecorder).Events)
+				reconciler = nil
+			}
 		})
 
 		It("should fail to find vm import: ", func() {
@@ -1098,6 +1116,8 @@ var _ = Describe("Reconcile steps", func() {
 
 			result, err := reconciler.Reconcile(request)
 
+			event := <-reconciler.recorder.(*record.FakeRecorder).Events
+			Expect(event).To(ContainSubstring("import blocked"))
 			Expect(err).To(BeNil())
 			Expect(result).To(Equal(reconcile.Result{RequeueAfter: requeueAfterValidationFailureTime}))
 		})
@@ -1131,6 +1151,8 @@ var _ = Describe("Reconcile steps", func() {
 
 			result, err := reconciler.Reconcile(request)
 
+			event := <-reconciler.recorder.(*record.FakeRecorder).Events
+			Expect(event).To(ContainSubstring("Error while creating virtual machine"))
 			Expect(err).To(Not(BeNil()))
 			Expect(result).To(Equal(reconcile.Result{}))
 		})
@@ -1174,6 +1196,8 @@ var _ = Describe("Reconcile steps", func() {
 
 			result, err := reconciler.Reconcile(request)
 
+			event := <-reconciler.recorder.(*record.FakeRecorder).Events
+			Expect(event).To(ContainSubstring("creation failed"))
 			Expect(err).To(Not(BeNil()))
 			Expect(result).To(Equal(reconcile.Result{}))
 		})
@@ -1230,7 +1254,7 @@ var _ = Describe("Reconcile steps", func() {
 	})
 })
 
-func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory pclient.Factory, kvConfigProvider config.KubeVirtConfigProvider) *ReconcileVirtualMachineImport {
+func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory pclient.Factory, kvConfigProvider config.KubeVirtConfigProvider, recorder record.EventRecorder) *ReconcileVirtualMachineImport {
 	return &ReconcileVirtualMachineImport{
 		client:                 client,
 		resourceMappingsFinder: finder,
@@ -1238,6 +1262,7 @@ func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme 
 		ownerreferencesmgr:     ownerreferencesmgr,
 		factory:                factory,
 		kvConfigProvider:       kvConfigProvider,
+		recorder:               recorder,
 	}
 }
 
@@ -1340,6 +1365,11 @@ func (p *mockProvider) CreateMapper() (provider.Mapper, error) {
 // GetVMStatus implements Provider.GetVMStatus
 func (p *mockProvider) GetVMStatus() (provider.VMStatus, error) {
 	return getVMStatus()
+}
+
+// GetVMName implements Provider.GetVMName
+func (p *mockProvider) GetVMName() (string, error) {
+	return "", nil
 }
 
 // StartVM implements Provider.StartVM

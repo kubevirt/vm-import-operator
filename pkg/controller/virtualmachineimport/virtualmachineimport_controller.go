@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,6 +47,17 @@ const (
 	progressDone                      = "100"
 	progressForCopyDisk               = 40
 	requeueAfterValidationFailureTime = 5 * time.Second
+
+	// EventImportSucceeded is emitted
+	EventImportSucceeded = "ImportSucceeded"
+	// EventImportBlocked is emitted
+	EventImportBlocked = "ImportBlocked"
+	// EventVMStartFailed is emitted
+	EventVMStartFailed = "VMStartFailed"
+	// EventVMCreationFailed is emitted
+	EventVMCreationFailed = "VMCreationFailed"
+	// EventDVCreationFailed is emitted
+	EventDVCreationFailed = "DVCreationFailed"
 )
 
 var (
@@ -81,6 +93,7 @@ func newReconciler(mgr manager.Manager, kvConfigProvider config.KubeVirtConfigPr
 		ownerreferencesmgr:     ownerreferencesmgr,
 		factory:                factory,
 		kvConfigProvider:       kvConfigProvider,
+		recorder:               mgr.GetEventRecorderFor("virtualmachineimport-controller"),
 	}
 }
 
@@ -142,6 +155,7 @@ type ReconcileVirtualMachineImport struct {
 	ownerreferencesmgr     ownerreferences.OwnerReferenceManager
 	factory                pclient.Factory
 	kvConfigProvider       config.KubeVirtConfigProvider
+	recorder               record.EventRecorder
 }
 
 // Reconcile reads that state of the cluster for a VirtualMachineImport object and makes changes based on the state read
@@ -255,6 +269,9 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 					if err := r.afterSuccess(vmName, vmiName, provider); err != nil {
 						return err
 					}
+
+					// Emit event vm is successfully imported
+					r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportSucceeded, "Virtual Machine %s/%s import successful", vmName.Namespace, vmName.Name)
 				}
 			}
 		} else {
@@ -314,8 +331,12 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 	// Create kubevirt VM from source VM:
 	reqLogger.Info("Creating a new VM", "VM.Namespace", vmSpec.Namespace, "VM.Name", vmSpec.Name)
 	if err = r.client.Create(context.TODO(), vmSpec); err != nil && !errors.IsAlreadyExists(err) {
+		message := fmt.Sprintf("Error while creating virtual machine %s/%s: %s", vmSpec.Namespace, vmSpec.Name, err)
+		// Update event:
+		r.recorder.Event(instance, corev1.EventTypeWarning, EventVMCreationFailed, message)
+
 		// Update condition to failed state:
-		succeededCond := conditions.NewSucceededCondition(string(v2vv1alpha1.VMCreationFailed), fmt.Sprintf("Error while creating virtual machine: %s", err), corev1.ConditionFalse)
+		succeededCond := conditions.NewSucceededCondition(string(v2vv1alpha1.VMCreationFailed), message, corev1.ConditionFalse)
 		processingCond.Status = corev1.ConditionFalse
 		processingFailedReason := string(v2vv1alpha1.ProcessingFailed)
 		processingCond.Reason = &processingFailedReason
@@ -362,10 +383,15 @@ func (r *ReconcileVirtualMachineImport) startVM(provider provider.Provider, inst
 				return err
 			}
 			if err = r.updateToRunning(vmName); err != nil {
+				// Emit event vm failed to start:
+				r.recorder.Eventf(instance, corev1.EventTypeWarning, EventVMStartFailed, "Virtual Machine %s/%s failed to start: %s", vmName.Namespace, vmName.Name, err)
 				return err
 			}
 		} else if err == nil {
 			if vmi.Status.Phase == kubevirtv1.Running || vmi.Status.Phase == kubevirtv1.Scheduled {
+				// Emit event vm is successfully imported and started:
+				r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportSucceeded, "Virtual Machine %s/%s imported and started", vmName.Namespace, vmName.Name)
+
 				if err = r.updateConditionsAfterSuccess(instance, "Virtual machine running", v2vv1alpha1.VirtualMachineRunning); err != nil {
 					return err
 				}
@@ -445,6 +471,7 @@ func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Prov
 	// Fetch VM:
 	vmDef := &kubevirtv1.VirtualMachine{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, vmDef)
+
 	if err != nil {
 		return err
 	}
@@ -457,8 +484,12 @@ func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Prov
 
 		err = r.client.Create(context.TODO(), &dv)
 		if err != nil {
+			message := fmt.Sprintf("Data volume %s/%s creation failed: %s", dv.Namespace, dv.Name, err)
+			// Update event:
+			r.recorder.Event(instance, corev1.EventTypeWarning, EventDVCreationFailed, message)
+
 			// Update condition to failed:
-			succeededCond := conditions.NewSucceededCondition(string(v2vv1alpha1.DataVolumeCreationFailed), fmt.Sprintf("Data volume creation failed: %s", err), corev1.ConditionFalse)
+			succeededCond := conditions.NewSucceededCondition(string(v2vv1alpha1.DataVolumeCreationFailed), message, corev1.ConditionFalse)
 			processingCond.Status = corev1.ConditionFalse
 			processingFailedReason := string(v2vv1alpha1.ProcessingFailed)
 			processingCond.Reason = &processingFailedReason
@@ -703,6 +734,7 @@ func (r *ReconcileVirtualMachineImport) afterFailure(vmiName types.NamespacedNam
 	if len(errs) > 0 {
 		return foldErrors(errs, "Import failure", vmiName)
 	}
+
 	return nil
 }
 
@@ -821,6 +853,14 @@ func (r *ReconcileVirtualMachineImport) validate(instance *v2vv1alpha1.VirtualMa
 		}
 		if valid, message := shouldFailWith(conditions); !valid {
 			logger.Info("Import blocked. " + message)
+
+			// Emit event vm import blocked:
+			if vmName, err := provider.GetVMName(); err == nil {
+				// This potentially flood events service, consider checking if event already occured and don't emit it if it did,
+				// if any performance implication occur.
+				r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportBlocked, "Virtual Machine %s/%s import blocked: %s", instance.Namespace, vmName, message)
+			}
+
 			return false, nil
 		}
 
