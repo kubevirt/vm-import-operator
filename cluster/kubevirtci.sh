@@ -14,7 +14,6 @@
 
 export KUBEVIRT_PROVIDER=${KUBEVIRT_PROVIDER:-'k8s-1.16.2'}
 
-KUBEVIRTCI_VERSION='9b8707c02d59ee1a7924103b6beca9b9cd010633'
 KUBEVIRTCI_PATH="${PWD}/_kubevirtci"
 
 function kubevirtci::install() {
@@ -22,7 +21,6 @@ function kubevirtci::install() {
         git clone https://github.com/kubevirt/kubevirtci.git ${KUBEVIRTCI_PATH}
         (
             cd ${KUBEVIRTCI_PATH}
-            git checkout ${KUBEVIRTCI_VERSION}
         )
     fi
 }
