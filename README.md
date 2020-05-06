@@ -188,6 +188,10 @@ Connect to the debug session, i.e. if using vscode, create launch.json as:
     ]
 }
 ```
+
+# Functional testing
+Functional tests for the operator are described in a [this document](docs/functional-tests.md).
+
 # Release
 1. Checkout a public branch
 2. Call `make prepare-patch|minor|major` and prepare release notes
