@@ -18,6 +18,18 @@ type hasConditionInStatus struct {
 	status        corev1.ConditionStatus
 }
 
+// HaveMappingRulesVerificationFailure creates the matcher checking whether Virtual Machine Import has failed mapping rules verification
+func HaveMappingRulesVerificationFailure(testFramework *framework.Framework) types.GomegaMatcher {
+	matcher := hasConditionInStatus{}
+	matcher.timeout = 1 * time.Minute
+	matcher.pollInterval = 1 * time.Second
+	matcher.testFramework = testFramework
+
+	matcher.conditionType = v2vv1alpha1.MappingRulesVerified
+	matcher.status = corev1.ConditionFalse
+	return &matcher
+}
+
 // BeProcessing creates the matcher checking whether Virtual Machine Import is currently processing
 func BeProcessing(testFramework *framework.Framework) types.GomegaMatcher {
 	matcher := hasConditionInStatus{}

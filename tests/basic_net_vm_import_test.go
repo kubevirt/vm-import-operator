@@ -2,7 +2,7 @@ package tests_test
 
 import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
-	"github.com/kubevirt/vm-import-operator/tests/framework"
+	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	. "github.com/onsi/ginkgo"
@@ -17,14 +17,16 @@ var (
 	networkID = "123"
 )
 
-type networkedVmImportTest struct{}
+type networkedVmImportTest struct {
+	framework *fwk.Framework
+}
 
 var _ = Describe("Networked VM import ", func() {
 	var (
-		f         = framework.NewFrameworkOrDie("networked-vm-import")
+		f         = fwk.NewFrameworkOrDie("networked-vm-import")
 		secret    corev1.Secret
 		namespace string
-		test      = networkedVmImportTest{}
+		test      = networkedVmImportTest{framework: f}
 	)
 
 	BeforeEach(func() {
@@ -56,13 +58,14 @@ var _ = Describe("Networked VM import ", func() {
 		vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 		Expect(vmBlueprint).To(BeRunning(f))
 
-		vm := test.validateTargetConfiguration(f, vmBlueprint.Name, vmBlueprint.Namespace)
+		vm := test.validateTargetConfiguration(vmBlueprint.Name)
 		Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveDefaultStorageClass(f))
 	})
 })
 
-func (t *networkedVmImportTest) validateTargetConfiguration(f *framework.Framework, vmName string, vmNamespace string) *v1.VirtualMachine {
-	vm, _ := f.KubeVirtClient.VirtualMachine(vmNamespace).Get(vmName, &metav1.GetOptions{})
+func (t *networkedVmImportTest) validateTargetConfiguration(vmName string) *v1.VirtualMachine {
+	vmNamespace := t.framework.Namespace.Name
+	vm, _ := t.framework.KubeVirtClient.VirtualMachine(vmNamespace).Get(vmName, &metav1.GetOptions{})
 	spec := vm.Spec.Template.Spec
 
 	By("having correct machine type")

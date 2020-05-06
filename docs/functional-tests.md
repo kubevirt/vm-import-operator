@@ -23,8 +23,8 @@
 ## VM Network Validation
 | Test description | Implemented |
 | :---------------- | :-----------: |
-| VM with unsupported NIC interface should be blocked | &cross; |
-| VM with vnic profile pass-through enabled should be blocked | &cross; |
+| VM with unsupported NIC interfaces should be blocked | &check; |
+| VM with vnic profile pass-through enabled should be blocked | &check; |
 
 ## VM Storage Validation 
 | Test description | Implemented |

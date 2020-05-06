@@ -5,7 +5,7 @@ import (
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	"github.com/onsi/ginkgo/extensions/table"
 
-	"github.com/kubevirt/vm-import-operator/tests/framework"
+	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,12 +26,16 @@ var (
 	storageClass = "local"
 )
 
-type basicVmImportTest struct{}
+type basicVmImportTest struct {
+	framework *fwk.Framework
+}
 
 var _ = Describe("Basic VM import ", func() {
 	var (
-		f         = framework.NewFrameworkOrDie("basic-vm-import")
-		test      = basicVmImportTest{}
+		f    = fwk.NewFrameworkOrDie("basic-vm-import")
+		test = basicVmImportTest{
+			framework: f,
+		}
 		secret    corev1.Secret
 		namespace string
 	)
@@ -60,7 +64,7 @@ var _ = Describe("Basic VM import ", func() {
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).NotTo(BeRunning(f))
 
-			vm := test.validateTargetConfiguration(f, vmBlueprint.Name, vmBlueprint.Namespace)
+			vm := test.validateTargetConfiguration(vmBlueprint.Name)
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveDefaultStorageClass(f))
 		})
 
@@ -79,7 +83,7 @@ var _ = Describe("Basic VM import ", func() {
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).To(BeRunning(f))
 
-			vm := test.validateTargetConfiguration(f, vmBlueprint.Name, vmBlueprint.Namespace)
+			vm := test.validateTargetConfiguration(vmBlueprint.Name)
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveDefaultStorageClass(f))
 		})
 	})
@@ -101,7 +105,7 @@ var _ = Describe("Basic VM import ", func() {
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).To(BeRunning(f))
 
-			vm := test.validateTargetConfiguration(f, vmBlueprint.Name, vmBlueprint.Namespace)
+			vm := test.validateTargetConfiguration(vmBlueprint.Name)
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveStorageClass(storageClass, f))
 		},
 			table.Entry(" for disk", v2vv1alpha1.OvirtMappings{
@@ -117,7 +121,9 @@ var _ = Describe("Basic VM import ", func() {
 	})
 })
 
-func (t *basicVmImportTest) validateTargetConfiguration(f *framework.Framework, vmName string, vmNamespace string) *v1.VirtualMachine {
+func (t *basicVmImportTest) validateTargetConfiguration(vmName string) *v1.VirtualMachine {
+	vmNamespace := t.framework.Namespace.Name
+	f := t.framework
 	vm, _ := f.KubeVirtClient.VirtualMachine(vmNamespace).Get(vmName, &metav1.GetOptions{})
 	spec := vm.Spec.Template.Spec
 
