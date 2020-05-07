@@ -3,9 +3,11 @@ module github.com/kubevirt/vm-import-operator
 go 1.13
 
 require (
+	github.com/RHsyseng/operator-utils v0.0.0-20190906175225-942a3f9c85a9
 	github.com/aktau/github-release v0.7.2
 	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-openapi/spec v0.19.4
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20191119172530-79f836b90111
 	github.com/onsi/ginkgo v1.12.0
