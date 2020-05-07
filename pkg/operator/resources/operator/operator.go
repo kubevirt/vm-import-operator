@@ -582,6 +582,23 @@ func NewClusterServiceVersion(data *ClusterServiceVersionData) (*csvv1.ClusterSe
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      operatorName + "." + data.CsvVersion,
 			Namespace: data.Namespace,
+			Annotations: map[string]string{
+				"capabilities": "Virtual Machine Import",
+				"categories":   "Import,Virtualization, RHV",
+				"alm-examples": `
+      [
+        {
+          "apiVersion":"v2v.kubevirt.io/v1alpha1",
+          "kind":"VMImportConfig",
+          "metadata": {
+            "name":"vm-import-operator-config"
+          },
+          "spec": {
+            "imagePullPolicy":"IfNotPresent"
+          }
+        }
+      ]`,
+			},
 		},
 		Spec: csvv1.ClusterServiceVersionSpec{
 			DisplayName: "VM import operator",
