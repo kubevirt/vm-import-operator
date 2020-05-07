@@ -55,13 +55,12 @@
 ## Resource mapping
 | Test description | Implemented |
 | :---------------- | :---------: |
-| Import with external resource mapping for network should create running VM | &cross; |
-| Import with external resource mapping for disk should create running VM | &cross; |
-| Import with external resource mapping for storage domain should create running VM | &cross; |
-| Import with external resource mapping for storage and in-CR for network should create running VM | &cross; |
-| Import with in-CR resource mapping overriding external resource mapping for network should create running VM | &cross; |
-| Import with in-CR resource mapping overriding external resource mapping for disk should create running VM | &cross; |
-| Import with in-CR resource mapping overriding external resource mapping for storage domain should create running VM | &cross; |
+| Import with external resource mapping for network should create running VM | &check; |
+| Import with external resource mapping for disk should create running VM with default storage class ignoring external mapping | &check; |
+| Import with external resource mapping for storage domain should create running VM | &check; |
+| Import with external resource mapping for storage and in-CR for network should create running VM | &check; |
+| Import with in-CR resource mapping overriding external resource mapping for network should create running VM | &check; |
+| Import with in-CR resource mapping overriding external resource mapping for storage domain should create running VM | &check; |
 
 ## Multiple disks
 | Test description | Implemented |

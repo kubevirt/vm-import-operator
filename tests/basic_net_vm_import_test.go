@@ -12,11 +12,6 @@ import (
 	v1 "kubevirt.io/client-go/api/v1"
 )
 
-var (
-	podType   = "pod"
-	networkID = "123"
-)
-
 type networkedVmImportTest struct {
 	framework *fwk.Framework
 }
@@ -27,6 +22,10 @@ var _ = Describe("Networked VM import ", func() {
 		secret    corev1.Secret
 		namespace string
 		test      = networkedVmImportTest{framework: f}
+	)
+	var (
+		podType   = "pod"
+		networkID = "123"
 	)
 
 	BeforeEach(func() {
@@ -39,8 +38,7 @@ var _ = Describe("Networked VM import ", func() {
 	})
 
 	It("should create started VM", func() {
-		vmi := utils.VirtualMachineImportCr("basic-network", namespace, secret.Name, f.NsPrefix)
-		vmi.Spec.StartVM = &trueVar
+		vmi := utils.VirtualMachineImportCr("basic-network", namespace, secret.Name, f.NsPrefix, true)
 		vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
 			NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
 				{Source: v2vv1alpha1.Source{ID: &networkID}, Type: &podType},

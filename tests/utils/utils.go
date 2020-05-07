@@ -7,7 +7,7 @@ import (
 )
 
 // VirtualMachineImportCr creates VM import CR
-func VirtualMachineImportCr(vmID string, namespace string, ovirtSecretName string, prefix string) v2vv1alpha1.VirtualMachineImport {
+func VirtualMachineImportCr(vmID string, namespace string, ovirtSecretName string, prefix string, startVm bool) v2vv1alpha1.VirtualMachineImport {
 	targetVMName := "target-vm"
 	return v2vv1alpha1.VirtualMachineImport{
 		ObjectMeta: metav1.ObjectMeta{
@@ -15,6 +15,7 @@ func VirtualMachineImportCr(vmID string, namespace string, ovirtSecretName strin
 			Namespace:    namespace,
 		},
 		Spec: v2vv1alpha1.VirtualMachineImportSpec{
+			StartVM: &startVm,
 			ProviderCredentialsSecret: v2vv1alpha1.ObjectIdentifier{
 				Name:      ovirtSecretName,
 				Namespace: &namespace,
