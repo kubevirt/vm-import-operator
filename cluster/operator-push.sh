@@ -16,7 +16,7 @@
 
 set -ex
 
-export VERSION=latest
+export VERSION=v0.0.0
 
 registry_port=$(./cluster/cli.sh ports registry | tr -d '\r')
 if [[ "${KUBEVIRT_PROVIDER}" =~ ^(okd|ocp)-.*$ ]]; then \

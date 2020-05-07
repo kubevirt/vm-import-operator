@@ -16,7 +16,7 @@
 
 set -ex
 
-export VERSION=latest
+export VERSION=v0.0.0
 
 ./cluster/kubectl.sh create -f _out/vm-import-operator/${VERSION}/operator.yaml
 ./cluster/kubectl.sh wait deploy/vm-import-operator -n kubevirt --for=condition=Available --timeout=600s
