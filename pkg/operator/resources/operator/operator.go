@@ -290,6 +290,133 @@ func NewCrds() []*extv1beta1.CustomResourceDefinition {
 	return []*extv1beta1.CustomResourceDefinition{
 		createResourceMapping(),
 		createVMImport(),
+		createVMImportConfig(),
+	}
+}
+
+func createVMImportConfig() *extv1beta1.CustomResourceDefinition {
+	return &extv1beta1.CustomResourceDefinition{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apiextensions.k8s.io/v1beta1",
+			Kind:       "CustomResourceDefinition",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "vmimportconfigs.v2v.kubevirt.io",
+			Labels: map[string]string{
+				"operator.v2v.kubevirt.io": "",
+			},
+		},
+		Spec: extv1beta1.CustomResourceDefinitionSpec{
+			Group:   "v2v.kubevirt.io",
+			Version: "v1alpha1",
+			Scope:   "Namespaced",
+			Versions: []extv1beta1.CustomResourceDefinitionVersion{
+				{
+					Name:    "v1alpha1",
+					Served:  true,
+					Storage: true,
+				},
+			},
+			Names: extv1beta1.CustomResourceDefinitionNames{
+				Kind:     "VMImportConfig",
+				ListKind: "VMImportConfigList",
+				Plural:   "vmimportconfigs",
+				Singular: "vmimportconfig",
+				Categories: []string{
+					"all",
+				},
+			},
+			Validation: &extv1beta1.CustomResourceValidation{
+				OpenAPIV3Schema: &extv1beta1.JSONSchemaProps{
+					Description: "VMImportConfig is the Schema for the vmimportconfigs API",
+					Type:        "object",
+					Properties: map[string]extv1beta1.JSONSchemaProps{
+						"apiVersion": {
+							Description: "APIVersion defines the versioned schema of this representation of an object",
+							Type:        "string",
+						},
+						"kind": {
+							Description: "Kind is a string value representing the REST resource this object represents",
+							Type:        "string",
+						},
+						"metadata": {
+							Type: "object",
+						},
+						"spec": {
+							Description: "VMImportConfigSpec defines the desired state of VMImportConfig",
+							Type:        "object",
+							Properties: map[string]extv1beta1.JSONSchemaProps{
+								"imagePullPolicy": {
+									Type: "string",
+									Enum: []extv1beta1.JSON{
+										{
+											Raw: []byte(`"Always"`),
+										},
+										{
+											Raw: []byte(`"IfNotPresent"`),
+										},
+										{
+											Raw: []byte(`"Never"`),
+										},
+									},
+								},
+							},
+						},
+						"status": {
+							Description: "VMImportConfigStatus defines the observed state of VMImportConfig",
+							Type:        "object",
+							Properties: map[string]extv1beta1.JSONSchemaProps{
+								"conditions": {
+									Description: "A list of current conditions of the VMImportConfig resource",
+									Type:        "array",
+									Items: &extv1beta1.JSONSchemaPropsOrArray{
+										Schema: &extv1beta1.JSONSchemaProps{
+											Type: "object",
+											Properties: map[string]extv1beta1.JSONSchemaProps{
+												"lastHeartbeatTime": {
+													Description: "Last time the state of the condition was checked",
+													Type:        "string",
+													Format:      "date-time",
+												},
+												"lastTransitionTime": {
+													Description: "Last time the state of the condition changed",
+													Type:        "string",
+													Format:      "date-time",
+												},
+												"message": {
+													Description: "Message related to the last condition change",
+													Type:        "string",
+												},
+												"reason": {
+													Description: "Reason the last condition changed",
+													Type:        "string",
+												},
+												"status": {
+													Description: "Current status of the condition, True, False, Unknown",
+													Type:        "string",
+												},
+											},
+										},
+									},
+								},
+								"targetVersion": {
+									Description: "The desired version of the VMImportConfig resource",
+									Type:        "string",
+								},
+								"observedVersion": {
+									Description: "The observed version of the VMImportConfig resource",
+									Type:        "string",
+								},
+								"operatorVersion": {
+									Description: "The version of the VMImportConfig resource as defined by the operator",
+									Type:        "string",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 }
 
