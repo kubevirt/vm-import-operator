@@ -29,6 +29,8 @@ if [[ "$KUBEVIRT_PROVIDER" =~ (ocp|okd)- ]]; then
     ./cluster/kubectl.sh delete ns openshift-cluster-samples-operator --wait=false
 fi
 
+ensure_golang
+
 install_cdi
 install_kubevirt
 install_imageio

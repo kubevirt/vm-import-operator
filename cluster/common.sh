@@ -21,3 +21,10 @@ function install_imageio {
     ./cluster/kubectl.sh apply -f cluster/imageio.yaml
     ./cluster/kubectl.sh -n cdi wait deploy imageio-deployment --for condition=Available --timeout=1200s
 }
+
+# Install golang to run generate manifests
+function ensure_golang {
+    if [[ "$(rpm -q golang 2>&1)" =~ "is not installed" ]]; then
+        sudo yum install -y golang
+    fi
+}
