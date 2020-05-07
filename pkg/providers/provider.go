@@ -25,6 +25,7 @@ type Provider interface {
 	StopVM() error
 	CreateMapper() (Mapper, error)
 	GetVMStatus() (VMStatus, error)
+	GetVMName() (string, error)
 	StartVM() error
 	CleanUp() error
 	FindTemplate() (*oapiv1.Template, error)

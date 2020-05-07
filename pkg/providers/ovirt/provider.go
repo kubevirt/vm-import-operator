@@ -158,6 +158,16 @@ func (o *OvirtProvider) getVM() (*ovirtsdk.Vm, error) {
 	return o.vm, nil
 }
 
+// GetVMName return oVirt virtual machine to be imported
+func (o *OvirtProvider) GetVMName() (string, error) {
+	vm, err := o.getVM()
+	if err != nil {
+		return "", err
+	}
+	vmName, _ := vm.Name()
+	return vmName, nil
+}
+
 // Close the connection to ovirt provider
 func (o *OvirtProvider) Close() {
 	if o.ovirtClient != nil {
