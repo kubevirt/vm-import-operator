@@ -82,6 +82,7 @@ test/unit: $(GINKGO)
 	$(GINKGO) $(GINKGO_ARGS) ./pkg/ ./cmd/
 
 docker-build:
+	CGO_ENABLED=0 GOOS=linux go build -a -o build/_output/bin/vm-import-operator cmd/manager/main.go
 	docker build -f build/Dockerfile -t $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE):$(IMAGE_TAG) .
 
 docker-push:
