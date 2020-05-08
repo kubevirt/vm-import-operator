@@ -26,7 +26,7 @@
 | VM with unsupported NIC interfaces should be blocked | &check; |
 | VM with vnic profile pass-through enabled should be blocked | &check; |
 
-## VM Storage Validation 
+## VM Storage Validation
 | Test description | Implemented |
 | :---------------- | :-----------: |
 | VM with no disk attachments should be blocked | &cross; |
@@ -52,24 +52,24 @@
 | VM with USB enabled should be blocked | &cross; |
 | VM with watchdog other than 'i6300esb' should be blocked | &cross; |
 
-## Resource mapping 
-| Test description | Implemented |   
+## Resource mapping
+| Test description | Implemented |
 | :---------------- | :---------: |
-| Import with external resource mapping for network should create running VM | &cross; | 
-| Import with external resource mapping for disk should create running VM | &cross; | 
-| Import with external resource mapping for storage domain should create running VM | &cross; | 
-| Import with external resource mapping for storage and in-CR for network should create running VM | &cross; | 
-| Import with in-CR resource mapping overriding external resource mapping for network should create running VM | &cross; | 
-| Import with in-CR resource mapping overriding external resource mapping for disk should create running VM | &cross; | 
+| Import with external resource mapping for network should create running VM | &cross; |
+| Import with external resource mapping for disk should create running VM | &cross; |
+| Import with external resource mapping for storage domain should create running VM | &cross; |
+| Import with external resource mapping for storage and in-CR for network should create running VM | &cross; |
+| Import with in-CR resource mapping overriding external resource mapping for network should create running VM | &cross; |
+| Import with in-CR resource mapping overriding external resource mapping for disk should create running VM | &cross; |
 | Import with in-CR resource mapping overriding external resource mapping for storage domain should create running VM | &cross; |
 
 ## Multiple disks
-| Test description | Implemented | 
+| Test description | Implemented |
 | :---------------- | :---------: |
 | Import of a VM with two disks should create running VM and preserve boot order | &cross; |
 
 ## Networking
-| Test description | Implemented | 
+| Test description | Implemented |
 | :---------------- | :---------: |
 | Import of VM should create running VM with Multus network | &cross; |
 | Import of VM should create running VM with two networks: Multus and Pod | &cross; |
