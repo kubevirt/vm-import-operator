@@ -48,13 +48,11 @@ var _ = Describe("VM network validation ", func() {
 
 func (t *networkValidationTest) prepareImport(vmID string, secretName string) *v2vv1alpha1.VirtualMachineImport {
 	var (
-		trueVar   = true
 		podType   = "pod"
 		networkID = "123"
 	)
 	namespace := t.framework.Namespace.Name
-	vmi := utils.VirtualMachineImportCr(vmID, namespace, secretName, t.framework.NsPrefix)
-	vmi.Spec.StartVM = &trueVar
+	vmi := utils.VirtualMachineImportCr(vmID, namespace, secretName, t.framework.NsPrefix, true)
 	vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
 		NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
 			{Source: v2vv1alpha1.Source{ID: &networkID}, Type: &podType},

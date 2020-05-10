@@ -14,23 +14,20 @@ import (
 	v1 "kubevirt.io/client-go/api/v1"
 )
 
-var (
-	// ID of a VM existing in oVirt described by the secret.
-	vmID = "123"
-
-	trueVar = true
-
-	diskID           = "123"
-	storageDomainsID = "123"
-
-	storageClass = "local"
-)
-
 type basicVmImportTest struct {
 	framework *fwk.Framework
 }
 
 var _ = Describe("Basic VM import ", func() {
+	var (
+		vmID = "123"
+
+		diskID           = "123"
+		storageDomainsID = "123"
+
+		storageClass = "local"
+	)
+
 	var (
 		f    = fwk.NewFrameworkOrDie("basic-vm-import")
 		test = basicVmImportTest{
@@ -51,7 +48,7 @@ var _ = Describe("Basic VM import ", func() {
 
 	Context(" without resource mapping", func() {
 		It("should create stopped VM", func() {
-			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix)
+			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, false)
 
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
@@ -69,8 +66,7 @@ var _ = Describe("Basic VM import ", func() {
 		})
 
 		It("should create started VM", func() {
-			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix)
-			vmi.Spec.StartVM = &trueVar
+			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
@@ -90,8 +86,7 @@ var _ = Describe("Basic VM import ", func() {
 
 	Context(" with in-CR resource mapping", func() {
 		table.DescribeTable("should create running VM", func(mappings v2vv1alpha1.OvirtMappings, storageClass string) {
-			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix)
-			vmi.Spec.StartVM = &trueVar
+			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Ovirt.Mappings = &mappings
 
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)

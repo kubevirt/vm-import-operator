@@ -23,6 +23,11 @@ func HaveStorageClass(sc string, f *framework.Framework) types.GomegaMatcher {
 	return &haveStorageClassMatcher{storageClass: &sc, testFramework: f}
 }
 
+// HaveStorageClassReference creates matcher checking whether data volume of a given name has expected storage class
+func HaveStorageClassReference(sc *string, f *framework.Framework) types.GomegaMatcher {
+	return &haveStorageClassMatcher{storageClass: sc, testFramework: f}
+}
+
 // Match checks whether data volume of a given name has expected storage class
 func (matcher *haveStorageClassMatcher) Match(dvName interface{}) (bool, error) {
 	f := matcher.testFramework

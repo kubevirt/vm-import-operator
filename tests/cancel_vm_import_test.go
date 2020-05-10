@@ -22,10 +22,12 @@ var _ = Describe("VM import cancellation ", func() {
 		f         = framework.NewFrameworkOrDie("cancel-vm-import")
 		secret    corev1.Secret
 		namespace string
-		vmID      = "123"
 		vmImports v2vvmiclient.VirtualMachineImportInterface
 		vmi       *v2vv1alpha1.VirtualMachineImport
 		vmiName   string
+	)
+	var (
+		vmID = "123"
 	)
 
 	BeforeEach(func() {
@@ -36,7 +38,7 @@ var _ = Describe("VM import cancellation ", func() {
 		}
 		secret = s
 		vmImports = f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace)
-		cr := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix)
+		cr := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 		vmi, err = vmImports.Create(&cr)
 		if err != nil {
 			Fail(err.Error())
