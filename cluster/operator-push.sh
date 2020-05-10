@@ -37,4 +37,3 @@ IMAGE_REGISTRY=$registry make docker-build docker-push
 
 ./cluster/kubectl.sh create -f _out/vm-import-operator/${VERSION}/v2v_v1alpha1_resourcemapping_crd.yaml
 ./cluster/kubectl.sh create -f _out/vm-import-operator/${VERSION}/v2v_v1alpha1_virtualmachineimport_crd.yaml
-./cluster/kubectl.sh create -f _out/vm-import-operator/${VERSION}/config_map.yaml

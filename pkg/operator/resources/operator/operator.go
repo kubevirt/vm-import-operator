@@ -282,6 +282,12 @@ func createEnv(name string) []corev1.EnvVar {
 			Name:  "OPERATOR_NAME",
 			Value: name,
 		},
+		corev1.EnvVar{
+			Name: "OS_CONFIGMAP_NAME",
+		},
+		corev1.EnvVar{
+			Name: "OS_CONFIGMAP_NAMESPACE",
+		},
 	}
 }
 

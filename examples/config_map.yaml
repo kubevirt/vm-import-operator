@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: vmimport-os-mapper
-  namespace: {{NAMESPACE}}
+  namespace: kubevirt-hyperconverged
 data:
   guestos2common: |
     "Red Hat Enterprise Linux Server": "rhel"

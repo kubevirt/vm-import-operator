@@ -21,4 +21,3 @@ echo 'Cleaning up ...'
 ./cluster/kubectl.sh delete --ignore-not-found -f _out/vm-import-operator/${VERSION}/v2v_v1alpha1_resourcemapping_crd.yaml
 ./cluster/kubectl.sh delete --ignore-not-found -f _out/vm-import-operator/${VERSION}/v2v_v1alpha1_virtualmachineimport_crd.yaml
 ./cluster/kubectl.sh delete --ignore-not-found -f _out/vm-import-operator/${VERSION}/operator.yaml
-./cluster/kubectl.sh delete --ignore-not-found -f _out/vm-import-operator/${VERSION}/config_map.yaml
