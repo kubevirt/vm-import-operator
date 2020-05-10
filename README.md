@@ -197,3 +197,17 @@ Functional tests for the operator are described in a [this document](docs/functi
 2. Call `make prepare-patch|minor|major` and prepare release notes
 3. Open a new PR
 4. Once the PR is merged, create a new release in GitHub and attach new manifests
+
+## Releasing as a draft release
+For testing/development purposes, a developer may create a draft release on developer's github repository,
+by providing the desired set of parameters:
+
+```bash
+make prepare-patch
+GITHUB_REPOSITORY=origin \
+GITHUB_TOKEN=1eb... \
+GITHUB_USER=$USER \
+EXTRA_RELEASE_ARGS=--draft \
+make release
+```
+EXTRA_RELEASE_ARGS will be passed as-is to `github-release` (other values maybe '--pre-release'). See manual pages for further information.

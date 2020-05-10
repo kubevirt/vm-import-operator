@@ -10,10 +10,17 @@ export TARGET_NAMESPACE := $(TARGET_NAMESPACE)
 
 DEPLOY_DIR ?= manifests
 
+# Image registry variables
 QUAY_USER ?= $(USER)
 IMAGE_REGISTRY ?= quay.io/$(QUAY_USER)
 IMAGE_TAG ?= latest
 OPERATOR_IMAGE ?= vm-import-operator
+
+# Git parameters
+GITHUB_REPOSITORY ?= https://github.com/kubevirt/vm-import-operator
+GITHUB_USER ?= kubevirt
+GITHUB_TOKEN ?=
+EXTRA_RELEASE_ARGS ?=
 
 TARGETS = \
 	gen-k8s \
@@ -133,6 +140,10 @@ prepare-major:
 release: $(GITHUB_RELEASE)
 	DESCRIPTION=version/description \
 	GITHUB_RELEASE=$(GITHUB_RELEASE) \
+	GITHUB_REPOSITORY=$(GITHUB_REPOSITORY) \
+	GITHUB_USER=$(GITHUB_USER) \
+	GITHUB_TOKEN=$(GITHUB_TOKEN) \
+	EXTRA_RELEASE_ARGS=$(EXTRA_RELEASE_ARGS) \
 	TAG=$(shell hack/version.sh) \
 	  hack/release.sh \
 	    $(shell find manifests/vm-import-operator/$(shell hack/version.sh) -type f)

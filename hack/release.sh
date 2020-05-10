@@ -1,15 +1,16 @@
 #!/bin/bash -e
 
 git tag $TAG
-git push https://github.com/kubevirt/vm-import-operator $TAG
+git push $GITHUB_REPOSITORY $TAG
 
-$GITHUB_RELEASE release -u kubevirt -r vm-import-operator \
+GITHUB_TOKEN=${GITHUB_TOKEN} $GITHUB_RELEASE release -u $GITHUB_USER -r vm-import-operator \
     --tag $TAG \
     --name $TAG \
-    --description "$(cat $DESCRIPTION)"
+    --description "$(cat $DESCRIPTION)" \
+    $EXTRA_RELEASE_ARGS
 
 for resource in "$@" ;do
-    $GITHUB_RELEASE upload -u kubevirt -r vm-import-operator \
+    GITHUB_TOKEN=${GITHUB_TOKEN} $GITHUB_RELEASE upload -u $GITHUB_USER -r vm-import-operator \
         --name $(basename $resource) \
         --tag $TAG \
         --file $resource
