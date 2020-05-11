@@ -4,6 +4,7 @@ import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
+	vms "github.com/kubevirt/vm-import-operator/tests/ovirt-vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -23,10 +24,6 @@ var _ = Describe("Networked VM import ", func() {
 		namespace string
 		test      = networkedVmImportTest{framework: f}
 	)
-	var (
-		podType   = "pod"
-		networkID = "123"
-	)
 
 	BeforeEach(func() {
 		namespace = f.Namespace.Name
@@ -38,10 +35,10 @@ var _ = Describe("Networked VM import ", func() {
 	})
 
 	It("should create started VM", func() {
-		vmi := utils.VirtualMachineImportCr("basic-network", namespace, secret.Name, f.NsPrefix, true)
+		vmi := utils.VirtualMachineImportCr(vms.BasicNetworkVmID, namespace, secret.Name, f.NsPrefix, true)
 		vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
 			NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
-				{Source: v2vv1alpha1.Source{ID: &networkID}, Type: &podType},
+				{Source: v2vv1alpha1.Source{ID: &vms.BasicNetworkID}, Type: &podType},
 			},
 		}
 

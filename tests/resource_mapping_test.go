@@ -4,6 +4,7 @@ import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	"github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
+	vms "github.com/kubevirt/vm-import-operator/tests/ovirt-vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
@@ -20,15 +21,6 @@ var _ = Describe("VM import ", func() {
 		secret    corev1.Secret
 		namespace string
 	)
-	var (
-		podType    = "pod"
-		multusType = "multus"
-
-		networkID       = "123"
-		storageDomainID = "123"
-		diskID          = "123"
-		storageClass    = "local"
-	)
 
 	BeforeEach(func() {
 		namespace = f.Namespace.Name
@@ -43,14 +35,14 @@ var _ = Describe("VM import ", func() {
 		It("should create running VM", func() {
 			ovirtMappings := v2vv1alpha1.OvirtMappings{
 				NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &networkID}, Type: &podType},
+					{Source: v2vv1alpha1.Source{ID: &vms.BasicNetworkID}, Type: &podType},
 				},
 			}
 			rm, err := f.CreateResourceMapping(ovirtMappings)
 			if err != nil {
 				Fail(err.Error())
 			}
-			vmi := utils.VirtualMachineImportCr("basic-network", namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(vms.BasicNetworkVmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.ResourceMapping = &v2vv1alpha1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
@@ -80,14 +72,14 @@ var _ = Describe("VM import ", func() {
 		It("should create running VM", func() {
 			mappings := v2vv1alpha1.OvirtMappings{
 				StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &storageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: storageClass}},
+					{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: storageClass}},
 				},
 			}
 			rm, err := f.CreateResourceMapping(mappings)
 			if err != nil {
 				Fail(err.Error())
 			}
-			vmi := utils.VirtualMachineImportCr("123", namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(vms.BasicVmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.ResourceMapping = &v2vv1alpha1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
@@ -112,7 +104,7 @@ var _ = Describe("VM import ", func() {
 			if err != nil {
 				Fail(err.Error())
 			}
-			vmi := utils.VirtualMachineImportCr("basic-network", namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(vms.BasicNetworkVmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.ResourceMapping = &v2vv1alpha1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
 			vmi.Spec.Source.Ovirt.Mappings = &internalMapping
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
@@ -141,10 +133,10 @@ var _ = Describe("VM import ", func() {
 			table.Entry("with default storage class ignoring external mapping",
 				v2vv1alpha1.OvirtMappings{
 					DiskMappings: &[]v2vv1alpha1.ResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &diskID}, Target: v2vv1alpha1.ObjectIdentifier{Name: storageClass}},
+						{Source: v2vv1alpha1.Source{ID: &vms.VirtioDiskID}, Target: v2vv1alpha1.ObjectIdentifier{Name: storageClass}},
 					},
 					NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &networkID}, Type: &podType},
+						{Source: v2vv1alpha1.Source{ID: &vms.BasicNetworkID}, Type: &podType},
 					},
 				},
 				v2vv1alpha1.OvirtMappings{},
@@ -152,27 +144,27 @@ var _ = Describe("VM import ", func() {
 			table.Entry("with storage class based on internal storage domain",
 				v2vv1alpha1.OvirtMappings{
 					NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &networkID}, Type: &podType},
+						{Source: v2vv1alpha1.Source{ID: &vms.BasicNetworkID}, Type: &podType},
 					},
 				},
 				v2vv1alpha1.OvirtMappings{
 					StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &storageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: storageClass}},
+						{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: storageClass}},
 					},
 				},
 				&storageClass),
 			table.Entry("with storage class based on internal mapping overriding external mapping",
 				v2vv1alpha1.OvirtMappings{
 					StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &storageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: "wrong-sc"}},
+						{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: "wrong-sc"}},
 					},
 					NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &networkID}, Type: &podType},
+						{Source: v2vv1alpha1.Source{ID: &vms.BasicNetworkID}, Type: &podType},
 					},
 				},
 				v2vv1alpha1.OvirtMappings{
 					StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &storageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: storageClass}},
+						{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: storageClass}},
 					},
 				},
 				&storageClass),
@@ -181,14 +173,14 @@ var _ = Describe("VM import ", func() {
 					NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
 						{
 							Type:   &multusType,
-							Source: v2vv1alpha1.Source{ID: &networkID},
+							Source: v2vv1alpha1.Source{ID: &vms.BasicNetworkID},
 							Target: v2vv1alpha1.ObjectIdentifier{Name: "wrong-network"},
 						},
 					},
 				},
 				v2vv1alpha1.OvirtMappings{
 					NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &networkID}, Type: &podType},
+						{Source: v2vv1alpha1.Source{ID: &vms.BasicNetworkID}, Type: &podType},
 					},
 				},
 				nil),
