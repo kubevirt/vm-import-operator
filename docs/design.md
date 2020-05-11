@@ -128,7 +128,12 @@ The user can provide a custom map to override or extend operator's OS map by pro
 - OS_CONFIGMAP_NAME - the user OS config map name
 - OS_CONFIGMAP_NAMESPACE - the user OS config map namespace
 
-An example of the map can be found under [example](https://github.com/kubevirt/vm-import-operator/blob/master/examples/config_map.yaml) and should follow the format of:
+In order to update `vm-import-operator` deployment, user may use CLI or UI for setting environment variable values, e.g.:
+![Image of vm-import-operator deployment](/docs/images/vm-import-operator-deployment.png)
+
+After setting the values, click on 'Reload' or delete the vm-import-operator pod for changes to take effect.
+
+An example of the map can be found under [example](https://github.com/kubevirt/vm-import-operator/blob/master/examples/config_map.yaml) and should follow the format as shown in the following config map:
 ```yaml
 apiVersion: v1
 kind: ConfigMap
