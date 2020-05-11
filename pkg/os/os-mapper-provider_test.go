@@ -91,6 +91,13 @@ var _ = Describe("OS Map Provider ", func() {
 			// verify user values overrides core values
 			Expect(osInfoToCommon["rhel_6_9_plus_ppc64"]).To(Equal("myos"))
 			Expect(guestOsToCommon["Fedora"]).To(Equal("myfedora"))
+
+			// verify other core values remain intact
+			Expect(len(osInfoToCommon)).To(BeNumerically(">", 2))
+			Expect(osInfoToCommon["windows_8"]).To(Equal("win10"))
+
+			Expect(len(guestOsToCommon)).To(BeNumerically(">", 2))
+			Expect(guestOsToCommon["CentOS Linux"]).To(Equal("centos"))
 		})
 
 		It("should fail to parse user OS map values of Guest OS to Common", func() {
