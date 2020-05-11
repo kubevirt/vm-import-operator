@@ -3,13 +3,17 @@ module github.com/kubevirt/vm-import-operator
 go 1.13
 
 require (
+	cloud.google.com/go v0.53.0 // indirect
 	github.com/RHsyseng/operator-utils v0.0.0-20190906175225-942a3f9c85a9
 	github.com/aktau/github-release v0.7.2
 	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
+	github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
+	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20191119172530-79f836b90111
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.7.1
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
@@ -22,8 +26,9 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
 	github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2 // indirect
-	golang.org/x/sys v0.0.0-20191210023423-ac6580df4449 // indirect
-	golang.org/x/tools v0.0.0-20191029190741-b9c20aec41a5
+	golang.org/x/net v0.0.0-20200222125558-5a598a2470a0 // indirect
+	golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae // indirect
+	golang.org/x/tools v0.0.0-20200212150539-ea181f53ac56
 	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.17.1
 	k8s.io/apiextensions-apiserver v0.16.4
