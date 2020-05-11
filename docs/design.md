@@ -121,6 +121,36 @@ Spec:
         name: ovirt_storage_domain_1 # maps ovirt storage domains to storage class
       target: storage_class_1
 ```
+#### Common Templates
+The operator defines a map of OS types to equivalent common templates OS types.
+When a match is found between the imported VM operating system via operator's OS map to a common template, that template will be used to create the VM spec of the target VM.
+The user can provide a custom map to override or extend operator's OS map by providing the map via environment variables to be set for the operator's deployment resource. Both OS config-map name and namespace are required:
+- OS_CONFIGMAP_NAME - the user OS config map name
+- OS_CONFIGMAP_NAMESPACE - the user OS config map namespace
+
+An example of the map can be found under [example](https://github.com/kubevirt/vm-import-operator/blob/master/examples/config_map.yaml) and should follow the format of:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vmimport-os-mapper
+  namespace: kubevirt-hyperconverged
+data:
+  guestos2common: |
+    "Red Hat Enterprise Linux Server": "rhel"
+    "CentOS Linux": "centos"
+    "Fedora": "fedora"
+    "Ubuntu": "ubuntu"
+    "openSUSE": "opensuse"
+  osinfo2common: |
+    "rhel_6_9_plus_ppc64": "rhel6.9"
+    "rhel_6_ppc64": "rhel6.9"
+    "rhel_6": "rhel6.9"
+    "rhel_6x64": "rhel6.9"
+    "rhel_7_ppc64": "rhel7.7"
+```
+- guestos2common - maps the guest OS (as reported by the guest agent) to common template
+- osinfo2common - maps the operating system resource of source provider to common template
 
 ### Provider Secret
 
