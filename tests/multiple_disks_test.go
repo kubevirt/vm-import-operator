@@ -3,6 +3,7 @@ package tests_test
 import (
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
+	vms "github.com/kubevirt/vm-import-operator/tests/ovirt-vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,9 +18,6 @@ var _ = Describe("VM import ", func() {
 		secret    corev1.Secret
 		namespace string
 	)
-	var (
-		trueVar = true
-	)
 
 	BeforeEach(func() {
 		namespace = f.Namespace.Name
@@ -32,7 +30,7 @@ var _ = Describe("VM import ", func() {
 
 	Context("for VM with two disks", func() {
 		It("should create started VM", func() {
-			vmi := utils.VirtualMachineImportCr("two-disks", namespace, secret.Name, f.NsPrefix, trueVar)
+			vmi := utils.VirtualMachineImportCr(vms.TwoDisksVmID, namespace, secret.Name, f.NsPrefix, trueVar)
 			vmi.Spec.StartVM = &trueVar
 
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
