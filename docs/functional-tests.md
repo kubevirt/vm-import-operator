@@ -65,7 +65,7 @@
 ## Multiple disks
 | Test description | Implemented |
 | :---------------- | :---------: |
-| Import of a VM with two disks should create running VM and preserve boot order | &cross; |
+| Import of a VM with two disks should create running VM and set correct boot order | &check; |
 
 ## Networking
 | Test description | Implemented |
