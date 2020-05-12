@@ -11,6 +11,7 @@ import (
 
 	jsondiff "github.com/appscode/jsonpatch"
 	"github.com/blang/semver"
+	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/go-logr/logr"
 	"github.com/kelseyhightower/envconfig"
 	vmimportv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
@@ -25,6 +26,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/jsonmergepatch"
+	"k8s.io/apimachinery/pkg/util/mergepatch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -214,36 +217,6 @@ func shouldTakeUpdatePath(logger logr.Logger, targetVersion, currentVersion stri
 	return shouldTakeUpdatePath, nil
 }
 
-func (r *ReconcileVMImportConfig) reconcileCreate(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) (reconcile.Result, error) {
-	MarkCrDeploying(cr, "DeployStarted", "Started Deployment")
-
-	if err := r.crInit(cr); err != nil {
-		return reconcile.Result{}, err
-	}
-
-	logger.Info("Successfully entered Deploying state")
-
-	return r.reconcileUpdate(logger, cr)
-}
-
-// MarkCrDeploying marks the passed CR as currently deploying.
-func MarkCrDeploying(cr *vmimportv1alpha1.VMImportConfig, reason, message string) {
-	conditions.SetStatusCondition(&cr.Status.Conditions, conditions.Condition{
-		Type:   conditions.ConditionAvailable,
-		Status: corev1.ConditionFalse,
-	})
-	conditions.SetStatusCondition(&cr.Status.Conditions, conditions.Condition{
-		Type:    conditions.ConditionProgressing,
-		Status:  corev1.ConditionTrue,
-		Reason:  reason,
-		Message: message,
-	})
-	conditions.SetStatusCondition(&cr.Status.Conditions, conditions.Condition{
-		Type:   conditions.ConditionDegraded,
-		Status: corev1.ConditionFalse,
-	})
-}
-
 func (r *ReconcileVMImportConfig) checkUpgrade(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) error {
 	// should maybe put this in separate function
 	if cr.Status.OperatorVersion != r.operatorArgs.OperatorVersion {
@@ -341,6 +314,17 @@ func (r *ReconcileVMImportConfig) reconcileUpdate(logger logr.Logger, cr *vmimpo
 			currentRuntimeObjCopy := currentRuntimeObj.DeepCopyObject()
 			currentMetaObj := currentRuntimeObj.(metav1.Object)
 
+			if !r.isMutable(currentRuntimeObj) {
+				setLastAppliedConfiguration(desiredMetaObj)
+
+				// overwrite currentRuntimeObj
+				currentRuntimeObj, err = mergeObject(desiredRuntimeObj, currentRuntimeObj)
+				if err != nil {
+					return reconcile.Result{}, err
+				}
+				currentMetaObj = currentRuntimeObj.(metav1.Object)
+			}
+
 			if !reflect.DeepEqual(currentRuntimeObjCopy, currentRuntimeObj) {
 				logJSONDiff(logger, currentRuntimeObjCopy, currentRuntimeObj)
 
@@ -394,6 +378,54 @@ func (r *ReconcileVMImportConfig) reconcileUpdate(logger logr.Logger, cr *vmimpo
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func mergeObject(desiredObj, currentObj runtime.Object) (runtime.Object, error) {
+	desiredObj = desiredObj.DeepCopyObject()
+	desiredMetaObj := desiredObj.(metav1.Object)
+	currentMetaObj := currentObj.(metav1.Object)
+
+	v, ok := currentMetaObj.GetAnnotations()[lastAppliedConfigAnnotation]
+	if !ok {
+		log.Info("Resource missing last applied config", "resource", currentMetaObj)
+	}
+
+	original := []byte(v)
+
+	// setting the timestamp saves unnecessary updates because creation timestamp is nulled
+	desiredMetaObj.SetCreationTimestamp(currentMetaObj.GetCreationTimestamp())
+	modified, err := json.Marshal(desiredObj)
+	if err != nil {
+		return nil, err
+	}
+
+	current, err := json.Marshal(currentObj)
+	if err != nil {
+		return nil, err
+	}
+
+	preconditions := []mergepatch.PreconditionFunc{
+		mergepatch.RequireKeyUnchanged("apiVersion"),
+		mergepatch.RequireKeyUnchanged("kind"),
+		mergepatch.RequireMetadataKeyUnchanged("name"),
+	}
+
+	patch, err := jsonmergepatch.CreateThreeWayJSONMergePatch(original, modified, current, preconditions...)
+	if err != nil {
+		return nil, err
+	}
+
+	newCurrent, err := jsonpatch.MergePatch(current, patch)
+	if err != nil {
+		return nil, err
+	}
+
+	result := newDefaultInstance(currentObj)
+	if err = json.Unmarshal(newCurrent, result); err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func logJSONDiff(logger logr.Logger, objA, objB interface{}) {
@@ -504,6 +536,37 @@ func (r *ReconcileVMImportConfig) cleanupUnusedResources(logger logr.Logger, cr 
 }
 
 func (r *ReconcileVMImportConfig) reconcileDelete(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) (reconcile.Result, error) {
+	if cr.Status.Phase != vmimportv1alpha1.PhaseDeleting {
+		if err := r.crUpdate(vmimportv1alpha1.PhaseDeleting, cr); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	deployments, err := r.getAllDeployments(cr)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	logger.Info("Deleting VMImport deployment")
+
+	for _, deployment := range deployments {
+		if !isControllerDeployment(deployment) {
+			continue
+		}
+		err := r.client.Delete(context.TODO(), deployment, &client.DeleteOptions{
+			PropagationPolicy: &[]metav1.DeletionPropagation{metav1.DeletePropagationForeground}[0],
+		})
+		if err != nil && !errors.IsNotFound(err) {
+			logger.Error(err, "Error deleting vm import controller deployment")
+			return reconcile.Result{}, err
+		}
+	}
+
+	err = deleteRelatedResources(logger, r.client)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	if err := r.crUpdate(vmimportv1alpha1.PhaseDeleted, cr); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -511,15 +574,44 @@ func (r *ReconcileVMImportConfig) reconcileDelete(logger logr.Logger, cr *vmimpo
 	return reconcile.Result{}, nil
 }
 
+func deleteRelatedResources(logger logr.Logger, c client.Client) error {
+	object := &corev1.PodList{}
+	ls, err := labels.Parse("v2v.kubevirt.io")
+	if err != nil {
+		return err
+	}
+
+	options := &client.ListOptions{
+		LabelSelector: ls,
+	}
+
+	if err := c.List(context.TODO(), object, options); err != nil {
+		logger.Error(err, "Error listing resources")
+		return err
+	}
+
+	sv := reflect.ValueOf(object).Elem()
+	iv := sv.FieldByName("Items")
+
+	for i := 0; i < iv.Len(); i++ {
+		obj := iv.Index(i).Addr().Interface().(runtime.Object)
+		logger.Info("Deleting", "type", reflect.TypeOf(obj), "obj", obj)
+		if err := c.Delete(context.TODO(), obj); err != nil {
+			logger.Error(err, "Error deleting a resource")
+			return err
+		}
+	}
+
+	return nil
+}
+
+func isControllerDeployment(d *appsv1.Deployment) bool {
+	return d.Name == "vm-import-deployment"
+}
+
 func (r *ReconcileVMImportConfig) crUpdate(phase vmimportv1alpha1.VMImportPhase, cr *vmimportv1alpha1.VMImportConfig) error {
 	cr.Status.Phase = phase
 	return r.client.Update(context.TODO(), cr)
-}
-
-func (r *ReconcileVMImportConfig) crInit(cr *vmimportv1alpha1.VMImportConfig) error {
-	cr.Status.OperatorVersion = r.operatorArgs.OperatorVersion
-	cr.Status.TargetVersion = r.operatorArgs.OperatorVersion
-	return r.crUpdate(vmimportv1alpha1.PhaseDeploying, cr)
 }
 
 func (r *ReconcileVMImportConfig) checkDegraded(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) (bool, error) {
@@ -609,9 +701,6 @@ func (r *ReconcileVMImportConfig) watchDependantResources(cr *vmimportv1alpha1.V
 		return err
 	}
 
-	// append stuff for certs
-	resources = append(resources, &corev1.ConfigMap{}, &corev1.Secret{})
-
 	if err = r.watchResourceTypes(resources); err != nil {
 		return err
 	}
@@ -669,7 +758,7 @@ func createControllerResources(args *OperatorArgs) []runtime.Object {
 		resources.CreateServiceAccount(),
 		resources.CreateRoleBinding(args.Namespace),
 		resources.CreateRole(),
-		resources.CreateControllerDeployment(args.Namespace, args.ControllerImage, args.PullPolicy, int32(1)),
+		resources.CreateControllerDeployment("vm-import-deployment", args.Namespace, args.ControllerImage, args.PullPolicy, int32(1)),
 	}
 }
 
@@ -747,4 +836,24 @@ func sameResource(obj1, obj2 runtime.Object) bool {
 	}
 
 	return true
+}
+
+// this is used for testing.  wish this a helper function in test file instead of member
+func (r *ReconcileVMImportConfig) crSetVersion(cr *vmimportv1alpha1.VMImportConfig, version string) error {
+	phase := vmimportv1alpha1.PhaseDeployed
+	if version == "" {
+		phase = vmimportv1alpha1.VMImportPhase("")
+	}
+	cr.Status.ObservedVersion = version
+	cr.Status.OperatorVersion = version
+	cr.Status.TargetVersion = version
+	return r.crUpdate(phase, cr)
+}
+
+func (r *ReconcileVMImportConfig) isMutable(obj runtime.Object) bool {
+	switch obj.(type) {
+	case *corev1.ConfigMap, *corev1.Secret, *rbacv1.RoleBinding, *rbacv1.Role:
+		return true
+	}
+	return false
 }

@@ -191,6 +191,22 @@ Connect to the debug session, i.e. if using vscode, create launch.json as:
 }
 ```
 
+# Running tests
+
+In order to run controller tests we need to install `kubebuilder` by running:
+
+```bash
+os=$(go env GOOS)
+arch=$(go env GOARCH)
+
+# download kubebuilder and extract it to tmp
+curl -L https://go.kubebuilder.io/dl/2.3.1/${os}/${arch} | tar -xz -C /tmp/
+
+# move to a long-term location and put it on your path
+sudo mv /tmp/kubebuilder_2.3.1_${os}_${arch} /usr/local/kubebuilder
+
+```
+
 # Functional testing
 Functional tests for the operator are described in a [this document](docs/functional-tests.md).
 

@@ -9,6 +9,7 @@ require (
 	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
 	github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30
 	github.com/blang/semver v3.5.1+incompatible
+	github.com/evanphx/json-patch v4.5.0+incompatible
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
@@ -29,7 +30,7 @@ require (
 	golang.org/x/net v0.0.0-20200222125558-5a598a2470a0 // indirect
 	golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae // indirect
 	golang.org/x/tools v0.0.0-20200212150539-ea181f53ac56
-	gopkg.in/yaml.v2 v2.2.4
+	gopkg.in/yaml.v2 v2.2.5
 	k8s.io/api v0.17.1
 	k8s.io/apiextensions-apiserver v0.16.4
 	k8s.io/apimachinery v0.17.1

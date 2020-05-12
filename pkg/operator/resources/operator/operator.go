@@ -259,17 +259,17 @@ func getClusterPolicyRules() []rbacv1.PolicyRule {
 }
 
 // CreateControllerDeployment returns vmimport controller deployment
-func CreateControllerDeployment(namespace string, image string, pullPolicy string, numReplicas int32) *appsv1.Deployment {
+func CreateControllerDeployment(name, namespace, image, pullPolicy string, numReplicas int32) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
 			Kind:       "Deployment",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "vm-import-operator",
+			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: *createControllerDeploymentSpec(image, pullPolicy, "name", "vm-import-operator", numReplicas),
+		Spec: *createControllerDeploymentSpec(image, pullPolicy, "v2v.kubevirt.io", "vm-import-controller", numReplicas),
 	}
 	return deployment
 }
@@ -296,7 +296,7 @@ func createControllerDeploymentSpec(image string, pullPolicy string, matchKey st
 func createControllerContainers(image string, pullPolicy string) []corev1.Container {
 	return []corev1.Container{
 		corev1.Container{
-			Name:  "vm-import-operator",
+			Name:  "vm-import-controller",
 			Image: image,
 			Command: []string{
 				operatorName,

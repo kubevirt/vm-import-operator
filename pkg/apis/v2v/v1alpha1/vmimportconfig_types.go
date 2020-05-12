@@ -51,6 +51,9 @@ const (
 	// PhaseDeployed signals that the resources are successflly deployed
 	PhaseDeployed VMImportPhase = "Deployed"
 
+	// PhaseDeleting signals that the resources are being removed
+	PhaseDeleting VMImportPhase = "Deleting"
+
 	// PhaseDeleted signals that the resources are deleted
 	PhaseDeleted VMImportPhase = "Deleted"
 
