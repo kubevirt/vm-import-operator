@@ -213,6 +213,19 @@ func getClusterPolicyRules() []rbacv1.PolicyRule {
 				"watch",
 			},
 		},
+		{
+			APIGroups: []string{
+				"k8s.cni.cncf.io",
+			},
+			Resources: []string{
+				"network-attachment-definitions",
+			},
+			Verbs: []string{
+				"get",
+				"list",
+				"watch",
+			},
+		},
 	}
 	return rules
 }
