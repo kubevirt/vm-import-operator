@@ -5,6 +5,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// CreateResourceMapping creates resource mapping with given oVirt Mappings
 func (f *Framework) CreateResourceMapping(ovirtMappings v2vv1alpha1.OvirtMappings) (v2vv1alpha1.ResourceMapping, error) {
 	resourceMapping := v2vv1alpha1.ResourceMapping{
 		ObjectMeta: metav1.ObjectMeta{

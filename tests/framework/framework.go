@@ -39,10 +39,11 @@ const (
 
 // run-time flags
 var (
-	kubectlPath          *string
-	kubeConfig           *string
-	master               *string
-	ovirtSecretBlueprint *string
+	kubectlPath              *string
+	kubeConfig               *string
+	master                   *string
+	ovirtSecretBlueprint     *string
+	kubeVirtInstallNamespace *string
 )
 
 // This package is based on https://github.com/kubevirt/containerized-data-importer/blob/master/tests/framework/framework.go
@@ -72,6 +73,8 @@ type Framework struct {
 	Master string
 	// The namespaced name of the oVirt secret to copy for tests
 	OVirtSecretName *types.NamespacedName
+	// KubeVirtInstallNamespace namespace where KubeVirt is installed
+	KubeVirtInstallNamespace string
 }
 
 // initialize run-time flags
@@ -82,6 +85,7 @@ func init() {
 	kubeConfig = flag.String("kubeconfig", "/var/run/kubernetes/admin.kubeconfig", "The absolute path to the kubeconfig file")
 	master = flag.String("master", "", "master url:port")
 	ovirtSecretBlueprint = flag.String("ovirt-secret", "", "The namespace/name of the oVirt secret to copy for tests")
+	kubeVirtInstallNamespace = flag.String("kubevirt-namespace", "kubevirt", "Set the namespace KubeVirt is installed in")
 }
 
 // NewFrameworkOrDie calls NewFramework and handles errors by calling Fail. Config is optional, but
@@ -109,6 +113,7 @@ func NewFramework(prefix string) (*Framework, error) {
 	f.KubectlPath = *kubectlPath
 	f.KubeConfig = *kubeConfig
 	f.Master = *master
+	f.KubeVirtInstallNamespace = *kubeVirtInstallNamespace
 
 	if ovirtSecretBlueprint != nil && len(*ovirtSecretBlueprint) > 0 {
 		nameSlice := strings.Split(*ovirtSecretBlueprint, "/")

@@ -79,8 +79,12 @@ func (t *networkedVmImportTest) validateTargetConfiguration(vmName string) *v1.V
 	By("having correct network configuration")
 	Expect(spec.Networks).To(HaveLen(1))
 	Expect(spec.Networks[0].Pod).ToNot(BeNil())
-	Expect(spec.Domain.Devices.Interfaces).To(HaveLen(1))
-	Expect(spec.Domain.Devices.Interfaces[0].Name).To(BeEquivalentTo(spec.Networks[0].Name))
+
+	nic := spec.Domain.Devices.Interfaces[0]
+	Expect(nic.Name).To(BeEquivalentTo(spec.Networks[0].Name))
+	Expect(nic.MacAddress).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
+	Expect(nic.Masquerade).ToNot(BeNil())
+	Expect(nic.Model).To(BeEquivalentTo("virtio"))
 
 	By("having correct clock settings")
 	Expect(spec.Domain.Clock.UTC).ToNot(BeNil())
