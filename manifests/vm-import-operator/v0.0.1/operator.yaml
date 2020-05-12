@@ -95,9 +95,17 @@ rules:
   verbs:
   - 'create'
 - apiGroups:
-    - storage.k8s.io
+  - storage.k8s.io
   resources:
-    - storageclasses
+  - storageclasses
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+    - k8s.cni.cncf.io
+  resources:
+    - network-attachment-definitions
   verbs:
     - get
     - list
