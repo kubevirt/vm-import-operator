@@ -24,7 +24,10 @@ function install_imageio {
 
 # Install golang to run generate manifests
 function ensure_golang {
-    if [[ "$(rpm -q golang 2>&1)" =~ "is not installed" ]]; then
-        sudo yum install -y golang
+    export PATH=$PATH:/usr/local/go/bin
+    GOVERSION='go1.14.2.linux-amd64.tar.gz'
+    if [[ "$(go version 2>&1)" =~ "not found" ]]; then
+        wget https://dl.google.com/go/${GOVERSION}
+        sudo tar -C /usr/local -xzf ${GOVERSION}
     fi
 }
