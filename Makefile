@@ -6,8 +6,6 @@ VERSION ?= v0.0.1
 export VERSION := $(VERSION)
 
 TARGET_NAMESPACE ?= kubevirt-hyperconverged
-export TARGET_NAMESPACE := $(TARGET_NAMESPACE)
-
 DEPLOY_DIR ?= manifests
 
 # Image registry variables
@@ -15,6 +13,7 @@ QUAY_USER ?= $(USER)
 IMAGE_REGISTRY ?= quay.io/$(QUAY_USER)
 IMAGE_TAG ?= latest
 OPERATOR_IMAGE ?= vm-import-operator
+CONTROLLER_IMAGE ?= vm-import-controller
 
 # Git parameters
 GITHUB_REPOSITORY ?= https://github.com/kubevirt/vm-import-operator
@@ -88,12 +87,21 @@ goimports-check: $(cmd_sources) $(pkg_sources)
 test/unit: $(GINKGO)
 	$(GINKGO) $(GINKGO_ARGS) ./pkg/ ./cmd/
 
-docker-build:
-	CGO_ENABLED=0 GOOS=linux go build -a -o build/_output/bin/vm-import-operator cmd/manager/main.go
-	docker build -f build/Dockerfile -t $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE):$(IMAGE_TAG) .
+controller-build:
+	docker build -f build/controller/Dockerfile -t $(IMAGE_REGISTRY)/$(CONTROLLER_IMAGE):$(IMAGE_TAG) .
 
-docker-push:
+operator-build:
+	docker build -f build/operator/Dockerfile -t $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE):$(IMAGE_TAG) .
+
+docker-build: controller-build operator-build
+
+controller-push:
+	docker push $(IMAGE_REGISTRY)/$(CONTROLLER_IMAGE):$(IMAGE_TAG)
+
+operator-push:
 	docker push $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE):$(IMAGE_TAG)
+
+docker-push: controller-push operator-push
 
 cluster-up:
 	./cluster/up.sh
