@@ -13,6 +13,7 @@
 # limitations under the License.
 
 export KUBEVIRT_PROVIDER=${KUBEVIRT_PROVIDER:-'k8s-1.16'}
+export KUBEVIRTCI_VERSION=${KUBEVIRTCI_VERSION:-'master'}
 
 KUBEVIRTCI_PATH="${PWD}/_kubevirtci"
 
@@ -21,6 +22,7 @@ function kubevirtci::install() {
         git clone https://github.com/kubevirt/kubevirtci.git ${KUBEVIRTCI_PATH}
         (
             cd ${KUBEVIRTCI_PATH}
+            git checkout ${KUBEVIRTCI_VERSION}
         )
     fi
 }
