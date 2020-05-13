@@ -24,10 +24,9 @@ function install_imageio {
 
 # Install golang to run generate manifests
 function ensure_golang {
-    export PATH=$PATH:/usr/local/go/bin
     GOVERSION='go1.14.2.linux-amd64.tar.gz'
     if [[ "$(go version 2>&1)" =~ "not found" ]]; then
-        wget https://dl.google.com/go/${GOVERSION}
+        wget -q https://dl.google.com/go/${GOVERSION}
         tar -C /usr/local -xzf ${GOVERSION}
     fi
 }
