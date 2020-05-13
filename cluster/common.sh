@@ -28,6 +28,6 @@ function ensure_golang {
     GOVERSION='go1.14.2.linux-amd64.tar.gz'
     if [[ "$(go version 2>&1)" =~ "not found" ]]; then
         wget https://dl.google.com/go/${GOVERSION}
-        sudo tar -C /usr/local -xzf ${GOVERSION}
+        tar -C /usr/local -xzf ${GOVERSION}
     fi
 }
