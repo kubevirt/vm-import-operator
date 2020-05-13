@@ -31,6 +31,8 @@ fi
 
 ensure_golang
 
+install_cnao
+
 install_cdi
 install_kubevirt
 install_imageio

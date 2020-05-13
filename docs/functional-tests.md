@@ -70,6 +70,6 @@
 ## Networking
 | Test description | Implemented |
 | :---------------- | :---------: |
-| Import of VM should create running VM with Multus network | &cross; |
+| Import of VM should create running VM with Multus network | &check; |
 | Import of VM should create running VM with two networks: Multus and Pod | &cross; |
 | Import of VM should create running VM with two Multus networks | &cross; |
