@@ -442,7 +442,7 @@ var _ = Describe("Controller", func() {
 				if !ok {
 					return false
 				}
-				if deployment.Name == "vm-import-deployment" {
+				if deployment.Name == "vm-import-controller" {
 					return true
 				}
 				return false
@@ -494,7 +494,7 @@ var _ = Describe("Controller", func() {
 				if !ok {
 					return false
 				}
-				if deployment.Name == "vm-import-deployment" {
+				if deployment.Name == "vm-import-controller" {
 					return true
 				}
 				return false
@@ -539,7 +539,7 @@ var _ = Describe("Controller", func() {
 				if !ok {
 					return false
 				}
-				if deployment.Name == "vm-import-deployment" {
+				if deployment.Name == "vm-import-controller" {
 					return true
 				}
 				return false

@@ -300,6 +300,11 @@ func (r *ReconcileVMImportConfig) reconcileUpdate(logger logr.Logger, cr *vmimpo
 			}
 
 			currentRuntimeObj = desiredRuntimeObj.DeepCopyObject()
+			logger.Info("Resource creating",
+				"namespace", desiredMetaObj.GetNamespace(),
+				"name", desiredMetaObj.GetName(),
+				"type", fmt.Sprintf("%T", desiredMetaObj))
+
 			if err = r.client.Create(context.TODO(), currentRuntimeObj); err != nil {
 				logger.Error(err, "")
 				allErrors = append(allErrors, err)
@@ -755,10 +760,10 @@ func (r *ReconcileVMImportConfig) getAllResources(cr *vmimportv1alpha1.VMImportC
 
 func createControllerResources(args *OperatorArgs) []runtime.Object {
 	return []runtime.Object{
-		resources.CreateServiceAccount(),
-		resources.CreateRoleBinding(args.Namespace),
-		resources.CreateRole(),
-		resources.CreateControllerDeployment("vm-import-deployment", args.Namespace, args.ControllerImage, args.PullPolicy, int32(1)),
+		resources.CreateServiceAccount(args.Namespace),
+		resources.CreateControllerRole(args.Namespace),
+		resources.CreateControllerRoleBinding(args.Namespace),
+		resources.CreateControllerDeployment("vm-import-controller", args.Namespace, args.ControllerImage, args.PullPolicy, int32(1)),
 	}
 }
 

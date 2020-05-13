@@ -36,6 +36,9 @@ export GO111MODULE=on
 GINKGO_EXTRA_ARGS ?=
 GINKGO_ARGS ?= --v -r --progress $(GINKGO_EXTRA_ARGS)
 GINKGO ?= build/_output/bin/ginkgo
+KUBEBUILDER_VERSION="2.2.0"
+ARCH="amd64"
+KUBEBUILDER_DIR=/usr/local/kubebuilder
 
 OPERATOR_SDK ?= build/_output/bin/operator-sdk
 
@@ -84,7 +87,7 @@ goimports-check: $(cmd_sources) $(pkg_sources)
 	go run ./vendor/golang.org/x/tools/cmd/goimports -d ./pkg ./cmd
 	touch $@
 
-test/unit: $(GINKGO)
+test/unit: $(GINKGO) $(KUBEBUILDER_DIR)
 	$(GINKGO) $(GINKGO_ARGS) ./pkg/ ./cmd/
 
 controller-build:
@@ -137,6 +140,12 @@ gen-k8s: $(OPERATOR_SDK) $(apis_sources)
 gen-k8s-check: $(apis_sources)
 	./hack/verify-codegen.sh
 	touch $@
+
+$(KUBEBUILDER_DIR):
+	curl -L -O "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${KUBEBUILDER_VERSION}/kubebuilder_${KUBEBUILDER_VERSION}_linux_${ARCH}.tar.gz" && \
+    	tar -zxvf kubebuilder_${KUBEBUILDER_VERSION}_linux_${ARCH}.tar.gz && \
+    	sudo mv kubebuilder_${KUBEBUILDER_VERSION}_linux_${ARCH} ${KUBEBUILDER_DIR} && \
+    	rm kubebuilder_${KUBEBUILDER_VERSION}_linux_${ARCH}.tar.gz
 
 prepare-patch:
 	./hack/prepare-release.sh patch
