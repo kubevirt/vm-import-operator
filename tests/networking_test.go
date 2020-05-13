@@ -64,8 +64,8 @@ var _ = Describe("Import of VM ", func() {
 			Expect(vmBlueprint).To(BeRunning(f))
 
 			By("Having correct network configuration")
-			vm, _ := f.KubeVirtClient.VirtualMachine(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
-			spec := vm.Spec.Template.Spec
+			vm, _ := f.KubeVirtClient.VirtualMachineInstance(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+			spec := vm.Spec
 			Expect(spec.Networks).To(HaveLen(1))
 			Expect(spec.Networks[0].Multus).ToNot(BeNil())
 			Expect(spec.Networks[0].Multus.NetworkName).To(BeEquivalentTo(networkName))
@@ -76,6 +76,10 @@ var _ = Describe("Import of VM ", func() {
 			Expect(nic.MacAddress).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
 			Expect(nic.Bridge).ToNot(BeNil())
 			Expect(nic.Model).To(BeEquivalentTo("virtio"))
+
+			Expect(vm.Status.Interfaces).To(HaveLen(1))
+			Expect(vm.Status.Interfaces[0].Name).To(BeEquivalentTo(spec.Networks[0].Name))
+			Expect(vm.Status.Interfaces[0].MAC).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
 		})
 	})
 })
