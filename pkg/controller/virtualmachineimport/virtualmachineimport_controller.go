@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/kubevirt/vm-import-operator/pkg/config"
@@ -40,12 +41,14 @@ const (
 	// AnnCurrentProgress is annotations storing current progress of the vm import
 	AnnCurrentProgress = "vmimport.v2v.kubevirt.io/progress"
 	// constants
-	progressStart                     = "0"
-	progressCreatingVM                = "30"
-	progressCopyingDisks              = "40"
-	progressStartVM                   = "90"
-	progressDone                      = "100"
-	progressForCopyDisk               = 40
+	progressStart         = "0"
+	progressCreatingVM    = "5"
+	progressCopyingDisks  = "10"
+	progressStartVM       = "90"
+	progressDone          = "100"
+	progressForCopyDisk   = 75
+	progressCopyDiskRange = float64(progressForCopyDisk / 100.0)
+
 	requeueAfterValidationFailureTime = 5 * time.Second
 
 	// EventImportSucceeded is emitted
@@ -246,6 +249,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 		return err
 	}
 	dvsDone := make(map[string]bool)
+	dvsImportProgress := make(map[string]float64)
 	for dvID := range dvs {
 		foundDv := &cdiv1.DataVolume{}
 		err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: dvID}, foundDv)
@@ -274,9 +278,23 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 					r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportSucceeded, "Virtual Machine %s/%s import successful", vmName.Namespace, vmName.Name)
 				}
 			}
+			// Get current progress of the import:
+			progress := string(foundDv.Status.Progress)
+			progressFloat, err := strconv.ParseFloat(strings.TrimRight(progress, "%"), 64)
+			if err != nil {
+				dvsImportProgress[dvID] = 0.0
+			} else {
+				dvsImportProgress[dvID] = progressFloat
+			}
 		} else {
 			return err
 		}
+	}
+
+	// Update progress:
+	currentProgress := disksImportProgress(dvsImportProgress, float64(len(dvs)))
+	if err := r.updateProgress(instance, currentProgress); err != nil {
+		return err
 	}
 
 	return nil
@@ -443,16 +461,6 @@ func (r *ReconcileVirtualMachineImport) manageDataVolumeState(instance *v2vv1alp
 			return err
 		}
 	}
-
-	// Update progress, progress of CopyingDisks starts at 40% and we update the proccess,
-	// based on number of disks. Each disk updates state as 40/numberOfDisks. So we end at 80%.
-	if done > 0 {
-		progressCopyingDisksInt, _ := strconv.Atoi(progressCopyingDisks)
-		if err := r.updateProgress(instance, strconv.FormatInt(int64(progressCopyingDisksInt+(progressForCopyDisk/done)), 10)); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -887,4 +895,16 @@ func newValidationCondition(reason v2vv1alpha1.ValidConditionReason, message str
 		message,
 		v1.ConditionFalse,
 	)
+}
+
+// disksImportProgress count progress as progressCopyingDisks + (allProgress / countOfDisks) * (progressForCopyDisk / 100)
+// So for example for two disks of one done on 25% and second for 60% we go as -> 10 + (85 / 2) * 0.75 = 41.875%
+func disksImportProgress(dvsImportProgress map[string]float64, dvCount float64) string {
+	sumProgress := float64(0.0)
+	for _, progress := range dvsImportProgress {
+		sumProgress += progress
+	}
+	startProgress, _ := strconv.Atoi(progressCopyingDisks)
+	disksAverageProgress := sumProgress / dvCount
+	return fmt.Sprintf("%v", startProgress+int(disksAverageProgress*progressCopyDiskRange))
 }

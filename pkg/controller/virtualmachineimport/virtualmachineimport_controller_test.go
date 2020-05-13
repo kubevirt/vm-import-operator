@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -804,26 +805,6 @@ var _ = Describe("Reconcile steps", func() {
 			Expect(err).To(BeNil())
 		})
 
-		It("should fail to update some: ", func() {
-			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
-				return fmt.Errorf("Not modified")
-			}
-			done := map[string]bool{"test": true, "test2": false}
-			number := len(done)
-			conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
-			reason := string(v2vv1alpha1.VirtualMachineReady)
-			conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
-				Status: corev1.ConditionTrue,
-				Type:   v2vv1alpha1.Succeeded,
-				Reason: &reason,
-			})
-			instance.Status.Conditions = conditions
-
-			err := reconciler.manageDataVolumeState(instance, done, number)
-
-			Expect(err).To(Not(BeNil()))
-		})
-
 		It("should fail to update status condition: ", func() {
 			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
 				return fmt.Errorf("Not modified")
@@ -1252,6 +1233,21 @@ var _ = Describe("Reconcile steps", func() {
 			Expect(result).To(Equal(reconcile.Result{}))
 		})
 	})
+})
+
+var _ = Describe("Disks import progress", func() {
+	table.DescribeTable("Percentage count",
+		func(disks map[string]float64, expected string) {
+			result := disksImportProgress(disks, float64(len(disks)))
+			Expect(result).To(Equal(expected))
+		},
+		table.Entry("No progress", map[string]float64{"1": 0.0}, "10"),
+		table.Entry("Two disks no progress", map[string]float64{"1": 0.0, "2": 0.0}, "10"),
+		table.Entry("Two disks done progress", map[string]float64{"1": 100, "2": 100}, "85"),
+		table.Entry("Two disks half done", map[string]float64{"1": 50, "2": 50}, "47"),
+		table.Entry("Two disks one done", map[string]float64{"1": 50, "2": 100}, "66"),
+		table.Entry("Done progress", map[string]float64{"1": 100}, "85"),
+	)
 })
 
 func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory pclient.Factory, kvConfigProvider config.KubeVirtConfigProvider, recorder record.EventRecorder) *ReconcileVirtualMachineImport {
