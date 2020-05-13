@@ -51,15 +51,19 @@ const (
 
 	requeueAfterValidationFailureTime = 5 * time.Second
 
-	// EventImportSucceeded is emitted
+	// EventImportScheduled is emitted when import scheduled
+	EventImportScheduled = "ImportScheduled"
+	// EventImportInProgress is emitted when import is in progress
+	EventImportInProgress = "ImportInProgress"
+	// EventImportSucceeded is emitted when import succeed
 	EventImportSucceeded = "ImportSucceeded"
-	// EventImportBlocked is emitted
+	// EventImportBlocked is emitted when import is blocked
 	EventImportBlocked = "ImportBlocked"
-	// EventVMStartFailed is emitted
+	// EventVMStartFailed is emitted when vm failed to start
 	EventVMStartFailed = "VMStartFailed"
-	// EventVMCreationFailed is emitted
+	// EventVMCreationFailed is emitted when creation of vm fails
 	EventVMCreationFailed = "VMCreationFailed"
-	// EventDVCreationFailed is emitted
+	// EventDVCreationFailed is emitted when creation of datavolume fails
 	EventDVCreationFailed = "DVCreationFailed"
 )
 
@@ -228,6 +232,8 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 			return reconcile.Result{}, err
 		}
 		vmName.Name = newName
+		// Emit event we are starting the import process:
+		r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportScheduled, "Import of Virtual Machine %s/%s started", vmName.Namespace, vmName.Name)
 	}
 
 	// Import disks:
@@ -517,6 +523,9 @@ func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Prov
 			return err
 		}
 	}
+
+	// Emit event that DVs import is in progress:
+	r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportInProgress, "Import of Virtual Machine %s/%s disks are in progress", vmName.Namespace, vmName.Name)
 
 	// Update datavolume in VM import CR status:
 	if err = r.updateDVs(instanceNamespacedName, dvs); err != nil {
