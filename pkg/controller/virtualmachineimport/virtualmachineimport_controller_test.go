@@ -100,7 +100,7 @@ var _ = Describe("Reconcile steps", func() {
 			return nil
 		}
 		vmName = types.NamespacedName{Name: "test", Namespace: "default"}
-		rec := record.NewFakeRecorder(1)
+		rec := record.NewFakeRecorder(2)
 		reconciler = NewReconciler(mockClient, finder, scheme, ownerreferences.NewOwnerReferenceManager(mockClient), factory, kvConfigProviderMock, rec)
 	})
 
@@ -1022,7 +1022,7 @@ var _ = Describe("Reconcile steps", func() {
 			create = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 				return nil
 			}
-			rec := record.NewFakeRecorder(1)
+			rec := record.NewFakeRecorder(2)
 			reconciler.recorder = rec
 		})
 
@@ -1197,7 +1197,10 @@ var _ = Describe("Reconcile steps", func() {
 			result, err := reconciler.Reconcile(request)
 
 			event := <-reconciler.recorder.(*record.FakeRecorder).Events
+			Expect(event).To(ContainSubstring("started"))
+			event = <-reconciler.recorder.(*record.FakeRecorder).Events
 			Expect(event).To(ContainSubstring("creation failed"))
+
 			Expect(err).To(Not(BeNil()))
 			Expect(result).To(Equal(reconcile.Result{}))
 		})
