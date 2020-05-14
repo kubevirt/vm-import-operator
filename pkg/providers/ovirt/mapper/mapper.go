@@ -6,7 +6,7 @@ import (
 
 	oos "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/os"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	outils "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/utils"
