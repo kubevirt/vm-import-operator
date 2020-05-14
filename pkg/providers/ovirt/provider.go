@@ -266,6 +266,7 @@ func (o *OvirtProvider) ProcessTemplate(template *templatev1.Template, vmName *s
 	return vm, nil
 }
 
+// GetVmiNamespacedName return the namespaced name of the VM import object
 func (o *OvirtProvider) GetVmiNamespacedName() types.NamespacedName {
 	return types.NamespacedName{Name: o.vmiObjectMeta.Name, Namespace: o.vmiObjectMeta.Namespace}
 }

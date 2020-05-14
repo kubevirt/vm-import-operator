@@ -497,8 +497,8 @@ func reportedDevicesToStrings(devices []*ovirtsdk.ReportedDevice) []string {
 
 func reportedDeviceToString(rd *ovirtsdk.ReportedDevice) string {
 	var id, name *string
-	if rdId, ok := rd.Id(); ok {
-		id = &rdId
+	if rdID, ok := rd.Id(); ok {
+		id = &rdID
 	}
 	if rdName, ok := rd.Name(); ok {
 		name = &rdName
