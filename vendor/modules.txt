@@ -1208,7 +1208,6 @@ kubevirt.io/containerized-data-importer/pkg/client/clientset/versioned/scheme
 kubevirt.io/containerized-data-importer/pkg/client/clientset/versioned/typed/core/v1alpha1
 kubevirt.io/containerized-data-importer/pkg/client/clientset/versioned/typed/upload/v1alpha1
 kubevirt.io/containerized-data-importer/pkg/common
-kubevirt.io/containerized-data-importer/pkg/operator/resources/utils
 kubevirt.io/containerized-data-importer/pkg/util
 kubevirt.io/containerized-data-importer/tools/util
 # sigs.k8s.io/controller-runtime v0.4.0

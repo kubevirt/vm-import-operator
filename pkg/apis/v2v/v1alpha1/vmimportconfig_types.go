@@ -48,7 +48,7 @@ const (
 	// PhaseDeploying signals that the resources are being deployed
 	PhaseDeploying VMImportPhase = "Deploying"
 
-	// PhaseDeployed signals that the resources are successflly deployed
+	// PhaseDeployed signals that the resources are successfully deployed
 	PhaseDeployed VMImportPhase = "Deployed"
 
 	// PhaseDeleting signals that the resources are being removed
@@ -65,6 +65,9 @@ const (
 
 	// PhaseEmpty is an uninitialized phase
 	PhaseEmpty VMImportPhase = ""
+
+	// UpgradeStartedReason signals that upgrdade started
+	UpgradeStartedReason = "UpgradeStarted"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -8,9 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
+	resources "github.com/kubevirt/vm-import-operator/pkg/operator/resources/operator"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -22,27 +21,8 @@ func TestOperator(t *testing.T) {
 
 var testenv *envtest.Environment
 var cfg *rest.Config
-var clientset *kubernetes.Clientset
 
-var crd = &extv1beta1.CustomResourceDefinition{
-	ObjectMeta: metav1.ObjectMeta{
-		Name: "vmimportconfigs.v2v.kubevirt.io",
-		Labels: map[string]string{
-			"operator.v2v.kubevirt.io": "",
-		},
-	},
-	Spec: extv1beta1.CustomResourceDefinitionSpec{
-		Group: "v2v.kubevirt.io",
-		Names: extv1beta1.CustomResourceDefinitionNames{
-			Kind:     "VMImportConfig",
-			ListKind: "VMImportConfigList",
-			Plural:   "vmimportconfigs",
-			Singular: "vmimportconfig",
-		},
-		Scope:   "Cluster",
-		Version: "v1alpha1",
-	},
-}
+var crd = resources.CreateVMImportConfig()
 
 var _ = BeforeSuite(func(done Done) {
 	logf.SetLogger(logf.ZapLoggerTo(GinkgoWriter, true))
@@ -51,9 +31,6 @@ var _ = BeforeSuite(func(done Done) {
 
 	var err error
 	cfg, err = env.Start()
-	Expect(err).NotTo(HaveOccurred())
-
-	clientset, err = kubernetes.NewForConfig(cfg)
 	Expect(err).NotTo(HaveOccurred())
 
 	opts := envtest.CRDInstallOptions{

@@ -199,26 +199,27 @@ func shouldTakeUpdatePath(logger logr.Logger, targetVersion, currentVersion stri
 	// So if the target and current version do not
 	// adhere to the semver spec, we assume by default the
 	// update path is the correct path.
-	shouldTakeUpdatePath := true
 	target, err := semver.Make(targetVersion)
-	if err == nil {
-		current, err := semver.Make(currentVersion)
-		if err == nil {
-			if target.Compare(current) < 0 {
-				err := fmt.Errorf("operator downgraded, will not reconcile")
-				logger.Error(err, "", "current", current, "target", target)
-				return false, err
-			} else if target.Compare(current) == 0 {
-				shouldTakeUpdatePath = false
-			}
-		}
+	if err != nil {
+		return true, nil
+	}
+	current, err := semver.Make(currentVersion)
+	if err != nil {
+		return true, nil
 	}
 
-	return shouldTakeUpdatePath, nil
+	if target.Compare(current) < 0 {
+		err := fmt.Errorf("operator downgraded, will not reconcile")
+		logger.Error(err, "", "current", current, "target", target)
+		return false, err
+	} else if target.Compare(current) == 0 {
+		return false, nil
+	}
+
+	return true, nil
 }
 
-func (r *ReconcileVMImportConfig) checkUpgrade(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) error {
-	// should maybe put this in separate function
+func (r *ReconcileVMImportConfig) updateResourceForUpgrade(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) error {
 	if cr.Status.OperatorVersion != r.operatorArgs.OperatorVersion {
 		cr.Status.OperatorVersion = r.operatorArgs.OperatorVersion
 		cr.Status.TargetVersion = r.operatorArgs.OperatorVersion
@@ -234,7 +235,7 @@ func (r *ReconcileVMImportConfig) checkUpgrade(logger logr.Logger, cr *vmimportv
 
 	if isUpgrade && cr.Status.Phase != vmimportv1alpha1.PhaseUpgrading {
 		logger.Info("Observed version is not target version. Begin upgrade", "Observed version ", cr.Status.ObservedVersion, "TargetVersion", r.operatorArgs.OperatorVersion)
-		MarkCrUpgradeHealingDegraded(cr, "UpgradeStarted", fmt.Sprintf("Started upgrade to version %s", r.operatorArgs.OperatorVersion))
+		markCrUpgradeHealingDegraded(cr, vmimportv1alpha1.UpgradeStartedReason, fmt.Sprintf("Started upgrade to version %s", r.operatorArgs.OperatorVersion))
 		if err := r.crUpdate(vmimportv1alpha1.PhaseUpgrading, cr); err != nil {
 			return err
 		}
@@ -243,8 +244,8 @@ func (r *ReconcileVMImportConfig) checkUpgrade(logger logr.Logger, cr *vmimportv
 	return nil
 }
 
-// MarkCrUpgradeHealingDegraded marks the passed CR as upgrading and degraded.
-func MarkCrUpgradeHealingDegraded(cr *vmimportv1alpha1.VMImportConfig, reason, message string) {
+// markCrUpgradeHealingDegraded marks the passed CR as upgrading and degraded.
+func markCrUpgradeHealingDegraded(cr *vmimportv1alpha1.VMImportConfig, reason, message string) {
 	conditions.SetStatusCondition(&cr.Status.Conditions, conditions.Condition{
 		Type:   conditions.ConditionAvailable,
 		Status: corev1.ConditionTrue,
@@ -267,7 +268,7 @@ func newDefaultInstance(obj runtime.Object) runtime.Object {
 }
 
 func (r *ReconcileVMImportConfig) reconcileUpdate(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) (reconcile.Result, error) {
-	if err := r.checkUpgrade(logger, cr); err != nil {
+	if err := r.updateResourceForUpgrade(logger, cr); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -300,10 +301,7 @@ func (r *ReconcileVMImportConfig) reconcileUpdate(logger logr.Logger, cr *vmimpo
 			}
 
 			currentRuntimeObj = desiredRuntimeObj.DeepCopyObject()
-			logger.Info("Resource creating",
-				"namespace", desiredMetaObj.GetNamespace(),
-				"name", desiredMetaObj.GetName(),
-				"type", fmt.Sprintf("%T", desiredMetaObj))
+			logObjectInfo(logger, desiredMetaObj, "Resource creating")
 
 			if err = r.client.Create(context.TODO(), currentRuntimeObj); err != nil {
 				logger.Error(err, "")
@@ -311,10 +309,7 @@ func (r *ReconcileVMImportConfig) reconcileUpdate(logger logr.Logger, cr *vmimpo
 				continue
 			}
 
-			logger.Info("Resource created",
-				"namespace", desiredMetaObj.GetNamespace(),
-				"name", desiredMetaObj.GetName(),
-				"type", fmt.Sprintf("%T", desiredMetaObj))
+			logObjectInfo(logger, desiredMetaObj, "Resource created")
 		} else {
 			currentRuntimeObjCopy := currentRuntimeObj.DeepCopyObject()
 			currentMetaObj := currentRuntimeObj.(metav1.Object)
@@ -341,15 +336,9 @@ func (r *ReconcileVMImportConfig) reconcileUpdate(logger logr.Logger, cr *vmimpo
 					continue
 				}
 
-				logger.Info("Resource updated",
-					"namespace", desiredMetaObj.GetNamespace(),
-					"name", desiredMetaObj.GetName(),
-					"type", fmt.Sprintf("%T", desiredMetaObj))
+				logObjectInfo(logger, desiredMetaObj, "Resource updated")
 			} else {
-				logger.V(3).Info("Resource unchanged",
-					"namespace", desiredMetaObj.GetNamespace(),
-					"name", desiredMetaObj.GetName(),
-					"type", fmt.Sprintf("%T", desiredMetaObj))
+				logObjectInfo(logger, desiredMetaObj, "Resource unchanged")
 			}
 		}
 	}
@@ -383,6 +372,13 @@ func (r *ReconcileVMImportConfig) reconcileUpdate(logger logr.Logger, cr *vmimpo
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func logObjectInfo(logger logr.Logger, desiredMetaObj metav1.Object, action string) {
+	logger.Info(action,
+		"namespace", desiredMetaObj.GetNamespace(),
+		"name", desiredMetaObj.GetName(),
+		"type", fmt.Sprintf("%T", desiredMetaObj))
 }
 
 func mergeObject(desiredObj, currentObj runtime.Object) (runtime.Object, error) {
@@ -763,7 +759,7 @@ func createControllerResources(args *OperatorArgs) []runtime.Object {
 		resources.CreateServiceAccount(args.Namespace),
 		resources.CreateControllerRole(args.Namespace),
 		resources.CreateControllerRoleBinding(args.Namespace),
-		resources.CreateControllerDeployment("vm-import-controller", args.Namespace, args.ControllerImage, args.PullPolicy, int32(1)),
+		resources.CreateControllerDeployment(resources.ControllerName, args.Namespace, args.ControllerImage, args.PullPolicy, int32(1)),
 	}
 }
 

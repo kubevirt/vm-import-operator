@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	operatorName       = "vm-import-operator"
-	controllerName     = "vm-import-controller"
+	operatorName = "vm-import-operator"
+	// ControllerName defines name of the controller
+	ControllerName     = "vm-import-controller"
 	serviceAccountName = operatorName
-	roleName           = operatorName
 )
 
 var commonLabels = map[string]string{
@@ -61,7 +61,7 @@ func CreateControllerRole(namespace string) *rbacv1.Role {
 			Kind:       "ClusterRole",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "vm-import-controller",
+			Name:      ControllerName,
 			Labels:    map[string]string{},
 			Namespace: namespace,
 		},
@@ -77,16 +77,16 @@ func CreateControllerRoleBinding(namespace string) *rbacv1.RoleBinding {
 			Kind:       "ClusterRoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "vm-import-controller",
+			Name:      ControllerName,
 			Namespace: namespace,
 		},
 		RoleRef: rbacv1.RoleRef{
-			Kind:     "ClusterRole",
-			Name:     "vm-import-operator",
+			Kind:     "Role",
+			Name:     operatorName,
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 		Subjects: []rbacv1.Subject{
-			rbacv1.Subject{
+			{
 				Kind:      "ServiceAccount",
 				Name:      serviceAccountName,
 				Namespace: namespace,
@@ -310,7 +310,7 @@ func CreateControllerDeployment(name, namespace, image, pullPolicy string, numRe
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: *createControllerDeploymentSpec(image, pullPolicy, "v2v.kubevirt.io", controllerName, numReplicas),
+		Spec: *createControllerDeploymentSpec(image, pullPolicy, "v2v.kubevirt.io", ControllerName, numReplicas),
 	}
 	return deployment
 }
@@ -336,11 +336,11 @@ func createControllerDeploymentSpec(image string, pullPolicy string, matchKey st
 
 func createControllerContainers(image string, pullPolicy string) []corev1.Container {
 	return []corev1.Container{
-		corev1.Container{
-			Name:  controllerName,
+		{
+			Name:  ControllerName,
 			Image: image,
 			Command: []string{
-				controllerName,
+				ControllerName,
 			},
 			ImagePullPolicy: corev1.PullPolicy(pullPolicy),
 			Env:             createControllerEnv(pullPolicy),
@@ -375,15 +375,6 @@ func createControllerEnv(pullPolicy string) []corev1.EnvVar {
 			Name:  "PULL_POLICY",
 			Value: pullPolicy,
 		},
-	}
-}
-
-// NewCrds creates crds
-func NewCrds() []*extv1beta1.CustomResourceDefinition {
-	return []*extv1beta1.CustomResourceDefinition{
-		CreateResourceMapping(),
-		CreateVMImport(),
-		CreateVMImportConfig(),
 	}
 }
 
@@ -1051,8 +1042,8 @@ the disk alias on ovirt DiskMappings is respected only when provided in context 
 }
 
 func createOperatorDeployment(operatorVersion, namespace, deployClusterResources, operatorImage, controllerImage, pullPolicy string) *appsv1.Deployment {
-	deployment := CreateOperatorDeployment("vm-import-operator", namespace, "name", "vm-import-operator", serviceAccountName, int32(1))
-	container := CreateContainer("vm-import-operator", operatorImage, corev1.PullPolicy(pullPolicy))
+	deployment := CreateOperatorDeployment(operatorName, namespace, "name", operatorName, serviceAccountName, int32(1))
+	container := CreateContainer(operatorName, operatorImage, corev1.PullPolicy(pullPolicy))
 	container.Env = createOperatorEnvVar(operatorVersion, deployClusterResources, controllerImage, pullPolicy)
 	deployment.Spec.Template.Spec.Containers = []corev1.Container{container}
 	return deployment
@@ -1069,7 +1060,7 @@ func CreateOperatorDeployment(name, namespace, matchKey, matchValue, serviceAcco
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: *CreateOperatorDeploymentSpec(name, matchKey, matchValue, serviceAccount, numReplicas),
+		Spec: *CreateOperatorDeploymentSpec(matchKey, matchValue, serviceAccount, numReplicas),
 	}
 	return deployment
 }
@@ -1116,7 +1107,7 @@ func createOperatorEnvVar(operatorVersion, deployClusterResources, controllerIma
 }
 
 // CreateOperatorDeploymentSpec creates deployment
-func CreateOperatorDeploymentSpec(name, matchKey, matchValue, serviceAccount string, numReplicas int32) *appsv1.DeploymentSpec {
+func CreateOperatorDeploymentSpec(matchKey, matchValue, serviceAccount string, numReplicas int32) *appsv1.DeploymentSpec {
 	matchMap := map[string]string{matchKey: matchValue}
 	spec := &appsv1.DeploymentSpec{
 		Replicas: &numReplicas,
