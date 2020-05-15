@@ -72,7 +72,7 @@ spec:
 EOF
 ```
 
-## Create VM IMport resource for importing a specific VM from oVirt to KubeVirt:
+## Create VM Import resource for importing a specific VM from oVirt to KubeVirt:
 ```bash
 cat <<EOF | kubectl create -f -
 apiVersion: v2v.kubevirt.io/v1alpha1
