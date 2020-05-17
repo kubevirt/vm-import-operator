@@ -157,17 +157,6 @@ func getPolicyRules() []rbacv1.PolicyRule {
 		},
 		{
 			APIGroups: []string{
-				"",
-			},
-			Resources: []string{
-				"pods",
-			},
-			Verbs: []string{
-				"get",
-			},
-		},
-		{
-			APIGroups: []string{
 				"apps",
 			},
 			Resources: []string{
@@ -1228,7 +1217,7 @@ func NewClusterServiceVersion(data *ClusterServiceVersionData) (*csvv1.ClusterSe
 				},
 				{
 					Name: "Source Code",
-					URL:  "https://github.com/kubevirt/vm-import-operator/",
+					URL:  "https://github.com/kubevirt/vm-import-operator",
 				},
 			},
 			Labels: map[string]string{
