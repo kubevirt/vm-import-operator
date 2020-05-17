@@ -28,6 +28,7 @@ for template in $templates; do
 		-e "s/{{IMAGE_TAG}}/$IMAGE_TAG/g" \
 		-e "s/{{IMAGE_PULL_POLICY}}/$IMAGE_PULL_POLICY/g" \
         -e "s/{{OPERATOR_IMAGE}}/$OPERATOR_IMAGE/g" \
+        -e "s/{{CONTROLLER_IMAGE}}/$CONTROLLER_IMAGE/g" \
 	$infile > $file
 done
 

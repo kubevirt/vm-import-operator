@@ -160,3 +160,11 @@ spec:
               value: "vm-import-operator"
             - name: OS_CONFIGMAP_NAME
             - name: OS_CONFIGMAP_NAMESPACE
+            - name: DEPLOY_CLUSTER_RESOURCES
+              value: "true"
+            - name: OPERATOR_VERSION
+              value: {{IMAGE_TAG}}
+            - name: CONTROLLER_IMAGE
+              value: {{CONTAINER_PREFIX}}/{{CONTROLLER_IMAGE}}:{{IMAGE_TAG}}
+            - name: PULL_POLICY
+              value: {{IMAGE_PULL_POLICY}}
