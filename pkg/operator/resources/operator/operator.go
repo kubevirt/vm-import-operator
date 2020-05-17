@@ -14,13 +14,18 @@ import (
 )
 
 const (
-	operatorName       = "vm-import-operator"
+	operatorName = "vm-import-operator"
+	// ControllerName defines name of the controller
+	ControllerName     = "vm-import-controller"
 	serviceAccountName = operatorName
-	roleName           = operatorName
 )
 
+var commonLabels = map[string]string{
+	"v2v.kubevirt.io": "",
+}
+
 var operatorLabels = map[string]string{
-	operatorName: "",
+	"operator.v2v.kubevirt.io": "",
 }
 
 // ClusterServiceVersionData - Data arguments used to create vm import operator's CSV manifest
@@ -31,6 +36,7 @@ type ClusterServiceVersionData struct {
 	ImagePullPolicy    string
 	OperatorVersion    string
 	OperatorImage      string
+	ControllerImage    string
 }
 
 type csvPermissions struct {
@@ -47,20 +53,49 @@ type csvStrategySpec struct {
 	Deployments        []csvDeployments `json:"deployments"`
 }
 
-func createRole(name string) *rbacv1.Role {
+// CreateControllerRole returns role for vm-controller-operator
+func CreateControllerRole(namespace string) *rbacv1.Role {
 	return &rbacv1.Role{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRole",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: map[string]string{},
+			Name:      ControllerName,
+			Labels:    map[string]string{},
+			Namespace: namespace,
+		},
+		Rules: getPolicyRules(),
+	}
+}
+
+// CreateControllerRoleBinding returns role binging for vm-import-operator
+func CreateControllerRoleBinding(namespace string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRoleBinding",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ControllerName,
+			Namespace: namespace,
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "Role",
+			Name:     operatorName,
+			APIGroup: "rbac.authorization.k8s.io",
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Name:      serviceAccountName,
+				Namespace: namespace,
+			},
 		},
 	}
 }
 
-func getClusterPolicyRules() []rbacv1.PolicyRule {
+func getPolicyRules() []rbacv1.PolicyRule {
 	rules := []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{
@@ -226,11 +261,46 @@ func getClusterPolicyRules() []rbacv1.PolicyRule {
 				"watch",
 			},
 		},
+		{
+			APIGroups: []string{
+				"apiextensions.k8s.io",
+			},
+			Resources: []string{
+				"customresourcedefinitions",
+			},
+			Verbs: []string{
+				"*",
+			},
+		},
+		{
+			APIGroups: []string{
+				"",
+			},
+			Resources: []string{
+				"serviceaccounts",
+			},
+			Verbs: []string{
+				"*",
+			},
+		},
+		{
+			APIGroups: []string{
+				"rbac.authorization.k8s.io",
+			},
+			Resources: []string{
+				"rolebindings",
+				"roles",
+			},
+			Verbs: []string{
+				"*",
+			},
+		},
 	}
 	return rules
 }
 
-func createOperatorDeployment(name string, namespace string, image string, pullPolicy string, matchKey string, matchValue string, numReplicas int32) *appsv1.Deployment {
+// CreateControllerDeployment returns vmimport controller deployment
+func CreateControllerDeployment(name, namespace, image, pullPolicy string, numReplicas int32) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -240,50 +310,50 @@ func createOperatorDeployment(name string, namespace string, image string, pullP
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: *createOperatorDeploymentSpec(name, image, pullPolicy, matchKey, matchValue, numReplicas),
+		Spec: *createControllerDeploymentSpec(image, pullPolicy, "v2v.kubevirt.io", ControllerName, numReplicas),
 	}
 	return deployment
 }
 
-func createOperatorDeploymentSpec(name string, image string, pullPolicy string, matchKey string, matchValue string, numReplicas int32) *appsv1.DeploymentSpec {
+func createControllerDeploymentSpec(image string, pullPolicy string, matchKey string, matchValue string, numReplicas int32) *appsv1.DeploymentSpec {
 	matchMap := map[string]string{matchKey: matchValue}
 	return &appsv1.DeploymentSpec{
 		Replicas: &numReplicas,
 		Selector: &metav1.LabelSelector{
-			MatchLabels: withOperatorLabels(matchMap),
+			MatchLabels: WithLabels(matchMap, operatorLabels),
 		},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels: withOperatorLabels(matchMap),
+				Labels: WithLabels(matchMap, operatorLabels),
 			},
 			Spec: corev1.PodSpec{
 				ServiceAccountName: serviceAccountName,
-				Containers:         createContainers(name, image, corev1.PullPolicy(pullPolicy)),
+				Containers:         createControllerContainers(image, pullPolicy),
 			},
 		},
 	}
 }
 
-func createContainers(name string, image string, pullPolicy corev1.PullPolicy) []corev1.Container {
+func createControllerContainers(image string, pullPolicy string) []corev1.Container {
 	return []corev1.Container{
-		corev1.Container{
-			Name:  name,
+		{
+			Name:  ControllerName,
 			Image: image,
 			Command: []string{
-				operatorName,
+				ControllerName,
 			},
-			ImagePullPolicy: pullPolicy,
-			Env:             createEnv(name),
+			ImagePullPolicy: corev1.PullPolicy(pullPolicy),
+			Env:             createControllerEnv(pullPolicy),
 		},
 	}
 }
 
-func createEnv(name string) []corev1.EnvVar {
+func createControllerEnv(pullPolicy string) []corev1.EnvVar {
 	return []corev1.EnvVar{
-		corev1.EnvVar{
+		{
 			Name: "WATCH_NAMESPACE",
 		},
-		corev1.EnvVar{
+		{
 			Name: "POD_NAME",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
@@ -291,25 +361,20 @@ func createEnv(name string) []corev1.EnvVar {
 				},
 			},
 		},
-		corev1.EnvVar{
+		{
 			Name:  "OPERATOR_NAME",
-			Value: name,
+			Value: "vm-import-operator",
 		},
-		corev1.EnvVar{
+		{
 			Name: "OS_CONFIGMAP_NAME",
 		},
-		corev1.EnvVar{
+		{
 			Name: "OS_CONFIGMAP_NAMESPACE",
 		},
-	}
-}
-
-// NewCrds creates crds
-func NewCrds() []*extv1beta1.CustomResourceDefinition {
-	return []*extv1beta1.CustomResourceDefinition{
-		CreateResourceMapping(),
-		CreateVMImport(),
-		CreateVMImportConfig(),
+		{
+			Name:  "PULL_POLICY",
+			Value: pullPolicy,
+		},
 	}
 }
 
@@ -329,7 +394,7 @@ func CreateVMImportConfig() *extv1beta1.CustomResourceDefinition {
 		Spec: extv1beta1.CustomResourceDefinitionSpec{
 			Group:   "v2v.kubevirt.io",
 			Version: "v1alpha1",
-			Scope:   "Namespaced",
+			Scope:   "Cluster",
 			Versions: []extv1beta1.CustomResourceDefinitionVersion{
 				{
 					Name:    "v1alpha1",
@@ -976,23 +1041,126 @@ the disk alias on ovirt DiskMappings is respected only when provided in context 
 	}
 }
 
+func createOperatorDeployment(operatorVersion, namespace, deployClusterResources, operatorImage, controllerImage, pullPolicy string) *appsv1.Deployment {
+	deployment := CreateOperatorDeployment(operatorName, namespace, "name", operatorName, serviceAccountName, int32(1))
+	container := CreateContainer(operatorName, operatorImage, corev1.PullPolicy(pullPolicy))
+	container.Env = createOperatorEnvVar(operatorVersion, deployClusterResources, controllerImage, pullPolicy)
+	deployment.Spec.Template.Spec.Containers = []corev1.Container{container}
+	return deployment
+}
+
+// CreateOperatorDeployment creates deployment
+func CreateOperatorDeployment(name, namespace, matchKey, matchValue, serviceAccount string, numReplicas int32) *appsv1.Deployment {
+	deployment := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: *CreateOperatorDeploymentSpec(matchKey, matchValue, serviceAccount, numReplicas),
+	}
+	return deployment
+}
+
+// CreateContainer creates container
+func CreateContainer(name, image string, pullPolicy corev1.PullPolicy) corev1.Container {
+	return corev1.Container{
+		Name:            name,
+		Image:           image,
+		ImagePullPolicy: pullPolicy,
+	}
+}
+
+func createOperatorEnvVar(operatorVersion, deployClusterResources, controllerImage, pullPolicy string) []corev1.EnvVar {
+	return []corev1.EnvVar{
+		{
+			Name:  "DEPLOY_CLUSTER_RESOURCES",
+			Value: deployClusterResources,
+		},
+		{
+			Name:  "OPERATOR_VERSION",
+			Value: operatorVersion,
+		},
+		{
+			Name:  "CONTROLLER_IMAGE",
+			Value: controllerImage,
+		},
+		{
+			Name:  "PULL_POLICY",
+			Value: pullPolicy,
+		},
+		{
+			Name: "WATCH_NAMESPACE",
+		},
+		{
+			Name: "POD_NAME",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.name",
+				},
+			},
+		},
+	}
+}
+
+// CreateOperatorDeploymentSpec creates deployment
+func CreateOperatorDeploymentSpec(matchKey, matchValue, serviceAccount string, numReplicas int32) *appsv1.DeploymentSpec {
+	matchMap := map[string]string{matchKey: matchValue}
+	spec := &appsv1.DeploymentSpec{
+		Replicas: &numReplicas,
+		Selector: &metav1.LabelSelector{
+			MatchLabels: WithLabels(matchMap, operatorLabels),
+		},
+		Template: corev1.PodTemplateSpec{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: WithLabels(matchMap, operatorLabels),
+			},
+			Spec: corev1.PodSpec{
+				SecurityContext: &corev1.PodSecurityContext{
+					RunAsNonRoot: &[]bool{true}[0],
+				},
+				ServiceAccountName: serviceAccount,
+			},
+		},
+	}
+
+	return spec
+}
+
+// CreateServiceAccount creates service account
+func CreateServiceAccount(namespace string) *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ServiceAccount",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceAccountName,
+			Labels:    WithLabels(nil, commonLabels),
+			Namespace: namespace,
+		},
+	}
+}
+
 // NewClusterServiceVersion creates all cluster resources fr a specific group/component
 func NewClusterServiceVersion(data *ClusterServiceVersionData) (*csvv1.ClusterServiceVersion, error) {
 	deployment := createOperatorDeployment(
-		operatorName,
+		data.OperatorVersion,
 		data.Namespace,
+		"true",
 		data.OperatorImage,
+		data.ControllerImage,
 		data.ImagePullPolicy,
-		"name",
-		operatorName,
-		int32(1),
 	)
 
 	strategySpec := csvStrategySpec{
 		ClusterPermissions: []csvPermissions{
 			{
 				ServiceAccountName: serviceAccountName,
-				Rules:              getClusterPolicyRules(),
+				Rules:              getPolicyRules(),
 			},
 		},
 		Deployments: []csvDeployments{
@@ -1097,13 +1265,6 @@ func NewClusterServiceVersion(data *ClusterServiceVersionData) (*csvv1.ClusterSe
 						Kind:        "VirtualMachineImport",
 						DisplayName: "Virtual Machine import",
 						Description: "Represents a virtual machine import",
-						Resources: []csvv1.APIResourceReference{
-							{
-								Kind:    "ConfigMap",
-								Name:    "vmimport-os-mapper",
-								Version: "v1",
-							},
-						},
 						SpecDescriptors: []csvv1.SpecDescriptor{
 							{
 								Description:  "The ImageRegistry to use for vm import.",
@@ -1163,13 +1324,13 @@ func NewClusterServiceVersion(data *ClusterServiceVersionData) (*csvv1.ClusterSe
 	}, nil
 }
 
-// withOperatorLabels aggregates common lables
-func withOperatorLabels(labels map[string]string) map[string]string {
+// WithLabels aggregates existing lables
+func WithLabels(labels map[string]string, existing map[string]string) map[string]string {
 	if labels == nil {
 		labels = make(map[string]string)
 	}
 
-	for k, v := range operatorLabels {
+	for k, v := range existing {
 		_, ok := labels[k]
 		if !ok {
 			labels[k] = v

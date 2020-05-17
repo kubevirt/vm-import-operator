@@ -16,6 +16,7 @@ var (
 	pullPolicy         = flag.String("pull-policy", "Always", "The pull policy to use on the operator image")
 	operatorVersion    = flag.String("operator-version", "", "The operator version")
 	operatorImage      = flag.String("operator-image", "", "The operator image name")
+	controllerImage    = flag.String("controller-image", "", "The controller image name")
 	dumpCRDs           = flag.Bool("dump-crds", false, "optional - dumps crd manifests to stdout")
 )
 
@@ -31,6 +32,7 @@ func main() {
 		ImagePullPolicy:    *pullPolicy,
 		OperatorVersion:    *operatorVersion,
 		OperatorImage:      *operatorImage,
+		ControllerImage:    *controllerImage,
 	}
 
 	csv, err := vmioperator.NewClusterServiceVersion(&data)
@@ -43,12 +45,9 @@ func main() {
 	}
 
 	if *dumpCRDs {
-		vmiCrds := vmioperator.NewCrds()
-		for _, crd := range vmiCrds {
-			err = util.MarshallObject(crd, os.Stdout)
-			if err != nil {
-				panic(err)
-			}
+		err = util.MarshallObject(vmioperator.CreateVMImportConfig(), os.Stdout)
+		if err != nil {
+			panic(err)
 		}
 	}
 }

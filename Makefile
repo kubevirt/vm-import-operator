@@ -6,8 +6,6 @@ VERSION ?= v0.0.1
 export VERSION := $(VERSION)
 
 TARGET_NAMESPACE ?= kubevirt-hyperconverged
-export TARGET_NAMESPACE := $(TARGET_NAMESPACE)
-
 DEPLOY_DIR ?= manifests
 
 # Image registry variables
@@ -15,6 +13,7 @@ QUAY_USER ?= $(USER)
 IMAGE_REGISTRY ?= quay.io/$(QUAY_USER)
 IMAGE_TAG ?= latest
 OPERATOR_IMAGE ?= vm-import-operator
+CONTROLLER_IMAGE ?= vm-import-controller
 
 # Git parameters
 GITHUB_REPOSITORY ?= https://github.com/kubevirt/vm-import-operator
@@ -37,6 +36,9 @@ export GO111MODULE=on
 GINKGO_EXTRA_ARGS ?=
 GINKGO_ARGS ?= --v -r --progress $(GINKGO_EXTRA_ARGS)
 GINKGO ?= build/_output/bin/ginkgo
+KUBEBUILDER_VERSION="2.2.0"
+ARCH="amd64"
+KUBEBUILDER_DIR=/usr/local/kubebuilder
 
 OPERATOR_SDK ?= build/_output/bin/operator-sdk
 
@@ -85,15 +87,24 @@ goimports-check: $(cmd_sources) $(pkg_sources)
 	go run ./vendor/golang.org/x/tools/cmd/goimports -d ./pkg ./cmd
 	touch $@
 
-test/unit: $(GINKGO)
+test/unit: $(GINKGO) $(KUBEBUILDER_DIR)
 	$(GINKGO) $(GINKGO_ARGS) ./pkg/ ./cmd/
 
-docker-build:
-	CGO_ENABLED=0 GOOS=linux go build -a -o build/_output/bin/vm-import-operator cmd/manager/main.go
-	docker build -f build/Dockerfile -t $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE):$(IMAGE_TAG) .
+controller-build:
+	docker build -f build/controller/Dockerfile -t $(IMAGE_REGISTRY)/$(CONTROLLER_IMAGE):$(IMAGE_TAG) .
 
-docker-push:
+operator-build:
+	docker build -f build/operator/Dockerfile -t $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE):$(IMAGE_TAG) .
+
+docker-build: controller-build operator-build
+
+controller-push:
+	docker push $(IMAGE_REGISTRY)/$(CONTROLLER_IMAGE):$(IMAGE_TAG)
+
+operator-push:
 	docker push $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE):$(IMAGE_TAG)
+
+docker-push: controller-push operator-push
 
 cluster-up:
 	./cluster/up.sh
@@ -129,6 +140,12 @@ gen-k8s: $(OPERATOR_SDK) $(apis_sources)
 gen-k8s-check: $(apis_sources)
 	./hack/verify-codegen.sh
 	touch $@
+
+$(KUBEBUILDER_DIR):
+	curl -L -O "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${KUBEBUILDER_VERSION}/kubebuilder_${KUBEBUILDER_VERSION}_linux_${ARCH}.tar.gz" && \
+    	tar -zxvf kubebuilder_${KUBEBUILDER_VERSION}_linux_${ARCH}.tar.gz && \
+    	sudo mv kubebuilder_${KUBEBUILDER_VERSION}_linux_${ARCH} ${KUBEBUILDER_DIR} && \
+    	rm kubebuilder_${KUBEBUILDER_VERSION}_linux_${ARCH}.tar.gz
 
 prepare-patch:
 	./hack/prepare-release.sh patch
