@@ -146,7 +146,7 @@ spec:
       containers:
         - name: vm-import-operator
           # Replace this with the built image name
-          image: {{CONTAINER_PREFIX}}/{{OPERATOR_IMAGE}}:{{CONTAINER_TAG}}
+          image: {{CONTAINER_PREFIX}}/{{OPERATOR_IMAGE}}:{{IMAGE_TAG}}
           command:
           - vm-import-operator
           imagePullPolicy: {{IMAGE_PULL_POLICY}}
