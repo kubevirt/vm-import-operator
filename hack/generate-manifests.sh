@@ -8,6 +8,7 @@ IMAGE_TAG="${IMAGE_TAG:-latest}"
 IMAGE_PULL_POLICY="${IMAGE_PULL_POLICY:-Always}"
 KUBEVIRT_NAMESPACE="${REPLACE_KUBEVIRT_NAMESPACE:-kubevirt-hyperconverged}"
 OPERATOR_IMAGE="${OPERATOR_IMAGE:-vm-import-operator}"
+CONTROLLER_IMAGE="${CONTROLLER_IMAGE:-vm-import-controller}"
 CSV_VERSION_REPLACES=${VERSION_REPLACES//v}
 CSV_VERSION=${VERSION//v}
 
@@ -39,6 +40,7 @@ rendered=$( \
 	--namespace=${KUBEVIRT_NAMESPACE} \
 	--operator-version=${IMAGE_TAG} \
 	--operator-image="${CONTAINER_PREFIX}/${OPERATOR_IMAGE}:${IMAGE_TAG}" \
+	--controller-image="${CONTAINER_PREFIX}/${CONTROLLER_IMAGE}:${IMAGE_TAG}" \
 	--image-pull-policy=${IMAGE_PULL_POLICY} \
 )
 if [[ ! -z "$rendered" ]]; then
