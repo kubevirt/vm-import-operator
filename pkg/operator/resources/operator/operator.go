@@ -69,7 +69,7 @@ func CreateControllerRole(namespace string) *rbacv1.Role {
 	}
 }
 
-// CreateControllerRoleBinding returns role binging for vm-import-operator
+// CreateControllerRoleBinding returns role binding for vm-import-operator
 func CreateControllerRoleBinding(namespace string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
