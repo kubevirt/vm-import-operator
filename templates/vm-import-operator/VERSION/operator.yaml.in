@@ -59,8 +59,6 @@ rules:
   - v2v.kubevirt.io
   resources:
   - '*'
-  - resourcemappings
-  - vmimportconfigs
   verbs:
   - '*'
 - apiGroups:

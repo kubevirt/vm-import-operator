@@ -172,7 +172,6 @@ func getPolicyRules() []rbacv1.PolicyRule {
 			},
 			Resources: []string{
 				"*",
-				"resourcemappings",
 			},
 			Verbs: []string{
 				"*",
