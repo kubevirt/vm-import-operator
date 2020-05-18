@@ -54,48 +54,46 @@ type csvStrategySpec struct {
 }
 
 // CreateControllerRole returns role for vm-controller-operator
-func CreateControllerRole(namespace string) *rbacv1.Role {
-	return &rbacv1.Role{
+func CreateControllerRole() *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRole",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ControllerName,
-			Labels:    map[string]string{},
-			Namespace: namespace,
+			Name:   ControllerName,
+			Labels: map[string]string{},
 		},
-		Rules: getPolicyRules(),
+		Rules: getControllerPolicyRules(),
 	}
 }
 
 // CreateControllerRoleBinding returns role binding for vm-import-operator
-func CreateControllerRoleBinding(namespace string) *rbacv1.RoleBinding {
-	return &rbacv1.RoleBinding{
+func CreateControllerRoleBinding(namespace string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "ClusterRoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ControllerName,
-			Namespace: namespace,
+			Name: ControllerName,
 		},
 		RoleRef: rbacv1.RoleRef{
-			Kind:     "Role",
-			Name:     operatorName,
+			Kind:     "ClusterRole",
+			Name:     ControllerName,
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Name:      serviceAccountName,
+				Name:      ControllerName,
 				Namespace: namespace,
 			},
 		},
 	}
 }
 
-func getPolicyRules() []rbacv1.PolicyRule {
+func getControllerPolicyRules() []rbacv1.PolicyRule {
 	rules := []rbacv1.PolicyRule{
 		{
 			APIGroups: []string{
@@ -249,6 +247,50 @@ func getPolicyRules() []rbacv1.PolicyRule {
 				"watch",
 			},
 		},
+	}
+	return rules
+}
+
+func getOperatorPolicyRules() []rbacv1.PolicyRule {
+	rules := []rbacv1.PolicyRule{
+		{
+			APIGroups: []string{
+				"",
+			},
+			Resources: []string{
+				"pods",
+				"events",
+				"configmaps",
+				"secrets",
+				"serviceaccounts",
+			},
+			Verbs: []string{
+				"*",
+			},
+		},
+		{
+			APIGroups: []string{
+				"apps",
+			},
+			Resources: []string{
+				"deployments",
+				"deployments/finalizers",
+			},
+			Verbs: []string{
+				"*",
+			},
+		},
+		{
+			APIGroups: []string{
+				"v2v.kubevirt.io",
+			},
+			Resources: []string{
+				"vmimportconfigs",
+			},
+			Verbs: []string{
+				"*",
+			},
+		},
 		{
 			APIGroups: []string{
 				"apiextensions.k8s.io",
@@ -262,22 +304,11 @@ func getPolicyRules() []rbacv1.PolicyRule {
 		},
 		{
 			APIGroups: []string{
-				"",
-			},
-			Resources: []string{
-				"serviceaccounts",
-			},
-			Verbs: []string{
-				"*",
-			},
-		},
-		{
-			APIGroups: []string{
 				"rbac.authorization.k8s.io",
 			},
 			Resources: []string{
-				"rolebindings",
-				"roles",
+				"clusterrolebindings",
+				"clusterroles",
 			},
 			Verbs: []string{
 				"*",
@@ -315,7 +346,7 @@ func createControllerDeploymentSpec(image string, pullPolicy string, matchKey st
 				Labels: WithLabels(matchMap, operatorLabels),
 			},
 			Spec: corev1.PodSpec{
-				ServiceAccountName: serviceAccountName,
+				ServiceAccountName: ControllerName,
 				Containers:         createControllerContainers(image, pullPolicy),
 			},
 		},
@@ -1126,7 +1157,7 @@ func CreateServiceAccount(namespace string) *corev1.ServiceAccount {
 			Kind:       "ServiceAccount",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceAccountName,
+			Name:      ControllerName,
 			Labels:    WithLabels(nil, commonLabels),
 			Namespace: namespace,
 		},
@@ -1148,7 +1179,7 @@ func NewClusterServiceVersion(data *ClusterServiceVersionData) (*csvv1.ClusterSe
 		ClusterPermissions: []csvPermissions{
 			{
 				ServiceAccountName: serviceAccountName,
-				Rules:              getPolicyRules(),
+				Rules:              getOperatorPolicyRules(),
 			},
 		},
 		Deployments: []csvDeployments{
