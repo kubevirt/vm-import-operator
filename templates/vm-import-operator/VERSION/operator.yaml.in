@@ -76,6 +76,7 @@ rules:
   - v2v.kubevirt.io
   resources:
   - vmimportconfigs
+  - vmimportconfigs/finalizers
   verbs:
   - '*'
 - apiGroups:
@@ -84,7 +85,13 @@ rules:
   - customresourcedefinitions
   verbs:
   - '*'
-
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  - clusterroles
+  verbs:
+  - '*'
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
