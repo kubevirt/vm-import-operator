@@ -69,7 +69,7 @@ func CreateControllerRole(namespace string) *rbacv1.Role {
 	}
 }
 
-// CreateControllerRoleBinding returns role binging for vm-import-operator
+// CreateControllerRoleBinding returns role binding for vm-import-operator
 func CreateControllerRoleBinding(namespace string) *rbacv1.RoleBinding {
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
@@ -153,17 +153,6 @@ func getPolicyRules() []rbacv1.PolicyRule {
 			},
 			Verbs: []string{
 				"update",
-			},
-		},
-		{
-			APIGroups: []string{
-				"",
-			},
-			Resources: []string{
-				"pods",
-			},
-			Verbs: []string{
-				"get",
 			},
 		},
 		{
@@ -1228,7 +1217,7 @@ func NewClusterServiceVersion(data *ClusterServiceVersionData) (*csvv1.ClusterSe
 				},
 				{
 					Name: "Source Code",
-					URL:  "https://github.com/kubevirt/vm-import-operator/",
+					URL:  "https://github.com/kubevirt/vm-import-operator",
 				},
 			},
 			Labels: map[string]string{
