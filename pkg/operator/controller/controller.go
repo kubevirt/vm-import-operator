@@ -757,7 +757,7 @@ func (r *ReconcileVMImportConfig) getAllResources(cr *vmimportv1alpha1.VMImportC
 func createControllerResources(args *OperatorArgs) []runtime.Object {
 	return []runtime.Object{
 		resources.CreateServiceAccount(args.Namespace),
-		resources.CreateControllerRole(args.Namespace),
+		resources.CreateControllerRole(),
 		resources.CreateControllerRoleBinding(args.Namespace),
 		resources.CreateControllerDeployment(resources.ControllerName, args.Namespace, args.ControllerImage, args.PullPolicy, int32(1)),
 	}
