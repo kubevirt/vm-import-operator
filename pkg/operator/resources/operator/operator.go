@@ -286,6 +286,7 @@ func getOperatorPolicyRules() []rbacv1.PolicyRule {
 			},
 			Resources: []string{
 				"vmimportconfigs",
+				"vmimportconfigs/finalizers",
 			},
 			Verbs: []string{
 				"*",
