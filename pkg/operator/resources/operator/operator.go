@@ -420,6 +420,9 @@ func CreateVMImportConfig() *extv1beta1.CustomResourceDefinition {
 					"all",
 				},
 			},
+			Subresources: &extv1beta1.CustomResourceSubresources{
+				Status: &extv1beta1.CustomResourceSubresourceStatus{},
+			},
 			Validation: &extv1beta1.CustomResourceValidation{
 				OpenAPIV3Schema: &extv1beta1.JSONSchemaProps{
 					Description: "VMImportConfig is the Schema for the vmimportconfigs API",
@@ -547,6 +550,9 @@ func CreateVMImport() *extv1beta1.CustomResourceDefinition {
 					"all",
 				},
 				ShortNames: []string{"vmimports"},
+			},
+			Subresources: &extv1beta1.CustomResourceSubresources{
+				Status: &extv1beta1.CustomResourceSubresourceStatus{},
 			},
 			Validation: &extv1beta1.CustomResourceValidation{
 				OpenAPIV3Schema: &extv1beta1.JSONSchemaProps{
@@ -879,6 +885,9 @@ func CreateResourceMapping() *extv1beta1.CustomResourceDefinition {
 				Categories: []string{
 					"all",
 				},
+			},
+			Subresources: &extv1beta1.CustomResourceSubresources{
+				Status: &extv1beta1.CustomResourceSubresourceStatus{},
 			},
 			Validation: &extv1beta1.CustomResourceValidation{
 				OpenAPIV3Schema: &extv1beta1.JSONSchemaProps{
