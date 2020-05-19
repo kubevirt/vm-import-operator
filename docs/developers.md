@@ -11,25 +11,46 @@ kubectl apply -f manifests/vm-import-operator/v0.0.1/operator.yaml
 # since operator.yaml deploys the operator, remove it to use local one
 kubectl delete deployment -n kubevirt-hyperconverged vm-import-operator
 ```
-### Run the operator locally using:
-```bash
-make vendor
-operator-sdk run --local --namespace=default
-```
-
 ### After applying changes to file run:
 ```bash
 make
 ```
 
-### In order to debug the operator locally using 'dlv', start the operator locally:
+### In order to debug the operator or the controller locally using 'dlv', start the operator locally:
 Kubernetes cluster should be available and pointed by `~/.kube/config` or by `$KUBECONFIG`
 
+#### Remote Debugging of vm-import-controller
 ```bash
-make docker-build
-operator-sdk run --local --enable-delve
+make debug-controller
 ```
 Connect to the debug session, i.e. if using vscode, create launch.json as:
+
+```yaml
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Connect to vm-import-controller",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/manager/main.go",
+            "env": {
+                "WATCH_NAMESPACE": "",
+                "KUBECONFIG": "PATH_TO_KUBECONFIG",
+                "DEV_LOCAL_DEBUG": "true",
+                "OPERATOR_NAME": "vm-import-controller"
+              },
+            "args": []
+        }
+    ]
+}
+```
+#### Remote Debugging of vm-import-operator
+```bash
+make debug-operator
+```
+Connect to the debug session, i.e. if using vscode, create launch.json as (update variables as needed):
 
 ```yaml
 {
@@ -40,10 +61,17 @@ Connect to the debug session, i.e. if using vscode, create launch.json as:
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/cmd/manager/main.go",
+            "port": 2346,
+            "program": "${workspaceFolder}/cmd/operator/operator.go",
             "env": {
-                "WATCH_NAMESPACE": "default",
+                "WATCH_NAMESPACE": "",
                 "KUBECONFIG": "PATH_TO_KUBECONFIG",
+                "DEV_LOCAL_DEBUG": "true",
+                "OPERATOR_NAME": "vm-import-operator",
+                "DEPLOY_CLUSTER_RESOURCES": "true",
+                "OPERATOR_VERSION": "v0.0.2",
+                "CONTROLLER_IMAGE": "quay.io/kubevirt/vm-import-controller:v0.0.2",
+                "PULL_POLICY": "Always"
               },
             "args": []
         }
