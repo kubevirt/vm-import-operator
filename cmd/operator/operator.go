@@ -48,7 +48,9 @@ func main() {
 	err = leader.Become(ctx, "import-operator-lock")
 	if err != nil {
 		log.Error(err, "")
-		os.Exit(1)
+		if os.Getenv("DEV_LOCAL_DEBUG") == "" {
+			os.Exit(1)
+		}
 	}
 
 	mgr, err := manager.New(cfg, manager.Options{

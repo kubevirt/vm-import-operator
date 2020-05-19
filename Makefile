@@ -90,6 +90,14 @@ goimports-check: $(cmd_sources) $(pkg_sources)
 test/unit: $(GINKGO) $(KUBEBUILDER_DIR)
 	$(GINKGO) $(GINKGO_ARGS) ./pkg/ ./cmd/
 
+debug-controller:
+	go build -o build/_output/bin/vm-import-controller-local -gcflags="all=-N -l" -mod=vendor github.com/kubevirt/vm-import-operator/cmd/manager
+	dlv --listen=:2345 --headless=true --api-version=2 exec build/_output/bin/vm-import-controller-local --
+
+debug-operator:
+	go build -o build/_output/bin/vm-import-operator-local -gcflags="all=-N -l" -mod=vendor github.com/kubevirt/vm-import-operator/cmd/operator
+	dlv --listen=:2346 --headless=true --api-version=2 exec build/_output/bin/vm-import-operator-local --
+
 controller-build:
 	docker build -f build/controller/Dockerfile -t $(IMAGE_REGISTRY)/$(CONTROLLER_IMAGE):$(IMAGE_TAG) .
 
