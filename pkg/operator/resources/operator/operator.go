@@ -155,17 +155,6 @@ func getControllerPolicyRules() []rbacv1.PolicyRule {
 		},
 		{
 			APIGroups: []string{
-				"apps",
-			},
-			Resources: []string{
-				"replicasets",
-			},
-			Verbs: []string{
-				"get",
-			},
-		},
-		{
-			APIGroups: []string{
 				"v2v.kubevirt.io",
 			},
 			Resources: []string{
