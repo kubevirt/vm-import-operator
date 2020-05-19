@@ -21,6 +21,7 @@ Kubernetes cluster should be available and pointed by `~/.kube/config` or by `$K
 
 #### Remote Debugging of vm-import-controller
 ```bash
+kubectl apply -f `./hack/generate-controller-manifests.sh`
 make debug-controller
 ```
 Connect to the debug session, i.e. if using vscode, create launch.json as:

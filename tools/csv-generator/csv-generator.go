@@ -18,6 +18,7 @@ var (
 	operatorImage      = flag.String("operator-image", "", "The operator image name")
 	controllerImage    = flag.String("controller-image", "", "The controller image name")
 	dumpCRDs           = flag.Bool("dump-crds", false, "optional - dumps crd manifests to stdout")
+	controllerOnly     = flag.Bool("controller-only", false, "optional - dumps manifests to stdout only for controller local deployment")
 )
 
 func main() {
@@ -33,6 +34,34 @@ func main() {
 		OperatorVersion:    *operatorVersion,
 		OperatorImage:      *operatorImage,
 		ControllerImage:    *controllerImage,
+	}
+
+	// Generate resources required for deploying the controller only
+	if *controllerOnly {
+		err := util.MarshallObject(vmioperator.CreateResourceMapping(), os.Stdout)
+		if err != nil {
+			panic(err)
+		}
+		err = util.MarshallObject(vmioperator.CreateVMImport(), os.Stdout)
+		if err != nil {
+			panic(err)
+		}
+		err = util.MarshallObject(vmioperator.CreateServiceAccount(*namespace), os.Stdout)
+		if err != nil {
+			panic(err)
+		}
+		err = util.MarshallObject(vmioperator.CreateControllerRole(), os.Stdout)
+		if err != nil {
+			panic(err)
+		}
+		err = util.MarshallObject(vmioperator.CreateControllerRoleBinding(*namespace), os.Stdout)
+		if err != nil {
+			panic(err)
+		}
+		if err != nil {
+			panic(err)
+		}
+		return
 	}
 
 	csv, err := vmioperator.NewClusterServiceVersion(&data)
