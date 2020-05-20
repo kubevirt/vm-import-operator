@@ -17,11 +17,8 @@ TARGET_NAMESPACE=YOUR_DESIRED_NAMESPACE make gen-manifests
 
 Deploy vm-import-operator resources:
 ```bash
-kubectl apply -f https://github.com/kubevirt/vm-import-operator/releases/download/v0.0.1/v2v_v1alpha1_resourcemapping_crd.yaml
-kubectl apply -f https://github.com/kubevirt/vm-import-operator/releases/download/v0.0.1/v2v_v1alpha1_virtualmachineimport_crd.yaml
-# TODO: remove config_map.yaml once v0.0.2 is released
-kubectl apply -f https://github.com/kubevirt/vm-import-operator/releases/download/v0.0.1/config_map.yaml
-kubectl apply -f https://github.com/kubevirt/vm-import-operator/releases/download/v0.0.1/operator.yaml
+kubectl apply -f https://github.com/kubevirt/vm-import-operator/releases/download/v0.0.2/operator.yaml
+kubectl apply -f https://github.com/kubevirt/vm-import-operator/releases/download/v0.0.2/vmimportconfig_cr.yaml
 ```
 
 # Import virtual machine from oVirt
