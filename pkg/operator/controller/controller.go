@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/jsonmergepatch"
 	"k8s.io/apimachinery/pkg/util/mergepatch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -611,8 +612,24 @@ func isControllerDeployment(d *appsv1.Deployment) bool {
 }
 
 func (r *ReconcileVMImportConfig) crUpdate(phase vmimportv1alpha1.VMImportPhase, cr *vmimportv1alpha1.VMImportConfig) error {
-	cr.Status.Phase = phase
-	return r.client.Status().Update(context.TODO(), cr)
+	var instance vmimportv1alpha1.VMImportConfig
+	namespacedName := types.NamespacedName{Name: cr.ObjectMeta.Name, Namespace: cr.ObjectMeta.Namespace}
+	err := r.client.Get(context.TODO(), namespacedName, &instance)
+	if err != nil {
+		return err
+	}
+
+	copy := instance.DeepCopy()
+	copy.Status = cr.Status
+	copy.Status.Phase = phase
+	patch := client.MergeFrom(&instance)
+
+	err = r.client.Status().Patch(context.TODO(), copy, patch)
+	if err != nil {
+		return err
+	}
+	cr.Status = copy.Status
+	return nil
 }
 
 func (r *ReconcileVMImportConfig) checkDegraded(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) (bool, error) {
