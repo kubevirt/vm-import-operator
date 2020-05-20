@@ -304,6 +304,18 @@ func getOperatorPolicyRules() []rbacv1.PolicyRule {
 				"*",
 			},
 		},
+		{
+			APIGroups: []string{
+				"hco.kubevirt.io",
+			},
+			Resources: []string{
+				"hyperconvergeds",
+			},
+			Verbs: []string{
+				"get",
+				"list",
+			},
+		},
 	}
 	return rules
 }
