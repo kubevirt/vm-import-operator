@@ -34,6 +34,3 @@ TARGET_NAMESPACE=kubevirt IMAGE_REGISTRY=registry:5000 DEPLOY_DIR=_out make gen-
 make cluster-clean
 
 IMAGE_REGISTRY=$registry make docker-build docker-push
-
-./cluster/kubectl.sh create -f _out/vm-import-operator/${VERSION}/resourcemapping_crd.yaml
-./cluster/kubectl.sh create -f _out/vm-import-operator/${VERSION}/virtualmachineimport_crd.yaml

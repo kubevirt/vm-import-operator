@@ -18,6 +18,5 @@ set -ex
 
 echo 'Cleaning up ...'
 
-./cluster/kubectl.sh delete --ignore-not-found -f _out/vm-import-operator/${VERSION}/resourcemapping_crd.yaml
-./cluster/kubectl.sh delete --ignore-not-found -f _out/vm-import-operator/${VERSION}/virtualmachineimport_crd.yaml
+./cluster/kubectl.sh delete --ignore-not-found -f _out/vm-import-operator/${VERSION}/vmimportconfig_cr.yaml || true
 ./cluster/kubectl.sh delete --ignore-not-found -f _out/vm-import-operator/${VERSION}/operator.yaml
