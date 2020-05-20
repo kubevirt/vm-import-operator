@@ -612,7 +612,7 @@ func isControllerDeployment(d *appsv1.Deployment) bool {
 
 func (r *ReconcileVMImportConfig) crUpdate(phase vmimportv1alpha1.VMImportPhase, cr *vmimportv1alpha1.VMImportConfig) error {
 	cr.Status.Phase = phase
-	return r.client.Update(context.TODO(), cr)
+	return r.client.Status().Update(context.TODO(), cr)
 }
 
 func (r *ReconcileVMImportConfig) checkDegraded(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) (bool, error) {
