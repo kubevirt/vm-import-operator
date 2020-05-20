@@ -236,6 +236,18 @@ func getControllerPolicyRules() []rbacv1.PolicyRule {
 				"watch",
 			},
 		},
+		{
+			APIGroups: []string{
+				"hco.kubevirt.io",
+			},
+			Resources: []string{
+				"hyperconvergeds",
+			},
+			Verbs: []string{
+				"get",
+				"list",
+			},
+		},
 	}
 	return rules
 }
@@ -302,18 +314,6 @@ func getOperatorPolicyRules() []rbacv1.PolicyRule {
 			},
 			Verbs: []string{
 				"*",
-			},
-		},
-		{
-			APIGroups: []string{
-				"hco.kubevirt.io",
-			},
-			Resources: []string{
-				"hyperconvergeds",
-			},
-			Verbs: []string{
-				"get",
-				"list",
 			},
 		},
 	}
