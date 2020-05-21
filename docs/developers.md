@@ -1,25 +1,70 @@
 # Developer information
 
-# Development
-### After cloning the repository, deploy vm-import-operator resources:
+# Creating k8s cluster
+
+One alternative to create a running cluster fit for development is using [CodeReady Containers](https://code-ready.github.io/crc/)
+
+### Start CRC
+Increase the default memory for a smooth run of the cluster:
 ```bash
-kubectl apply -f manifests/vm-import-operator/v0.0.1/v2v_v1alpha1_resourcemapping_crd.yaml
-kubectl apply -f manifests/vm-import-operator/v0.0.1/v2v_v1alpha1_virtualmachineimport_crd.yaml
-# TODO: remove config_map.yaml once v0.0.2 is released
-kubectl apply -f manifests/vm-import-operator/v0.0.1/config_map.yaml
-kubectl apply -f manifests/vm-import-operator/v0.0.1/operator.yaml
-# since operator.yaml deploys the operator, remove it to use local one
-kubectl delete deployment -n kubevirt-hyperconverged vm-import-operator
+crc config set memory 10000
+crc setup
+crc start
 ```
-### After applying changes to file run:
+Login into CodeReady cluster as admin according to the message printed to the console.
+Alternately, you can set KUBECONFING environment variable to point to the created file.
+A possible location of kubeconfig file is `$HOME/.crc/cache/crc_libvirt_$OCP_VERSION/kubeconfig`
+
+### Use HCO to deploy components
+Use hyperconverged-cluster-operator (HCO) for installing required components:
+```bash
+git clone https://github.com/kubevirt/hyperconverged-cluster-operator.git
+cd hyperconverged-cluster-operator
+make
+./hack/deploy.sh
+```
+### Create local storage class
+```bash
+cat <<EOF | kubectl create -f -
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: local-storage
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+EOF
+
+# Patch all PVs to use storage class
+for f in $(oc get pv -o name)
+do
+  oc patch $f -p '{"spec":{"storageClassName":"local-storage"}}'
+done
+```
+
+At this point the cluster should be ready for deploying the vm-import-operator.
+Made required changes to the operator/controller, build, run tests and deploy:
 ```bash
 make
+# if needed, provide a specific tag by using IMAGE_TAG
+IMAGE_TAG=YOUR_TAG make docker-build docker-push
+
+# generated manifests that matches version and quay user
+IMAGE_TAG=YOUR_TAG VERSION=YOUR_TAG QUAY_USER=$USER make gen-manifests
+
+# deploy the manifests
+kubectl apply -f ./manifests/vm-import-operator/YOUR_TAG/operator.yaml
+kubectl apply -f ./manifests/vm-import-operator/YOUR_TAG/vmimportconfig_cr.yaml
 ```
+In order to speed-up development cycle of vm-import-controller, use this method instead:
+```
+./hack/generate-controller-manifests.sh
+kubectl apply -f ./build/_output/deploy/vm-import-controller-local-manifests.yaml
+CGO_ENABLED=0 GOOS=linux go build -o build/_output/bin/vm-import-controller-local cmd/manager/main.go
+DEV_LOCAL_DEBUG="true" WATCH_NAMESPACE="" build/_output/bin/vm-import-controller-local
+```
+At this step you can submit your VMImport custom-resource with the rules to import a VM from its source provider.
 
-### In order to debug the operator or the controller locally using 'dlv', start the operator locally:
-Kubernetes cluster should be available and pointed by `~/.kube/config` or by `$KUBECONFIG`
-
-#### Remote Debugging of vm-import-controller
+### Remote Debugging of vm-import-controller
 ```bash
 kubectl apply -f `./hack/generate-controller-manifests.sh`
 make debug-controller
@@ -47,7 +92,7 @@ Connect to the debug session, i.e. if using vscode, create launch.json as:
     ]
 }
 ```
-#### Remote Debugging of vm-import-operator
+### Remote Debugging of vm-import-operator
 ```bash
 make debug-operator
 ```
@@ -81,8 +126,12 @@ Connect to the debug session, i.e. if using vscode, create launch.json as (updat
 ```
 
 # Functional testing
-Functional tests for the operator are described in a [this document](functional-tests.md).
 
+Functional tests for the operator are described in a [this document](functional-tests.md).
+Run functional tests simply by:
+```bash
+./automation/test.sh
+```
 
 ### Running tests
 
@@ -101,6 +150,7 @@ sudo mv /tmp/kubebuilder_2.3.1_${os}_${arch} /usr/local/kubebuilder
 ```
 
 # Release
+
 1. Checkout a public branch
 2. Call `make prepare-patch|minor|major` and prepare release notes
 3. Open a new PR
@@ -123,6 +173,21 @@ EXTRA_RELEASE_ARGS will be passed as-is to `github-release` (other values maybe 
 # Troubleshooting
 
 ## Check operator pod for errors:
+For errors related to the vm-import-operator, check logs of:
 ```bash
-kubectl logs import-vm-oprator-xyz
+kubectl logs vm-import-operator-xyz
+```
+Also check the status of the VMImportConfig resource:
+```bash
+kubectl describe vmimportconfig vm-import-operator-config
+```
+
+## Check controller pod for errors:
+For errors related to the vm-import-controller, check logs of:
+```bash
+kubectl logs vm-import-controller-xyz
+```
+Also check the status of the VMImport resource:
+```bash
+kubectl describe vmimport RESOURCE_NAME
 ```

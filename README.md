@@ -131,4 +131,4 @@ status:
 
 # How to contribute
 
-For more development information please refer to [this document](docs/developers.md).
+To learn how to contribute, please refer to [contribution guide](CONTRIBUTING.md).
