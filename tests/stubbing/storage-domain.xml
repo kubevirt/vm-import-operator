@@ -1,0 +1,27 @@
+<storage_domain href="/ovirt-engine/api/storagedomains/domain-1" id="domain-1">
+    <name>sd</name>
+    <description/>
+    <comment/>
+    <available>11811160064</available>
+    <backup>false</backup>
+    <block_size>512</block_size>
+    <committed>2147483648</committed>
+    <critical_space_action_blocker>5</critical_space_action_blocker>
+    <discard_after_delete>false</discard_after_delete>
+    <external_status>ok</external_status>
+    <master>true</master>
+    <storage>
+        <path>/data/images</path>
+        <type>localfs</type>
+    </storage>
+    <storage_format>v5</storage_format>
+    <supports_discard>false</supports_discard>
+    <supports_discard_zeroes_data>false</supports_discard_zeroes_data>
+    <type>data</type>
+    <used>4294967296</used>
+    <warning_low_space_indicator>10</warning_low_space_indicator>
+    <wipe_after_delete>false</wipe_after_delete>
+    <data_centers>
+        <data_center href="[unused]"/>
+    </data_centers>
+</storage_domain>

@@ -29,6 +29,7 @@ function install_kubevirt {
 function install_imageio {
     ./cluster/kubectl.sh apply -f cluster/manifests/imageio.yaml
     ./cluster/kubectl.sh -n cdi wait deploy imageio-deployment --for condition=Available --timeout=1200s
+    ./cluster/kubectl.sh -n cdi port-forward -n cdi service/imageio 12346:12346 &
 }
 
 # Install golang to run generate manifests
