@@ -1291,11 +1291,11 @@ func NewClusterServiceVersion(data *ClusterServiceVersionData) (*csvv1.ClusterSe
 			CustomResourceDefinitions: csvv1.CustomResourceDefinitions{
 				Owned: []csvv1.CRDDescription{
 					{
-						Name:        "virtualmachineimports.v2v.kubevirt.io",
+						Name:        "vmimportconfigs.v2v.kubevirt.io",
 						Version:     "v1alpha1",
-						Kind:        "VirtualMachineImport",
-						DisplayName: "Virtual Machine import",
-						Description: "Represents a virtual machine import",
+						Kind:        "VMImportConfig",
+						DisplayName: "Virtual Machine import config",
+						Description: "Represents a virtual machine import config",
 						SpecDescriptors: []csvv1.SpecDescriptor{
 							{
 								Description:  "The ImageRegistry to use for vm import.",
