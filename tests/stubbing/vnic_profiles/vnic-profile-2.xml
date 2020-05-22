@@ -1,0 +1,4 @@
+<vnic_profile href="/ovirt-engine/api/networks/net-2/vnicprofiles/vnic-profile-2" id="vnic-profile-2">
+    <name>vNIC-2</name>
+    <network href="/ovirt-engine/api/networks/net-2" id="net-2"/>
+</vnic_profile>

@@ -1,0 +1,13 @@
+<nics>
+    <nic href="/ovirt-engine/api/vms/basic-network/nics/nic-1" id="nic-1">
+        <name>nic1</name>
+        <interface>virtio</interface>
+        <linked>true</linked>
+        <mac>
+            <address>56:6f:05:0f:00:05</address>
+        </mac>
+        <plugged>true</plugged>
+        <reported_devices/>
+        <vnic_profile href="/ovirt-engine/api/vnicprofiles/vnic-profile-1" id="vnic-profile-1"/>
+    </nic>
+</nics>

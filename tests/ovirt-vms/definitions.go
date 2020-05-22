@@ -13,6 +13,7 @@ const (
 	UsbEnabledVmID                        = "usb-enabled"
 	UnsupportedDiag288WatchdogVmID        = "unsupported-diag288-watchdog"
 	BasicNetworkVmID                      = "basic-network"
+	TwoNetworksVmID                       = "two-networks"
 )
 
 var (
@@ -21,5 +22,9 @@ var (
 
 	BasicNetworkID = "123"
 
+	VNicProfile1ID = "vnic-profile-1"
+	VNicProfile2ID = "vnic-profile-2"
+
 	BasicNetworkVmNicMAC = "56:6f:05:0f:00:05"
+	Nic2MAC              = "56:6f:05:0f:00:06"
 )
