@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	sclient "github.com/machacekondra/fakeovirt/pkg/client"
+
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/onsi/gomega"
@@ -61,6 +63,8 @@ type Framework struct {
 	CdiClient *cdi.Clientset
 	// RestConfig provides a pointer to our REST client config.
 	RestConfig *rest.Config
+	// OvirtStubbingClient provides a way to stub oVirt behavior
+	OvirtStubbingClient *sclient.FakeOvirtClient
 	// Namespace provides a namespace for each test generated/unique ns per test
 	Namespace          *v1.Namespace
 	namespacesToDelete []*v1.Namespace
@@ -114,7 +118,8 @@ func NewFramework(prefix string) (*Framework, error) {
 	f.KubeConfig = *kubeConfig
 	f.Master = *master
 	f.KubeVirtInstallNamespace = *kubeVirtInstallNamespace
-
+	ovirtClient := sclient.NewInsecureFakeOvirtClient("https://localhost:12346")
+	f.OvirtStubbingClient = &ovirtClient
 	if ovirtSecretBlueprint != nil && len(*ovirtSecretBlueprint) > 0 {
 		nameSlice := strings.Split(*ovirtSecretBlueprint, "/")
 		if len(nameSlice) == 2 {
@@ -167,6 +172,9 @@ func (f *Framework) BeforeEach() {
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	f.Namespace = ns
 	f.AddNamespaceToDelete(ns)
+
+	err = f.OvirtStubbingClient.Reset()
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
 // AfterEach provides a set of operations to run after each test

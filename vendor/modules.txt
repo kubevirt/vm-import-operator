@@ -261,7 +261,7 @@ github.com/gophercloud/gophercloud/openstack/identity/v2/tokens
 github.com/gophercloud/gophercloud/openstack/identity/v3/tokens
 github.com/gophercloud/gophercloud/openstack/utils
 github.com/gophercloud/gophercloud/pagination
-# github.com/gorilla/mux v1.7.1
+# github.com/gorilla/mux v1.7.4
 github.com/gorilla/mux
 # github.com/gorilla/websocket v1.4.0
 github.com/gorilla/websocket
@@ -320,6 +320,9 @@ github.com/konsorten/go-windows-terminal-sequences
 github.com/lib/pq
 github.com/lib/pq/oid
 github.com/lib/pq/scram
+# github.com/machacekondra/fakeovirt v0.0.0-20200521051316-d665f9412b9c
+github.com/machacekondra/fakeovirt/pkg/api/stubbing
+github.com/machacekondra/fakeovirt/pkg/client
 # github.com/magiconair/properties v1.8.1
 github.com/magiconair/properties
 # github.com/mailru/easyjson v0.7.0

@@ -1,10 +1,18 @@
 package ovirt_vms
 
 const (
-	BasicVmID                     = "123"
-	TwoDisksVmID                  = "two-disks"
-	InvalidNicInterfaceVmIDPrefix = "nic-interface-"
-	BasicNetworkVmID              = "basic-network"
+	BasicVmID                             = "123"
+	TwoDisksVmID                          = "two-disks"
+	InvalidNicInterfaceVmIDPrefix         = "nic-interface-"
+	UnsupportedStatusVmIDPrefix           = "unsupported-status-"
+	UnsupportedBiosTypeVmID               = "unsupported-i440fx_sea_bios-bios-type"
+	UnsupportedArchitectureVmID           = "unsupported-s390x-architecture"
+	IlleagalImagesVmID                    = "illegal-images"
+	KubevirtOriginVmID                    = "kubevirt-origin"
+	MigratablePlacementPolicyAffinityVmID = "migratable-placement-policy-affinity"
+	UsbEnabledVmID                        = "usb-enabled"
+	UnsupportedDiag288WatchdogVmID        = "unsupported-diag288-watchdog"
+	BasicNetworkVmID                      = "basic-network"
 )
 
 var (

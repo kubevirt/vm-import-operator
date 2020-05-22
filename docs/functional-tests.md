@@ -43,14 +43,14 @@
 ## VM Validation
 | Test description | Implemented |
 | :---------------- | :---------: |
-| VM with status other than 'up' or 'down' should be blocked | &cross; |
-| VM with unsupported BIOS type should be blocked | &cross; |
-| VM with unsupported CPU architecture should be blocked | &cross; |
-| VM with illegal images should be blocked | &cross; |
-| VM with 'kubevirt' origin should be blocked | &cross; |
-| VM with placement policy affinity set to 'migratable' should be blocked | &cross; |
-| VM with USB enabled should be blocked | &cross; |
-| VM with watchdog other than 'i6300esb' should be blocked | &cross; |
+| VM with status other than 'up' or 'down' should be blocked | &check; |
+| VM with unsupported BIOS type should be blocked | &check; |
+| VM with unsupported CPU architecture should be blocked | &check; |
+| VM with illegal images should be blocked | &check; |
+| VM with 'kubevirt' origin should be blocked | &check; |
+| VM with placement policy affinity set to 'migratable' should be blocked | &check; |
+| VM with USB enabled should be blocked | &check; |
+| VM with watchdog other than 'i6300esb' should be blocked | &check; |
 
 ## Resource mapping
 | Test description | Implemented |
