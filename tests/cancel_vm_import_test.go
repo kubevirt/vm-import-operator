@@ -2,6 +2,7 @@ package tests_test
 
 import (
 	"fmt"
+	"time"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 
@@ -85,24 +86,32 @@ var _ = Describe("VM import cancellation ", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		By("Temporary config map no longer existing")
-		configMap, err = getTemporaryConfigMap(f, namespace, vmiName)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(configMap).To(BeNil())
+		Eventually(func() (*corev1.ConfigMap, error) {
+			return getTemporaryConfigMap(f, namespace, vmiName)
+		}, 2*time.Minute, time.Second).Should(BeNil())
 
 		By("Temporary secret no longer existing")
-		secret, err = getTemporarySecret(f, namespace, vmiName)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(secret).To(BeNil())
+		Eventually(func() (*corev1.Secret, error) {
+			return getTemporarySecret(f, namespace, vmiName)
+		}, 2*time.Minute, time.Second).Should(BeNil())
 
 		By("VM Data Volume no longer existing")
-		_, err = f.CdiClient.CdiV1alpha1().DataVolumes(f.Namespace.Name).Get(dvName, metav1.GetOptions{})
-		Expect(err).To(HaveOccurred())
-		Expect(errors.IsNotFound(err)).To(BeTrue())
+		Eventually(func() error {
+			_, err = f.CdiClient.CdiV1alpha1().DataVolumes(f.Namespace.Name).Get(dvName, metav1.GetOptions{})
+			return err
+		}, 2*time.Minute, time.Second).Should(And(
+			HaveOccurred(),
+			WithTransform(errors.IsNotFound, BeTrue()),
+		))
 
 		By("VM no longer existing")
-		_, err = f.KubeVirtClient.VirtualMachine(namespace).Get(*vmi.Spec.TargetVMName, &metav1.GetOptions{})
-		Expect(err).To(HaveOccurred())
-		Expect(errors.IsNotFound(err)).To(BeTrue())
+		Eventually(func() error {
+			_, err = f.KubeVirtClient.VirtualMachine(namespace).Get(*vmi.Spec.TargetVMName, &metav1.GetOptions{})
+			return err
+		}, 2*time.Minute, time.Second).Should(And(
+			HaveOccurred(),
+			WithTransform(errors.IsNotFound, BeTrue()),
+		))
 	})
 
 })
