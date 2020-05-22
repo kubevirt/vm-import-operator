@@ -6,8 +6,8 @@ VM Import operator requires the following components to be installed:
   containers on a cluster. In order to enhance full feature set of vm-import-operator,
   it is required to use OKD / OpenShift.
 * **containerized-data-importer (CDI)** is an add-on which solves the problem of
-  populating Kubernetes Persistent Volumes with data.  It was written to be
-  general purpose but with the virtualization use case in mind.  Therefore, it
+  populating Kubernetes Persistent Volumes with data. It was written to be
+  general purpose but with the virtualization use case in mind. Therefore, it
   has a close relationship and special integration with KubeVirt. Minimal CDI version
   is v1.15.0 in which oVirt imageio support was added.
 * **KubeVirt** is an add-on which is installed on-top of Kubernetes, to be able
@@ -24,7 +24,7 @@ enhancements of templates.
 
 ## Contributing to VM Import Operator
 
-VM Import Operator contains two major component, each is being as own image:
+VM Import Operator contains two major components, each being a separate image:
 * **vm-import-controller** is responsible for managing the VM import process, for creating a
   virtual machine and copying its disks from the source provide to k8s cluster.
 * **vm-import-operator** is responsible for installing and managing the vm-import-controller
@@ -56,14 +56,14 @@ Starting a cluster with the required components is described in [developers guid
 **Untested features do not exist**. To ensure that what we code really works,
 relevant flows should be covered via unit tests and functional tests. So when
 thinking about a contribution, also think about testability. All tests can be
-run local without the need of CI.
+run locally without the need of CI.
 Have a look at the [functional testing](docs/functional-tests.md) for list of tests.
 
 ### Contributor compliance with Developer Certificate Of Origin (DCO)
 
 We require every contributor to certify that they are legally permitted to contribute to our project.
 A contributor expresses this by consciously signing their commits, and by this act expressing that
-they comply with the [Developer Certificate Of Origin](https://developercertificate.org/)
+they comply with the [Developer Certificate Of Origin](https://developercertificate.org/).
 
 A signed commit is a commit where the commit message contains the following content:
 
@@ -75,7 +75,7 @@ This can be done by adding [`--signoff`](https://git-scm.com/docs/git-commit#Doc
 
 ### Getting your code reviewed/merged
 
-Maintainers are here to help you enabling your use-case in a reasonable amount
+Maintainers are here to help you enable your use-case in a reasonable amount
 of time. The maintainers will try to review your code and give you productive
 feedback in a reasonable amount of time. However, if you are blocked on a
 review, or your Pull Request does not get the attention you think it deserves,
