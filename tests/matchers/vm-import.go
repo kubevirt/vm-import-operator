@@ -16,6 +16,7 @@ type hasConditionInStatus struct {
 	pollingMatcher
 	conditionType v2vv1alpha1.VirtualMachineImportConditionType
 	status        corev1.ConditionStatus
+	reason        v2vv1alpha1.SucceededConditionReason
 }
 
 // HaveMappingRulesVerificationFailure creates the matcher checking whether Virtual Machine Import has failed mapping rules verification
@@ -54,6 +55,19 @@ func BeSuccessful(testFramework *framework.Framework) types.GomegaMatcher {
 	return &matcher
 }
 
+// HaveDataVolumeCreationFailure creates the matcher checking whether Virtual Machine Import failed to create datavolume
+func HaveDataVolumeCreationFailure(testFramework *framework.Framework) types.GomegaMatcher {
+	matcher := hasConditionInStatus{}
+	matcher.timeout = 5 * time.Minute
+	matcher.pollInterval = 5 * time.Second
+	matcher.testFramework = testFramework
+
+	matcher.conditionType = v2vv1alpha1.Succeeded
+	matcher.reason = v2vv1alpha1.DataVolumeCreationFailed
+	matcher.status = corev1.ConditionFalse
+	return &matcher
+}
+
 // Match polls cluster until the virtual machine import is marked as expected
 func (matcher *hasConditionInStatus) Match(actual interface{}) (bool, error) {
 	vmBluePrint := actual.(*v2vv1alpha1.VirtualMachineImport)
@@ -63,6 +77,7 @@ func (matcher *hasConditionInStatus) Match(actual interface{}) (bool, error) {
 		vmBluePrint.Name,
 		matcher.conditionType,
 		matcher.status,
+		matcher.reason,
 	)
 	if pollErr != nil {
 		return false, pollErr

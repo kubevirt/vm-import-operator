@@ -3,6 +3,7 @@ package vms
 const (
 	BasicVmID                                    = "123"
 	TwoDisksVmID                                 = "two-disks"
+	InvalidDiskID                                = "invalid"
 	InvalidNicInterfaceVmIDPrefix                = "nic-interface-"
 	UnsupportedStatusVmIDPrefix                  = "unsupported-status-"
 	UnsupportedBiosTypeVmID                      = "unsupported-i440fx_sea_bios-bios-type"

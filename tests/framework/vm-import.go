@@ -27,7 +27,7 @@ func (f *Framework) EnsureVMIDoesNotExist(vmiName string) error {
 }
 
 // WaitForVMImportConditionInStatus blocks until VM import with given name has given status condition with given status
-func (f *Framework) WaitForVMImportConditionInStatus(pollInterval time.Duration, timeout time.Duration, vmiName string, conditionType v2vv1alpha1.VirtualMachineImportConditionType, status corev1.ConditionStatus) error {
+func (f *Framework) WaitForVMImportConditionInStatus(pollInterval time.Duration, timeout time.Duration, vmiName string, conditionType v2vv1alpha1.VirtualMachineImportConditionType, status corev1.ConditionStatus, reason v2vv1alpha1.SucceededConditionReason) error {
 	pollErr := wait.PollImmediate(pollInterval, timeout, func() (bool, error) {
 		retrieved, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(f.Namespace.Name).Get(vmiName, metav1.GetOptions{})
 		if err != nil {
@@ -40,6 +40,12 @@ func (f *Framework) WaitForVMImportConditionInStatus(pollInterval time.Duration,
 		if succeededCondition.Status != status {
 			return false, nil
 		}
+		condReason := string(reason)
+		if condReason != "" {
+			if *succeededCondition.Reason != condReason {
+				return false, nil
+			}
+		}
 		return true, nil
 	})
 	return pollErr
@@ -47,5 +53,5 @@ func (f *Framework) WaitForVMImportConditionInStatus(pollInterval time.Duration,
 
 // WaitForVMToBeProcessing blocks until VM import with given name is in Processing state
 func (f *Framework) WaitForVMToBeProcessing(vmiName string) error {
-	return f.WaitForVMImportConditionInStatus(2*time.Second, time.Minute, vmiName, v2vv1alpha1.Processing, corev1.ConditionTrue)
+	return f.WaitForVMImportConditionInStatus(2*time.Second, time.Minute, vmiName, v2vv1alpha1.Processing, corev1.ConditionTrue, "")
 }
