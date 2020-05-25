@@ -1,0 +1,12 @@
+<disk_attachments>
+    <disk_attachment href="[unused]" id="unsupported-interface-@INTERFACE">
+        <active>true</active>
+        <bootable>true</bootable>
+        <interface>@INTERFACE</interface>
+        <pass_discard>false</pass_discard>
+        <read_only>false</read_only>
+        <uses_scsi_reservation>false</uses_scsi_reservation>
+        <disk href="/ovirt-engine/api/disks/disk-1" id="disk-1"/>
+        <vm href="[unused]" id="[unused]"/>
+    </disk_attachment>
+</disk_attachments>

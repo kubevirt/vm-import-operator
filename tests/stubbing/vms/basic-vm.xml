@@ -1,10 +1,10 @@
-<vm href="/ovirt-engine/api/vms/basic-network" id="basic-network">
+<vm href="/ovirt-engine/api/vms/@VMID" id="@VMID">
     <name>cirrosvm</name>
     <description/>
     <comment/>
-    <link href="/ovirt-engine/api/vms/basic-network/graphicsconsoles" rel="graphicsconsoles"/>
-    <link href="/ovirt-engine/api/vms/basic-network/diskattachments" rel="diskattachments"/>
-    <link href="/ovirt-engine/api/vms/basic-network/nics" rel="nics"/>
+    <link href="/ovirt-engine/api/vms/@VMID/graphicsconsoles" rel="graphicsconsoles"/>
+    <link href="/ovirt-engine/api/vms/@VMID/diskattachments" rel="diskattachments"/>
+    <link href="/ovirt-engine/api/vms/@VMID/nics" rel="nics"/>
     <bios>
         <boot_menu>
             <enabled>false</enabled>
