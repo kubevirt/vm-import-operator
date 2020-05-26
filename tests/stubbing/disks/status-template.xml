@@ -1,0 +1,23 @@
+<disk href="/ovirt-engine/api/disks/disk-1" id="disk-1">
+    <name>cirros</name>
+    <description>CirrOS 0.4.0 for x86_64 (34bec3e)</description>
+    <actual_size>17575936</actual_size>
+    <alias>status-@STATUS</alias>
+    <interface>virtio</interface>
+    <backup>none</backup>
+    <content_type>data</content_type>
+    <format>cow</format>
+    <image_id>56a83d54-02af-4651-9ad8-0bf8efbf27b5</image_id>
+    <propagate_errors>false</propagate_errors>
+    <provisioned_size>@DISKSIZE</provisioned_size>
+    <qcow_version>qcow2_v3</qcow_version>
+    <shareable>false</shareable>
+    <sparse>true</sparse>
+    <status>@STATUS</status>
+    <storage_type>image</storage_type>
+    <total_size>@DISKSIZE</total_size>
+    <wipe_after_delete>false</wipe_after_delete>
+    <storage_domains>
+        <storage_domain href="/ovirt-engine/api/storagedomains/domain-1" id="domain-1"/>
+    </storage_domains>
+</disk>

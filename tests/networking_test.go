@@ -56,7 +56,7 @@ var _ = Describe("Import of VM ", func() {
 	Context("with multus network", func() {
 		It("should create running VM", func() {
 			vmID := vms.BasicNetworkVmID
-			vmXml := f.LoadFile("vms/basic-vm.xml")
+			vmXml := f.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
 			nicsXml := f.LoadFile("nics-one.xml")
 			stubbing := test.prepareCommonSubResources(vmID).
 				StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXml).
@@ -280,8 +280,8 @@ var _ = Describe("Import of VM ", func() {
 })
 
 func (t *networkingTest) prepareCommonSubResources(vmID string) *sapi.StubbingBuilder {
-	diskAttachmentsXml := t.framework.LoadFile("disk-attachments.xml")
-	diskXml := t.framework.LoadTemplate("disk.xml", map[string]string{"@DISKSIZE": "46137344"})
+	diskAttachmentsXml := t.framework.LoadFile("disk-attachments/one-attachment.xml")
+	diskXml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
 	domainXml := t.framework.LoadFile("storage-domain.xml")
 	consolesXml := t.framework.LoadFile("graphic-consoles-empty.xml")
 	networkXml := t.framework.LoadFile("networks/net-1.xml")

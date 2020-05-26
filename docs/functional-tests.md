@@ -29,16 +29,16 @@
 ## VM Storage Validation
 | Test description | Implemented |
 | :---------------- | :-----------: |
-| VM with no disk attachments should be blocked | &cross; |
-| VM with unsupported disk attachment interface should be blocked | &cross; |
-| VM with disk attachment with SCSI reservation should be blocked | &cross; |
-| VM with unsupported disk interface should be blocked | &cross; |
-| VM with disk with SCSI reservation should be blocked | &cross; |
-| VM with disk with LUN storage should be blocked | &cross; |
-| VM with disk with status other than 'ok' should be blocked | &cross; |
-| VM with disk with storage other than 'image' should be blocked | &cross; |
-| VM with disk with SGIO set to "filtered" should be blocked | &cross; |
-| VM with disk with SGIO set to "unfiltered" should be blocked | &cross; |
+| VM with no disk attachments should be blocked | &check; |
+| VM with unsupported disk attachment interface should be blocked | &check; |
+| VM with disk attachment with SCSI reservation should be blocked | &check; |
+| VM with unsupported disk interface should be blocked | &check; |
+| VM with disk with SCSI reservation should be blocked | &check; |
+| VM with disk with LUN storage should be blocked | &check; |
+| VM with disk with status other than 'ok' should be blocked | &check; |
+| VM with disk with storage other than 'image' should be blocked | &check; |
+| VM with disk with SGIO set to "filtered" should be blocked | &check; |
+| VM with disk with SGIO set to "unfiltered" should be blocked | &check; |
 
 ## VM Validation
 | Test description | Implemented |
