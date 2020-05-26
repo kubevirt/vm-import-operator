@@ -1,4 +1,4 @@
-package tests
+package ovirt
 
 import (
 	"testing"
@@ -7,8 +7,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestE2E(t *testing.T) {
+func TestOvirtProviderE2E(t *testing.T) {
 	defer GinkgoRecover()
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "e2e tests suite")
+	RunSpecs(t, "oVirt provider e2e tests suite")
 }

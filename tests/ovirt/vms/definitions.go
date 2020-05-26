@@ -1,4 +1,4 @@
-package ovirt_vms
+package vms
 
 const (
 	BasicVmID                                    = "123"

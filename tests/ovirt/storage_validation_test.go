@@ -1,7 +1,7 @@
-package tests_test
+package ovirt_test
 
 import (
-	vms "github.com/kubevirt/vm-import-operator/tests/ovirt-vms"
+	vms2 "github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
@@ -37,7 +37,7 @@ var _ = Describe("VM storage validation ", func() {
 	})
 
 	It("should block VM with no disk attachments", func() {
-		vmID := vms.BasicNetworkVmID
+		vmID := vms2.BasicNetworkVmID
 		created := test.prepareImport(vmID, secretName)
 		diskAttachmentsXml := f.LoadFile("invalid/disk-attachments/disk-attachments-empty.xml")
 		vmXml := f.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
@@ -50,7 +50,7 @@ var _ = Describe("VM storage validation ", func() {
 	})
 
 	table.DescribeTable("should block VM with unsupported disk attachment interface", func(iFace string) {
-		vmID := vms.UnsupportedDiskAttachmentInterfaceVmIDPrefix + iFace
+		vmID := vms2.UnsupportedDiskAttachmentInterfaceVmIDPrefix + iFace
 		created := test.prepareImport(vmID, secretName)
 		diskAttachmentsXml := f.LoadTemplate("/disk-attachments/interface-template.xml", map[string]string{"@INTERFACE": iFace})
 		diskXml := f.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
@@ -66,7 +66,7 @@ var _ = Describe("VM storage validation ", func() {
 	)
 
 	It("should block VM with disk attachment with SCSI reservation", func() {
-		vmID := vms.ScsiReservationDiskAttachmentVmID
+		vmID := vms2.ScsiReservationDiskAttachmentVmID
 		created := test.prepareImport(vmID, secretName)
 
 		diskAttachmentsXml := f.LoadFile("/invalid/disk-attachments/scsi-reservation.xml")
@@ -80,7 +80,7 @@ var _ = Describe("VM storage validation ", func() {
 	})
 
 	table.DescribeTable("should block VM with unsupported disk interface", func(iFace string) {
-		vmID := vms.UnsupportedDiskInterfaceVmIDPrefix + iFace
+		vmID := vms2.UnsupportedDiskInterfaceVmIDPrefix + iFace
 		created := test.prepareImport(vmID, secretName)
 
 		diskXml := f.LoadTemplate("disks/interface-template.xml", map[string]string{"@DISKSIZE": "46137344", "@INTERFACE": iFace})
@@ -96,7 +96,7 @@ var _ = Describe("VM storage validation ", func() {
 	)
 
 	It("should block VM with disk with SCSI reservation", func() {
-		vmID := vms.ScsiReservationDiskVmID
+		vmID := vms2.ScsiReservationDiskVmID
 		created := test.prepareImport(vmID, secretName)
 
 		diskXml := f.LoadTemplate("invalid/disks/scsi-reservation.xml", map[string]string{"@DISKSIZE": "46137344"})
@@ -109,7 +109,7 @@ var _ = Describe("VM storage validation ", func() {
 	})
 
 	It("should block VM with LUN storage", func() {
-		vmID := vms.LUNStorageDiskVmID
+		vmID := vms2.LUNStorageDiskVmID
 		created := test.prepareImport(vmID, secretName)
 
 		diskXml := f.LoadTemplate("invalid/disks/lun-storage.xml", map[string]string{"@DISKSIZE": "46137344"})
@@ -121,7 +121,7 @@ var _ = Describe("VM storage validation ", func() {
 		Expect(created).To(HaveMappingRulesVerificationFailure(f))
 	})
 	table.DescribeTable("should block VM with illegal disk status", func(status string) {
-		vmID := vms.IllegalDiskStatusVmIDPrefix + status
+		vmID := vms2.IllegalDiskStatusVmIDPrefix + status
 		created := test.prepareImport(vmID, secretName)
 
 		diskXml := f.LoadTemplate("disks/status-template.xml", map[string]string{"@DISKSIZE": "46137344", "@STATUS": status})
@@ -137,7 +137,7 @@ var _ = Describe("VM storage validation ", func() {
 	)
 
 	table.DescribeTable("should block VM with unsupported disk storage type", func(storageType string) {
-		vmID := vms.UnsupportedDiskStorageTypeVmIDPrefix + storageType
+		vmID := vms2.UnsupportedDiskStorageTypeVmIDPrefix + storageType
 		created := test.prepareImport(vmID, secretName)
 
 		diskXml := f.LoadTemplate("disks/storage-type-template.xml", map[string]string{"@DISKSIZE": "46137344", "@STORAGETYPE": storageType})
@@ -154,7 +154,7 @@ var _ = Describe("VM storage validation ", func() {
 	)
 
 	table.DescribeTable("should block VM with unsupported SGIO setting", func(sgio string) {
-		vmID := vms.UnsupportedDiskSGIOVmIDPrefix + sgio
+		vmID := vms2.UnsupportedDiskSGIOVmIDPrefix + sgio
 
 		created := test.prepareImport(vmID, secretName)
 		diskXml := f.LoadTemplate("disks/sgio-template.xml", map[string]string{"@DISKSIZE": "46137344", "@SGIO": sgio})

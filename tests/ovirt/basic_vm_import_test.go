@@ -1,8 +1,9 @@
-package tests_test
+package ovirt_test
 
 import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
-	vms "github.com/kubevirt/vm-import-operator/tests/ovirt-vms"
+	"github.com/kubevirt/vm-import-operator/tests"
+	vms2 "github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	"github.com/onsi/ginkgo/extensions/table"
 
@@ -39,7 +40,7 @@ var _ = Describe("Basic VM import ", func() {
 
 	Context(" without resource mapping", func() {
 		It("should create stopped VM", func() {
-			vmi := utils.VirtualMachineImportCr(vms.BasicVmID, namespace, secret.Name, f.NsPrefix, false)
+			vmi := utils.VirtualMachineImportCr(vms2.BasicVmID, namespace, secret.Name, f.NsPrefix, false)
 
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
@@ -57,7 +58,7 @@ var _ = Describe("Basic VM import ", func() {
 		})
 
 		It("should create started VM", func() {
-			vmi := utils.VirtualMachineImportCr(vms.BasicVmID, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(vms2.BasicVmID, namespace, secret.Name, f.NsPrefix, true)
 
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
@@ -77,7 +78,7 @@ var _ = Describe("Basic VM import ", func() {
 
 	Context(" with in-CR resource mapping", func() {
 		table.DescribeTable("should create running VM", func(mappings v2vv1alpha1.OvirtMappings, storageClass string) {
-			vmi := utils.VirtualMachineImportCr(vms.BasicVmID, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(vms2.BasicVmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Ovirt.Mappings = &mappings
 
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
@@ -96,14 +97,14 @@ var _ = Describe("Basic VM import ", func() {
 		},
 			table.Entry(" for disk", v2vv1alpha1.OvirtMappings{
 				DiskMappings: &[]v2vv1alpha1.ResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms.VirtioDiskID}, Target: v2vv1alpha1.ObjectIdentifier{Name: storageClass}},
+					{Source: v2vv1alpha1.Source{ID: &vms2.VirtioDiskID}, Target: v2vv1alpha1.ObjectIdentifier{Name: tests.StorageClass}},
 				},
-			}, storageClass),
+			}, tests.StorageClass),
 			table.Entry(" for storage domain", v2vv1alpha1.OvirtMappings{
 				StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: storageClass}},
+					{Source: v2vv1alpha1.Source{ID: &vms2.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: tests.StorageClass}},
 				},
-			}, storageClass))
+			}, tests.StorageClass))
 	})
 })
 

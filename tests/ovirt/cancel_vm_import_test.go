@@ -1,8 +1,10 @@
-package tests_test
+package ovirt_test
 
 import (
 	"fmt"
 	"time"
+
+	vms2 "github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 
@@ -11,7 +13,6 @@ import (
 	v2vvmiclient "github.com/kubevirt/vm-import-operator/pkg/api-client/clientset/versioned/typed/v2v/v1alpha1"
 	oputils "github.com/kubevirt/vm-import-operator/pkg/utils"
 	"github.com/kubevirt/vm-import-operator/tests/framework"
-	vms "github.com/kubevirt/vm-import-operator/tests/ovirt-vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -37,7 +38,7 @@ var _ = Describe("VM import cancellation ", func() {
 		}
 		secret = s
 		vmImports = f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace)
-		cr := utils.VirtualMachineImportCr(vms.BasicVmID, namespace, secret.Name, f.NsPrefix, true)
+		cr := utils.VirtualMachineImportCr(vms2.BasicVmID, namespace, secret.Name, f.NsPrefix, true)
 		vmi, err = vmImports.Create(&cr)
 		if err != nil {
 			Fail(err.Error())

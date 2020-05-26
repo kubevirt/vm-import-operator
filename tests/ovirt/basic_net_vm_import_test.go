@@ -1,10 +1,11 @@
-package tests_test
+package ovirt_test
 
 import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
-	vms "github.com/kubevirt/vm-import-operator/tests/ovirt-vms"
+	vms2 "github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -35,10 +36,10 @@ var _ = Describe("Networked VM import ", func() {
 	})
 
 	It("should create started VM", func() {
-		vmi := utils.VirtualMachineImportCr(vms.BasicNetworkVmID, namespace, secret.Name, f.NsPrefix, true)
+		vmi := utils.VirtualMachineImportCr(vms2.BasicNetworkVmID, namespace, secret.Name, f.NsPrefix, true)
 		vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
 			NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
-				{Source: v2vv1alpha1.Source{ID: &vms.BasicNetworkID}, Type: &podType},
+				{Source: v2vv1alpha1.Source{ID: &vms2.BasicNetworkID}, Type: &tests.PodType},
 			},
 		}
 
@@ -82,7 +83,7 @@ func (t *networkedVmImportTest) validateTargetConfiguration(vmName string) *v1.V
 
 	nic := spec.Domain.Devices.Interfaces[0]
 	Expect(nic.Name).To(BeEquivalentTo(spec.Networks[0].Name))
-	Expect(nic.MacAddress).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
+	Expect(nic.MacAddress).To(BeEquivalentTo(vms2.BasicNetworkVmNicMAC))
 	Expect(nic.Masquerade).ToNot(BeNil())
 	Expect(nic.Model).To(BeEquivalentTo("virtio"))
 

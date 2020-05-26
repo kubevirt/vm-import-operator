@@ -1,7 +1,7 @@
-package tests_test
+package ovirt_test
 
 import (
-	vms "github.com/kubevirt/vm-import-operator/tests/ovirt-vms"
+	vms2 "github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
@@ -38,8 +38,8 @@ var _ = Describe("VM validation ", func() {
 	})
 
 	table.DescribeTable("should block VM with unsupported status", func(status string) {
-		vmID := vms.UnsupportedStatusVmIDPrefix + status
-		vmXml := test.framework.LoadTemplate("invalid/"+vms.UnsupportedStatusVmIDPrefix+"vm-template.xml", map[string]string{"@VMSTATUS": status})
+		vmID := vms2.UnsupportedStatusVmIDPrefix + status
+		vmXml := test.framework.LoadTemplate("invalid/"+vms2.UnsupportedStatusVmIDPrefix+"vm-template.xml", map[string]string{"@VMSTATUS": status})
 		stubbing := test.stubResources(vmID).
 			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml).
 			Build()
@@ -81,16 +81,16 @@ var _ = Describe("VM validation ", func() {
 
 		Expect(created).To(HaveMappingRulesVerificationFailure(f))
 	},
-		table.Entry("unsupported i440fx_sea_bios BIOS type", vms.UnsupportedBiosTypeVmID),
-		table.Entry("unsupported s390fx architecture", vms.UnsupportedArchitectureVmID),
-		table.Entry("illegal images", vms.IlleagalImagesVmID),
-		table.Entry("kubevirt origin", vms.KubevirtOriginVmID),
-		table.Entry("placement policy affinity set to 'migratable'", vms.MigratablePlacementPolicyAffinityVmID),
-		table.Entry("USB enabled", vms.UsbEnabledVmID),
+		table.Entry("unsupported i440fx_sea_bios BIOS type", vms2.UnsupportedBiosTypeVmID),
+		table.Entry("unsupported s390fx architecture", vms2.UnsupportedArchitectureVmID),
+		table.Entry("illegal images", vms2.IlleagalImagesVmID),
+		table.Entry("kubevirt origin", vms2.KubevirtOriginVmID),
+		table.Entry("placement policy affinity set to 'migratable'", vms2.MigratablePlacementPolicyAffinityVmID),
+		table.Entry("USB enabled", vms2.UsbEnabledVmID),
 	)
 
 	It("should block VM with diag288 watchdog", func() {
-		vmID := vms.UnsupportedDiag288WatchdogVmID
+		vmID := vms2.UnsupportedDiag288WatchdogVmID
 		vmXml := test.framework.LoadFile("invalid/" + vmID + "-vm.xml")
 		wdXml := test.framework.LoadFile("invalid/diag288-watchdog.xml")
 		stubbing := test.stubResources(vmID).
