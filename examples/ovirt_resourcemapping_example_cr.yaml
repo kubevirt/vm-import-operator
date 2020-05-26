@@ -10,9 +10,9 @@ spec:
           name: red/profile1  # maps of ovirt 'logic network/vnic profile' to network attachment definition
         target:
           name: xyz
-        type: bridge
+        type: multus
       - source:
-          name: ovirtmgmt/ovirtmgmt
+          name: ovirtmgmt/ovirtmgmt # maps of 'ovirtmgmt' vnic-profile of 'ovirtmgmt' network to pod's network
         target:
           name: pod
         type: pod
