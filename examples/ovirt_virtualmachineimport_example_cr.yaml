@@ -23,7 +23,7 @@ spec:
       mappings:
         networkMapping:
           - source:
-              name: ovirtmgmt
+              name: red/profile1 # maps of ovirt 'logic network/vnic profile' to network attachment definition
             target:
               name: pod
             type: pod

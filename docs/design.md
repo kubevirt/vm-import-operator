@@ -56,7 +56,7 @@ Spec:
         - source:
             name: red/profile1
             target: xyz
-            type: bridge
+            type: multus
         diskMappings: # a mapping of a specific disk to storage class
         - source:
             id: 8181ecc1-5db8-4193-9c92-3ddab3be7b12
@@ -110,9 +110,9 @@ Spec:
     - source:
         name: red/profile1 # maps of ovirt 'logic network/vnic profile' to network attachment definition
       target: xyz
-      type: bridge
+      type: multus
     - source:
-        name: ovirtmgmt
+        name: ovirtmgmt/ovirtmgmt # maps of 'ovirtmgmt' vnic-profile of 'ovirtmgmt' network to pod's network
       Target:
         name: pod
       type: pod
