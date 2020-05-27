@@ -394,6 +394,10 @@ func createControllerEnv(pullPolicy string) []corev1.EnvVar {
 			Name: "OS_CONFIGMAP_NAMESPACE",
 		},
 		{
+			Name:  "IMPORT_POD_RESTART_TOLERANCE",
+			Value: "3",
+		},
+		{
 			Name:  "PULL_POLICY",
 			Value: pullPolicy,
 		},
