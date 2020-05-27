@@ -1,9 +1,10 @@
-package tests_test
+package ovirt_test
 
 import (
+	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
-	vms "github.com/kubevirt/vm-import-operator/tests/ovirt-vms"
+	vms2 "github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -30,8 +31,8 @@ var _ = Describe("VM import ", func() {
 
 	Context("for VM with two disks", func() {
 		It("should create started VM", func() {
-			vmi := utils.VirtualMachineImportCr(vms.TwoDisksVmID, namespace, secret.Name, f.NsPrefix, trueVar)
-			vmi.Spec.StartVM = &trueVar
+			vmi := utils.VirtualMachineImportCr(vms2.TwoDisksVmID, namespace, secret.Name, f.NsPrefix, tests.TrueVar)
+			vmi.Spec.StartVM = &tests.TrueVar
 
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 

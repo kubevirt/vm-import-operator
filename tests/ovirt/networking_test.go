@@ -1,10 +1,11 @@
-package tests_test
+package ovirt_test
 
 import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
-	vms "github.com/kubevirt/vm-import-operator/tests/ovirt-vms"
+	vms2 "github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	sapi "github.com/machacekondra/fakeovirt/pkg/api/stubbing"
 	. "github.com/onsi/ginkgo"
@@ -55,7 +56,7 @@ var _ = Describe("Import of VM ", func() {
 
 	Context("with multus network", func() {
 		It("should create running VM", func() {
-			vmID := vms.BasicNetworkVmID
+			vmID := vms2.BasicNetworkVmID
 			vmXml := f.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
 			nicsXml := f.LoadFile("nics-one.xml")
 			stubbing := test.prepareCommonSubResources(vmID).
@@ -68,7 +69,7 @@ var _ = Describe("Import of VM ", func() {
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
 				NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &multusType, Target: v2vv1alpha1.ObjectIdentifier{
+					{Source: v2vv1alpha1.Source{ID: &vms2.VNicProfile1ID}, Type: &tests.MultusType, Target: v2vv1alpha1.ObjectIdentifier{
 						Name:      networkName,
 						Namespace: &f.Namespace.Name,
 					}},
@@ -94,19 +95,19 @@ var _ = Describe("Import of VM ", func() {
 			Expect(spec.Domain.Devices.Interfaces).To(HaveLen(1))
 			nic := spec.Domain.Devices.Interfaces[0]
 			Expect(nic.Name).To(BeEquivalentTo(spec.Networks[0].Name))
-			Expect(nic.MacAddress).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
+			Expect(nic.MacAddress).To(BeEquivalentTo(vms2.BasicNetworkVmNicMAC))
 			Expect(nic.Bridge).ToNot(BeNil())
 			Expect(nic.Model).To(BeEquivalentTo("virtio"))
 
 			Expect(vm.Status.Interfaces).To(HaveLen(1))
 			Expect(vm.Status.Interfaces[0].Name).To(BeEquivalentTo(spec.Networks[0].Name))
-			Expect(vm.Status.Interfaces[0].MAC).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
+			Expect(vm.Status.Interfaces[0].MAC).To(BeEquivalentTo(vms2.BasicNetworkVmNicMAC))
 		})
 	})
 
 	Context("with two networks: Multus and Pod", func() {
 		It("should create running VM", func() {
-			vmID := vms.TwoNetworksVmID
+			vmID := vms2.TwoNetworksVmID
 			vmXml := f.LoadFile("vms/two-networks-vm.xml")
 			nicsXml := f.LoadFile("nics-two.xml")
 			network2Xml := f.LoadFile("networks/net-2.xml")
@@ -123,11 +124,11 @@ var _ = Describe("Import of VM ", func() {
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
 				NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &multusType, Target: v2vv1alpha1.ObjectIdentifier{
+					{Source: v2vv1alpha1.Source{ID: &vms2.VNicProfile1ID}, Type: &tests.MultusType, Target: v2vv1alpha1.ObjectIdentifier{
 						Name:      networkName,
 						Namespace: &f.Namespace.Name,
 					}},
-					{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile2ID}, Type: &podType},
+					{Source: v2vv1alpha1.Source{ID: &vms2.VNicProfile2ID}, Type: &tests.PodType},
 				},
 			}
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
@@ -166,14 +167,14 @@ var _ = Describe("Import of VM ", func() {
 			}
 			By("having one bridge interface")
 			Expect(nic1.Name).To(BeEquivalentTo(net1.Name))
-			Expect(nic1.MacAddress).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
+			Expect(nic1.MacAddress).To(BeEquivalentTo(vms2.BasicNetworkVmNicMAC))
 			Expect(nic1.Bridge).ToNot(BeNil())
 			Expect(nic1.Masquerade).To(BeNil())
 			Expect(nic1.Model).To(BeEquivalentTo("virtio"))
 
 			By("having one masquarade interface")
 			Expect(nic2.Name).To(BeEquivalentTo(net2.Name))
-			Expect(nic2.MacAddress).To(BeEquivalentTo(vms.Nic2MAC))
+			Expect(nic2.MacAddress).To(BeEquivalentTo(vms2.Nic2MAC))
 			Expect(nic2.Masquerade).ToNot(BeNil())
 			Expect(nic2.Bridge).To(BeNil())
 			Expect(nic2.Model).To(BeEquivalentTo("virtio"))
@@ -185,7 +186,7 @@ var _ = Describe("Import of VM ", func() {
 
 	Context("with two Multus networks", func() {
 		It("should create running VM", func() {
-			vmID := vms.TwoNetworksVmID
+			vmID := vms2.TwoNetworksVmID
 			vmXml := f.LoadFile("vms/two-networks-vm.xml")
 			nicsXml := f.LoadFile("nics-two.xml")
 			network2Xml := f.LoadFile("networks/net-2.xml")
@@ -210,15 +211,15 @@ var _ = Describe("Import of VM ", func() {
 			vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
 				NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
 					{
-						Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID},
-						Type:   &multusType,
+						Source: v2vv1alpha1.Source{ID: &vms2.VNicProfile1ID},
+						Type:   &tests.MultusType,
 						Target: v2vv1alpha1.ObjectIdentifier{
 							Name:      networkName,
 							Namespace: &f.Namespace.Name,
 						}},
 					{
-						Source: v2vv1alpha1.Source{ID: &vms.VNicProfile2ID},
-						Type:   &multusType,
+						Source: v2vv1alpha1.Source{ID: &vms2.VNicProfile2ID},
+						Type:   &tests.MultusType,
 						Target: v2vv1alpha1.ObjectIdentifier{
 							Name:      network2Name,
 							Namespace: &f.Namespace.Name,
@@ -261,14 +262,14 @@ var _ = Describe("Import of VM ", func() {
 			}
 			By("having interface #1 of type bridge")
 			Expect(nic1.Name).To(BeEquivalentTo(net1.Name))
-			Expect(nic1.MacAddress).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
+			Expect(nic1.MacAddress).To(BeEquivalentTo(vms2.BasicNetworkVmNicMAC))
 			Expect(nic1.Bridge).ToNot(BeNil())
 			Expect(nic1.Masquerade).To(BeNil())
 			Expect(nic1.Model).To(BeEquivalentTo("virtio"))
 
 			By("having interface #2 of type bridge")
 			Expect(nic2.Name).To(BeEquivalentTo(net2.Name))
-			Expect(nic2.MacAddress).To(BeEquivalentTo(vms.Nic2MAC))
+			Expect(nic2.MacAddress).To(BeEquivalentTo(vms2.Nic2MAC))
 			Expect(nic2.Bridge).ToNot(BeNil())
 			Expect(nic2.Masquerade).To(BeNil())
 			Expect(nic2.Model).To(BeEquivalentTo("virtio"))

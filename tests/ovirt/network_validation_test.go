@@ -1,10 +1,11 @@
-package tests_test
+package ovirt_test
 
 import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
-	vms "github.com/kubevirt/vm-import-operator/tests/ovirt-vms"
+	vms2 "github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
@@ -31,7 +32,7 @@ var _ = Describe("VM network validation ", func() {
 	})
 
 	table.DescribeTable("should block VM with unsupported NIC interface", func(iFace string) {
-		created := test.prepareImport(vms.InvalidNicInterfaceVmIDPrefix+iFace, secretName)
+		created := test.prepareImport(vms2.InvalidNicInterfaceVmIDPrefix+iFace, secretName)
 
 		Expect(created).To(HaveMappingRulesVerificationFailure(f))
 	},
@@ -52,7 +53,7 @@ func (t *networkValidationTest) prepareImport(vmID string, secretName string) *v
 	vmi := utils.VirtualMachineImportCr(vmID, namespace, secretName, t.framework.NsPrefix, true)
 	vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
 		NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
-			{Source: v2vv1alpha1.Source{ID: &vms.BasicNetworkID}, Type: &podType},
+			{Source: v2vv1alpha1.Source{ID: &vms2.BasicNetworkID}, Type: &tests.PodType},
 		},
 	}
 	created, err := t.framework.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
