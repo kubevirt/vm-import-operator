@@ -1,12 +1,12 @@
-<disk href="/ovirt-engine/api/disks/disk-1" id="disk-1">
-    <name>Disk_1</name>
-    <description>Disk no. 1</description>
+<disk href="/ovirt-engine/api/disks/disk-2" id="disk-2">
+    <name>Disk_2</name>
+    <description>Disk no. 2</description>
     <actual_size>17575936</actual_size>
-    <alias>disk-1</alias>
+    <alias>disk-2</alias>
     <backup>none</backup>
     <content_type>data</content_type>
     <format>cow</format>
-    <image_id>56a83d54-02af-4651-9ad8-0bf8efbf27b5</image_id>
+    <image_id>4d45714d-8e94-48e5-b6e8-0ce67675b54c</image_id>
     <propagate_errors>false</propagate_errors>
     <provisioned_size>@DISKSIZE</provisioned_size>
     <qcow_version>qcow2_v3</qcow_version>

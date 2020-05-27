@@ -4,19 +4,19 @@ import (
 	"fmt"
 	"time"
 
-	vms2 "github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
+	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
-
-	"k8s.io/apimachinery/pkg/api/errors"
 
 	v2vvmiclient "github.com/kubevirt/vm-import-operator/pkg/api-client/clientset/versioned/typed/v2v/v1alpha1"
 	oputils "github.com/kubevirt/vm-import-operator/pkg/utils"
 	"github.com/kubevirt/vm-import-operator/tests/framework"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
+	sapi "github.com/machacekondra/fakeovirt/pkg/api/stubbing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -38,7 +38,9 @@ var _ = Describe("VM import cancellation ", func() {
 		}
 		secret = s
 		vmImports = f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace)
-		cr := utils.VirtualMachineImportCr(vms2.BasicVmID, namespace, secret.Name, f.NsPrefix, true)
+		vmID := vms.BasicVmID
+		cr := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+		stub(f, vmID)
 		vmi, err = vmImports.Create(&cr)
 		if err != nil {
 			Fail(err.Error())
@@ -143,4 +145,24 @@ func getTemporarySecret(f *framework.Framework, namespace string, vmiName string
 		return nil, nil
 	}
 	return &list.Items[0], nil
+}
+
+func stub(f *framework.Framework, vmID string) {
+	domainXml := f.LoadFile("storage-domains/domain-1.xml")
+	diskAttachmentsXml := f.LoadFile("disk-attachments/one.xml")
+	diskXml := f.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	consolesXml := f.LoadFile("graphic-consoles/vnc.xml")
+	vmXml := f.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
+	nicsXml := f.LoadFile("nics/empty.xml")
+	builder := sapi.NewStubbingBuilder().
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXml).
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXml).
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXml).
+		StubGet("/ovirt-engine/api/disks/disk-1", &diskXml).
+		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXml).
+		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml)
+	err := f.OvirtStubbingClient.Stub(builder.Build())
+	if err != nil {
+		Fail(err.Error())
+	}
 }

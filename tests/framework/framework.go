@@ -173,7 +173,7 @@ func (f *Framework) BeforeEach() {
 	f.Namespace = ns
 	f.AddNamespaceToDelete(ns)
 
-	err = f.OvirtStubbingClient.Reset()
+	err = f.OvirtStubbingClient.Reset("static-sso,static-namespace,static-transfers")
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 

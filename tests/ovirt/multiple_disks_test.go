@@ -4,8 +4,9 @@ import (
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
-	vms2 "github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
+	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
+	sapi "github.com/machacekondra/fakeovirt/pkg/api/stubbing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -13,11 +14,16 @@ import (
 	v1 "kubevirt.io/client-go/api/v1"
 )
 
+type multipleDisksTest struct {
+	framework *fwk.Framework
+}
+
 var _ = Describe("VM import ", func() {
 	var (
 		f         = fwk.NewFrameworkOrDie("multiple-disks")
 		secret    corev1.Secret
 		namespace string
+		test      = multipleDisksTest{f}
 	)
 
 	BeforeEach(func() {
@@ -31,9 +37,10 @@ var _ = Describe("VM import ", func() {
 
 	Context("for VM with two disks", func() {
 		It("should create started VM", func() {
-			vmi := utils.VirtualMachineImportCr(vms2.TwoDisksVmID, namespace, secret.Name, f.NsPrefix, tests.TrueVar)
+			vmID := vms.TwoDisksVmID
+			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, tests.TrueVar)
 			vmi.Spec.StartVM = &tests.TrueVar
-
+			test.stub(vmID)
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
 			Expect(err).NotTo(HaveOccurred())
@@ -75,3 +82,25 @@ var _ = Describe("VM import ", func() {
 		})
 	})
 })
+
+func (t *multipleDisksTest) stub(vmID string) {
+	diskAttachmentsXml := t.framework.LoadFile("disk-attachments/two.xml")
+	disk1Xml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	disk2Xml := t.framework.LoadTemplate("disks/disk-2.xml", map[string]string{"@DISKSIZE": "46137344"})
+	domainXml := t.framework.LoadFile("storage-domains/domain-1.xml")
+	consolesXml := t.framework.LoadFile("graphic-consoles/empty.xml")
+	vmXml := t.framework.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
+	nicsXml := t.framework.LoadFile("nics/empty.xml")
+	builder := sapi.NewStubbingBuilder().
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXml).
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXml).
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXml).
+		StubGet("/ovirt-engine/api/disks/disk-1", &disk1Xml).
+		StubGet("/ovirt-engine/api/disks/disk-2", &disk2Xml).
+		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXml).
+		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml)
+	err := t.framework.OvirtStubbingClient.Stub(builder.Build())
+	if err != nil {
+		Fail(err.Error())
+	}
+}

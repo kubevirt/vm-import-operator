@@ -1,0 +1,20 @@
+<disk_attachments>
+    <disk_attachment href="/ovirt-engine/api/vms/two-disks/diskattachments/1" id="1">
+        <active>true</active>
+        <bootable>true</bootable>
+        <interface>virtio</interface>
+        <pass_discard>false</pass_discard>
+        <read_only>false</read_only>
+        <uses_scsi_reservation>false</uses_scsi_reservation>
+        <disk href="/ovirt-engine/api/disks/disk-1" id="disk-1"/>
+    </disk_attachment>
+    <disk_attachment href="/ovirt-engine/api/vms/two-disks/diskattachments/2" id="2">
+        <active>true</active>
+        <bootable>false</bootable>
+        <interface>sata</interface>
+        <pass_discard>false</pass_discard>
+        <read_only>false</read_only>
+        <uses_scsi_reservation>false</uses_scsi_reservation>
+        <disk href="/ovirt-engine/api/disks/disk-2" id="disk-2"/>
+    </disk_attachment>
+</disk_attachments>
