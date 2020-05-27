@@ -1,0 +1,6 @@
+<graphics_consoles>
+    <graphics_console href="[unused]" id="vnc">
+        <protocol>vnc</protocol>
+        <vm href="/ovirt-engine/api/vms/basic-network" id="basic-network"/>
+    </graphics_console>
+</graphics_consoles>

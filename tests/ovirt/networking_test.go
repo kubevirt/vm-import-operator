@@ -5,7 +5,7 @@ import (
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
-	vms2 "github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
+	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	sapi "github.com/machacekondra/fakeovirt/pkg/api/stubbing"
 	. "github.com/onsi/ginkgo"
@@ -47,18 +47,14 @@ var _ = Describe("Import of VM ", func() {
 			Fail(err.Error())
 		}
 		networkName = nad.Name
-		err = f.OvirtStubbingClient.Reset("static-sso,static-transfer,static-namespace,static-transfers")
-		if err != nil {
-			Fail(err.Error())
-		}
 
 	})
 
 	Context("with multus network", func() {
 		It("should create running VM", func() {
-			vmID := vms2.BasicNetworkVmID
+			vmID := vms.BasicNetworkVmID
 			vmXml := f.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
-			nicsXml := f.LoadFile("nics-one.xml")
+			nicsXml := f.LoadFile("nics/one.xml")
 			stubbing := test.prepareCommonSubResources(vmID).
 				StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXml).
 				StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml).
@@ -69,7 +65,7 @@ var _ = Describe("Import of VM ", func() {
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
 				NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms2.VNicProfile1ID}, Type: &tests.MultusType, Target: v2vv1alpha1.ObjectIdentifier{
+					{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.MultusType, Target: v2vv1alpha1.ObjectIdentifier{
 						Name:      networkName,
 						Namespace: &f.Namespace.Name,
 					}},
@@ -95,23 +91,23 @@ var _ = Describe("Import of VM ", func() {
 			Expect(spec.Domain.Devices.Interfaces).To(HaveLen(1))
 			nic := spec.Domain.Devices.Interfaces[0]
 			Expect(nic.Name).To(BeEquivalentTo(spec.Networks[0].Name))
-			Expect(nic.MacAddress).To(BeEquivalentTo(vms2.BasicNetworkVmNicMAC))
+			Expect(nic.MacAddress).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
 			Expect(nic.Bridge).ToNot(BeNil())
 			Expect(nic.Model).To(BeEquivalentTo("virtio"))
 
 			Expect(vm.Status.Interfaces).To(HaveLen(1))
 			Expect(vm.Status.Interfaces[0].Name).To(BeEquivalentTo(spec.Networks[0].Name))
-			Expect(vm.Status.Interfaces[0].MAC).To(BeEquivalentTo(vms2.BasicNetworkVmNicMAC))
+			Expect(vm.Status.Interfaces[0].MAC).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
 		})
 	})
 
 	Context("with two networks: Multus and Pod", func() {
 		It("should create running VM", func() {
-			vmID := vms2.TwoNetworksVmID
+			vmID := vms.TwoNetworksVmID
 			vmXml := f.LoadFile("vms/two-networks-vm.xml")
-			nicsXml := f.LoadFile("nics-two.xml")
+			nicsXml := f.LoadFile("nics/two.xml")
 			network2Xml := f.LoadFile("networks/net-2.xml")
-			vnicProfile2Xml := f.LoadFile("vnic_profiles/vnic-profile-2.xml")
+			vnicProfile2Xml := f.LoadFile("vnic-profiles/vnic-profile-2.xml")
 			stubbing := test.prepareCommonSubResources(vmID).
 				StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXml).
 				StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml).
@@ -124,11 +120,11 @@ var _ = Describe("Import of VM ", func() {
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
 				NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms2.VNicProfile1ID}, Type: &tests.MultusType, Target: v2vv1alpha1.ObjectIdentifier{
+					{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.MultusType, Target: v2vv1alpha1.ObjectIdentifier{
 						Name:      networkName,
 						Namespace: &f.Namespace.Name,
 					}},
-					{Source: v2vv1alpha1.Source{ID: &vms2.VNicProfile2ID}, Type: &tests.PodType},
+					{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile2ID}, Type: &tests.PodType},
 				},
 			}
 			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
@@ -167,14 +163,14 @@ var _ = Describe("Import of VM ", func() {
 			}
 			By("having one bridge interface")
 			Expect(nic1.Name).To(BeEquivalentTo(net1.Name))
-			Expect(nic1.MacAddress).To(BeEquivalentTo(vms2.BasicNetworkVmNicMAC))
+			Expect(nic1.MacAddress).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
 			Expect(nic1.Bridge).ToNot(BeNil())
 			Expect(nic1.Masquerade).To(BeNil())
 			Expect(nic1.Model).To(BeEquivalentTo("virtio"))
 
 			By("having one masquarade interface")
 			Expect(nic2.Name).To(BeEquivalentTo(net2.Name))
-			Expect(nic2.MacAddress).To(BeEquivalentTo(vms2.Nic2MAC))
+			Expect(nic2.MacAddress).To(BeEquivalentTo(vms.Nic2MAC))
 			Expect(nic2.Masquerade).ToNot(BeNil())
 			Expect(nic2.Bridge).To(BeNil())
 			Expect(nic2.Model).To(BeEquivalentTo("virtio"))
@@ -186,11 +182,11 @@ var _ = Describe("Import of VM ", func() {
 
 	Context("with two Multus networks", func() {
 		It("should create running VM", func() {
-			vmID := vms2.TwoNetworksVmID
+			vmID := vms.TwoNetworksVmID
 			vmXml := f.LoadFile("vms/two-networks-vm.xml")
-			nicsXml := f.LoadFile("nics-two.xml")
+			nicsXml := f.LoadFile("nics/two.xml")
 			network2Xml := f.LoadFile("networks/net-2.xml")
-			vnicProfile2Xml := f.LoadFile("vnic_profiles/vnic-profile-2.xml")
+			vnicProfile2Xml := f.LoadFile("vnic-profiles/vnic-profile-2.xml")
 			stubbing := test.prepareCommonSubResources(vmID).
 				StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXml).
 				StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml).
@@ -211,14 +207,14 @@ var _ = Describe("Import of VM ", func() {
 			vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
 				NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
 					{
-						Source: v2vv1alpha1.Source{ID: &vms2.VNicProfile1ID},
+						Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID},
 						Type:   &tests.MultusType,
 						Target: v2vv1alpha1.ObjectIdentifier{
 							Name:      networkName,
 							Namespace: &f.Namespace.Name,
 						}},
 					{
-						Source: v2vv1alpha1.Source{ID: &vms2.VNicProfile2ID},
+						Source: v2vv1alpha1.Source{ID: &vms.VNicProfile2ID},
 						Type:   &tests.MultusType,
 						Target: v2vv1alpha1.ObjectIdentifier{
 							Name:      network2Name,
@@ -262,14 +258,14 @@ var _ = Describe("Import of VM ", func() {
 			}
 			By("having interface #1 of type bridge")
 			Expect(nic1.Name).To(BeEquivalentTo(net1.Name))
-			Expect(nic1.MacAddress).To(BeEquivalentTo(vms2.BasicNetworkVmNicMAC))
+			Expect(nic1.MacAddress).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
 			Expect(nic1.Bridge).ToNot(BeNil())
 			Expect(nic1.Masquerade).To(BeNil())
 			Expect(nic1.Model).To(BeEquivalentTo("virtio"))
 
 			By("having interface #2 of type bridge")
 			Expect(nic2.Name).To(BeEquivalentTo(net2.Name))
-			Expect(nic2.MacAddress).To(BeEquivalentTo(vms2.Nic2MAC))
+			Expect(nic2.MacAddress).To(BeEquivalentTo(vms.Nic2MAC))
 			Expect(nic2.Bridge).ToNot(BeNil())
 			Expect(nic2.Masquerade).To(BeNil())
 			Expect(nic2.Model).To(BeEquivalentTo("virtio"))
@@ -281,12 +277,12 @@ var _ = Describe("Import of VM ", func() {
 })
 
 func (t *networkingTest) prepareCommonSubResources(vmID string) *sapi.StubbingBuilder {
-	diskAttachmentsXml := t.framework.LoadFile("disk-attachments/one-attachment.xml")
+	diskAttachmentsXml := t.framework.LoadFile("disk-attachments/one.xml")
 	diskXml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
-	domainXml := t.framework.LoadFile("storage-domain.xml")
-	consolesXml := t.framework.LoadFile("graphic-consoles-empty.xml")
+	domainXml := t.framework.LoadFile("storage-domains/domain-1.xml")
+	consolesXml := t.framework.LoadFile("graphic-consoles/empty.xml")
 	networkXml := t.framework.LoadFile("networks/net-1.xml")
-	vnicProfileXml := t.framework.LoadFile("vnic_profiles/vnic-profile-1.xml")
+	vnicProfileXml := t.framework.LoadFile("vnic-profiles/vnic-profile-1.xml")
 	return sapi.NewStubbingBuilder().
 		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXml).
 		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXml).

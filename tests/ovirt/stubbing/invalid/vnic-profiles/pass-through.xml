@@ -1,0 +1,8 @@
+<vnic_profile href="/ovirt-engine/api/networks/net-1/vnicprofiles/vnic-profile-1" id="vnic-profile-1">
+    <name>vNIC-1</name>
+    <pass_through>
+        <mode>enabled</mode>
+    </pass_through>
+    <port_mirroring>false</port_mirroring>
+    <network href="/ovirt-engine/api/networks/net-1" id="net-1"/>
+</vnic_profile>

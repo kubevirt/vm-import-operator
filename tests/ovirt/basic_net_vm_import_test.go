@@ -5,8 +5,9 @@ import (
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
-	vms2 "github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
+	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
+	sapi "github.com/machacekondra/fakeovirt/pkg/api/stubbing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -36,13 +37,14 @@ var _ = Describe("Networked VM import ", func() {
 	})
 
 	It("should create started VM", func() {
-		vmi := utils.VirtualMachineImportCr(vms2.BasicNetworkVmID, namespace, secret.Name, f.NsPrefix, true)
+		vmID := vms.BasicVmID
+		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 		vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
 			NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
-				{Source: v2vv1alpha1.Source{ID: &vms2.BasicNetworkID}, Type: &tests.PodType},
+				{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 			},
 		}
-
+		test.stub(vmID)
 		created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
 		Expect(err).NotTo(HaveOccurred())
@@ -83,7 +85,7 @@ func (t *networkedVmImportTest) validateTargetConfiguration(vmName string) *v1.V
 
 	nic := spec.Domain.Devices.Interfaces[0]
 	Expect(nic.Name).To(BeEquivalentTo(spec.Networks[0].Name))
-	Expect(nic.MacAddress).To(BeEquivalentTo(vms2.BasicNetworkVmNicMAC))
+	Expect(nic.MacAddress).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
 	Expect(nic.Masquerade).ToNot(BeNil())
 	Expect(nic.Model).To(BeEquivalentTo("virtio"))
 
@@ -101,4 +103,28 @@ func (t *networkedVmImportTest) validateTargetConfiguration(vmName string) *v1.V
 	Expect(spec.Volumes).To(HaveLen(1))
 
 	return vm
+}
+
+func (t *networkedVmImportTest) stub(vmID string) {
+	diskAttachmentsXml := t.framework.LoadFile("disk-attachments/one.xml")
+	diskXml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	domainXml := t.framework.LoadFile("storage-domains/domain-1.xml")
+	consolesXml := t.framework.LoadFile("graphic-consoles/vnc.xml")
+	networkXml := t.framework.LoadFile("networks/net-1.xml")
+	vnicProfileXml := t.framework.LoadFile("vnic-profiles/vnic-profile-1.xml")
+	vmXml := t.framework.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
+	nicsXml := t.framework.LoadFile("nics/one.xml")
+	builder := sapi.NewStubbingBuilder().
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXml).
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXml).
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXml).
+		StubGet("/ovirt-engine/api/disks/disk-1", &diskXml).
+		StubGet("/ovirt-engine/api/networks/net-1", &networkXml).
+		StubGet("/ovirt-engine/api/vnicprofiles/vnic-profile-1", &vnicProfileXml).
+		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXml).
+		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml)
+	err := t.framework.OvirtStubbingClient.Stub(builder.Build())
+	if err != nil {
+		Fail(err.Error())
+	}
 }

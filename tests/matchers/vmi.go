@@ -18,7 +18,7 @@ type beRunningMatcher struct {
 // BeRunning creates the matcher
 func BeRunning(testFramework *framework.Framework) types.GomegaMatcher {
 	matcher := beRunningMatcher{}
-	matcher.timeout = 5 * time.Minute
+	matcher.timeout = 3 * time.Minute
 	matcher.testFramework = testFramework
 	return &matcher
 }

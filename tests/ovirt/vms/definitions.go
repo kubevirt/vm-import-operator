@@ -7,6 +7,7 @@ const (
 	UnsupportedStatusVmIDPrefix                  = "unsupported-status-"
 	UnsupportedBiosTypeVmID                      = "unsupported-i440fx_sea_bios-bios-type"
 	UnsupportedArchitectureVmID                  = "unsupported-s390x-architecture"
+	NicPassthroughVmID                           = "nic-passthrough"
 	IlleagalImagesVmID                           = "illegal-images"
 	KubevirtOriginVmID                           = "kubevirt-origin"
 	MigratablePlacementPolicyAffinityVmID        = "migratable-placement-policy-affinity"
@@ -25,10 +26,8 @@ const (
 )
 
 var (
-	VirtioDiskID    = "123"
-	StorageDomainID = "123"
-
-	BasicNetworkID = "123"
+	DiskID          = "disk-1"
+	StorageDomainID = "domain-1"
 
 	VNicProfile1ID = "vnic-profile-1"
 	VNicProfile2ID = "vnic-profile-2"

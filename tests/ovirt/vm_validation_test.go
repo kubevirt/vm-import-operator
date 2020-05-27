@@ -1,7 +1,7 @@
 package ovirt_test
 
 import (
-	vms2 "github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
+	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
@@ -30,16 +30,11 @@ var _ = Describe("VM validation ", func() {
 			Fail("Cannot create secret: " + err.Error())
 		}
 		secretName = s.Name
-
-		err = f.OvirtStubbingClient.Reset("static-sso,static-transfer,static-namespace,static-transfers")
-		if err != nil {
-			Fail(err.Error())
-		}
 	})
 
 	table.DescribeTable("should block VM with unsupported status", func(status string) {
-		vmID := vms2.UnsupportedStatusVmIDPrefix + status
-		vmXml := test.framework.LoadTemplate("invalid/"+vms2.UnsupportedStatusVmIDPrefix+"vm-template.xml", map[string]string{"@VMSTATUS": status})
+		vmID := vms.UnsupportedStatusVmIDPrefix + status
+		vmXml := test.framework.LoadTemplate("invalid/vms/"+vms.UnsupportedStatusVmIDPrefix+"vm-template.xml", map[string]string{"@VMSTATUS": status})
 		stubbing := test.stubResources(vmID).
 			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml).
 			Build()
@@ -68,7 +63,7 @@ var _ = Describe("VM validation ", func() {
 	)
 
 	table.DescribeTable("should block VM with", func(vmID string) {
-		vmXml := test.framework.LoadFile("invalid/" + vmID + "-vm.xml")
+		vmXml := test.framework.LoadFile("invalid/vms/" + vmID + "-vm.xml")
 		stubbing := test.stubResources(vmID).
 			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml).
 			Build()
@@ -81,18 +76,18 @@ var _ = Describe("VM validation ", func() {
 
 		Expect(created).To(HaveMappingRulesVerificationFailure(f))
 	},
-		table.Entry("unsupported i440fx_sea_bios BIOS type", vms2.UnsupportedBiosTypeVmID),
-		table.Entry("unsupported s390fx architecture", vms2.UnsupportedArchitectureVmID),
-		table.Entry("illegal images", vms2.IlleagalImagesVmID),
-		table.Entry("kubevirt origin", vms2.KubevirtOriginVmID),
-		table.Entry("placement policy affinity set to 'migratable'", vms2.MigratablePlacementPolicyAffinityVmID),
-		table.Entry("USB enabled", vms2.UsbEnabledVmID),
+		table.Entry("unsupported i440fx_sea_bios BIOS type", vms.UnsupportedBiosTypeVmID),
+		table.Entry("unsupported s390fx architecture", vms.UnsupportedArchitectureVmID),
+		table.Entry("illegal images", vms.IlleagalImagesVmID),
+		table.Entry("kubevirt origin", vms.KubevirtOriginVmID),
+		table.Entry("placement policy affinity set to 'migratable'", vms.MigratablePlacementPolicyAffinityVmID),
+		table.Entry("USB enabled", vms.UsbEnabledVmID),
 	)
 
 	It("should block VM with diag288 watchdog", func() {
-		vmID := vms2.UnsupportedDiag288WatchdogVmID
-		vmXml := test.framework.LoadFile("invalid/" + vmID + "-vm.xml")
-		wdXml := test.framework.LoadFile("invalid/diag288-watchdog.xml")
+		vmID := vms.UnsupportedDiag288WatchdogVmID
+		vmXml := test.framework.LoadFile("invalid/vms/" + vmID + "-vm.xml")
+		wdXml := test.framework.LoadFile("invalid/watchdogs/diag288.xml")
 		stubbing := test.stubResources(vmID).
 			StubGet("/ovirt-engine/api/vms/"+vmID+"/watchdogs", &wdXml).
 			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml).
@@ -119,11 +114,11 @@ func (t *vmValidationTest) prepareImport(vmID string, secretName string) *v2vv1a
 }
 
 func (t *vmValidationTest) stubResources(vmID string) *sapi.StubbingBuilder {
-	nicsXml := t.framework.LoadFile("nics-empty.xml")
-	diskAttachmentsXml := t.framework.LoadFile("disk-attachments/one-attachment.xml")
+	nicsXml := t.framework.LoadFile("nics/empty.xml")
+	diskAttachmentsXml := t.framework.LoadFile("disk-attachments/one.xml")
 	diskXml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
-	domainXml := t.framework.LoadFile("storage-domain.xml")
-	consolesXml := t.framework.LoadFile("graphic-consoles-empty.xml")
+	domainXml := t.framework.LoadFile("storage-domains/domain-1.xml")
+	consolesXml := t.framework.LoadFile("graphic-consoles/empty.xml")
 	return sapi.NewStubbingBuilder().
 		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXml).
 		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXml).
