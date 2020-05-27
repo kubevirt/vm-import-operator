@@ -3,6 +3,7 @@ package virtualmachineimport
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -70,7 +71,10 @@ const (
 )
 
 var (
-	log = logf.Log.WithName("controller_virtualmachineimport")
+	log                          = logf.Log.WithName("controller_virtualmachineimport")
+	// importPodRestartTolerance define how many restart of the import pod are tolerated before
+	// we end the import as failed, by default it's 3.
+	importPodRestartTolerance, _ = strconv.Atoi(os.Getenv("IMPORT_POD_RESTART_TOLERANCE"))
 )
 
 /**
@@ -328,7 +332,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 				err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: importerPodNameFromDv(dvID)}, foundPod)
 				if err == nil {
 					for _, cs := range foundPod.Status.ContainerStatuses {
-						if cs.State.Waiting != nil && cs.State.Waiting.Reason == podCrashLoopBackOff {
+						if cs.State.Waiting != nil && cs.State.Waiting.Reason == podCrashLoopBackOff && cs.RestartCount > int32(importPodRestartTolerance) {
 							if err = r.endImportAsFailed(provider, instance, foundDv); err != nil {
 								return err
 							}
