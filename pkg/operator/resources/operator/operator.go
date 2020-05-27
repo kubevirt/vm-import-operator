@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/blang/semver"
+	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	csvv1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/version"
 	appsv1 "k8s.io/api/apps/v1"
@@ -342,11 +343,11 @@ func createControllerDeploymentSpec(image string, pullPolicy string, matchKey st
 	return &appsv1.DeploymentSpec{
 		Replicas: &numReplicas,
 		Selector: &metav1.LabelSelector{
-			MatchLabels: WithLabels(matchMap, operatorLabels),
+			MatchLabels: utils.WithLabels(matchMap, operatorLabels),
 		},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels: WithLabels(matchMap, operatorLabels),
+				Labels: utils.WithLabels(matchMap, operatorLabels),
 			},
 			Spec: corev1.PodSpec{
 				ServiceAccountName: ControllerName,
@@ -1147,11 +1148,11 @@ func CreateOperatorDeploymentSpec(matchKey, matchValue, serviceAccount string, n
 	spec := &appsv1.DeploymentSpec{
 		Replicas: &numReplicas,
 		Selector: &metav1.LabelSelector{
-			MatchLabels: WithLabels(matchMap, operatorLabels),
+			MatchLabels: utils.WithLabels(matchMap, operatorLabels),
 		},
 		Template: corev1.PodTemplateSpec{
 			ObjectMeta: metav1.ObjectMeta{
-				Labels: WithLabels(matchMap, operatorLabels),
+				Labels: utils.WithLabels(matchMap, operatorLabels),
 			},
 			Spec: corev1.PodSpec{
 				SecurityContext: &corev1.PodSecurityContext{
@@ -1174,7 +1175,7 @@ func CreateServiceAccount(namespace string) *corev1.ServiceAccount {
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ControllerName,
-			Labels:    WithLabels(nil, commonLabels),
+			Labels:    utils.WithLabels(nil, commonLabels),
 			Namespace: namespace,
 		},
 	}
@@ -1357,20 +1358,4 @@ func NewClusterServiceVersion(data *ClusterServiceVersionData) (*csvv1.ClusterSe
 			},
 		},
 	}, nil
-}
-
-// WithLabels aggregates existing lables
-func WithLabels(labels map[string]string, existing map[string]string) map[string]string {
-	if labels == nil {
-		labels = make(map[string]string)
-	}
-
-	for k, v := range existing {
-		_, ok := labels[k]
-		if !ok {
-			labels[k] = v
-		}
-	}
-
-	return labels
 }

@@ -223,3 +223,19 @@ func ParseUtcOffsetToSeconds(offset string) (int, error) {
 
 	return multiplier * 60 * (hours*60 + minutes), nil
 }
+
+// WithLabels aggregates existing lables
+func WithLabels(labels map[string]string, existing map[string]string) map[string]string {
+	if labels == nil {
+		labels = make(map[string]string)
+	}
+
+	for k, v := range existing {
+		_, ok := labels[k]
+		if !ok {
+			labels[k] = v
+		}
+	}
+
+	return labels
+}

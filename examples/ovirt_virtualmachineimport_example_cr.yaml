@@ -5,6 +5,7 @@ metadata:
   namespace: example-ns
   annotations:
     vmimport.v2v.kubevirt.io/progress: "20"
+    vmimport.v2v.kubevirt.io/propagate-annotations: "{'description': 'My description.'}"
   labels:
     vmimport.v2v.kubevirt.io/tracker: "vmimport-123"
 spec:

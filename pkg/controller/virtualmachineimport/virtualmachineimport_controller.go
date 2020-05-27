@@ -2,6 +2,7 @@ package virtualmachineimport
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strconv"
@@ -41,6 +42,8 @@ const (
 	sourceVMInitialState = "vmimport.v2v.kubevirt.io/source-vm-initial-state"
 	// AnnCurrentProgress is annotations storing current progress of the vm import
 	AnnCurrentProgress = "vmimport.v2v.kubevirt.io/progress"
+	// AnnPropagate is annotation defining which values to propagate
+	AnnPropagate = "vmimport.v2v.kubevirt.io/propagate-annotations"
 	// constants
 	progressStart         = "0"
 	progressCreatingVM    = "5"
@@ -71,7 +74,7 @@ const (
 )
 
 var (
-	log                          = logf.Log.WithName("controller_virtualmachineimport")
+	log = logf.Log.WithName("controller_virtualmachineimport")
 	// importPodRestartTolerance define how many restart of the import pod are tolerated before
 	// we end the import as failed, by default it's 3.
 	importPodRestartTolerance, _ = strconv.Atoi(os.Getenv("IMPORT_POD_RESTART_TOLERANCE"))
@@ -425,6 +428,9 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 		return "", err
 	}
 
+	// propagate annotations
+	setAnnotations(instance, vmSpec)
+
 	// Update progress:
 	if err = r.updateProgress(instance, progressStart); err != nil {
 		return "", err
@@ -484,6 +490,26 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 	}
 
 	return found.Name, nil
+}
+
+func setAnnotations(instance *v2vv1alpha1.VirtualMachineImport, vmSpec *kubevirtv1.VirtualMachine) {
+	reqLogger := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
+	annotations := instance.GetAnnotations()
+	propagate := annotations[AnnPropagate]
+	if propagate != "" {
+		annotations := vmSpec.GetAnnotations()
+		if annotations == nil {
+			annotations = map[string]string{}
+			vmSpec.SetAnnotations(annotations)
+		}
+		prop := map[string]string{}
+		err := json.Unmarshal([]byte(propagate), &prop)
+		if err != nil {
+			reqLogger.Info("Failed while parsing annotations to propagate to virtual machine")
+			return
+		}
+		utils.WithLabels(annotations, prop)
+	}
 }
 
 // startVM start the VM if was requested to be started and VM disks are imported and ready:
