@@ -2,15 +2,6 @@
 
 set -e
 
-function install_cnao {
-  CNAO_VERSION=${CNAO_VERSION:-'0.35.1'}
-  ./cluster/kubectl.sh apply -f https://raw.githubusercontent.com/kubevirt/cluster-network-addons-operator/master/manifests/cluster-network-addons/${CNAO_VERSION}/namespace.yaml
-  ./cluster/kubectl.sh apply -f https://raw.githubusercontent.com/kubevirt/cluster-network-addons-operator/master/manifests/cluster-network-addons/${CNAO_VERSION}/network-addons-config.crd.yaml
-  ./cluster/kubectl.sh apply -f https://raw.githubusercontent.com/kubevirt/cluster-network-addons-operator/master/manifests/cluster-network-addons/${CNAO_VERSION}/operator.yaml
-  ./cluster/kubectl.sh apply -f ./cluster/manifests/cnao.yaml
-  ./cluster/kubectl.sh wait networkaddonsconfig cluster --for condition=Available --timeout=600s
-}
-
 function install_cdi {
     export VERSION=$(curl -s https://github.com/kubevirt/containerized-data-importer/releases/latest | grep -o "v[0-9]\.[0-9]*\.[0-9]*")
     ./cluster/kubectl.sh apply -f https://github.com/kubevirt/containerized-data-importer/releases/download/$VERSION/cdi-operator.yaml
