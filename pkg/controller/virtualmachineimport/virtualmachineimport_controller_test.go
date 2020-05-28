@@ -481,6 +481,22 @@ var _ = Describe("Reconcile steps", func() {
 			Expect(name).To(Equal(""))
 			Expect(err).To(BeNil())
 		})
+
+		It("should succeed to create vm with description: ", func() {
+			instance.Annotations = map[string]string{AnnPropagate: `{"description": "My description"}`}
+			create = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+				switch obj.(type) {
+				case *kubevirtv1.VirtualMachine:
+					Expect(obj.(*kubevirtv1.VirtualMachine).Annotations["description"], "My description")
+				}
+				return nil
+			}
+
+			name, err := reconciler.createVM(mock, instance, mapper)
+
+			Expect(name).To(Equal(""))
+			Expect(err).To(BeNil())
+		})
 	})
 
 	Describe("startVM step", func() {
