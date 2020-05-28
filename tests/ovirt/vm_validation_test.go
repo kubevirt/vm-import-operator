@@ -34,9 +34,9 @@ var _ = Describe("VM validation ", func() {
 
 	table.DescribeTable("should block VM with unsupported status", func(status string) {
 		vmID := vms.UnsupportedStatusVmIDPrefix + status
-		vmXml := test.framework.LoadTemplate("invalid/vms/"+vms.UnsupportedStatusVmIDPrefix+"vm-template.xml", map[string]string{"@VMSTATUS": status})
+		vmXML := test.framework.LoadTemplate("invalid/vms/"+vms.UnsupportedStatusVmIDPrefix+"vm-template.xml", map[string]string{"@VMSTATUS": status})
 		stubbing := test.stubResources(vmID).
-			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml).
+			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML).
 			Build()
 
 		err := f.OvirtStubbingClient.Stub(stubbing)
@@ -63,9 +63,9 @@ var _ = Describe("VM validation ", func() {
 	)
 
 	table.DescribeTable("should block VM with", func(vmID string) {
-		vmXml := test.framework.LoadFile("invalid/vms/" + vmID + "-vm.xml")
+		vmXML := test.framework.LoadFile("invalid/vms/" + vmID + "-vm.xml")
 		stubbing := test.stubResources(vmID).
-			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml).
+			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML).
 			Build()
 
 		err := f.OvirtStubbingClient.Stub(stubbing)
@@ -76,6 +76,7 @@ var _ = Describe("VM validation ", func() {
 
 		Expect(created).To(HaveMappingRulesVerificationFailure(f))
 	},
+		//TODO: move each of test cases to the set below once the positive counterpart is implemented
 		table.Entry("unsupported i440fx_sea_bios BIOS type", vms.UnsupportedBiosTypeVmID),
 		table.Entry("unsupported s390fx architecture", vms.UnsupportedArchitectureVmID),
 		table.Entry("illegal images", vms.IlleagalImagesVmID),
@@ -84,13 +85,31 @@ var _ = Describe("VM validation ", func() {
 		table.Entry("USB enabled", vms.UsbEnabledVmID),
 	)
 
+	table.DescribeTable("should block VM with", func(vmID string, vmFile string, vmMacros map[string]string) {
+		vmMacros["@VMID"] = vmID
+		vmXML := test.framework.LoadTemplate("vms/"+vmFile, vmMacros)
+		stubbing := test.stubResources(vmID).
+			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML).
+			Build()
+
+		err := f.OvirtStubbingClient.Stub(stubbing)
+		if err != nil {
+			Fail(err.Error())
+		}
+		created := test.prepareImport(vmID, secretName)
+
+		Expect(created).To(HaveMappingRulesVerificationFailure(f))
+	},
+		table.Entry("unsupported timezone", vms.UnsupportedTimezoneVmID, "timezone-template.xml", map[string]string{"@TIMEZONE": "America/New_York"}),
+	)
+
 	It("should block VM with diag288 watchdog", func() {
 		vmID := vms.UnsupportedDiag288WatchdogVmID
-		vmXml := test.framework.LoadFile("invalid/vms/" + vmID + "-vm.xml")
-		wdXml := test.framework.LoadFile("invalid/watchdogs/diag288.xml")
+		vmXML := test.framework.LoadFile("invalid/vms/" + vmID + "-vm.xml")
+		wdXML := test.framework.LoadFile("invalid/watchdogs/diag288.xml")
 		stubbing := test.stubResources(vmID).
-			StubGet("/ovirt-engine/api/vms/"+vmID+"/watchdogs", &wdXml).
-			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml).
+			StubGet("/ovirt-engine/api/vms/"+vmID+"/watchdogs", &wdXML).
+			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML).
 			Build()
 
 		err := f.OvirtStubbingClient.Stub(stubbing)
@@ -114,16 +133,15 @@ func (t *vmValidationTest) prepareImport(vmID string, secretName string) *v2vv1a
 }
 
 func (t *vmValidationTest) stubResources(vmID string) *sapi.StubbingBuilder {
-	nicsXml := t.framework.LoadFile("nics/empty.xml")
-	diskAttachmentsXml := t.framework.LoadFile("disk-attachments/one.xml")
-	diskXml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
-	domainXml := t.framework.LoadFile("storage-domains/domain-1.xml")
-	consolesXml := t.framework.LoadFile("graphic-consoles/empty.xml")
+	nicsXML := t.framework.LoadFile("nics/empty.xml")
+	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
+	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
+	consolesXML := t.framework.LoadFile("graphic-consoles/empty.xml")
 	return sapi.NewStubbingBuilder().
-		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXml).
-		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXml).
-		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXml).
-		StubGet("/ovirt-engine/api/disks/disk-1", &diskXml).
-		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXml)
-
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXML).
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXML).
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXML).
+		StubGet("/ovirt-engine/api/disks/disk-1", &diskXML).
+		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXML)
 }

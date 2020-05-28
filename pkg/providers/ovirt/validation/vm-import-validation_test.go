@@ -151,6 +151,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		table.Entry("Placement policy affinity", validators.VMPlacementPolicyAffinityID),
 		table.Entry("USB", validators.VMUsbID),
 		table.Entry("Watchdog", validators.VMWatchdogsID),
+		table.Entry("Time Zone", validators.VMTimezoneID),
 	)
 	table.DescribeTable("should accept VirtualMachineImport spec with Nic log for ", func(checkId validators.CheckID) {
 		message := "Some log"

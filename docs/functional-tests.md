@@ -27,7 +27,7 @@
 | VM with placement policy affinity set to 'user_migratable' should be imported and started | &cross; |
 | VM with placement policy affinity set to 'migrateble' and Live Migration enabled should be imported and started | &cross; |
 | VM with placement policy affinity set to 'pinned' should be imported and started | &cross; |
-| VM with UTC-compatible (i.e. 'Africa/Abidjan')  timezone should be imported and started | &cross; |
+| VM with UTC-compatible (i.e. 'Africa/Abidjan')  timezone should be imported and started | &check; |
 | VM with correct pinning layout should be imported and started | &cross; |
 | VM with disabled USB should be imported and started | &cross; |
 | VM with 'i6300esb' watchdog should be imported and started | &cross; |
@@ -68,7 +68,7 @@
 | VM with placement policy affinity set to 'migratable' should be blocked | &check; |
 | VM with USB enabled should be blocked | &check; |
 | VM with watchdog other than 'i6300esb' should be blocked | &check; |
-| VM with non-UTC-compatible (i.e. 'America/New_York')  timezone should be blocked | &cross; |
+| VM with non-UTC-compatible (i.e. 'America/New_York')  timezone should be blocked | &check; |
 
 ## Resource mapping
 | Test description | Implemented |

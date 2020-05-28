@@ -2,7 +2,7 @@
     <disk_attachment href="[unused]" id="scsi-reservation">
         <active>true</active>
         <bootable>true</bootable>
-        <interface>@INTERFACE</interface>
+        <interface>virtio</interface>
         <pass_discard>false</pass_discard>
         <read_only>false</read_only>
         <uses_scsi_reservation>true</uses_scsi_reservation>
