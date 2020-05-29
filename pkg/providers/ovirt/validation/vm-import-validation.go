@@ -93,6 +93,7 @@ var checkToAction = map[validators.CheckID]action{
 	validators.VMWatchdogsID:                     block,
 	validators.VMCdromsID:                        log,
 	validators.VMFloppiesID:                      log,
+	validators.VMTimezoneID:                      block,
 }
 
 // Validator validates different properties of a VM

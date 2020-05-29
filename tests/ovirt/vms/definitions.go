@@ -23,6 +23,8 @@ const (
 	IllegalDiskStatusVmIDPrefix                  = "illegal-disk-status-"
 	UnsupportedDiskStorageTypeVmIDPrefix         = "unsupported-disk-storage-type-"
 	UnsupportedDiskSGIOVmIDPrefix                = "unsupported-disk-sgio-type-"
+	UnsupportedTimezoneVmID                      = "unsupported-timezone"
+	UtcCompatibleTimeZone                        = "timezone-vm"
 )
 
 var (

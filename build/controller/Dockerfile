@@ -12,6 +12,8 @@ ENV CONTROLLER=/usr/local/bin/vm-import-controller \
 
 # install controller binary
 COPY --from=builder /vm-import-controller ${CONTROLLER}
+# Controller needs timezone data for VM validation
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY build/controller/bin /usr/local/bin
 RUN  /usr/local/bin/user_setup
 
