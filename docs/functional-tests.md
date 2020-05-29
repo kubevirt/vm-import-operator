@@ -10,6 +10,12 @@
 | Basic import with in-CR resource mapping should create running VM for storage domain mapping | &check; |
 | Basic import with in-CR resource mapping should create running VM for storage disk mapping | &check; |
 
+## Basic VM negative
+| Test description | Implemented |
+| :---------------- | :-----------: |
+| Basic VM import with invalid VM image | &check; |
+| Basic VM import with invalid VM image size | &check; |
+
 ## Basic Net VM
 | Test description | Implemented |
 | :---------------- | :-----------: |
