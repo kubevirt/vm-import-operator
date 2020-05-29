@@ -1,10 +1,10 @@
-<vm href="/ovirt-engine/api/vms/unsupported-status-@VMSTATUS" id="unsupported-status-@VMSTATUS">
+<vm href="/ovirt-engine/api/vms/@VMID" id="@VMID">
     <name>cirrosvm</name>
     <description/>
     <comment/>
-    <link href="/ovirt-engine/api/vms/unsupported-status-@VMSTATUS/diskattachments" rel="diskattachments"/>
-    <link href="/ovirt-engine/api/vms/unsupported-status-@VMSTATUS/nics" rel="nics"/>
-    <link href="/ovirt-engine/api/vms/unsupported-status-@VMSTATUS/graphicsconsoles" rel="graphicsconsoles"/>
+    <link href="/ovirt-engine/api/vms/@VMID/diskattachments" rel="diskattachments"/>
+    <link href="/ovirt-engine/api/vms/@VMID/nics" rel="nics"/>
+    <link href="/ovirt-engine/api/vms/@VMID/graphicsconsoles" rel="graphicsconsoles"/>
     <bios>
         <boot_menu>
             <enabled>false</enabled>
@@ -62,7 +62,7 @@
         <type>other</type>
     </os>
     <placement_policy>
-        <affinity>pinned</affinity>
+        <affinity>@AFFINITY</affinity>
         <hosts>
         </hosts>
     </placement_policy>
@@ -84,6 +84,6 @@
     </usb>
     <next_run_configuration_exists>false</next_run_configuration_exists>
     <numa_tune_mode>interleave</numa_tune_mode>
-    <status>@VMSTATUS</status>
+    <status>down</status>
     <stop_reason/>
 </vm>

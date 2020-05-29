@@ -1,11 +1,12 @@
-<vm href="/ovirt-engine/api/vms/illegal-images" id="illegal-images">
+<vm href="/ovirt-engine/api/vms/@VMID" id="@VMID">
     <name>cirrosvm</name>
     <description/>
     <comment/>
-    <link href="/ovirt-engine/api/vms/illegal-images/diskattachments" rel="diskattachments"/>
-    <link href="/ovirt-engine/api/vms/illegal-images/nics" rel="nics"/>
-    <link href="/ovirt-engine/api/vms/illegal-images/graphicsconsoles" rel="graphicsconsoles"/>
-    <has_illegal_images>true</has_illegal_images>
+    <link href="/ovirt-engine/api/vms/@VMID/diskattachments" rel="diskattachments"/>
+    <link href="/ovirt-engine/api/vms/@VMID/nics" rel="nics"/>
+    <link href="/ovirt-engine/api/vms/@VMID/graphicsconsoles" rel="graphicsconsoles"/>
+    <link href="/ovirt-engine/api/vms/@VMID/watchdogs" rel="watchdogs"/>
+
     <bios>
         <boot_menu>
             <enabled>false</enabled>

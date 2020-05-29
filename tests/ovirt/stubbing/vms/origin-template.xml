@@ -1,10 +1,10 @@
-<vm href="/ovirt-engine/api/vms/kubevirt-origin" id="kubevirt-origin">
+<vm href="/ovirt-engine/api/vms/@VMID" id="@VMID">
     <name>cirrosvm</name>
     <description/>
     <comment/>
-    <link href="/ovirt-engine/api/vms/kubevirt-origin/diskattachments" rel="diskattachments"/>
-    <link href="/ovirt-engine/api/vms/kubevirt-origin/nics" rel="nics"/>
-    <link href="/ovirt-engine/api/vms/kubevirt-origin/graphicsconsoles" rel="graphicsconsoles"/>
+    <link href="/ovirt-engine/api/vms/@VMID/diskattachments" rel="diskattachments"/>
+    <link href="/ovirt-engine/api/vms/@VMID/nics" rel="nics"/>
+    <link href="/ovirt-engine/api/vms/@VMID/graphicsconsoles" rel="graphicsconsoles"/>
     <bios>
         <boot_menu>
             <enabled>false</enabled>
@@ -52,7 +52,7 @@
     </migration>
     <migration_downtime>-1</migration_downtime>
     <multi_queues_enabled>true</multi_queues_enabled>
-    <origin>kubevirt</origin>
+    <origin>@ORIGIN</origin>
     <os>
         <boot>
             <devices>
