@@ -7,6 +7,7 @@ import (
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	sapi "github.com/machacekondra/fakeovirt/pkg/api/stubbing"
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -37,14 +38,57 @@ var _ = Describe("Import", func() {
 
 	Context("should create started VM configured with", func() {
 		It("UTC-compatible timezone", func() {
-			vmID := vms.UtcCompatibleTimeZone
+			vmID := vms.UtcCompatibleTimeZoneVmID
 			test.stub(vmID, "timezone-template.xml", map[string]string{"@TIMEZONE": "Africa/Abidjan"})
 			vm := test.ensureVMIsRunning(vmID)
 
 			spec := vm.Spec.Template.Spec
 			Expect(spec.Domain.Clock.UTC).ToNot(BeNil())
 		})
+
+		table.DescribeTable("BIOS type", func(inBIOSType string, targetBootloader v1.Bootloader) {
+			vmID := vms.BIOSTypeVmIDPrefix + inBIOSType
+			test.stub(vmID, "bios-type-template.xml", map[string]string{"@BIOSTYPE": inBIOSType})
+			vm := test.ensureVMIsRunning(vmID)
+			spec := vm.Spec.Template.Spec
+			Expect(*spec.Domain.Firmware.Bootloader).To(BeEquivalentTo(targetBootloader))
+		},
+			table.Entry("q35_sea_bios", "q35_sea_bios", v1.Bootloader{BIOS: &v1.BIOS{}}),
+			table.Entry("q35_secure_boot", "q35_secure_boot", v1.Bootloader{BIOS: &v1.BIOS{}}),
+			table.Entry("q35_ovmf", "q35_ovmf", v1.Bootloader{EFI: &v1.EFI{}}))
+
+		table.DescribeTable("architecture", func(inArch string, targetArch string) {
+			vmID := vms.ArchitectureVmIDPrefix + inArch
+			test.stub(vmID, "architecture-template.xml", map[string]string{"@ARCH": inArch})
+			vm := test.ensureVMIsRunning(vmID)
+			spec := vm.Spec.Template.Spec
+			Expect(spec.Domain.Machine.Type).To(BeEquivalentTo(targetArch))
+		},
+			table.Entry("undefined", "undefined", "q35"))
+
+		It("i6300esb watchdog", func() {
+			vmID := vms.I6300esbWatchdogVmID
+			wdXML := test.framework.LoadTemplate("watchdogs/model-template.xml", map[string]string{"@MODEL": "i6300esb"})
+			stubbing := sapi.NewStubbingBuilder().StubGet("/ovirt-engine/api/vms/"+vmID+"/watchdogs", &wdXML).Build()
+			err := f.OvirtStubbingClient.Stub(stubbing)
+			if err != nil {
+				Fail(err.Error())
+			}
+			test.stub(vmID, "watchdog-vm.xml", map[string]string{})
+
+			test.ensureVMIsRunning(vmID)
+		})
+
 	})
+	table.DescribeTable("should create started VM configured with", func(vmID string, templateFile string, macros map[string]string) {
+		test.stub(vmID, templateFile, macros)
+		test.ensureVMIsRunning(vmID)
+	},
+		table.Entry("ovirt origin", vms.OvirtOriginVmID, "origin-template.xml", map[string]string{"@ORIGIN": "ovirt"}),
+		table.Entry("placement policy affinity: 'user_migratable'", vms.PlacementPolicyAffinityVmIDPrefix+"user_migratable", "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "user_migratable"}),
+		table.Entry("placement policy affinity: 'pinned'", vms.PlacementPolicyAffinityVmIDPrefix+"pinned", "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "pinned"}),
+		table.Entry("disabled USB", vms.UsbDisabledVmID, "usb-template.xml", map[string]string{"@ENABLED": "false"}))
+
 })
 
 func (t *variousVMConfigurationsTest) ensureVMIsRunning(vmID string) *v1.VirtualMachine {

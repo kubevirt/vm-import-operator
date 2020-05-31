@@ -463,11 +463,7 @@ func (o *OvirtMapper) mapFirmware() *kubevirtv1.Firmware {
 	// Map bootloader
 	bios, _ := o.vm.Bios()
 	biosType, _ := bios.Type()
-	bootloader, ok := BiosTypeMapping[string(biosType)]
-	if ok {
-		bootloader = &kubevirtv1.Bootloader{BIOS: &kubevirtv1.BIOS{}}
-	}
-	firmware.Bootloader = bootloader
+	firmware.Bootloader = BiosTypeMapping[string(biosType)]
 
 	// Map serial number
 	serial := o.mapSerialNumber()
