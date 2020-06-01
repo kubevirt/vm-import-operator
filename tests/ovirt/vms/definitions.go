@@ -32,6 +32,7 @@ const (
 	PlacementPolicyAffinityVmIDPrefix            = "placement-policy-affinity"
 	UsbDisabledVmID                              = "usb-disabled"
 	I6300esbWatchdogVmID                         = "i6300esb-watchdog"
+	CPUPinningVmID                               = "cpu-pinning"
 )
 
 var (
