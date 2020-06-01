@@ -25,18 +25,18 @@
 | Test description | Implemented |
 | :---------------- | :-----------: |
 | VM with 'up' status should be imported and started | &cross; |
-| VM with 'q35_secure_boot' BIOS type should be imported and started | &cross; |
-| VM with 'q35_ovmf' BIOS type should be imported and started | &cross; |
+| VM with 'q35_secure_boot' BIOS type should be imported and started | &check; |
+| VM with 'q35_ovmf' BIOS type should be imported and started | &check; |
 | VM with 'ppc64' architecture should be imported and started | &cross; |
-| VM with 'undefined' architecture should be imported and started | &cross; |
-| VM with 'ovirt' origin should be imported and started | &cross; |
-| VM with placement policy affinity set to 'user_migratable' should be imported and started | &cross; |
+| VM with 'undefined' architecture should be imported and started | &check; |
+| VM with 'ovirt' origin should be imported and started | &check; |
+| VM with placement policy affinity set to 'user_migratable' should be imported and started | &check; |
 | VM with placement policy affinity set to 'migrateble' and Live Migration enabled should be imported and started | &cross; |
-| VM with placement policy affinity set to 'pinned' should be imported and started | &cross; |
+| VM with placement policy affinity set to 'pinned' should be imported and started | &check; |
 | VM with UTC-compatible (i.e. 'Africa/Abidjan')  timezone should be imported and started | &check; |
 | VM with correct pinning layout should be imported and started | &cross; |
-| VM with disabled USB should be imported and started | &cross; |
-| VM with 'i6300esb' watchdog should be imported and started | &cross; |
+| VM with disabled USB should be imported and started | &check; |
+| VM with 'i6300esb' watchdog should be imported and started | &check; |
 
 ## Cancel VM Import
 | Test description | Implemented |

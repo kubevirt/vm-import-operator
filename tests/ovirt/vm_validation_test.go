@@ -2,6 +2,7 @@ package ovirt_test
 
 import (
 	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
+	"github.com/onsi/ginkgo/extensions/table"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
@@ -9,7 +10,6 @@ import (
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	sapi "github.com/machacekondra/fakeovirt/pkg/api/stubbing"
 	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -34,7 +34,7 @@ var _ = Describe("VM validation ", func() {
 
 	table.DescribeTable("should block VM with unsupported status", func(status string) {
 		vmID := vms.UnsupportedStatusVmIDPrefix + status
-		vmXML := test.framework.LoadTemplate("invalid/vms/"+vms.UnsupportedStatusVmIDPrefix+"vm-template.xml", map[string]string{"@VMSTATUS": status})
+		vmXML := test.framework.LoadTemplate("vms/status-template.xml", map[string]string{"@VMSTATUS": status, "@VMID": vmID})
 		stubbing := test.stubResources(vmID).
 			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML).
 			Build()
@@ -62,29 +62,6 @@ var _ = Describe("VM validation ", func() {
 		table.Entry("wait_for_launch", "wait_for_launch"),
 	)
 
-	table.DescribeTable("should block VM with", func(vmID string) {
-		vmXML := test.framework.LoadFile("invalid/vms/" + vmID + "-vm.xml")
-		stubbing := test.stubResources(vmID).
-			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML).
-			Build()
-
-		err := f.OvirtStubbingClient.Stub(stubbing)
-		if err != nil {
-			Fail(err.Error())
-		}
-		created := test.prepareImport(vmID, secretName)
-
-		Expect(created).To(HaveMappingRulesVerificationFailure(f))
-	},
-		//TODO: move each of test cases to the set below once the positive counterpart is implemented
-		table.Entry("unsupported i440fx_sea_bios BIOS type", vms.UnsupportedBiosTypeVmID),
-		table.Entry("unsupported s390fx architecture", vms.UnsupportedArchitectureVmID),
-		table.Entry("illegal images", vms.IlleagalImagesVmID),
-		table.Entry("kubevirt origin", vms.KubevirtOriginVmID),
-		table.Entry("placement policy affinity set to 'migratable'", vms.MigratablePlacementPolicyAffinityVmID),
-		table.Entry("USB enabled", vms.UsbEnabledVmID),
-	)
-
 	table.DescribeTable("should block VM with", func(vmID string, vmFile string, vmMacros map[string]string) {
 		vmMacros["@VMID"] = vmID
 		vmXML := test.framework.LoadTemplate("vms/"+vmFile, vmMacros)
@@ -101,12 +78,18 @@ var _ = Describe("VM validation ", func() {
 		Expect(created).To(HaveMappingRulesVerificationFailure(f))
 	},
 		table.Entry("unsupported timezone", vms.UnsupportedTimezoneVmID, "timezone-template.xml", map[string]string{"@TIMEZONE": "America/New_York"}),
+		table.Entry("unsupported s390x architecture", vms.UnsupportedArchitectureVmID, "architecture-template.xml", map[string]string{"@ARCH": "s390x"}),
+		table.Entry("USB enabled", vms.UsbEnabledVmID, "usb-template.xml", map[string]string{"@ENABLED": "true"}),
+		table.Entry("unsupported i440fx_sea_bios BIOS type", vms.UnsupportedBiosTypeVmID, "bios-type-template.xml", map[string]string{"@BIOSTYPE": "i440fx_sea_bios"}),
+		table.Entry("placement policy affinity set to 'migratable'", vms.MigratablePlacementPolicyAffinityVmID, "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "migratable"}),
+		table.Entry("kubevirt origin", vms.KubevirtOriginVmID, "origin-template.xml", map[string]string{"@ORIGIN": "kubevirt"}),
+		table.Entry("illegal images", vms.IlleagalImagesVmID, "has-illegal-images-template.xml", map[string]string{"@ILLEGALIMAGES": "true"}),
 	)
 
 	It("should block VM with diag288 watchdog", func() {
 		vmID := vms.UnsupportedDiag288WatchdogVmID
-		vmXML := test.framework.LoadFile("invalid/vms/" + vmID + "-vm.xml")
-		wdXML := test.framework.LoadFile("invalid/watchdogs/diag288.xml")
+		vmXML := test.framework.LoadTemplate("vms/watchdog-vm.xml", map[string]string{"@VMID": vmID})
+		wdXML := test.framework.LoadTemplate("watchdogs/model-template.xml", map[string]string{"@MODEL": "diag288"})
 		stubbing := test.stubResources(vmID).
 			StubGet("/ovirt-engine/api/vms/"+vmID+"/watchdogs", &wdXML).
 			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML).

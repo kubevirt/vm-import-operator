@@ -25,7 +25,13 @@ const (
 	UnsupportedDiskStorageTypeVmIDPrefix         = "unsupported-disk-storage-type-"
 	UnsupportedDiskSGIOVmIDPrefix                = "unsupported-disk-sgio-type-"
 	UnsupportedTimezoneVmID                      = "unsupported-timezone"
-	UtcCompatibleTimeZone                        = "timezone-vm"
+	UtcCompatibleTimeZoneVmID                    = "timezone-vm"
+	BIOSTypeVmIDPrefix                           = "bios-type-"
+	ArchitectureVmIDPrefix                       = "architecture-"
+	OvirtOriginVmID                              = "ovirt-origin"
+	PlacementPolicyAffinityVmIDPrefix            = "placement-policy-affinity"
+	UsbDisabledVmID                              = "usb-disabled"
+	I6300esbWatchdogVmID                         = "i6300esb-watchdog"
 )
 
 var (

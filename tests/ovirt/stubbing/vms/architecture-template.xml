@@ -1,10 +1,10 @@
-<vm href="/ovirt-engine/api/vms/usb-enabled" id="usb-enabled">
+<vm href="/ovirt-engine/api/vms/@VMID" id="@VMID">
     <name>cirrosvm</name>
     <description/>
     <comment/>
-    <link href="/ovirt-engine/api/vms/usb-enabled/diskattachments" rel="diskattachments"/>
-    <link href="/ovirt-engine/api/vms/usb-enabled/nics" rel="nics"/>
-    <link href="/ovirt-engine/api/vms/usb-enabled/graphicsconsoles" rel="graphicsconsoles"/>
+    <link href="/ovirt-engine/api/vms/@VMID/diskattachments" rel="diskattachments"/>
+    <link href="/ovirt-engine/api/vms/@VMID/nics" rel="nics"/>
+    <link href="/ovirt-engine/api/vms/@VMID/graphicsconsoles" rel="graphicsconsoles"/>
     <bios>
         <boot_menu>
             <enabled>false</enabled>
@@ -12,7 +12,7 @@
         <type>q35_sea_bios</type>
     </bios>
     <cpu>
-        <architecture>x86_64</architecture>
+        <architecture>@ARCH</architecture>
         <topology>
             <cores>1</cores>
             <sockets>1</sockets>
@@ -80,7 +80,7 @@
     </time_zone>
     <type>desktop</type>
     <usb>
-        <enabled>true</enabled>
+        <enabled>false</enabled>
     </usb>
     <next_run_configuration_exists>false</next_run_configuration_exists>
     <numa_tune_mode>interleave</numa_tune_mode>

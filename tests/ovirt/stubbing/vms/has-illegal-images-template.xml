@@ -1,12 +1,11 @@
-<vm href="/ovirt-engine/api/vms/unsupported-diag288-watchdog" id="unsupported-diag288-watchdog">
+<vm href="/ovirt-engine/api/vms/@VMID" id="@VMID">
     <name>cirrosvm</name>
     <description/>
     <comment/>
-    <link href="/ovirt-engine/api/vms/unsupported-diag288-watchdog/diskattachments" rel="diskattachments"/>
-    <link href="/ovirt-engine/api/vms/unsupported-diag288-watchdog/nics" rel="nics"/>
-    <link href="/ovirt-engine/api/vms/unsupported-diag288-watchdog/graphicsconsoles" rel="graphicsconsoles"/>
-    <link href="/ovirt-engine/api/vms/unsupported-diag288-watchdog/watchdogs" rel="watchdogs"/>
-
+    <link href="/ovirt-engine/api/vms/@VMID/diskattachments" rel="diskattachments"/>
+    <link href="/ovirt-engine/api/vms/@VMID/nics" rel="nics"/>
+    <link href="/ovirt-engine/api/vms/@VMID/graphicsconsoles" rel="graphicsconsoles"/>
+    <has_illegal_images>@ILLEGALIMAGES</has_illegal_images>
     <bios>
         <boot_menu>
             <enabled>false</enabled>

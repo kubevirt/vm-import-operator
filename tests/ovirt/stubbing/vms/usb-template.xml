@@ -1,10 +1,10 @@
-<vm href="/ovirt-engine/api/vms/unsupported-s390x-architecture" id="unsupported-s390x-architecture">
+<vm href="/ovirt-engine/api/vms/@VMID" id="@VMID">
     <name>cirrosvm</name>
     <description/>
     <comment/>
-    <link href="/ovirt-engine/api/vms/unsupported-s390x-architecture/diskattachments" rel="diskattachments"/>
-    <link href="/ovirt-engine/api/vms/unsupported-s390x-architecture/nics" rel="nics"/>
-    <link href="/ovirt-engine/api/vms/unsupported-s390x-architecture/graphicsconsoles" rel="graphicsconsoles"/>
+    <link href="/ovirt-engine/api/vms/@VMID/diskattachments" rel="diskattachments"/>
+    <link href="/ovirt-engine/api/vms/@VMID/nics" rel="nics"/>
+    <link href="/ovirt-engine/api/vms/@VMID/graphicsconsoles" rel="graphicsconsoles"/>
     <bios>
         <boot_menu>
             <enabled>false</enabled>
@@ -12,7 +12,7 @@
         <type>q35_sea_bios</type>
     </bios>
     <cpu>
-        <architecture>s390x</architecture>
+        <architecture>x86_64</architecture>
         <topology>
             <cores>1</cores>
             <sockets>1</sockets>
@@ -80,7 +80,7 @@
     </time_zone>
     <type>desktop</type>
     <usb>
-        <enabled>false</enabled>
+        <enabled>@ENABLED</enabled>
     </usb>
     <next_run_configuration_exists>false</next_run_configuration_exists>
     <numa_tune_mode>interleave</numa_tune_mode>

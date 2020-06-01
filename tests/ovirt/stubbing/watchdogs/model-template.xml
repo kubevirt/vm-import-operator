@@ -1,5 +1,5 @@
 <watchdogs>
     <watchdog>
-        <model>diag288</model>
+        <model>@MODEL</model>
     </watchdog>
 </watchdogs>
