@@ -31,7 +31,7 @@
 | VM with 'undefined' architecture should be imported and started | &check; |
 | VM with 'ovirt' origin should be imported and started | &check; |
 | VM with placement policy affinity set to 'user_migratable' should be imported and started | &check; |
-| VM with placement policy affinity set to 'migrateble' and Live Migration enabled should be imported and started | &cross; |
+| VM with placement policy affinity set to 'migrateble' and Live Migration enabled should be imported and started | pending fix to #267 |
 | VM with placement policy affinity set to 'pinned' should be imported and started | &check; |
 | VM with UTC-compatible (i.e. 'Africa/Abidjan')  timezone should be imported and started | &check; |
 | VM with correct pinning layout should be imported and started | &cross; |

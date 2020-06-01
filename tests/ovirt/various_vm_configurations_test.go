@@ -1,13 +1,19 @@
 package ovirt_test
 
 import (
+	"strings"
+
+	"github.com/onsi/ginkgo/extensions/table"
+
+	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/tests"
+
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
 	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	sapi "github.com/machacekondra/fakeovirt/pkg/api/stubbing"
 	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -79,6 +85,18 @@ var _ = Describe("Import", func() {
 			test.ensureVMIsRunning(vmID)
 		})
 
+		PIt("placement policy: 'migratable' and LiveMigration enabled", func() {
+			vmID := vms.PlacementPolicyAffinityVmIDPrefix + "migratable"
+			configMap, err := f.K8sClient.CoreV1().ConfigMaps("kubevirt").Get("kubevirt-config", metav1.GetOptions{})
+			if err != nil {
+				Fail(err.Error())
+			}
+			configMap.Data["feature-gates"] = configMap.Data["feature-gates"] + ",LiveMigration"
+			f.K8sClient.CoreV1().ConfigMaps("kubevirt").Update(configMap)
+			defer cleanUpConfigMap(f)
+			test.stub(vmID, "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "migratable"})
+			test.ensureVMIsRunning(vmID)
+		})
 	})
 	table.DescribeTable("should create started VM configured with", func(vmID string, templateFile string, macros map[string]string) {
 		test.stub(vmID, templateFile, macros)
@@ -91,10 +109,27 @@ var _ = Describe("Import", func() {
 
 })
 
+func cleanUpConfigMap(f *fwk.Framework) {
+	configMap, err := f.K8sClient.CoreV1().ConfigMaps("kubevirt").Get("kubevirt-config", metav1.GetOptions{})
+	if err != nil {
+		Fail(err.Error())
+	}
+	configMap.Data["feature-gates"] = strings.ReplaceAll(configMap.Data["feature-gates"], ",LiveMigration", "")
+	_, err = f.K8sClient.CoreV1().ConfigMaps("kubevirt").Update(configMap)
+	if err != nil {
+		Fail(err.Error())
+	}
+}
+
 func (t *variousVMConfigurationsTest) ensureVMIsRunning(vmID string) *v1.VirtualMachine {
 	f := t.framework
 	namespace := t.framework.Namespace.Name
 	vmi := utils.VirtualMachineImportCr(vmID, namespace, t.secret.Name, f.NsPrefix, true)
+	vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
+		NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
+			{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+		},
+	}
 	created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
 	Expect(err).NotTo(HaveOccurred())
@@ -117,12 +152,16 @@ func (t *variousVMConfigurationsTest) stub(vmID string, vmFile string, vmMacros 
 	consolesXML := t.framework.LoadFile("graphic-consoles/vnc.xml")
 	vmMacros["@VMID"] = vmID
 	vmXML := t.framework.LoadTemplate("vms/"+vmFile, vmMacros)
-	nicsXML := t.framework.LoadFile("nics/empty.xml")
+	nicsXML := t.framework.LoadFile("nics/one.xml")
+	networkXML := t.framework.LoadFile("networks/net-1.xml")
+	vnicProfileXML := t.framework.LoadFile("vnic-profiles/vnic-profile-1.xml")
 	builder := sapi.NewStubbingBuilder().
 		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXML).
 		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXML).
 		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXML).
 		StubGet("/ovirt-engine/api/disks/disk-1", &diskXML).
+		StubGet("/ovirt-engine/api/networks/net-1", &networkXML).
+		StubGet("/ovirt-engine/api/vnicprofiles/vnic-profile-1", &vnicProfileXML).
 		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXML).
 		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML)
 	err := t.framework.OvirtStubbingClient.Stub(builder.Build())
