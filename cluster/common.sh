@@ -2,11 +2,17 @@
 
 set -e
 
+function debug {
+    ./cluster/kubectl.sh get events
+    ./cluster/kubectl.sh get all -n $1
+    ./cluster/kubectl.sh get pod -n $1 | awk 'NR>1 {print $1}' | xargs ./cluster/kubectl.sh logs -n $1 --tail=50
+}
+
 function install_cdi {
     export VERSION=$(curl -s https://github.com/kubevirt/containerized-data-importer/releases/latest | grep -o "v[0-9]\.[0-9]*\.[0-9]*")
     ./cluster/kubectl.sh apply -f https://github.com/kubevirt/containerized-data-importer/releases/download/$VERSION/cdi-operator.yaml
     ./cluster/kubectl.sh apply -f https://github.com/kubevirt/containerized-data-importer/releases/download/$VERSION/cdi-cr.yaml
-    ./cluster/kubectl.sh wait cdis.cdi.kubevirt.io/cdi --for=condition=Available --timeout=600s
+    ./cluster/kubectl.sh wait cdis.cdi.kubevirt.io/cdi --for=condition=Available --timeout=1200s || debug cdi
 }
 
 function install_kubevirt {
@@ -14,12 +20,12 @@ function install_kubevirt {
     ./cluster/kubectl.sh apply -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VER}/kubevirt-operator.yaml
     ./cluster/kubectl.sh create configmap -n kubevirt kubevirt-config --from-literal=feature-gates=DataVolumes
     ./cluster/kubectl.sh apply -f https://github.com/kubevirt/kubevirt/releases/download/${KUBEVIRT_VER}/kubevirt-cr.yaml
-    ./cluster/kubectl.sh -n kubevirt wait kv kubevirt --for condition=Available --timeout=600s
+    ./cluster/kubectl.sh -n kubevirt wait kv kubevirt --for condition=Available --timeout=1200s || debug kubevirt
 }
 
 function install_imageio {
     ./cluster/kubectl.sh apply -f cluster/manifests/imageio.yaml
-    ./cluster/kubectl.sh -n cdi wait deploy imageio-deployment --for condition=Available --timeout=1200s
+    ./cluster/kubectl.sh -n cdi wait deploy imageio-deployment --for condition=Available --timeout=1200s || debug cdi
     ./cluster/kubectl.sh -n cdi port-forward -n cdi service/imageio 12346:12346 &
 }
 
