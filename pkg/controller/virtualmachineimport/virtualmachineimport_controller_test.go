@@ -497,6 +497,22 @@ var _ = Describe("Reconcile steps", func() {
 			Expect(name).To(Equal(""))
 			Expect(err).To(BeNil())
 		})
+
+		It("should succeed to create vm with tracking label: ", func() {
+			instance.Labels = map[string]string{TrackingLabel: "My tracker"}
+			create = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+				switch obj.(type) {
+				case *kubevirtv1.VirtualMachine:
+					Expect(obj.(*kubevirtv1.VirtualMachine).Labels[TrackingLabel], "My tracker")
+				}
+				return nil
+			}
+
+			name, err := reconciler.createVM(mock, instance, mapper)
+
+			Expect(name).To(Equal(""))
+			Expect(err).To(BeNil())
+		})
 	})
 
 	Describe("startVM step", func() {
@@ -910,6 +926,28 @@ var _ = Describe("Reconcile steps", func() {
 			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
 
 			Expect(err).To(Not(BeNil()))
+		})
+
+		It("should create new dv with tracking label: ", func() {
+			instance.Labels = map[string]string{TrackingLabel: "My tracker"}
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *cdiv1.DataVolume:
+					return errors.NewNotFound(schema.GroupResource{}, "")
+				}
+				return nil
+			}
+			create = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+				switch obj.(type) {
+				case *cdiv1.DataVolume:
+					Expect(obj.(*cdiv1.DataVolume).Labels[TrackingLabel], "My tracker")
+				}
+				return nil
+			}
+
+			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
+
+			Expect(err).To(BeNil())
 		})
 
 		It("should not find a dv: ", func() {

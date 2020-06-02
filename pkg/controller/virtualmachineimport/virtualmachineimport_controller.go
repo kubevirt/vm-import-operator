@@ -23,6 +23,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
@@ -44,6 +45,8 @@ const (
 	AnnCurrentProgress = "vmimport.v2v.kubevirt.io/progress"
 	// AnnPropagate is annotation defining which values to propagate
 	AnnPropagate = "vmimport.v2v.kubevirt.io/propagate-annotations"
+	// TrackingLabel is a label used to track related entities.
+	TrackingLabel = "vmimport.v2v.kubevirt.io/tracker"
 	// constants
 	progressStart         = "0"
 	progressCreatingVM    = "5"
@@ -431,6 +434,9 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 	// propagate annotations
 	setAnnotations(instance, vmSpec)
 
+	// propagate tracking label
+	setTrackerLabel(vmSpec.ObjectMeta, instance)
+
 	// Update progress:
 	if err = r.updateProgress(instance, progressStart); err != nil {
 		return "", err
@@ -509,6 +515,19 @@ func setAnnotations(instance *v2vv1alpha1.VirtualMachineImport, vmSpec *kubevirt
 			return
 		}
 		utils.WithLabels(annotations, prop)
+	}
+}
+
+func setTrackerLabel(meta metav1.ObjectMeta, instance *v2vv1alpha1.VirtualMachineImport) {
+	iLabels := instance.GetLabels()
+	tracker := iLabels[TrackingLabel]
+	if tracker != "" {
+		labels := meta.GetLabels()
+		if labels == nil {
+			labels = map[string]string{}
+			meta.SetLabels(labels)
+		}
+		labels[TrackingLabel] = tracker
 	}
 }
 
@@ -622,6 +641,9 @@ func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Prov
 		if err := controllerutil.SetControllerReference(instance, &dv, r.scheme); err != nil {
 			return err
 		}
+
+		// Set tracking label
+		setTrackerLabel(dv.ObjectMeta, instance)
 
 		err = r.client.Create(context.TODO(), &dv)
 		if err != nil {
