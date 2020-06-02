@@ -17,7 +17,10 @@ import (
 
 const memoryGI = 1024 * 1024 * 1024
 
-var targetVMName = "myvm"
+var (
+	targetVMName   = "myvm"
+	expectedDVName = targetVMName + "-" + "123"
+)
 
 var (
 	findOs   func(vm *ovirtsdk.Vm) (string, error)
@@ -223,8 +226,8 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		namespace := "the-namespace"
 		mapper := mapper.NewOvirtMapper(vm, &mappings, credentials, namespace, &osFinder)
-		daName := "123"
-		dvs, _ := mapper.MapDataVolumes()
+		daName := expectedDVName
+		dvs, _ := mapper.MapDataVolumes(&targetVMName)
 
 		Expect(dvs).To(HaveLen(1))
 		Expect(dvs).To(HaveKey(daName))
@@ -270,11 +273,11 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
-		dvs, _ := mapper.MapDataVolumes()
+		dvs, _ := mapper.MapDataVolumes(&targetVMName)
 
 		Expect(dvs).To(HaveLen(1))
-		Expect(dvs["123"].Spec.PVC.StorageClassName).To(Not(BeNil()))
-		Expect(*dvs["123"].Spec.PVC.StorageClassName).To(Equal(targetStorageClass))
+		Expect(dvs[expectedDVName].Spec.PVC.StorageClassName).To(Not(BeNil()))
+		Expect(*dvs[expectedDVName].Spec.PVC.StorageClassName).To(Equal(targetStorageClass))
 	})
 
 	It("should map empty disk storage class to nil", func() {
@@ -296,11 +299,11 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
-		dvs, err := mapper.MapDataVolumes()
+		dvs, err := mapper.MapDataVolumes(&targetVMName)
 
 		Expect(err).To(BeNil())
 		Expect(dvs).To(HaveLen(1))
-		Expect(dvs["123"].Spec.PVC.StorageClassName).To(BeNil())
+		Expect(dvs[expectedDVName].Spec.PVC.StorageClassName).To(BeNil())
 	})
 	It("should map empty storage domain storage class to nil", func() {
 		storageDomainName := "mystoragedomain"
@@ -321,11 +324,11 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
-		dvs, err := mapper.MapDataVolumes()
+		dvs, err := mapper.MapDataVolumes(&targetVMName)
 
 		Expect(err).To(BeNil())
 		Expect(dvs).To(HaveLen(1))
-		Expect(dvs["123"].Spec.PVC.StorageClassName).To(BeNil())
+		Expect(dvs[expectedDVName].Spec.PVC.StorageClassName).To(BeNil())
 	})
 	It("should map missing mapping to nil storage class", func() {
 		mappings := v2vv1alpha1.OvirtMappings{
@@ -334,11 +337,11 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
-		dvs, err := mapper.MapDataVolumes()
+		dvs, err := mapper.MapDataVolumes(&targetVMName)
 
 		Expect(err).To(BeNil())
 		Expect(dvs).To(HaveLen(1))
-		Expect(dvs["123"].Spec.PVC.StorageClassName).To(BeNil())
+		Expect(dvs[expectedDVName].Spec.PVC.StorageClassName).To(BeNil())
 	})
 
 })
