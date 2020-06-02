@@ -121,7 +121,16 @@ Spec:
         name: ovirt_storage_domain_1 # maps ovirt storage domains to storage class
       target: storage_class_1
 ```
-#### Common Templates
+
+### Resource mapping resolution
+
+The resource mapping is resolved in following manner:
+ - If the mapping is defined in one place (in the import CR or in the ResourceMapping CR), that mapping is used;
+ - If the mapping of the same resource is defined in two places (in the import CR and in the ResourceMapping CR), the mapping from the import CR is used;
+ - If the mapping of a disk is defined both through the `storageMappings` and `diskMappings`, the latter is used.  
+ - If mappping for a disk is not defined in any way, the default storage class for the target cluster will be assumed. Default storage class can also be enforced by specifying empty string `""` target for either disk or storage mapping.
+
+### Common Templates
 The operator defines a map of OS types to equivalent common templates OS types.
 When a match is found between the imported VM operating system via operator's OS map to a common template, that template will be used to create the VM spec of the target VM.
 The user can provide a custom map to override or extend operator's OS map by providing the map via environment variables to be set for the operator's deployment resource. Both OS config-map name and namespace are required:
