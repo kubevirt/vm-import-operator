@@ -37,7 +37,7 @@ type Mapper interface {
 	CreateEmptyVM(vmName *string) *kubevirtv1.VirtualMachine
 	ResolveVMName(targetVMName *string) *string
 	MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachine) (*kubevirtv1.VirtualMachine, error)
-	MapDataVolumes() (map[string]cdiv1.DataVolume, error)
+	MapDataVolumes(targetVMName *string) (map[string]cdiv1.DataVolume, error)
 	MapDisks(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume)
 }
 

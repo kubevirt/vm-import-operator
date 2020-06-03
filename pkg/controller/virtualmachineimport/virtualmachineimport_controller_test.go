@@ -1484,7 +1484,7 @@ func (m *mockMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachi
 }
 
 // MapDataVolumes implements Mapper.MapDataVolumes
-func (m *mockMapper) MapDataVolumes() (map[string]cdiv1.DataVolume, error) {
+func (m *mockMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.DataVolume, error) {
 	return map[string]cdiv1.DataVolume{"123": {}}, nil
 }
 

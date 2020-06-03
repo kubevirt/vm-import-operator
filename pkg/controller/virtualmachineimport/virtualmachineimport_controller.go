@@ -286,7 +286,7 @@ func (r *ReconcileVirtualMachineImport) addWatchForImportPod(instance *v2vv1alph
 }
 
 func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName, vmiName types.NamespacedName) error {
-	dvs, err := mapper.MapDataVolumes()
+	dvs, err := mapper.MapDataVolumes(&vmName.Name)
 	if err != nil {
 		return err
 	}

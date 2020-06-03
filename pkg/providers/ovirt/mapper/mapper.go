@@ -199,7 +199,7 @@ func (o *OvirtMapper) MapDisks(vmSpec *kubevirtv1.VirtualMachine, dvs map[string
 	disks := make([]kubevirtv1.Disk, len(dvs))
 	for id := range dvs {
 		diskAttachments, _ := o.vm.DiskAttachments()
-		diskAttachment := getDiskAttachmentByID(id, diskAttachments)
+		diskAttachment := getDiskAttachmentByID(id, diskAttachments, vmSpec.ObjectMeta.Name)
 		iface, _ := diskAttachment.Interface()
 		disks[i] = kubevirtv1.Disk{
 			Name: fmt.Sprintf("dv-%v", i),
@@ -229,14 +229,15 @@ func (o *OvirtMapper) mapDiskInterface(iface ovirtsdk.DiskInterface) string {
 }
 
 // MapDataVolumes map the oVirt VM disks to the map of CDI DataVolumes specification, where
-// map id is the id of the oVirt disk
-func (o *OvirtMapper) MapDataVolumes() (map[string]cdiv1.DataVolume, error) {
+// map key is the target-vm-name + id of the oVirt disk
+func (o *OvirtMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.DataVolume, error) {
 	// TODO: stateless, boot_devices, floppy/cdrom
 	diskAttachments, _ := o.vm.DiskAttachments()
 	dvs := make(map[string]cdiv1.DataVolume, len(diskAttachments.Slice()))
 
 	for _, diskAttachment := range diskAttachments.Slice() {
-		attachID, _ := diskAttachment.Id()
+		diskAttachID, _ := diskAttachment.Id()
+		dvName := buildDataVolumeName(*targetVMName, diskAttachID)
 		disk, _ := diskAttachment.Disk()
 		diskID, _ := disk.Id()
 		sdClass := o.getStorageClassForDisk(disk, o.mappings)
@@ -247,13 +248,13 @@ func (o *OvirtMapper) MapDataVolumes() (map[string]cdiv1.DataVolume, error) {
 		}
 		quantity, _ := resource.ParseQuantity(diskSizeConverted)
 
-		dvs[attachID] = cdiv1.DataVolume{
+		dvs[dvName] = cdiv1.DataVolume{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: cdiAPIVersion,
 				Kind:       dataVolumeKind,
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      attachID,
+				Name:      dvName,
 				Namespace: o.namespace,
 			},
 			Spec: cdiv1.DataVolumeSpec{
@@ -278,7 +279,7 @@ func (o *OvirtMapper) MapDataVolumes() (map[string]cdiv1.DataVolume, error) {
 			},
 		}
 		if sdClass != nil {
-			dvs[attachID].Spec.PVC.StorageClassName = sdClass
+			dvs[dvName].Spec.PVC.StorageClassName = sdClass
 		}
 	}
 	return dvs, nil
@@ -704,11 +705,16 @@ func (o *OvirtMapper) mapTimeZone() *kubevirtv1.Clock {
 	return &clock
 }
 
-func getDiskAttachmentByID(id string, diskAttachments *ovirtsdk.DiskAttachmentSlice) *ovirtsdk.DiskAttachment {
+func getDiskAttachmentByID(id string, diskAttachments *ovirtsdk.DiskAttachmentSlice, targetVMName string) *ovirtsdk.DiskAttachment {
 	for _, diskAttachment := range diskAttachments.Slice() {
-		if diskID, ok := diskAttachment.Id(); ok && diskID == id {
+		if diskID, ok := diskAttachment.Id(); ok && buildDataVolumeName(targetVMName, diskID) == id {
 			return diskAttachment
 		}
 	}
 	return nil
+}
+
+func buildDataVolumeName(targetVMName string, diskAttachID string) string {
+	dvName, _ := utils.NormalizeName(targetVMName + "-" + diskAttachID)
+	return dvName
 }
