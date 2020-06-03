@@ -97,6 +97,14 @@ var _ = Describe("Import", func() {
 			test.stub(vmID, "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "migratable"})
 			test.ensureVMIsRunning(vmID)
 		})
+
+		PIt("Exact CPU pinning", func() {
+			vmID := vms.CPUPinningVmID
+			test.stub(vmID, "cpu-pinning-template.xml", map[string]string{})
+			vm := test.ensureVMIsRunning(vmID)
+			spec := vm.Spec.Template.Spec
+			Expect(spec.Domain.CPU.DedicatedCPUPlacement).To(BeTrue())
+		})
 	})
 	table.DescribeTable("should create started VM configured with", func(vmID string, templateFile string, macros map[string]string) {
 		test.stub(vmID, templateFile, macros)
