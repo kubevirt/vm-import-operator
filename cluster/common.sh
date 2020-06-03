@@ -37,3 +37,10 @@ function ensure_golang {
         tar -C /usr/local -xzf ${GOVERSION}
     fi
 }
+
+function install_templates {
+    if [[ "$KUBEVIRT_PROVIDER" =~ (ocp|okd)- ]]; then
+      export TEMPLATES_VER=$(curl -s https://github.com/kubevirt/common-templates/releases/latest | grep -o "v[0-9]\.[0-9]*\.[0-9]*")
+      ./cluster/kubectl.sh apply -f https://github.com/kubevirt/common-templates/releases/download/${TEMPLATES_VER}/common-templates-${TEMPLATES_VER}.yaml
+    fi
+}

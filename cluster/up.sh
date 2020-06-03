@@ -34,3 +34,4 @@ ensure_golang
 install_cdi
 install_kubevirt
 install_imageio
+install_templates
