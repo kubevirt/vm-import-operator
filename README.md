@@ -99,6 +99,16 @@ EOF
 kubectl get vmimports example-virtualmachineimport -n default
 ```
 
+### Wait for VM Import resource to complete:
+```bash
+kubectl wait vmimports example-virtualmachineimport -n default --for=condition=Succeeded
+```
+
+### View vm-import logs:
+```bash
+kubectl logs -n kubevirt-hyperconverged deploy/vm-import-controller
+```
+
 An example of a VM Import resource during creation:
 ```
 apiVersion: v2v.kubevirt.io/v1alpha1
