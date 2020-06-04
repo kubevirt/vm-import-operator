@@ -699,7 +699,7 @@ func (o *OvirtMapper) mapTimeZone() *kubevirtv1.Clock {
 			}
 		}
 	}
-	clock := kubevirtv1.Clock{}
+	clock := kubevirtv1.Clock{Timer: &kubevirtv1.Timer{}}
 	clock.UTC = &offset
 
 	return &clock
