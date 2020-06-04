@@ -1526,7 +1526,7 @@ func (m *mockMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.Data
 	return map[string]cdiv1.DataVolume{"123": {}}, nil
 }
 
-// MapDisks implements Mapper.MapDataVolumes
+// MapDisks implements Mapper.MapDisks
 func (m *mockMapper) MapDisks(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume) {
 }
 
