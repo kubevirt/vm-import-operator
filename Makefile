@@ -1,7 +1,7 @@
 all: fmt check
 
 # Always keep the last released version here
-VERSION_REPLACES ?= v0.0.2
+VERSION_REPLACES ?= v0.0.3
 VERSION ?= v0.0.1
 export VERSION := $(VERSION)
 
