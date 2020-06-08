@@ -30,6 +30,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: my-secret-with-ovirt-credentials
+  namespace: default
 type: Opaque
 stringData:
   ovirt: |
