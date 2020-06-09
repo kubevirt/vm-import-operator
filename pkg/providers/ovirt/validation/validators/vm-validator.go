@@ -2,13 +2,13 @@ package validators
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/kubevirt/vm-import-operator/pkg/config"
 
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
+	outils "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
 
@@ -201,20 +201,11 @@ func isValidArchitecture(cpu *ovirtsdk.Cpu) (ValidationFailure, bool) {
 
 func isValidCPUTune(cpu *ovirtsdk.Cpu) (ValidationFailure, bool) {
 	if tune, ok := cpu.CpuTune(); ok {
-		if pins, ok := tune.VcpuPins(); ok {
-			var pinMapping = make(map[int]int64)
-			var pinSlice = pins.Slice()
-			for _, pin := range pinSlice {
-				if cpuID, err := strconv.Atoi(pin.MustCpuSet()); err == nil {
-					pinMapping[cpuID] = pin.MustVcpu()
-				}
-			}
-			if len(pinMapping) != len(pinSlice) {
-				return ValidationFailure{
-					ID:      VMCpuTuneID,
-					Message: "VM uses unsupported CPU pinning layout. Only 1 vCPU - unique 1 pCpu pinning is supported",
-				}, false
-			}
+		if !outils.IsCPUPinningExact(tune) {
+			return ValidationFailure{
+				ID:      VMCpuTuneID,
+				Message: "VM uses unsupported CPU pinning layout. Only 1 vCPU - unique 1 pCpu pinning is supported",
+			}, false
 		}
 	}
 	return ValidationFailure{}, true
@@ -445,7 +436,7 @@ func isValidUsb(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
 		if enabled, ok := usb.Enabled(); ok && enabled {
 			return ValidationFailure{
 				ID:      VMUsbID,
-				Message: fmt.Sprintf("VM has USB enabled"),
+				Message: "VM has USB enabled",
 			}, false
 		}
 	}

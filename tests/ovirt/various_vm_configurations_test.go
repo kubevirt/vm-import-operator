@@ -98,7 +98,12 @@ var _ = Describe("Import", func() {
 			test.ensureVMIsRunning(vmID)
 		})
 
-		PIt("Exact CPU pinning", func() {
+		It("exact CPU pinning", func() {
+			err := f.AddLabelToAllNodes("cpumanager", "true")
+			if err != nil {
+				Fail(err.Error())
+			}
+			defer f.RemoveLabelFromNodes("cpumanager")
 			vmID := vms.CPUPinningVmID
 			test.stub(vmID, "cpu-pinning-template.xml", map[string]string{})
 			vm := test.ensureVMIsRunning(vmID)

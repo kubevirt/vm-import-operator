@@ -12,6 +12,40 @@ import (
 	v1 "kubevirt.io/client-go/api/v1"
 )
 
+// AddLabelToAllNodes adds label with given value to all schedulable nodes
+func (f *Framework) AddLabelToAllNodes(name string, value string) error {
+	nodeList, err := f.GetAllSchedulableNodes()
+	if err != nil {
+		return err
+	}
+	for _, node := range nodeList.Items {
+		newNode := node.DeepCopy()
+		newNode.Labels[name] = value
+		_, err = f.K8sClient.CoreV1().Nodes().Update(newNode)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RemoveLabelFromNodes removes label from all schedulable nodes
+func (f *Framework) RemoveLabelFromNodes(name string) error {
+	nodeList, err := f.GetAllSchedulableNodes()
+	if err != nil {
+		return err
+	}
+	for _, node := range nodeList.Items {
+		newNode := node.DeepCopy()
+		delete(newNode.Labels, name)
+		_, err = f.K8sClient.CoreV1().Nodes().Update(newNode)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // GetAllSchedulableNodes retrieves all schedulable nodes
 func (f *Framework) GetAllSchedulableNodes() (*k8sv1.NodeList, error) {
 	return f.K8sClient.CoreV1().Nodes().List(metav1.ListOptions{LabelSelector: v1.NodeSchedulable + "=" + "true"})
