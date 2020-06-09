@@ -34,7 +34,7 @@
 | VM with placement policy affinity set to 'migrateble' and Live Migration enabled should be imported and started | pending fix to #267 |
 | VM with placement policy affinity set to 'pinned' should be imported and started | &check; |
 | VM with UTC-compatible (i.e. 'Africa/Abidjan')  timezone should be imported and started | &check; |
-| VM with correct pinning layout should be imported and started | pending fix to #269 |
+| VM with correct pinning layout should be imported and started | &check; |
 | VM with disabled USB should be imported and started | &check; |
 | VM with 'i6300esb' watchdog should be imported and started | &check; |
 

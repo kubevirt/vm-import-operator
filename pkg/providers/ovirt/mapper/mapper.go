@@ -131,7 +131,8 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 	}
 
 	// Map CPU
-	vmSpec.Spec.Template.Spec.Domain.CPU = o.mapCPU()
+	cpu := o.mapCPU()
+	vmSpec.Spec.Template.Spec.Domain.CPU = cpu
 
 	// Map bios
 	vmSpec.Spec.Template.Spec.Domain.Firmware = o.mapFirmware()
@@ -146,7 +147,7 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 	vmSpec.Spec.Template.Spec.Domain.Memory = o.mapMemory()
 
 	// Memory policy set the memory limit
-	if vmSpec.Spec.Template.Spec.Domain.Resources, err = o.mapResourceRequirements(); err != nil {
+	if vmSpec.Spec.Template.Spec.Domain.Resources, err = o.mapResourceRequirements(cpu.DedicatedCPUPlacement); err != nil {
 		return vmSpec, err
 	}
 
@@ -508,6 +509,11 @@ func (o *OvirtMapper) mapCPU() *kubevirtv1.CPU {
 				cpu.Threads = uint32(threads)
 			}
 		}
+		if tune, ok := cpuDef.CpuTune(); ok {
+			if outils.IsCPUPinningExact(tune) {
+				cpu.DedicatedCPUPlacement = true
+			}
+		}
 	}
 
 	// Custom cpu model
@@ -561,19 +567,8 @@ func (o *OvirtMapper) mapHugePages() *kubevirtv1.Hugepages {
 	return nil
 }
 
-func (o *OvirtMapper) mapResourceRequirements() (kubevirtv1.ResourceRequirements, error) {
+func (o *OvirtMapper) mapResourceRequirements(dedicatedCPUPlacement bool) (kubevirtv1.ResourceRequirements, error) {
 	reqs := kubevirtv1.ResourceRequirements{}
-
-	// Requests
-	ovirtVMMemory, _ := o.vm.Memory()
-	vmMemoryConverted, err := utils.FormatBytes(ovirtVMMemory)
-	if err != nil {
-		return reqs, err
-	}
-	guestMemory, _ := resource.ParseQuantity(vmMemoryConverted)
-	reqs.Requests = map[corev1.ResourceName]resource.Quantity{
-		corev1.ResourceMemory: guestMemory,
-	}
 
 	// Limits
 	memoryPolicy, _ := o.vm.MemoryPolicy()
@@ -585,6 +580,21 @@ func (o *OvirtMapper) mapResourceRequirements() (kubevirtv1.ResourceRequirements
 	maxMemoryQuantity, _ := resource.ParseQuantity(maxMemoryConverted)
 	reqs.Limits = map[corev1.ResourceName]resource.Quantity{
 		corev1.ResourceMemory: maxMemoryQuantity,
+	}
+
+	// Requests
+	requestedMemory := maxMemoryQuantity
+	if !dedicatedCPUPlacement {
+		ovirtVMMemory, _ := o.vm.Memory()
+		vmMemoryConverted, err := utils.FormatBytes(ovirtVMMemory)
+		if err != nil {
+			return reqs, err
+		}
+		requestedMemory, _ = resource.ParseQuantity(vmMemoryConverted)
+	}
+
+	reqs.Requests = map[corev1.ResourceName]resource.Quantity{
+		corev1.ResourceMemory: requestedMemory,
 	}
 
 	return reqs, nil

@@ -16,6 +16,7 @@ import (
 )
 
 const memoryGI = 1024 * 1024 * 1024
+const maxMemoryGI = 4 * 1024 * 1024 * 1024
 
 var (
 	targetVMName   = "myvm"
@@ -56,6 +57,23 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(vmSpecCPU.Cores).To(Equal(uint32(vmTopology.MustCores())))
 		Expect(vmSpecCPU.Sockets).To(Equal(uint32(vmTopology.MustSockets())))
 		Expect(vmSpecCPU.Threads).To(Equal(uint32(vmTopology.MustThreads())))
+	})
+
+	It("should map CPU pinning", func() {
+		vm = createVM()
+		vm.MustCpu().SetCpuTune(
+			ovirtsdk.NewCpuTuneBuilder().
+				VcpuPinsOfAny(
+					ovirtsdk.NewVcpuPinBuilder().CpuSet("0").Vcpu(0).MustBuild()).
+				MustBuild())
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
+		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+
+		vmSpecCPU := vmSpec.Spec.Template.Spec.Domain.CPU
+
+		Expect(vmSpecCPU.DedicatedCPUPlacement).To(BeTrue())
+		Expect(vmSpec.Spec.Template.Spec.Domain.Resources.Requests.Memory().Value()).To(BeEquivalentTo(vmSpec.Spec.Template.Spec.Domain.Resources.Limits.Memory().Value()))
+		Expect(vmSpec.Spec.Template.Spec.Domain.Resources.Requests.Memory().Value()).To(BeEquivalentTo(maxMemoryGI))
 	})
 
 	It("should map BIOS", func() {
@@ -368,7 +386,7 @@ func createVM() *ovirtsdk.Vm {
 		Memory(memoryGI).
 		MemoryPolicy(
 			ovirtsdk.NewMemoryPolicyBuilder().
-				Max(memoryGI).MustBuild()).
+				Max(maxMemoryGI).MustBuild()).
 		GraphicsConsolesOfAny(
 			ovirtsdk.NewGraphicsConsoleBuilder().
 				Name("testConsole").MustBuild()).

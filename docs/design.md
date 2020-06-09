@@ -127,7 +127,7 @@ Spec:
 The resource mapping is resolved in following manner:
  - If the mapping is defined in one place (in the import CR or in the ResourceMapping CR), that mapping is used;
  - If the mapping of the same resource is defined in two places (in the import CR and in the ResourceMapping CR), the mapping from the import CR is used;
- - If the mapping of a disk is defined both through the `storageMappings` and `diskMappings`, the latter is used.  
+ - If the mapping of a disk is defined both through the `storageMappings` and `diskMappings`, the latter is used.
  - If mappping for a disk is not defined in any way, the default storage class for the target cluster will be assumed. Default storage class can also be enforced by specifying empty string `""` target for either disk or storage mapping.
 
 ### Common Templates
