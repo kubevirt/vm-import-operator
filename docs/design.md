@@ -21,7 +21,7 @@ Each will be described in details:
 
 VirtualMachineImport is a namespaced custom resource that defines the source of the VM, the identifier of the VM on the source and the mapping to be used for the import.
 
-An example of the [VirtualMachineImport](https://github.com/kubevirt/vm-import-operator/blob/master/deploy/crds/v2v_v1alpha1_virtualmachineimport_cr.yaml) resource is shown below.
+An example of the [VirtualMachineImport](/examples/ovirt/vmimport-external-mapping.yaml) resource is shown below.
 
 ```yaml
 apiVersion: v2v.kubevirt.io/v1alpha1
@@ -127,7 +127,7 @@ Spec:
 The resource mapping is resolved in following manner:
  - If the mapping is defined in one place (in the import CR or in the ResourceMapping CR), that mapping is used;
  - If the mapping of the same resource is defined in two places (in the import CR and in the ResourceMapping CR), the mapping from the import CR is used;
- - If the mapping of a disk is defined both through the `storageMappings` and `diskMappings`, the latter is used.  
+ - If the mapping of a disk is defined both through the `storageMappings` and `diskMappings`, the latter is used.
  - If mappping for a disk is not defined in any way, the default storage class for the target cluster will be assumed. Default storage class can also be enforced by specifying empty string `""` target for either disk or storage mapping.
 
 ### Common Templates
@@ -168,7 +168,7 @@ data:
 
 ### Provider Secret
 
-The [example](https://github.com/kubevirt/vm-import-operator/blob/master/examples/ovirt-secret.yaml) of secret below defines oVirt connectivity and authentication method:
+The [example](/examples/ovirt/secret.yaml) of secret below defines oVirt connectivity and authentication method:
 
 ```yaml
 apiVersion: v1

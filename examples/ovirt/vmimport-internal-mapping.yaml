@@ -1,0 +1,32 @@
+apiVersion: v2v.kubevirt.io/v1alpha1
+kind: VirtualMachineImport
+metadata:
+  name: vmimport-example
+  namespace: default
+spec:
+  providerCredentialsSecret:
+    name: my-secret-with-ovirt-credentials
+    namespace: default
+  targetVmName: examplevm
+  startVm: true
+  source:
+    ovirt:
+      vm:
+        id: 80554327-0569-496b-bdeb-fcbbf52b827b
+      mappings:
+        networkMapping:
+          - source:
+              name: red/profile1 # maps of ovirt 'logic network/vnic profile' to network attachment definition
+            target:
+              name: pod
+            type: pod
+        storageMappings:
+          - source:
+              name: storage_domain_1
+            target:
+              name: storage_class_1
+        diskMappings: # specifies per-disk placement on storage class
+          - source:
+              id: 8181ecc1-5db8-4193-9c92-3ddab3be7b05
+            target:
+              name: storage_class_1
