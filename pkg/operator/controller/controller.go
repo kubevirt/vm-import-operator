@@ -489,8 +489,6 @@ func (r *ReconcileVMImportConfig) cleanupUnusedResources(logger logr.Logger, cr 
 		&rbacv1.ClusterRoleBindingList{},
 		&rbacv1.ClusterRoleList{},
 		&appsv1.DeploymentList{},
-		&rbacv1.RoleBindingList{},
-		&rbacv1.RoleList{},
 		&corev1.ServiceAccountList{},
 	}
 
