@@ -13,12 +13,13 @@ import (
 
 type beRunningMatcher struct {
 	pollingMatcher
+	lastVirtualMachineInstance *v1.VirtualMachineInstance
 }
 
 // BeRunning creates the matcher
 func BeRunning(testFramework *framework.Framework) types.GomegaMatcher {
 	matcher := beRunningMatcher{}
-	matcher.timeout = 3 * time.Minute
+	matcher.timeout = 5 * time.Minute
 	matcher.testFramework = testFramework
 	return &matcher
 }
@@ -27,11 +28,12 @@ func BeRunning(testFramework *framework.Framework) types.GomegaMatcher {
 func (matcher *beRunningMatcher) Match(actual interface{}) (bool, error) {
 	vm := actual.(v1.VirtualMachine)
 	pollErr := wait.PollImmediate(5*time.Second, matcher.timeout, func() (bool, error) {
-		vm, err := matcher.testFramework.KubeVirtClient.VirtualMachineInstance(vm.Namespace).Get(vm.Name, &metav1.GetOptions{})
+		vmi, err := matcher.testFramework.KubeVirtClient.VirtualMachineInstance(vm.Namespace).Get(vm.Name, &metav1.GetOptions{})
+		matcher.lastVirtualMachineInstance = vmi
 		if err != nil {
 			return false, err
 		}
-		if vm.Status.Phase == v1.Running {
+		if vmi.Status.Phase == v1.Running {
 			return true, nil
 		}
 		return false, nil
@@ -44,10 +46,10 @@ func (matcher *beRunningMatcher) Match(actual interface{}) (bool, error) {
 
 // FailureMessage is a message shown for failure
 func (matcher *beRunningMatcher) FailureMessage(actual interface{}) (message string) {
-	return format.Message(actual, "to be a running VirtualMachineInstance")
+	return format.Message(matcher.lastVirtualMachineInstance, "to be a running VirtualMachineInstance")
 }
 
 // NegatedFailureMessage us  message shown for negated failure
 func (matcher *beRunningMatcher) NegatedFailureMessage(actual interface{}) (message string) {
-	return format.Message(actual, "not to be a running VirtualMachineInstance")
+	return format.Message(matcher.lastVirtualMachineInstance, "not to be a running VirtualMachineInstance")
 }
