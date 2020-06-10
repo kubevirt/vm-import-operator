@@ -21,7 +21,7 @@ Each will be described in details:
 
 VirtualMachineImport is a namespaced custom resource that defines the source of the VM, the identifier of the VM on the source and the mapping to be used for the import.
 
-An example of the [VirtualMachineImport](https://github.com/kubevirt/vm-import-operator/blob/master/deploy/crds/v2v_v1alpha1_virtualmachineimport_cr.yaml) resource is shown below.
+An example of the [VirtualMachineImport](/examples/ovirt/vmimport-external-mapping.yaml) resource is shown below.
 
 ```yaml
 apiVersion: v2v.kubevirt.io/v1alpha1
@@ -168,7 +168,7 @@ data:
 
 ### Provider Secret
 
-The [example](https://github.com/kubevirt/vm-import-operator/blob/master/examples/ovirt-secret.yaml) of secret below defines oVirt connectivity and authentication method:
+The [example](/examples/ovirt/secret.yaml) of secret below defines oVirt connectivity and authentication method:
 
 ```yaml
 apiVersion: v1

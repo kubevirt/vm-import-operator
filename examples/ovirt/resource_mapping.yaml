@@ -1,8 +1,8 @@
 apiVersion: v2v.kubevirt.io/v1alpha1
 kind: ResourceMapping
 metadata:
-  name: example-resourcemappings
-  namespace: example-ns
+  name: example
+  namespace: default
 spec:
   ovirt:
     networkMappings:
