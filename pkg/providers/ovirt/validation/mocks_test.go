@@ -34,6 +34,10 @@ func (v *mockValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]
 	return validateNetworkMappingsMock(nics, mapping, crNamespace)
 }
 
+func (v *mockValidator) ValidateDiskStatus(diskAttachment ovirtsdk.DiskAttachment) bool {
+	return true
+}
+
 func (v *mockValidator) ValidateStorageMapping(
 	attachments []*ovirtsdk.DiskAttachment,
 	storageMapping *[]v2vv1alpha1.ResourceMappingItem,

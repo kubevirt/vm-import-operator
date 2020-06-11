@@ -99,6 +99,7 @@ var checkToAction = map[validators.CheckID]action{
 // Validator validates different properties of a VM
 type Validator interface {
 	ValidateVM(vm *ovirtsdk.Vm) []validators.ValidationFailure
+	ValidateDiskStatus(diskAttachment ovirtsdk.DiskAttachment) bool
 	ValidateDiskAttachments(diskAttachments []*ovirtsdk.DiskAttachment) []validators.ValidationFailure
 	ValidateNics(nics []*ovirtsdk.Nic) []validators.ValidationFailure
 	ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.ResourceMappingItem, crNamespace string) []validators.ValidationFailure

@@ -1442,6 +1442,11 @@ func (p *mockProvider) Init(secret *corev1.Secret, instance *v2vv1alpha1.Virtual
 	return pinit(secret, instance)
 }
 
+// ValidateDiskStatus return true if disk is valid
+func (p *mockProvider) ValidateDiskStatus(string) (bool, error) {
+	return true, nil
+}
+
 // Close implements Provider.Close
 func (p *mockProvider) Close() {}
 
