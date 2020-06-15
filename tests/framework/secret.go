@@ -32,14 +32,14 @@ func (f *Framework) CreateOvirtSecretFromBlueprint() (corev1.Secret, error) {
 }
 
 // CreateOvirtSecret creates ovirt secret with given credentials
-func (f *Framework) CreateOvirtSecret(apiUrl string, username string, password string, caCert string) (corev1.Secret, error) {
+func (f *Framework) CreateOvirtSecret(apiURL string, username string, password string, caCert string) (corev1.Secret, error) {
 	secretData := make(map[string]string)
-	secretData["apiUrl"] = apiUrl
+	secretData["apiUrl"] = apiURL
 	secretData["username"] = username
 	secretData["password"] = password
 	secretData["caCert"] = caCert
 
-	mrshalled, err := yaml.Marshal(secretData)
+	marshalled, err := yaml.Marshal(secretData)
 	if err != nil {
 		return corev1.Secret{}, err
 	}
@@ -49,7 +49,7 @@ func (f *Framework) CreateOvirtSecret(apiUrl string, username string, password s
 			GenerateName: f.NsPrefix,
 			Namespace:    namespace,
 		},
-		StringData: map[string]string{"ovirt": string(mrshalled)},
+		StringData: map[string]string{"ovirt": string(marshalled)},
 	}
 	created, err := f.K8sClient.CoreV1().Secrets(namespace).Create(&secret)
 	if err != nil {
