@@ -13,8 +13,16 @@
 ## Basic VM negative
 | Test description | Implemented |
 | :---------------- | :-----------: |
-| Basic VM import with invalid VM image | &check; |
-| Basic VM import with invalid VM image size | &check; |
+| Basic VM import with invalid VM image should fail import | &check; |
+| Basic VM import with invalid VM image size should fail import | &check; |
+| Basic VM import with missing oVirt secret should fail import | &cross; |
+| Basic VM import with invalid oVirt secret should fail import | &cross; |
+| Basic VM import with invalid oVirt cert should fail import | &cross; |
+| Basic VM import with invalid oVirt URL should fail import | &cross; |
+| Basic VM import with invalid oVirt username should fail import | &cross; |
+| Basic VM import with invalid oVirt password should fail import | &cross; |
+| Basic VM import with non-existing VM ID should fail import | &cross; |
+| Basic VM import with missing specified external resource mapping should fail import | &cross; |
 
 ## Basic Net VM
 | Test description | Implemented |
@@ -76,6 +84,14 @@
 | VM with watchdog other than 'i6300esb' should be blocked | &check; |
 | VM with non-UTC-compatible (i.e. 'America/New_York')  timezone should be blocked | &check; |
 
+## Resource mapping validation
+| Test description | Implemented |
+| :---------------- | :---------: 
+| Import with missing network resource mapping should be blocked | &cross; |
+| Import with incorrect network mapping should be blocked | &cross; |
+| Import with incorrect storage mapping should be blocked | &cross; |
+| Import with incorrect disk mapping should be blocked | &cross; |
+ 
 ## Resource mapping
 | Test description | Implemented |
 | :---------------- | :---------: |
