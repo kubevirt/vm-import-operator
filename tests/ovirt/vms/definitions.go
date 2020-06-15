@@ -33,6 +33,15 @@ const (
 	UsbDisabledVmID                              = "usb-disabled"
 	I6300esbWatchdogVmID                         = "i6300esb-watchdog"
 	CPUPinningVmID                               = "cpu-pinning"
+
+	MissingOVirtSecretVmId   = "missing-ovirt-secret"
+	InvalidOVirtSecretVmId   = "invalid-ovirt-secret"
+	InvalidOVirtUrlVmID      = "invalid-ovirt-url"
+	InvalidOVirtUsernameVmID = "invalid-ovirt-username"
+	InvalidOVirtPasswordVmID = "invalid-ovirt-password"
+	InvalidOVirtCACertVmID   = "invalid-ovirt-ca-cert"
+
+	MissingExternalResourceMappingVmID = "missing-external-resource-mapping"
 )
 
 var (

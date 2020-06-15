@@ -1,6 +1,7 @@
 package matchers
 
 import (
+	"sync/atomic"
 	"time"
 
 	"github.com/kubevirt/vm-import-operator/tests/framework"
@@ -13,7 +14,7 @@ import (
 
 type beRunningMatcher struct {
 	pollingMatcher
-	lastVirtualMachineInstance *v1.VirtualMachineInstance
+	lastVirtualMachineInstance atomic.Value
 }
 
 // BeRunning creates the matcher
@@ -29,7 +30,7 @@ func (matcher *beRunningMatcher) Match(actual interface{}) (bool, error) {
 	vm := actual.(v1.VirtualMachine)
 	pollErr := wait.PollImmediate(5*time.Second, matcher.timeout, func() (bool, error) {
 		vmi, err := matcher.testFramework.KubeVirtClient.VirtualMachineInstance(vm.Namespace).Get(vm.Name, &metav1.GetOptions{})
-		matcher.lastVirtualMachineInstance = vmi
+		matcher.lastVirtualMachineInstance.Store(vmi)
 		if err != nil {
 			return false, err
 		}
@@ -46,10 +47,10 @@ func (matcher *beRunningMatcher) Match(actual interface{}) (bool, error) {
 
 // FailureMessage is a message shown for failure
 func (matcher *beRunningMatcher) FailureMessage(actual interface{}) (message string) {
-	return format.Message(matcher.lastVirtualMachineInstance, "to be a running VirtualMachineInstance")
+	return format.Message(matcher.lastVirtualMachineInstance.Load(), "to be a running VirtualMachineInstance")
 }
 
 // NegatedFailureMessage us  message shown for negated failure
 func (matcher *beRunningMatcher) NegatedFailureMessage(actual interface{}) (message string) {
-	return format.Message(matcher.lastVirtualMachineInstance, "not to be a running VirtualMachineInstance")
+	return format.Message(matcher.lastVirtualMachineInstance.Load(), "not to be a running VirtualMachineInstance")
 }

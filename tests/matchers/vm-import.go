@@ -16,7 +16,7 @@ type hasConditionInStatus struct {
 	pollingMatcher
 	conditionType v2vv1alpha1.VirtualMachineImportConditionType
 	status        corev1.ConditionStatus
-	reason        v2vv1alpha1.SucceededConditionReason
+	reason        string
 }
 
 // HaveMappingRulesVerificationFailure creates the matcher checking whether Virtual Machine Import has failed mapping rules verification
@@ -28,6 +28,19 @@ func HaveMappingRulesVerificationFailure(testFramework *framework.Framework) typ
 
 	matcher.conditionType = v2vv1alpha1.MappingRulesVerified
 	matcher.status = corev1.ConditionFalse
+	return &matcher
+}
+
+// HaveValidationFailure creates the matcher checking whether Virtual Machine Import has failed validation
+func HaveValidationFailure(testFramework *framework.Framework, reason string) types.GomegaMatcher {
+	matcher := hasConditionInStatus{}
+	matcher.timeout = 1 * time.Minute
+	matcher.pollInterval = 1 * time.Second
+	matcher.testFramework = testFramework
+
+	matcher.conditionType = v2vv1alpha1.Valid
+	matcher.status = corev1.ConditionFalse
+	matcher.reason = reason
 	return &matcher
 }
 
@@ -63,7 +76,7 @@ func HaveDataVolumeCreationFailure(testFramework *framework.Framework) types.Gom
 	matcher.testFramework = testFramework
 
 	matcher.conditionType = v2vv1alpha1.Succeeded
-	matcher.reason = v2vv1alpha1.DataVolumeCreationFailed
+	matcher.reason = string(v2vv1alpha1.DataVolumeCreationFailed)
 	matcher.status = corev1.ConditionFalse
 	return &matcher
 }

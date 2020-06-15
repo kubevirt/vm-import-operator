@@ -15,14 +15,14 @@
 | :---------------- | :-----------: |
 | Basic VM import with invalid VM image should fail import | &check; |
 | Basic VM import with invalid VM image size should fail import | &check; |
-| Basic VM import with missing oVirt secret should fail import | &cross; |
-| Basic VM import with invalid oVirt secret should fail import | &cross; |
-| Basic VM import with invalid oVirt cert should fail import | &cross; |
-| Basic VM import with invalid oVirt URL should fail import | &cross; |
-| Basic VM import with invalid oVirt username should fail import | &cross; |
-| Basic VM import with invalid oVirt password should fail import | &cross; |
-| Basic VM import with non-existing VM ID should fail import | &cross; |
-| Basic VM import with missing specified external resource mapping should fail import | &cross; |
+| Basic VM import with missing oVirt secret should fail import | &check; |
+| Basic VM import with invalid oVirt secret should fail import | &check; |
+| Basic VM import with invalid oVirt cert should fail import | &check; |
+| Basic VM import with invalid oVirt URL should fail import | &check; |
+| Basic VM import with invalid oVirt username should fail import | &check; |
+| Basic VM import with invalid oVirt password should fail import | &check; |
+| Basic VM import with non-existing VM ID should fail import | &check; |
+| Basic VM import with missing specified external resource mapping should fail import | &check; |
 
 ## Basic Net VM
 | Test description | Implemented |

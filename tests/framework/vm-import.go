@@ -27,22 +27,22 @@ func (f *Framework) EnsureVMIDoesNotExist(vmiName string) error {
 }
 
 // WaitForVMImportConditionInStatus blocks until VM import with given name has given status condition with given status
-func (f *Framework) WaitForVMImportConditionInStatus(pollInterval time.Duration, timeout time.Duration, vmiName string, conditionType v2vv1alpha1.VirtualMachineImportConditionType, status corev1.ConditionStatus, reason v2vv1alpha1.SucceededConditionReason) error {
+func (f *Framework) WaitForVMImportConditionInStatus(pollInterval time.Duration, timeout time.Duration, vmiName string, conditionType v2vv1alpha1.VirtualMachineImportConditionType, status corev1.ConditionStatus, reason string) error {
 	pollErr := wait.PollImmediate(pollInterval, timeout, func() (bool, error) {
 		retrieved, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(f.Namespace.Name).Get(vmiName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
-		succeededCondition := conditions.FindConditionOfType(retrieved.Status.Conditions, conditionType)
-		if succeededCondition == nil {
+		condition := conditions.FindConditionOfType(retrieved.Status.Conditions, conditionType)
+		if condition == nil {
 			return false, nil
 		}
-		if succeededCondition.Status != status {
+		if condition.Status != status {
 			return false, nil
 		}
-		condReason := string(reason)
+		condReason := reason
 		if condReason != "" {
-			if *succeededCondition.Reason != condReason {
+			if *condition.Reason != condReason {
 				return false, nil
 			}
 		}
