@@ -38,7 +38,7 @@ type Mapper interface {
 	ResolveVMName(targetVMName *string) *string
 	MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachine) (*kubevirtv1.VirtualMachine, error)
 	MapDataVolumes(targetVMName *string) (map[string]cdiv1.DataVolume, error)
-	MapDisks(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume)
+	MapDisk(vmSpec *kubevirtv1.VirtualMachine, dv cdiv1.DataVolume)
 }
 
 // VMStatus represents VM status

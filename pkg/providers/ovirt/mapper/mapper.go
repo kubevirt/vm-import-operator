@@ -178,48 +178,37 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 	return vmSpec, nil
 }
 
-// MapDisks map VM disks
-func (o *OvirtMapper) MapDisks(vmSpec *kubevirtv1.VirtualMachine, dvs map[string]cdiv1.DataVolume) {
-	// Map volumes
-	volumes := make([]kubevirtv1.Volume, len(dvs))
-	i := 0
-	for _, dv := range dvs {
-		volumes[i] = kubevirtv1.Volume{
-			Name: fmt.Sprintf("dv-%v", i),
-			VolumeSource: kubevirtv1.VolumeSource{
-				DataVolume: &kubevirtv1.DataVolumeSource{
-					Name: dv.Name,
-				},
+// MapDisk map VM disk
+func (o *OvirtMapper) MapDisk(vmSpec *kubevirtv1.VirtualMachine, dv cdiv1.DataVolume) {
+	// Map volume
+	volume := kubevirtv1.Volume{
+		Name: fmt.Sprintf("dv-%v", dv.Name),
+		VolumeSource: kubevirtv1.VolumeSource{
+			DataVolume: &kubevirtv1.DataVolumeSource{
+				Name: dv.Name,
 			},
-		}
-		i++
+		},
 	}
 
 	// Map disks
-	i = 0
-	disks := make([]kubevirtv1.Disk, len(dvs))
-	for id := range dvs {
-		diskAttachments, _ := o.vm.DiskAttachments()
-		diskAttachment := getDiskAttachmentByID(id, diskAttachments, vmSpec.ObjectMeta.Name)
-		iface, _ := diskAttachment.Interface()
-		disks[i] = kubevirtv1.Disk{
-			Name: fmt.Sprintf("dv-%v", i),
-			DiskDevice: kubevirtv1.DiskDevice{
-				Disk: &kubevirtv1.DiskTarget{
-					Bus: o.mapDiskInterface(iface),
-				},
+	diskAttachments, _ := o.vm.DiskAttachments()
+	diskAttachment := getDiskAttachmentByID(dv.Name, diskAttachments, vmSpec.ObjectMeta.Name)
+	iface, _ := diskAttachment.Interface()
+	disk := kubevirtv1.Disk{
+		Name: fmt.Sprintf("dv-%v", dv.Name),
+		DiskDevice: kubevirtv1.DiskDevice{
+			Disk: &kubevirtv1.DiskTarget{
+				Bus: o.mapDiskInterface(iface),
 			},
-		}
-		if bootable, ok := diskAttachment.Bootable(); ok && bootable {
-			bootOrder := uint(1)
-			disks[i].BootOrder = &bootOrder
-		}
-
-		i++
+		},
+	}
+	if bootable, ok := diskAttachment.Bootable(); ok && bootable {
+		bootOrder := uint(1)
+		disk.BootOrder = &bootOrder
 	}
 
-	vmSpec.Spec.Template.Spec.Volumes = volumes
-	vmSpec.Spec.Template.Spec.Domain.Devices.Disks = disks
+	vmSpec.Spec.Template.Spec.Volumes = append(vmSpec.Spec.Template.Spec.Volumes, volume)
+	vmSpec.Spec.Template.Spec.Domain.Devices.Disks = append(vmSpec.Spec.Template.Spec.Domain.Devices.Disks, disk)
 }
 
 func (o *OvirtMapper) mapDiskInterface(iface ovirtsdk.DiskInterface) string {

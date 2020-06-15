@@ -296,7 +296,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 
 	dvsDone := make(map[string]bool)
 	dvsImportProgress := make(map[string]float64)
-	for dvID := range dvs {
+	for dvID, dv := range dvs {
 		if err = r.addWatchForImportPod(instance, dvID); err != nil {
 			return err
 		}
@@ -304,29 +304,13 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 		foundDv := &cdiv1.DataVolume{}
 		err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: dvID}, foundDv)
 		if err != nil && errors.IsNotFound(err) {
-			if err = r.createDataVolumes(provider, mapper, instance, dvs, vmName); err != nil {
+			if err = r.createDataVolume(provider, mapper, instance, dv, vmName); err != nil {
 				return err
 			}
 		} else if err == nil {
 			// Set dataVolume as done, if it's in Succeeded state:
 			if foundDv.Status.Phase == cdiv1.Succeeded {
 				dvsDone[dvID] = true
-				if err = r.manageDataVolumeState(instance, dvsDone, len(dvs)); err != nil {
-					return err
-				}
-
-				// Cleanup if user don't want to start the VM
-				if instance.Spec.StartVM == nil || !*instance.Spec.StartVM {
-					if err := r.updateProgress(instance, progressDone); err != nil {
-						return err
-					}
-					if err := r.afterSuccess(vmName, vmiName, provider); err != nil {
-						return err
-					}
-
-					// Emit event vm is successfully imported
-					r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportSucceeded, "Virtual Machine %s/%s import successful", vmName.Namespace, vmName.Name)
-				}
 			} else if foundDv.Status.Phase == cdiv1.Failed {
 				if err = r.endImportAsFailed(provider, instance, foundDv); err != nil {
 					return err
@@ -363,6 +347,28 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 	currentProgress := disksImportProgress(dvsImportProgress, float64(len(dvs)))
 	if err := r.updateProgress(instance, currentProgress); err != nil {
 		return err
+	}
+
+	// Update status if disk import is done:
+	allDone, err := r.manageDataVolumeState(instance, dvsDone, len(dvs))
+	if err != nil {
+		return err
+	}
+
+	// Update progress if all disks import done:
+	if allDone {
+		// Cleanup if user don't want to start the VM
+		if instance.Spec.StartVM == nil || !*instance.Spec.StartVM {
+			if err := r.updateProgress(instance, progressDone); err != nil {
+				return err
+			}
+			if err := r.afterSuccess(vmName, vmiName, provider); err != nil {
+				return err
+			}
+
+			// Emit event vm is successfully imported
+			r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportSucceeded, "Virtual Machine %s/%s import successful", vmName.Namespace, vmName.Name)
+		}
 	}
 
 	return nil
@@ -602,7 +608,7 @@ func shouldStartVM(instance *v2vv1alpha1.VirtualMachineImport) bool {
 }
 
 // manageDataVolumeState update current state according to progress of import
-func (r *ReconcileVirtualMachineImport) manageDataVolumeState(instance *v2vv1alpha1.VirtualMachineImport, dvsDone map[string]bool, numberOfDvs int) error {
+func (r *ReconcileVirtualMachineImport) manageDataVolumeState(instance *v2vv1alpha1.VirtualMachineImport, dvsDone map[string]bool, numberOfDvs int) (bool, error) {
 	// Count successfully imported dvs:
 	done := utils.CountImportedDataVolumes(dvsDone)
 
@@ -610,13 +616,13 @@ func (r *ReconcileVirtualMachineImport) manageDataVolumeState(instance *v2vv1alp
 	allDone := done == numberOfDvs
 	if allDone && !conditions.HasSucceededConditionOfReason(instance.Status.Conditions, v2vv1alpha1.VirtualMachineReady, v2vv1alpha1.VirtualMachineRunning) {
 		if err := r.updateConditionsAfterSuccess(instance, "Virtual machine disks import done", v2vv1alpha1.VirtualMachineReady); err != nil {
-			return err
+			return false, err
 		}
 	}
-	return nil
+	return allDone, nil
 }
 
-func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Provider, mapper provider.Mapper, instance *v2vv1alpha1.VirtualMachineImport, dvs map[string]cdiv1.DataVolume, vmName types.NamespacedName) error {
+func (r *ReconcileVirtualMachineImport) createDataVolume(provider provider.Provider, mapper provider.Mapper, instance *v2vv1alpha1.VirtualMachineImport, dv cdiv1.DataVolume, vmName types.NamespacedName) error {
 	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	// Update condition to create VM:
 	processingCond := conditions.NewProcessingCondition(string(v2vv1alpha1.CopyingDisks), "Copying virtual machine disks", corev1.ConditionTrue)
@@ -635,54 +641,57 @@ func (r *ReconcileVirtualMachineImport) createDataVolumes(provider provider.Prov
 	if err != nil {
 		return err
 	}
-	// Create DVs:
-	for _, dv := range dvs {
-		// Set controller owner reference:
-		if err := controllerutil.SetControllerReference(instance, &dv, r.scheme); err != nil {
-			return err
-		}
 
-		// Set tracking label
-		setTrackerLabel(dv.ObjectMeta, instance)
-
-		err = r.client.Create(context.TODO(), &dv)
-		if err != nil {
-			message := fmt.Sprintf("Data volume %s/%s creation failed: %s", dv.Namespace, dv.Name, err)
-			// Update event:
-			r.recorder.Event(instance, corev1.EventTypeWarning, EventDVCreationFailed, message)
-
-			// Update condition to failed:
-			succeededCond := conditions.NewSucceededCondition(string(v2vv1alpha1.DataVolumeCreationFailed), message, corev1.ConditionFalse)
-			processingCond.Status = corev1.ConditionFalse
-			processingFailedReason := string(v2vv1alpha1.ProcessingFailed)
-			processingCond.Reason = &processingFailedReason
-			if err = r.upsertStatusConditions(instanceNamespacedName, processingCond, succeededCond); err != nil {
-				return err
-			}
-
-			// Cleanup
-			if err = r.afterFailure(instanceNamespacedName, provider); err != nil {
-				return err
-			}
-			return err
-		}
-
-		// Set VM as owner reference:
-		if err := r.ownerreferencesmgr.AddOwnerReference(vmDef, &dv); err != nil {
-			return err
-		}
+	// Set controller owner reference:
+	if err := controllerutil.SetControllerReference(instance, &dv, r.scheme); err != nil {
+		return err
 	}
 
-	// Emit event that DVs import is in progress:
-	r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportInProgress, "Import of Virtual Machine %s/%s disks are in progress", vmName.Namespace, vmName.Name)
+	// Set tracking label
+	setTrackerLabel(dv.ObjectMeta, instance)
+
+	err = r.client.Create(context.TODO(), &dv)
+	if err != nil {
+		message := fmt.Sprintf("Data volume %s/%s creation failed: %s", dv.Namespace, dv.Name, err)
+		// Update event:
+		r.recorder.Event(instance, corev1.EventTypeWarning, EventDVCreationFailed, message)
+
+		// Update condition to failed:
+		succeededCond := conditions.NewSucceededCondition(string(v2vv1alpha1.DataVolumeCreationFailed), message, corev1.ConditionFalse)
+		processingCond.Status = corev1.ConditionFalse
+		processingFailedReason := string(v2vv1alpha1.ProcessingFailed)
+		processingCond.Reason = &processingFailedReason
+		if err = r.upsertStatusConditions(instanceNamespacedName, processingCond, succeededCond); err != nil {
+			return err
+		}
+
+		// Cleanup
+		if err = r.afterFailure(instanceNamespacedName, provider); err != nil {
+			return err
+		}
+		return err
+	}
+
+	// Set VM as owner reference:
+	if err := r.ownerreferencesmgr.AddOwnerReference(vmDef, &dv); err != nil {
+		return err
+	}
+
+	// Emit event that DV import is in progress:
+	r.recorder.Eventf(
+		instance,
+		corev1.EventTypeNormal,
+		EventImportInProgress,
+		"Import of Virtual Machine %s/%s disk %s in progress", vmName.Namespace, vmName.Name, dv.Name,
+	)
 
 	// Update datavolume in VM import CR status:
-	if err = r.updateDVs(instanceNamespacedName, dvs); err != nil {
+	if err = r.updateDVs(instanceNamespacedName, dv); err != nil {
 		return err
 	}
 
 	// Update VM spec with imported disks:
-	err = r.updateVMSpecDataVolumes(mapper, types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, dvs)
+	err = r.updateVMSpecDataVolumes(mapper, types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, dv)
 	if err != nil {
 		return err
 	}
@@ -755,7 +764,7 @@ func (r *ReconcileVirtualMachineImport) updateToRunning(vmName types.NamespacedN
 	return nil
 }
 
-func (r *ReconcileVirtualMachineImport) updateDVs(vmiName types.NamespacedName, dvs map[string]cdiv1.DataVolume) error {
+func (r *ReconcileVirtualMachineImport) updateDVs(vmiName types.NamespacedName, dv cdiv1.DataVolume) error {
 	var instance v2vv1alpha1.VirtualMachineImport
 	err := r.client.Get(context.TODO(), vmiName, &instance)
 	if err != nil {
@@ -763,9 +772,7 @@ func (r *ReconcileVirtualMachineImport) updateDVs(vmiName types.NamespacedName, 
 	}
 
 	copy := instance.DeepCopy()
-	for dvName := range dvs {
-		copy.Status.DataVolumes = append(copy.Status.DataVolumes, v2vv1alpha1.DataVolumeItem{Name: dvName})
-	}
+	copy.Status.DataVolumes = append(copy.Status.DataVolumes, v2vv1alpha1.DataVolumeItem{Name: dv.Name})
 
 	patch := client.MergeFrom(&instance)
 	err = r.client.Status().Patch(context.TODO(), copy, patch)
@@ -793,14 +800,14 @@ func (r *ReconcileVirtualMachineImport) updateTargetVMName(vmiName types.Namespa
 	return nil
 }
 
-func (r *ReconcileVirtualMachineImport) updateVMSpecDataVolumes(mapper provider.Mapper, vmName types.NamespacedName, dvs map[string]cdiv1.DataVolume) error {
+func (r *ReconcileVirtualMachineImport) updateVMSpecDataVolumes(mapper provider.Mapper, vmName types.NamespacedName, dv cdiv1.DataVolume) error {
 	var vm kubevirtv1.VirtualMachine
 	err := r.client.Get(context.TODO(), vmName, &vm)
 	if err != nil {
 		return err
 	}
 	copy := vm.DeepCopy()
-	mapper.MapDisks(copy, dvs)
+	mapper.MapDisk(copy, dv)
 
 	patch := client.MergeFrom(&vm)
 	err = r.client.Patch(context.TODO(), copy, patch)
