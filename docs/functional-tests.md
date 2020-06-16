@@ -87,10 +87,10 @@
 ## Resource mapping validation
 | Test description | Implemented |
 | :---------------- | :---------: 
-| Import with missing network resource mapping should be blocked | &cross; |
-| Import with incorrect network mapping should be blocked | &cross; |
-| Import with incorrect storage mapping should be blocked | &cross; |
-| Import with incorrect disk mapping should be blocked | &cross; |
+| Import with missing network resource mapping should be blocked | &check; |
+| Import with network mapping to a non-existing target network should be blocked | &check; |
+| Import with storage mapping to a non-existing target storage class should be blocked | &check; |
+| Import with disk mapping to a non-existing target storage class should be blocked | &check; |
  
 ## Resource mapping
 | Test description | Implemented |
