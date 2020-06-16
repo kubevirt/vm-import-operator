@@ -25,6 +25,17 @@ type usesScsiReservationOwner interface {
 	UsesScsiReservation() (bool, bool)
 }
 
+// ValidateDiskStatus return true if the disk status is valid:
+func ValidateDiskStatus(diskAttachment ovirtsdk.DiskAttachment) bool {
+	if disk, ok := diskAttachment.Disk(); ok {
+		if status, ok := disk.Status(); ok && status != "ok" {
+			return false
+		}
+	}
+
+	return true
+}
+
 // ValidateDiskAttachments validates disk attachments
 func ValidateDiskAttachments(diskAttachments []*ovirtsdk.DiskAttachment) []ValidationFailure {
 	var failures []ValidationFailure

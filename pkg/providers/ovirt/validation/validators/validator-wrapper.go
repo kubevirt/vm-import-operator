@@ -41,6 +41,11 @@ func (v *ValidatorWrapper) ValidateVM(vm *ovirtsdk.Vm) []ValidationFailure {
 	return ValidateVM(vm, kvConfig)
 }
 
+// ValidateDiskStatus return true if the disk status is valid:
+func (v *ValidatorWrapper) ValidateDiskStatus(diskAttachment ovirtsdk.DiskAttachment) bool {
+	return ValidateDiskStatus(diskAttachment)
+}
+
 // ValidateDiskAttachments wraps validators package implementation of ValidateDiskAttachments function
 func (v *ValidatorWrapper) ValidateDiskAttachments(diskAttachments []*ovirtsdk.DiskAttachment) []ValidationFailure {
 	return ValidateDiskAttachments(diskAttachments)

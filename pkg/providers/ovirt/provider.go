@@ -3,6 +3,7 @@ package ovirtprovider
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/kubevirt/vm-import-operator/pkg/ownerreferences"
 
@@ -222,6 +223,28 @@ func (o *OvirtProvider) LoadVM(sourceSpec v2vv1alpha1.VirtualMachineImportSource
 // PrepareResourceMapping merges external resource mapping and resource mapping provided in the virtual machine import spec
 func (o *OvirtProvider) PrepareResourceMapping(externalResourceMapping *v2vv1alpha1.ResourceMappingSpec, vmiSpec v2vv1alpha1.VirtualMachineImportSourceSpec) {
 	o.resourceMapping = mappings.MergeMappings(externalResourceMapping, vmiSpec.Ovirt.Mappings)
+}
+
+// ValidateDiskStatus validate current status of the disk in oVirt env:
+func (o *OvirtProvider) ValidateDiskStatus(diskName string) (bool, error) {
+	// Refresh cached VM data:
+	err := o.LoadVM(o.instance.Spec.Source)
+	if err != nil {
+		return false, err
+	}
+
+	// Find the disk by ID and validate the status:
+	if diskAttachments, ok := o.vm.DiskAttachments(); ok {
+		for _, disk := range diskAttachments.Slice() {
+			if diskID, ok := disk.Id(); ok {
+				if strings.Contains(diskName, diskID) {
+					return o.validator.Validator.ValidateDiskStatus(*disk), nil
+				}
+			}
+		}
+	}
+
+	return false, nil
 }
 
 // Validate validates whether loaded previously VM and resource mapping is valid. The validation results are recorded in th VMI CR identified by vmiCrName and in case of a validation failure error is returned.

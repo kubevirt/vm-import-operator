@@ -304,8 +304,21 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 		foundDv := &cdiv1.DataVolume{}
 		err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: dvID}, foundDv)
 		if err != nil && errors.IsNotFound(err) {
-			if err = r.createDataVolume(provider, mapper, instance, dv, vmName); err != nil {
+			// We have to validate the disk status, so we are sure, the disk wasn't manipulated,
+			// before we execute the import:
+			valid, err := provider.ValidateDiskStatus(dv.Name)
+			if err != nil {
 				return err
+			}
+			if valid {
+				if err = r.createDataVolume(provider, mapper, instance, dv, vmName); err != nil {
+					return err
+				}
+			} else {
+				// If disk status is wrong, end the import as failed:
+				if err = r.endImportAsFailed(provider, instance, foundDv); err != nil {
+					return err
+				}
 			}
 		} else if err == nil {
 			// Set dataVolume as done, if it's in Succeeded state:
