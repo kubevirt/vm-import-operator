@@ -19,18 +19,22 @@ func (s *StubbingBuilder) Stub(stub Stubbing) *StubbingBuilder {
 
 func (s *StubbingBuilder) StubGetWithResponseCode(path string, responseCode int, body *string) *StubbingBuilder {
 	return s.Stub(Stubbing{
-		Path:         path,
-		Method:       "GET",
-		ResponseBody: body,
-		ResponseCode: responseCode,
+		Path:   path,
+		Method: "GET",
+		Responses: []RepeatedResponse{{
+			ResponseBody: body,
+			ResponseCode: responseCode,
+		}},
 	})
 }
 
 func (s *StubbingBuilder) StubGet(path string, body *string) *StubbingBuilder {
 	return s.Stub(Stubbing{
-		Path:         path,
-		Method:       "GET",
-		ResponseBody: body,
-		ResponseCode: 200,
+		Path:   path,
+		Method: "GET",
+		Responses: []RepeatedResponse{{
+			ResponseBody: body,
+			ResponseCode: 200,
+		}},
 	})
 }

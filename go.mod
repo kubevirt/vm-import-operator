@@ -15,7 +15,7 @@ require (
 	github.com/go-openapi/spec v0.19.4
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20191119172530-79f836b90111
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/machacekondra/fakeovirt v0.0.0-20200521051316-d665f9412b9c
+	github.com/machacekondra/fakeovirt v0.0.0-20200617055337-1afdfa789aab
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.7.1
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
