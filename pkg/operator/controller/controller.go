@@ -16,6 +16,7 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	vmimportv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	resources "github.com/kubevirt/vm-import-operator/pkg/operator/resources/operator"
+	osmap "github.com/kubevirt/vm-import-operator/pkg/os"
 	conditions "github.com/openshift/custom-resource-status/conditions/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -29,6 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/jsonmergepatch"
 	"k8s.io/apimachinery/pkg/util/mergepatch"
+	"kubevirt.io/client-go/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -37,8 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
-
-	"kubevirt.io/containerized-data-importer/pkg/util"
 )
 
 const (
@@ -66,14 +66,19 @@ type OperatorArgs struct {
 	DeployClusterResources string `required:"true" split_words:"true"`
 	PullPolicy             string `required:"true" split_words:"true"`
 	Namespace              string
+	OsConfigMapName        string
+	OsConfigMapNamespace   string
 }
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) (*ReconcileVMImportConfig, error) {
 	var operatorArgs OperatorArgs
-	namespace := util.GetNamespace()
+	namespace, err := util.GetNamespace()
+	if err != nil {
+		return nil, err
+	}
 
-	err := envconfig.Process("", &operatorArgs)
+	err = envconfig.Process("", &operatorArgs)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +140,7 @@ func (r *ReconcileVMImportConfig) Reconcile(request reconcile.Request) (reconcil
 		return reconcile.Result{}, err
 	}
 
-	// make sure we're watching eveything
+	// make sure we're watching everything
 	if err := r.watchDependantResources(cr); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -752,6 +757,22 @@ func (r *ReconcileVMImportConfig) getOperatorArgs(cr *vmimportv1alpha1.VMImportC
 		}
 	}
 
+	// update operatorArgs with OS config map name and namespace if defined in vm-import-operator deployment
+	// TODO: Replace vm-import-operator deployment env vars with VMImportConfig attributes
+	operatorDeployment := &appsv1.Deployment{}
+	key := client.ObjectKey{Namespace: result.Namespace, Name: "vm-import-operator"}
+	if err := r.client.Get(context.TODO(), key, operatorDeployment); err == nil {
+		operatorEnv := operatorDeployment.Spec.Template.Spec.Containers[0].Env
+		for _, env := range operatorEnv {
+			if env.Name == osmap.OsConfigMapName {
+				result.OsConfigMapName = env.Value
+			}
+			if env.Name == osmap.OsConfigMapNamespace {
+				result.OsConfigMapNamespace = env.Value
+			}
+		}
+	}
+
 	return &result
 }
 
@@ -774,7 +795,15 @@ func createControllerResources(args *OperatorArgs) []runtime.Object {
 		resources.CreateServiceAccount(args.Namespace),
 		resources.CreateControllerRole(),
 		resources.CreateControllerRoleBinding(args.Namespace),
-		resources.CreateControllerDeployment(resources.ControllerName, args.Namespace, args.ControllerImage, args.PullPolicy, int32(1)),
+		resources.CreateControllerDeployment(
+			resources.ControllerName,
+			args.Namespace,
+			args.ControllerImage,
+			args.PullPolicy,
+			args.OsConfigMapName,
+			args.OsConfigMapNamespace,
+			int32(1),
+		),
 	}
 }
 
