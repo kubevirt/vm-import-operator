@@ -33,6 +33,7 @@ const (
 	UsbDisabledVmID                              = "usb-disabled"
 	I6300esbWatchdogVmID                         = "i6300esb-watchdog"
 	CPUPinningVmID                               = "cpu-pinning"
+	UpStatusVmID                                 = "status-up"
 
 	MissingOVirtSecretVmId   = "missing-ovirt-secret"
 	InvalidOVirtSecretVmId   = "invalid-ovirt-secret"

@@ -120,6 +120,47 @@ var _ = Describe("Import", func() {
 		table.Entry("placement policy affinity: 'pinned'", vms.PlacementPolicyAffinityVmIDPrefix+"pinned", "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "pinned"}),
 		table.Entry("disabled USB", vms.UsbDisabledVmID, "usb-template.xml", map[string]string{"@ENABLED": "false"}))
 
+	It("should create started VM from VM in 'up' status", func() {
+		vmID := vms.UpStatusVmID
+		upVMXML := f.LoadTemplate("vms/status-template.xml", map[string]string{"@VMID": vmID, "@VMSTATUS": "up"})
+		downVMXML := f.LoadTemplate("vms/status-template.xml", map[string]string{"@VMID": vmID, "@VMSTATUS": "down"})
+		actionXML := "<action/>"
+		builder := test.createVMResourcesStubs(vmID).
+			Stub(sapi.Stubbing{
+				Path:   "/ovirt-engine/api/vms/" + vmID + "/shutdown",
+				Method: "POST",
+				Responses: []sapi.RepeatedResponse{
+					{
+						ResponseBody: &actionXML,
+						ResponseCode: 200,
+					},
+				},
+			}).
+			Stub(sapi.Stubbing{
+				Path:   "/ovirt-engine/api/vms/" + vmID,
+				Method: "GET",
+				Responses: []sapi.RepeatedResponse{
+					// VM is UP at the beginning and shortly after shutdown request was issued
+					{
+						ResponseBody: &upVMXML,
+						ResponseCode: 200,
+						// Make the oVirt client wait 3 polling cycles
+						Times: 3,
+					},
+					// After shutdown call eventually oVirt should report VM being down
+					{
+						ResponseBody: &downVMXML,
+						ResponseCode: 200,
+					},
+				},
+			})
+		err := f.OvirtStubbingClient.Stub(builder.Build())
+		if err != nil {
+			Fail(err.Error())
+		}
+
+		test.ensureVMIsRunning(vmID)
+	})
 })
 
 func cleanUpConfigMap(f *fwk.Framework) {
@@ -159,12 +200,22 @@ func (t *variousVMConfigurationsTest) ensureVMIsRunning(vmID string) *v1.Virtual
 }
 
 func (t *variousVMConfigurationsTest) stub(vmID string, vmFile string, vmMacros map[string]string) {
+	vmMacros["@VMID"] = vmID
+	vmXML := t.framework.LoadTemplate("vms/"+vmFile, vmMacros)
+	builder := t.createVMResourcesStubs(vmID).
+		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML)
+	err := t.framework.OvirtStubbingClient.Stub(builder.Build())
+	if err != nil {
+		Fail(err.Error())
+	}
+}
+
+func (t *variousVMConfigurationsTest) createVMResourcesStubs(vmID string) *sapi.StubbingBuilder {
 	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
 	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
 	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
 	consolesXML := t.framework.LoadFile("graphic-consoles/vnc.xml")
-	vmMacros["@VMID"] = vmID
-	vmXML := t.framework.LoadTemplate("vms/"+vmFile, vmMacros)
+
 	nicsXML := t.framework.LoadFile("nics/one.xml")
 	networkXML := t.framework.LoadFile("networks/net-1.xml")
 	vnicProfileXML := t.framework.LoadFile("vnic-profiles/vnic-profile-1.xml")
@@ -175,10 +226,7 @@ func (t *variousVMConfigurationsTest) stub(vmID string, vmFile string, vmMacros 
 		StubGet("/ovirt-engine/api/disks/disk-1", &diskXML).
 		StubGet("/ovirt-engine/api/networks/net-1", &networkXML).
 		StubGet("/ovirt-engine/api/vnicprofiles/vnic-profile-1", &vnicProfileXML).
-		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXML).
-		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML)
-	err := t.framework.OvirtStubbingClient.Stub(builder.Build())
-	if err != nil {
-		Fail(err.Error())
-	}
+		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXML)
+
+	return builder
 }
