@@ -320,7 +320,7 @@ github.com/konsorten/go-windows-terminal-sequences
 github.com/lib/pq
 github.com/lib/pq/oid
 github.com/lib/pq/scram
-# github.com/machacekondra/fakeovirt v0.0.0-20200521051316-d665f9412b9c
+# github.com/machacekondra/fakeovirt v0.0.0-20200617055337-1afdfa789aab
 github.com/machacekondra/fakeovirt/pkg/api/stubbing
 github.com/machacekondra/fakeovirt/pkg/client
 # github.com/magiconair/properties v1.8.1

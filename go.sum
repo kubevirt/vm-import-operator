@@ -605,8 +605,8 @@ github.com/lucas-clemente/aes12 v0.0.0-20171027163421-cd47fb39b79f/go.mod h1:JpH
 github.com/lucas-clemente/quic-clients v0.1.0/go.mod h1:y5xVIEoObKqULIKivu+gD/LU90pL73bTdtQjPBvtCBk=
 github.com/lucas-clemente/quic-go v0.10.2/go.mod h1:hvaRS9IHjFLMq76puFJeWNfmn+H70QZ/CXoxqw9bzao=
 github.com/lucas-clemente/quic-go-certificates v0.0.0-20160823095156-d2f86524cced/go.mod h1:NCcRLrOTZbzhZvixZLlERbJtDtYsmMw8Jc4vS8Z0g58=
-github.com/machacekondra/fakeovirt v0.0.0-20200521051316-d665f9412b9c h1:iUvgiI/BsF3v7fSf+yWmSUF11qAtihHAeASamR+ic1Q=
-github.com/machacekondra/fakeovirt v0.0.0-20200521051316-d665f9412b9c/go.mod h1:/X5EoPOXC7o1I7kIgywprfQVLInH1VqsqrvpbwddtrE=
+github.com/machacekondra/fakeovirt v0.0.0-20200617055337-1afdfa789aab h1:vfiDxvAcfdGeq5qLx2i3mfs4kubpnsoDf8QpPUhN8bQ=
+github.com/machacekondra/fakeovirt v0.0.0-20200617055337-1afdfa789aab/go.mod h1:/X5EoPOXC7o1I7kIgywprfQVLInH1VqsqrvpbwddtrE=
 github.com/magiconair/properties v1.8.0/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
 github.com/magiconair/properties v1.8.1 h1:ZC2Vc7/ZFkGmsVC9KvOjumD+G5lXy2RtTKyzRKO2BQ4=
 github.com/magiconair/properties v1.8.1/go.mod h1:PppfXfuXeibc/6YijjN8zIbojt8czPbwD3XqdrwzmxQ=
