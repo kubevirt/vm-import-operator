@@ -32,7 +32,7 @@
 ## Various VM configurations
 | Test description | Implemented |
 | :---------------- | :-----------: |
-| VM with 'up' status should be imported and started | &cross; |
+| VM with 'up' status should be imported and started | &check; |
 | VM with 'q35_secure_boot' BIOS type should be imported and started | &check; |
 | VM with 'q35_ovmf' BIOS type should be imported and started | &check; |
 | VM with 'ppc64' architecture should be imported and started | &cross; |
