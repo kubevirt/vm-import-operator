@@ -1,24 +1,28 @@
 package ovirt_test
 
 import (
+	"time"
+
+	"github.com/kubevirt/vm-import-operator/tests/ovirt"
+	"github.com/onsi/ginkgo/extensions/table"
+	"k8s.io/apimachinery/pkg/api/errors"
+	v1 "kubevirt.io/client-go/api/v1"
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
+
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
-	"github.com/kubevirt/vm-import-operator/tests/ovirt"
 	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	sapi "github.com/machacekondra/fakeovirt/pkg/api/stubbing"
 	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "kubevirt.io/client-go/api/v1"
-	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 )
 
-type basicVmImportNegativeTest struct {
+type basicVMImportNegativeTest struct {
 	framework *fwk.Framework
 }
 
@@ -28,7 +32,7 @@ var _ = Describe("VM import", func() {
 		f         = fwk.NewFrameworkOrDie("basic-vm-import-negative")
 		secret    corev1.Secret
 		namespace string
-		test      = basicVmImportNegativeTest{f}
+		test      = basicVMImportNegativeTest{f}
 		err       error
 	)
 
@@ -134,9 +138,44 @@ var _ = Describe("VM import", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(HaveValidationFailure(f, string(v2vv1alpha1.ResourceMappingNotFound)))
 	})
+
+	It("should be stuck when source VM does not shut down", func() {
+		vmID := vms.BasicVmID
+		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+
+		vmXML := f.LoadTemplate("vms/status-template.xml", map[string]string{"@VMID": vmID, "@VMSTATUS": "up"})
+		actionXML := "<action/>"
+		builder := test.prepareVmResourcesStub(vmID).
+			Stub(sapi.Stubbing{
+				Path:   "/ovirt-engine/api/vms/" + vmID + "/shutdown",
+				Method: "POST",
+				Responses: []sapi.RepeatedResponse{
+					{
+						ResponseBody: &actionXML,
+						ResponseCode: 200,
+					},
+				},
+			}).
+			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML)
+		test.recordStubbing(builder)
+
+		created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+
+		Expect(err).NotTo(HaveOccurred())
+
+		Consistently(func() (*v2vv1alpha1.VirtualMachineImportCondition, error) {
+			retrieved, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(f.Namespace.Name).Get(created.Name, metav1.GetOptions{})
+			if err != nil {
+				return nil, err
+			}
+			condition := conditions.FindConditionOfType(retrieved.Status.Conditions, v2vv1alpha1.Processing)
+			return condition, nil
+
+		}, 5*time.Minute, time.Minute).Should(BeNil())
+	})
 })
 
-func (t *basicVmImportNegativeTest) createInvalidSecret() *corev1.Secret {
+func (t *basicVMImportNegativeTest) createInvalidSecret() *corev1.Secret {
 	f := t.framework
 	namespace := f.Namespace.Name
 	secret := corev1.Secret{
@@ -152,28 +191,43 @@ func (t *basicVmImportNegativeTest) createInvalidSecret() *corev1.Secret {
 	}
 	return created
 }
-func (t *basicVmImportNegativeTest) prepareInvalidVm(vmID string, diskSize string) {
+func (t *basicVMImportNegativeTest) prepareInvalidVm(vmID string, diskSize string) {
 	diskXML := t.framework.LoadTemplate("disks/invalid-disk.xml", map[string]string{"@DISKSIZE": diskSize})
 	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/invalid-disk.xml")
 	t.prepareVmWithDiskXML(vmID, vmID, diskXML, diskAttachmentsXML)
 }
 
-func (t *basicVmImportNegativeTest) prepareVm(vmID string) {
-	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
-	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
-	t.prepareVmWithDiskXML(vmID, "disk-1", diskXML, diskAttachmentsXML)
+func (t *basicVMImportNegativeTest) prepareVm(vmID string) {
+	vmXML := t.framework.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
+	builder := t.prepareVmResourcesStub(vmID).
+		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML)
+	t.recordStubbing(builder)
 }
 
-func (t *basicVmImportNegativeTest) prepareVmWithDiskXML(vmID string, diskID string, diskXML string, diskAttachmentsXML string) {
-	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
+func (t *basicVMImportNegativeTest) prepareVmWithDiskXML(vmID string, diskID string, diskXML string, diskAttachmentsXML string) {
 	vmXML := t.framework.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
+	builder := t.prepareVMResourceStubWithDiskData(vmID, diskID, diskXML, diskAttachmentsXML).
+		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML)
+	t.recordStubbing(builder)
+}
+
+func (t *basicVMImportNegativeTest) prepareVmResourcesStub(vmID string) *sapi.StubbingBuilder {
+	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
+	return t.prepareVMResourceStubWithDiskData(vmID, "disk-1", diskXML, diskAttachmentsXML)
+}
+
+func (t *basicVMImportNegativeTest) prepareVMResourceStubWithDiskData(vmID string, diskID string, diskXML string, diskAttachmentsXML string) *sapi.StubbingBuilder {
+	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
 	nicsXML := t.framework.LoadFile("nics/empty.xml")
-	builder := sapi.NewStubbingBuilder().
+	return sapi.NewStubbingBuilder().
 		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXML).
 		StubGet("/ovirt-engine/api/disks/"+diskID, &diskXML).
 		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXML).
-		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXML).
-		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML)
+		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXML)
+}
+
+func (t *basicVMImportNegativeTest) recordStubbing(builder *sapi.StubbingBuilder) {
 	err := t.framework.OvirtStubbingClient.Stub(builder.Build())
 	if err != nil {
 		Fail(err.Error())
