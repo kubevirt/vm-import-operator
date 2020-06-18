@@ -142,6 +142,42 @@ In order to update `vm-import-operator` deployment, user may use CLI or UI for s
 
 After setting the values, click on 'Reload' or delete the vm-import-operator pod for changes to take effect.
 
+For CLI users, run the following after replacing `TARGET_NAMESPACE` and the values of env vars `OS_CONFIGMAP_NAMESPACE` and `OS_CONFIGMAP_NAME` with the desired ones:
+
+```bash
+TARGET_NAMESPACE=kubevirt-hyperconverged
+kubectl patch deployment vm-import-operator -n $TARGET_NAMESPACE --patch '
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "containers": [
+          {
+            "name": "vm-import-operator",
+            "env": [
+              {
+                "name": "OS_CONFIGMAP_NAMESPACE",
+                "value": "default"
+              },
+              {
+                "name": "OS_CONFIGMAP_NAME",
+                "value": "my-custom-os-map-name"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}'
+```
+
+In order to propagate the changes to vm-import-controller deployment, it should be deleted. The vm-import-operator will reconcile it to the desired state:
+```bash
+TARGET_NAMESPACE=kubevirt-hyperconverged
+oc delete deploy/vm-import-controller -n $TARGET_NAMESPACE
+```
+
 An example of the map can be found under [example](https://github.com/kubevirt/vm-import-operator/blob/master/examples/config_map.yaml) and should follow the format as shown in the following config map:
 ```yaml
 apiVersion: v1
