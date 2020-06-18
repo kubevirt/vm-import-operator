@@ -9,6 +9,7 @@
 | Basic import without resource mapping should create started VM | &check; |
 | Basic import with in-CR resource mapping should create running VM for storage domain mapping | &check; |
 | Basic import with in-CR resource mapping should create running VM for storage disk mapping | &check; |
+| Target VM and VMI should not be affected when successful import CR is removed | &cross; |
 
 ## Basic VM negative
 | Test description | Implemented |
@@ -23,11 +24,20 @@
 | Basic VM import with invalid oVirt password should fail import | &check; |
 | Basic VM import with non-existing VM ID should fail import | &check; |
 | Basic VM import with missing specified external resource mapping should fail import | &check; |
+| Basic VM import should be stuck retrying to stop the source VM when it does not shut down | &cross; |
 
 ## Basic Net VM
 | Test description | Implemented |
 | :---------------- | :-----------: |
 | Networked VM import should create started VM | &check; |
+
+### Multiple VMs import
+| Test description | Implemented |
+| :---------------- | :-----------: |
+| Two VMs should be imported in parallel to the same namespace and started | &cross; |
+| Two VMs should be imported in sequence to the same namespace and started | &cross; |
+| Import of the same VM second time in a row to the same namespace should fail | &cross; |
+| Same VM imported second time in a row to a different namespace than the first time should be started | &cross; |
 
 ## Various VM configurations
 | Test description | Implemented |
