@@ -24,7 +24,7 @@
 | Basic VM import with invalid oVirt password should fail import | &check; |
 | Basic VM import with non-existing VM ID should fail import | &check; |
 | Basic VM import with missing specified external resource mapping should fail import | &check; |
-| Basic VM import should be stuck retrying to stop the source VM when it does not shut down | &cross; |
+| Basic VM import should be stuck retrying to stop the source VM when it does not shut down | &check; |
 
 ## Basic Net VM
 | Test description | Implemented |
