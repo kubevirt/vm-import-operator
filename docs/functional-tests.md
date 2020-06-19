@@ -9,7 +9,7 @@
 | Basic import without resource mapping should create started VM | &check; |
 | Basic import with in-CR resource mapping should create running VM for storage domain mapping | &check; |
 | Basic import with in-CR resource mapping should create running VM for storage disk mapping | &check; |
-| Target VM and VMI should not be affected when successful import CR is removed | &cross; |
+| Target VM and VMI should not be affected when successful import CR is removed | &check; |
 
 ## Basic VM negative
 | Test description | Implemented |
