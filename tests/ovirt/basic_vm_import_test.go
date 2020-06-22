@@ -1,15 +1,17 @@
 package ovirt_test
 
 import (
+	"time"
+
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	"github.com/kubevirt/vm-import-operator/tests"
-	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
-	"github.com/kubevirt/vm-import-operator/tests/utils"
-	sapi "github.com/machacekondra/fakeovirt/pkg/api/stubbing"
 	"github.com/onsi/ginkgo/extensions/table"
 
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
+	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
+	"github.com/kubevirt/vm-import-operator/tests/utils"
+	sapi "github.com/machacekondra/fakeovirt/pkg/api/stubbing"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -109,6 +111,61 @@ var _ = Describe("Basic VM import ", func() {
 				},
 			}, tests.StorageClass))
 	})
+
+	Context("when it's successful and the import CR is removed", func() {
+		It("should not affect imported VM or VMI", func() {
+			By("Creating Virtual Machine Import")
+			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+			vmImports := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace)
+
+			created, err := vmImports.Create(&vmi)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(created).To(BeSuccessful(f))
+
+			retrieved, _ := vmImports.Get(created.Name, metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
+			By("Making sure the imported VM is running")
+			Expect(vmBlueprint).To(BeRunning(f))
+
+			When("VM import CR is deleted", func() {
+				foreground := metav1.DeletePropagationForeground
+				deleteOptions := metav1.DeleteOptions{
+					PropagationPolicy: &foreground,
+				}
+				err = vmImports.Delete(retrieved.Name, &deleteOptions)
+				if err != nil {
+					Fail(err.Error())
+				}
+
+				By("Waiting for VM import removal")
+				err = f.EnsureVMIDoesNotExist(retrieved.Name)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			Consistently(func() (*v1.VirtualMachineInstance, error) {
+				vmi, err := f.KubeVirtClient.VirtualMachineInstance(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+				if err != nil {
+					return nil, err
+				}
+				return vmi, nil
+
+			}, 2*time.Minute, 15*time.Second).ShouldNot(BeNil())
+			vmInstance, err := f.KubeVirtClient.VirtualMachineInstance(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+			if err != nil {
+				Fail(err.Error())
+			}
+			Expect(vmInstance.IsRunning()).To(BeTrue())
+
+			vm, err := f.KubeVirtClient.VirtualMachine(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+			if err != nil {
+				Fail(err.Error())
+			}
+			Expect(vm).NotTo(BeNil())
+		})
+	})
 })
 
 func (t *basicVmImportTest) validateTargetConfiguration(vmName string) *v1.VirtualMachine {
@@ -160,19 +217,19 @@ func (t *basicVmImportTest) validateTargetConfiguration(vmName string) *v1.Virtu
 }
 
 func (t *basicVmImportTest) stub(vmID string) {
-	domainXml := t.framework.LoadFile("storage-domains/domain-1.xml")
-	diskAttachmentsXml := t.framework.LoadFile("disk-attachments/one.xml")
-	diskXml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
-	consolesXml := t.framework.LoadFile("graphic-consoles/vnc.xml")
-	vmXml := t.framework.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
-	nicsXml := t.framework.LoadFile("nics/empty.xml")
+	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
+	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
+	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	consolesXML := t.framework.LoadFile("graphic-consoles/vnc.xml")
+	vmXML := t.framework.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
+	nicsXML := t.framework.LoadFile("nics/empty.xml")
 	builder := sapi.NewStubbingBuilder().
-		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXml).
-		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXml).
-		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXml).
-		StubGet("/ovirt-engine/api/disks/disk-1", &diskXml).
-		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXml).
-		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml)
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXML).
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXML).
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXML).
+		StubGet("/ovirt-engine/api/disks/disk-1", &diskXML).
+		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXML).
+		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML)
 	err := t.framework.OvirtStubbingClient.Stub(builder.Build())
 	if err != nil {
 		Fail(err.Error())
