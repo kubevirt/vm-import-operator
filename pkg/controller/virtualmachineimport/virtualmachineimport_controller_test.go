@@ -1441,6 +1441,8 @@ type mockKubeVirtConfigProvider struct{}
 
 type mockOvirtClient struct{}
 
+type mockVmwareClient struct{}
+
 // Create implements client.Client
 func (c *mockClient) Create(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 	return create(ctx, obj)
@@ -1592,6 +1594,11 @@ func (f *mockFactory) NewOvirtClient(dataMap map[string]string) (pclient.VMClien
 	return &mockOvirtClient{}, nil
 }
 
+// NewVmwareClient implements Factory.NewVmwareClient
+func (f *mockFactory) NewVmwareClient(dataMap map[string]string) (pclient.VMClient, error) {
+	return &mockVmwareClient{}, nil
+}
+
 func (f *mockController) Watch(src source.Source, eventhandler handler.EventHandler, predicates ...predicate.Predicate) error {
 	return nil
 }
@@ -1621,6 +1628,22 @@ func (c *mockOvirtClient) TestConnection() error {
 }
 
 func (c *mockOvirtClient) Close() error {
+	return nil
+}
+
+func (c *mockVmwareClient) GetVM(id *string, name *string, cluster *string, clusterID *string) (interface{}, error) {
+	return getVM(id, name, cluster, clusterID)
+}
+
+func (c *mockVmwareClient) StopVM(id string) error {
+	return stopVM(id)
+}
+
+func (c *mockVmwareClient) StartVM(id string) error {
+	return nil
+}
+
+func (c *mockVmwareClient) Close() error {
 	return nil
 }
 

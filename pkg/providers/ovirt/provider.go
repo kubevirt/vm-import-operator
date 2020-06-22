@@ -20,7 +20,6 @@ import (
 	"github.com/kubevirt/vm-import-operator/pkg/configmaps"
 	"github.com/kubevirt/vm-import-operator/pkg/datavolumes"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
-	ovirtclient "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/client"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mappings"
 	otemplates "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/templates"
@@ -527,22 +526,4 @@ func foldErrors(errs []error, vmiName types.NamespacedName) error {
 		message = utils.WithMessage(message, e.Error())
 	}
 	return fmt.Errorf("clean-up for %v failed: %s", utils.ToLoggableResourceName(vmiName.Name, &vmiName.Namespace), message)
-}
-
-// SourceClientFactory provides default client factory implementation
-type SourceClientFactory struct{}
-
-// NewSourceClientFactory creates new factory
-func NewSourceClientFactory() *SourceClientFactory {
-	return &SourceClientFactory{}
-}
-
-// NewOvirtClient creates new Ovirt clients
-func (f *SourceClientFactory) NewOvirtClient(dataMap map[string]string) (pclient.VMClient, error) {
-	return ovirtclient.NewRichOvirtClient(&ovirtclient.ConnectionSettings{
-		URL:      dataMap["apiUrl"],
-		Username: dataMap["username"],
-		Password: dataMap["password"],
-		CACert:   []byte(dataMap["caCert"]),
-	})
 }
