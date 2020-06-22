@@ -35,9 +35,11 @@
 | Test description | Implemented |
 | :---------------- | :-----------: |
 | Two VMs should be imported in parallel to the same namespace and started | &cross; |
-| Two VMs should be imported in sequence to the same namespace and started | &cross; |
-| Import of the same VM second time in a row to the same namespace should fail | &cross; |
-| Same VM imported second time in a row to a different namespace than the first time should be started | &cross; |
+| Two VMs should be imported in sequence to the same namespace and started | &check; |
+| Import of the same source VM with NIC (and MAC address) to the same namespace should fail | &check; |
+| Import of the same source VM with NIC (and MAC address) to a different namespace should fail | &check; |
+| Same source VM with no NICs imported second time with the same target name to the same namespace should not be created but import should be successful | &check; |
+| Same VM with no NICs imported second time in a row to a different namespace than the first time should be started | &check; |
 
 ## Various VM configurations
 | Test description | Implemented |

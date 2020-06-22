@@ -37,4 +37,4 @@ make cluster-sync
 ./cluster/kubectl.sh create -f tests/cirros/secret.yml
 
 KUBECONFIG=$(./cluster/kubeconfig.sh)
-go test ./tests/ovirt --v -timeout 90m -kubeconfig "$KUBECONFIG" -ovirt-secret "default/ovirt-secret"
+go test ./tests/ovirt --v -timeout 120m -kubeconfig "$KUBECONFIG" -ovirt-secret "default/ovirt-secret"

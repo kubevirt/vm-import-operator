@@ -68,6 +68,18 @@ func BeSuccessful(testFramework *framework.Framework) types.GomegaMatcher {
 	return &matcher
 }
 
+// BeUnsuccessful creates the matcher checking whether Virtual Machine Import is unsuccessful
+func BeUnsuccessful(testFramework *framework.Framework) types.GomegaMatcher {
+	matcher := hasConditionInStatus{}
+	matcher.timeout = 3 * time.Minute
+	matcher.pollInterval = 5 * time.Second
+	matcher.testFramework = testFramework
+
+	matcher.conditionType = v2vv1alpha1.Succeeded
+	matcher.status = corev1.ConditionFalse
+	return &matcher
+}
+
 // HaveDataVolumeCreationFailure creates the matcher checking whether Virtual Machine Import failed to create datavolume
 func HaveDataVolumeCreationFailure(testFramework *framework.Framework) types.GomegaMatcher {
 	matcher := hasConditionInStatus{}
@@ -91,6 +103,7 @@ func (matcher *hasConditionInStatus) Match(actual interface{}) (bool, error) {
 		matcher.conditionType,
 		matcher.status,
 		matcher.reason,
+		vmBluePrint.Namespace,
 	)
 	if pollErr != nil {
 		return false, pollErr

@@ -6,16 +6,20 @@ import (
 	v1 "kubevirt.io/client-go/api/v1"
 )
 
-// VirtualMachineImportCr creates VM import CR
-func VirtualMachineImportCr(vmID string, namespace string, ovirtSecretName string, prefix string, startVm bool) v2vv1alpha1.VirtualMachineImport {
-	targetVMName := "target-vm"
+// VirtualMachineImportCr creates VM import CR with default name
+func VirtualMachineImportCr(vmID string, namespace string, ovirtSecretName string, prefix string, startVM bool) v2vv1alpha1.VirtualMachineImport {
+	return VirtualMachineImportCrWithName(vmID, namespace, ovirtSecretName, prefix, startVM, "target-vm")
+}
+
+// VirtualMachineImportCrWithName creates VM import CR with given name
+func VirtualMachineImportCrWithName(vmID string, namespace string, ovirtSecretName string, prefix string, startVM bool, targetVMName string) v2vv1alpha1.VirtualMachineImport {
 	return v2vv1alpha1.VirtualMachineImport{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: prefix + "-",
 			Namespace:    namespace,
 		},
 		Spec: v2vv1alpha1.VirtualMachineImportSpec{
-			StartVM: &startVm,
+			StartVM: &startVM,
 			ProviderCredentialsSecret: v2vv1alpha1.ObjectIdentifier{
 				Name:      ovirtSecretName,
 				Namespace: &namespace,

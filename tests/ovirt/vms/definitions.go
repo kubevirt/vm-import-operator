@@ -34,6 +34,8 @@ const (
 	I6300esbWatchdogVmID                         = "i6300esb-watchdog"
 	CPUPinningVmID                               = "cpu-pinning"
 	UpStatusVmID                                 = "status-up"
+	MultipleVmsNo1VmID                           = "multiple-vms-no1"
+	MultipleVmsNo2VmID                           = "multiple-vms-no2"
 
 	MissingOVirtSecretVmId   = "missing-ovirt-secret"
 	InvalidOVirtSecretVmId   = "invalid-ovirt-secret"

@@ -85,7 +85,7 @@ var _ = Describe("VM import cancellation ", func() {
 		})
 
 		By("Waiting for VM import removal")
-		err = f.EnsureVMIDoesNotExist(vmiName)
+		err = f.EnsureVMImportDoesNotExist(vmiName)
 		Expect(err).ToNot(HaveOccurred())
 
 		By("Temporary config map no longer existing")
