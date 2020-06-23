@@ -785,12 +785,21 @@ func (r *ReconcileVirtualMachineImport) updateDVs(vmiName types.NamespacedName, 
 	}
 
 	copy := instance.DeepCopy()
-	copy.Status.DataVolumes = append(copy.Status.DataVolumes, v2vv1alpha1.DataVolumeItem{Name: dv.Name})
-
-	patch := client.MergeFrom(&instance)
-	err = r.client.Status().Patch(context.TODO(), copy, patch)
-	if err != nil {
-		return err
+	dvFound := false
+	for _, dvName := range copy.Status.DataVolumes {
+		if dvName.Name == dv.Name {
+			dvFound = true
+			break
+		}
+	}
+	// Patch the status only in case DV is not already part of the VMImport status:
+	if !dvFound {
+		copy.Status.DataVolumes = append(copy.Status.DataVolumes, v2vv1alpha1.DataVolumeItem{Name: dv.Name})
+		patch := client.MergeFrom(&instance)
+		err = r.client.Status().Patch(context.TODO(), copy, patch)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
