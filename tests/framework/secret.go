@@ -10,6 +10,11 @@ import (
 
 // CreateOvirtSecretFromBlueprint copies secret from `f.OVirtSecretName` to the test namespace
 func (f *Framework) CreateOvirtSecretFromBlueprint() (corev1.Secret, error) {
+	return f.CreateOvirtSecretInNamespaceFromBlueprint(f.Namespace.Name)
+}
+
+// CreateOvirtSecretInNamespaceFromBlueprint copies secret from `f.OVirtSecretName` to given namespace
+func (f *Framework) CreateOvirtSecretInNamespaceFromBlueprint(namespace string) (corev1.Secret, error) {
 	if f.OVirtSecretName == nil {
 		return corev1.Secret{}, fmt.Errorf("OVirt secret namespace and name have not been provided")
 	}
@@ -18,7 +23,6 @@ func (f *Framework) CreateOvirtSecretFromBlueprint() (corev1.Secret, error) {
 		return corev1.Secret{}, err
 	}
 	testSecret := blueprint.DeepCopy()
-	namespace := f.Namespace.Name
 	testSecret.ObjectMeta = metav1.ObjectMeta{
 		GenerateName: f.NsPrefix,
 		Namespace:    namespace,

@@ -141,7 +141,7 @@ var _ = Describe("Basic VM import ", func() {
 				}
 
 				By("Waiting for VM import removal")
-				err = f.EnsureVMIDoesNotExist(retrieved.Name)
+				err = f.EnsureVMImportDoesNotExist(retrieved.Name)
 				Expect(err).ToNot(HaveOccurred())
 			})
 
