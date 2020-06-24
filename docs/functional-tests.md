@@ -29,7 +29,8 @@
 ## Basic Net VM
 | Test description | Implemented |
 | :---------------- | :-----------: |
-| Networked VM import should create started VM | &check; |
+| Networked VM import should create started VM with pod network when type in network resource mapping is 'pod' | &check; |
+| Networked VM import should create started VM with pod network when type in network resource mapping is missing (nil) | &check; |
 
 ### Multiple VMs import
 | Test description | Implemented |
@@ -101,6 +102,7 @@
 | :---------------- | :---------:
 | Import with missing network resource mapping should be blocked | &check; |
 | Import with network mapping to a non-existing target network should be blocked | &check; |
+| Import with network mapping to unsupported target type should be blocked | &check; |
 | Import with storage mapping to a non-existing target storage class should be blocked | &check; |
 | Import with disk mapping to a non-existing target storage class should be blocked | &check; |
 

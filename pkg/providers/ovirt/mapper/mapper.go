@@ -358,7 +358,7 @@ func (o *OvirtMapper) getNetworkForNic(vnicProfile *ovirtsdk.VnicProfile) kubevi
 }
 
 func (o *OvirtMapper) mapNetworkType(mapping v2vv1alpha1.ResourceMappingItem, kubevirtNet *kubevirtv1.Network) {
-	if *mapping.Type == networkTypePod {
+	if mapping.Type == nil || *mapping.Type == networkTypePod {
 		kubevirtNet.Pod = &kubevirtv1.PodNetwork{}
 	} else if *mapping.Type == networkTypeMultus {
 		kubevirtNet.Multus = &kubevirtv1.MultusNetwork{
