@@ -9,13 +9,14 @@ import (
 	"github.com/kubevirt/vm-import-operator/tests/utils"
 	sapi "github.com/machacekondra/fakeovirt/pkg/api/stubbing"
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "kubevirt.io/client-go/api/v1"
 )
 
-type networkedVmImportTest struct {
+type networkedVMImportTest struct {
 	framework *fwk.Framework
 }
 
@@ -24,7 +25,7 @@ var _ = Describe("Networked VM import ", func() {
 		f         = fwk.NewFrameworkOrDie("networked-vm-import")
 		secret    corev1.Secret
 		namespace string
-		test      = networkedVmImportTest{framework: f}
+		test      = networkedVMImportTest{framework: f}
 	)
 
 	BeforeEach(func() {
@@ -36,12 +37,12 @@ var _ = Describe("Networked VM import ", func() {
 		secret = s
 	})
 
-	It("should create started VM", func() {
+	table.DescribeTable("should create started VM with pod network", func(networkType *string) {
 		vmID := vms.BasicVmID
 		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 		vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
 			NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
-				{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+				{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: networkType},
 			},
 		}
 		test.stub(vmID)
@@ -58,10 +59,13 @@ var _ = Describe("Networked VM import ", func() {
 
 		vm := test.validateTargetConfiguration(vmBlueprint.Name)
 		Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveDefaultStorageClass(f))
-	})
+	},
+		table.Entry("when type in network resource mapping is 'pod'", &tests.PodType),
+		table.Entry("when type in network resource mapping is missing (nil)", nil),
+	)
 })
 
-func (t *networkedVmImportTest) validateTargetConfiguration(vmName string) *v1.VirtualMachine {
+func (t *networkedVMImportTest) validateTargetConfiguration(vmName string) *v1.VirtualMachine {
 	vmNamespace := t.framework.Namespace.Name
 	vm, _ := t.framework.KubeVirtClient.VirtualMachine(vmNamespace).Get(vmName, &metav1.GetOptions{})
 	spec := vm.Spec.Template.Spec
@@ -105,24 +109,24 @@ func (t *networkedVmImportTest) validateTargetConfiguration(vmName string) *v1.V
 	return vm
 }
 
-func (t *networkedVmImportTest) stub(vmID string) {
-	diskAttachmentsXml := t.framework.LoadFile("disk-attachments/one.xml")
-	diskXml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
-	domainXml := t.framework.LoadFile("storage-domains/domain-1.xml")
-	consolesXml := t.framework.LoadFile("graphic-consoles/vnc.xml")
-	networkXml := t.framework.LoadFile("networks/net-1.xml")
-	vnicProfileXml := t.framework.LoadFile("vnic-profiles/vnic-profile-1.xml")
-	vmXml := t.framework.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
-	nicsXml := t.framework.LoadFile("nics/one.xml")
+func (t *networkedVMImportTest) stub(vmID string) {
+	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
+	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
+	consolesXML := t.framework.LoadFile("graphic-consoles/vnc.xml")
+	networkXML := t.framework.LoadFile("networks/net-1.xml")
+	vnicProfileXML := t.framework.LoadFile("vnic-profiles/vnic-profile-1.xml")
+	vmXML := t.framework.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
+	nicsXML := t.framework.LoadFile("nics/one.xml")
 	builder := sapi.NewStubbingBuilder().
-		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXml).
-		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXml).
-		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXml).
-		StubGet("/ovirt-engine/api/disks/disk-1", &diskXml).
-		StubGet("/ovirt-engine/api/networks/net-1", &networkXml).
-		StubGet("/ovirt-engine/api/vnicprofiles/vnic-profile-1", &vnicProfileXml).
-		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXml).
-		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml)
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXML).
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXML).
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXML).
+		StubGet("/ovirt-engine/api/disks/disk-1", &diskXML).
+		StubGet("/ovirt-engine/api/networks/net-1", &networkXML).
+		StubGet("/ovirt-engine/api/vnicprofiles/vnic-profile-1", &vnicProfileXML).
+		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXML).
+		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML)
 	err := t.framework.OvirtStubbingClient.Stub(builder.Build())
 	if err != nil {
 		Fail(err.Error())
