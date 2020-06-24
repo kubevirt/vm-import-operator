@@ -1,8 +1,12 @@
 package ovirt_test
 
 import (
+	"strings"
 	"time"
 
+	"github.com/kubevirt/vm-import-operator/tests"
+
+	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	"github.com/kubevirt/vm-import-operator/tests/ovirt"
 	"github.com/onsi/ginkgo/extensions/table"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -10,7 +14,6 @@ import (
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
-	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
 	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
@@ -173,6 +176,30 @@ var _ = Describe("VM import", func() {
 
 		}, 5*time.Minute, time.Minute).Should(BeNil())
 	})
+
+	It("should fail when ImportWithoutTemplate feature gate is disabled and VM template can't be found", func() {
+		vmID := vms.BasicVmID
+		configMap, err := f.K8sClient.CoreV1().ConfigMaps("kubevirt").Get("kubevirt-config", metav1.GetOptions{})
+		if err != nil {
+			Fail(err.Error())
+		}
+		configMap.Data["feature-gates"] = strings.ReplaceAll(configMap.Data["feature-gates"], ",ImportWithoutTemplate", "")
+
+		f.K8sClient.CoreV1().ConfigMaps("kubevirt").Update(configMap)
+		defer test.cleanUpConfigMap()
+
+		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+		vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
+			NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
+				{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+			},
+		}
+		test.prepareVm(vmID)
+		created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(created).To(HaveTemplateMatchingFailure(f))
+	})
 })
 
 func (t *basicVMImportNegativeTest) createInvalidSecret() *corev1.Secret {
@@ -229,6 +256,19 @@ func (t *basicVMImportNegativeTest) prepareVMResourceStubWithDiskData(vmID strin
 
 func (t *basicVMImportNegativeTest) recordStubbing(builder *sapi.StubbingBuilder) {
 	err := t.framework.OvirtStubbingClient.Stub(builder.Build())
+	if err != nil {
+		Fail(err.Error())
+	}
+}
+
+func (t *basicVMImportNegativeTest) cleanUpConfigMap() {
+	f := t.framework
+	configMap, err := f.K8sClient.CoreV1().ConfigMaps("kubevirt").Get("kubevirt-config", metav1.GetOptions{})
+	if err != nil {
+		Fail(err.Error())
+	}
+	configMap.Data["feature-gates"] = configMap.Data["feature-gates"] + ",ImportWithoutTemplate"
+	_, err = f.K8sClient.CoreV1().ConfigMaps("kubevirt").Update(configMap)
 	if err != nil {
 		Fail(err.Error())
 	}

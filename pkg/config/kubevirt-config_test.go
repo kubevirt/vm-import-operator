@@ -48,6 +48,34 @@ var _ = Describe("Live migration in KubeVirt config ", func() {
 	})
 })
 
+var _ = Describe("Import without templates in KubeVirt config ", func() {
+	table.DescribeTable("should be enabled for: ", func(featureGates string) {
+		cfg := config.KubeVirtConfig{
+			FeatureGates: featureGates,
+		}
+
+		enabled := cfg.ImportWithoutTemplateEnabled()
+
+		Expect(enabled).To(BeTrue())
+	},
+		table.Entry("only ImportWithoutTemplate", "ImportWithoutTemplate"),
+		table.Entry("ImportWithoutTemplate among others", "ImportWithoutTemplate,LiveMigration,Bar"),
+	)
+
+	table.DescribeTable("should be disabled for: ", func(featureGates string) {
+		cfg := config.KubeVirtConfig{
+			FeatureGates: featureGates,
+		}
+
+		enabled := cfg.ImportWithoutTemplateEnabled()
+
+		Expect(enabled).To(BeFalse())
+	},
+		table.Entry("empty feature gates", ""),
+		table.Entry("feature gates other than ImportWithoutTemplate", "Foo,Bar"),
+	)
+})
+
 var _ = Describe("KubeVirt config creator", func() {
 	featureGates := "LiveMigration"
 	configMap := corev1.ConfigMap{

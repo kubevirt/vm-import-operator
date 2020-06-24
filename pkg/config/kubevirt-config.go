@@ -10,6 +10,8 @@ const (
 	featureGatesKey = "feature-gates"
 
 	liveMigrationGate = "LiveMigration"
+
+	importWithoutTemplateGate = "ImportWithoutTemplate"
 )
 
 // NewKubeVirtConfig creates new KubeVirt and initializes it with given configMap
@@ -37,6 +39,11 @@ func (c *KubeVirtConfig) ConfigMap() v1.ConfigMap {
 // LiveMigrationEnabled returns true if LiveMigration KubeVirt feature gate is enabled
 func (c *KubeVirtConfig) LiveMigrationEnabled() bool {
 	return c.isFeatureGateEnabled(liveMigrationGate)
+}
+
+// ImportWithoutTemplateEnabled returns true if ImportWithoutTemplate KubeVirt feature gate is enabled
+func (c *KubeVirtConfig) ImportWithoutTemplateEnabled() bool {
+	return c.isFeatureGateEnabled(importWithoutTemplateGate)
 }
 
 // String returns string representation of the config

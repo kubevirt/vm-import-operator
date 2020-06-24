@@ -119,6 +119,9 @@ const (
 	// ValidationFailed represents a failure to validate the eligibility of the VM for import
 	ValidationFailed SucceededConditionReason = "ValidationFailed"
 
+	// VMTemplateMatchingFailed represents a failure to match VM template
+	VMTemplateMatchingFailed SucceededConditionReason = "VMTemplateMatchingFailed"
+
 	// VMCreationFailed represents a failure to create the VM entity
 	VMCreationFailed SucceededConditionReason = "VMCreationFailed"
 
@@ -179,6 +182,9 @@ type ProcessingConditionReason string
 
 // These are valid reasons for the Processing conditions of VM import.
 const (
+	// VMTemplateMatching represents the VM template matching process
+	VMTemplateMatching ProcessingConditionReason = "VMTemplateMatching"
+
 	// CreatingTargetVM represents the creation of the VM spec
 	CreatingTargetVM ProcessingConditionReason = "CreatingTargetVM"
 

@@ -428,16 +428,36 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 	targetVMName := mapper.ResolveVMName(instance.Spec.TargetVMName)
 
 	// Define VM spec
+	// Update condition to VM template matching:
+	processingCond := conditions.NewProcessingCondition(string(v2vv1alpha1.VMTemplateMatching), "Matching virtual machine template", corev1.ConditionTrue)
+	if err := r.upsertStatusConditions(instanceNamespacedName, processingCond); err != nil {
+		return "", err
+	}
 	template, err := provider.FindTemplate()
 	var spec *kubevirtv1.VirtualMachine
+	config, cfgErr := r.kvConfigProvider.GetConfig()
+	if cfgErr != nil {
+		log.Error(cfgErr, "Cannot get KubeVirt cluster config.")
+	}
 	if err != nil {
-		reqLogger.Info("No matching template was found for the virtual machine. Using empty VM definition")
+		reqLogger.Info("No matching template was found for the virtual machine.")
+		if !config.ImportWithoutTemplateEnabled() {
+			if err := r.templateMatchingFailed(instanceNamespacedName, err.Error(), &processingCond, provider); err != nil {
+				return "", err
+			}
+			return "", err
+		}
+		reqLogger.Info("Using empty VM definition.")
 		spec = mapper.CreateEmptyVM(targetVMName)
 	} else {
 		reqLogger.Info("A template was found for creating the virtual machine", "Template.Name", template.ObjectMeta.Name)
 		spec, err = provider.ProcessTemplate(template, targetVMName, instance.Namespace)
 		if err != nil {
-			reqLogger.Info("Failed to process the template. Using empty VM definition. Error: " + err.Error())
+			reqLogger.Info("Failed to process the template. Error: " + err.Error())
+			if !config.ImportWithoutTemplateEnabled() {
+				return "", err
+			}
+			reqLogger.Info("Using empty VM definition.")
 			spec = mapper.CreateEmptyVM(targetVMName)
 		} else {
 			if len(spec.ObjectMeta.Name) > 0 {
@@ -467,7 +487,7 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 	}
 
 	// Update condition to creating VM:
-	processingCond := conditions.NewProcessingCondition(string(v2vv1alpha1.CreatingTargetVM), "Creating virtual machine", corev1.ConditionTrue)
+	processingCond = conditions.NewProcessingCondition(string(v2vv1alpha1.CreatingTargetVM), "Creating virtual machine", corev1.ConditionTrue)
 	if err = r.upsertStatusConditions(instanceNamespacedName, processingCond); err != nil {
 		return "", err
 	}
@@ -1073,6 +1093,24 @@ func (r *ReconcileVirtualMachineImport) validate(instance *v2vv1alpha1.VirtualMa
 		logger.Info("VirtualMachineImport has already been validated positively. Skipping re-validation")
 	}
 	return true, nil
+}
+
+func (r *ReconcileVirtualMachineImport) templateMatchingFailed(instanceNamespacedName types.NamespacedName, errorMessage string, processingCond *v2vv1alpha1.VirtualMachineImportCondition, provider provider.Provider) error {
+	succeededCond := conditions.NewSucceededCondition(string(v2vv1alpha1.VMTemplateMatchingFailed), "Couldn't find matching template", corev1.ConditionFalse)
+
+	processingCond.Status = corev1.ConditionFalse
+	processingFailedReason := string(v2vv1alpha1.ProcessingFailed)
+	processingCond.Reason = &processingFailedReason
+	processingCond.Message = &errorMessage
+	if err := r.upsertStatusConditions(instanceNamespacedName, succeededCond, *processingCond); err != nil {
+		return err
+	}
+
+	// Cleanup after failure
+	if err := r.afterFailure(instanceNamespacedName, provider); err != nil {
+		return err
+	}
+	return nil
 }
 
 func newValidationCondition(reason v2vv1alpha1.ValidConditionReason, message string) v2vv1alpha1.VirtualMachineImportCondition {

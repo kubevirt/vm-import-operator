@@ -52,6 +52,7 @@ var (
 	getVM              func(id *string, name *string, cluster *string, clusterID *string) (interface{}, error)
 	stopVM             func(id string) error
 	list               func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error
+	getConfig          func() config.KubeVirtConfig
 )
 var _ = Describe("Reconcile steps", func() {
 	var (
@@ -104,6 +105,9 @@ var _ = Describe("Reconcile steps", func() {
 		}
 		cleanUp = func() error {
 			return nil
+		}
+		getConfig = func() config.KubeVirtConfig {
+			return config.KubeVirtConfig{FeatureGates: "ImportWithoutTemplate"}
 		}
 		vmName = types.NamespacedName{Name: "test", Namespace: "default"}
 		rec := record.NewFakeRecorder(2)
@@ -373,13 +377,19 @@ var _ = Describe("Reconcile steps", func() {
 		})
 
 		It("should fail to find a template: ", func() {
+			templateError := fmt.Errorf("Not found")
 			findTemplate = func() (*oapiv1.Template, error) {
-				return nil, fmt.Errorf("Not found")
+				return nil, templateError
+			}
+			getConfig = func() config.KubeVirtConfig {
+				// Feature flag is not present
+				return config.KubeVirtConfig{}
 			}
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-				switch obj.(type) {
+				switch vmImport := obj.(type) {
 				case *v2vv1alpha1.VirtualMachineImport:
-					return fmt.Errorf("Not found")
+					vmImport.Annotations = map[string]string{"vmimport.v2v.kubevirt.io/source-vm-initial-state": "down"}
+					vmImport.Spec = v2vv1alpha1.VirtualMachineImportSpec{}
 				}
 				return nil
 			}
@@ -388,12 +398,27 @@ var _ = Describe("Reconcile steps", func() {
 
 			Expect(name).To(Equal(""))
 			Expect(err).To(Not(BeNil()))
+			Expect(err).To(BeEquivalentTo(templateError))
+		})
+
+		It("should fail to process template: ", func() {
+			templateProcessingError := fmt.Errorf("Failed")
+			processTemplate = func(template *oapiv1.Template, name *string, namespace string) (*kubevirtv1.VirtualMachine, error) {
+				return nil, templateProcessingError
+			}
+			getConfig = func() config.KubeVirtConfig {
+				// Feature flag is not present
+				return config.KubeVirtConfig{}
+			}
+
+			name, err := reconciler.createVM(mock, instance, mapper)
+
+			Expect(name).To(Equal(""))
+			Expect(err).To(Not(BeNil()))
+			Expect(err).To(BeEquivalentTo(templateProcessingError))
 		})
 
 		It("should fail to update condition: ", func() {
-			processTemplate = func(template *oapiv1.Template, name *string, namespace string) (*kubevirtv1.VirtualMachine, error) {
-				return nil, fmt.Errorf("Failed")
-			}
 			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
 				return fmt.Errorf("Not modified")
 			}
@@ -1567,7 +1592,7 @@ func (c *mockOvirtClient) Close() error {
 }
 
 func (c *mockKubeVirtConfigProvider) GetConfig() (config.KubeVirtConfig, error) {
-	return config.KubeVirtConfig{}, nil
+	return getConfig(), nil
 }
 
 func getSecret() []byte {
