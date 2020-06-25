@@ -132,7 +132,22 @@ The resource mapping is resolved in following manner:
 
 ### Common Templates
 The operator defines a map of OS types to equivalent common templates OS types.
-When a match is found between the imported VM operating system via operator's OS map to a common template, that template will be used to create the VM spec of the target VM.
+When a match is found between the imported VM operating system via operator's OS map to a common template, that template will be used to create the VM spec of the target VM. By default, the VM import will fail if a matching template is not found. Importing of template-less VMs can be enabled by specifying `ImportWithoutTemplate` KubeVirt feature flag.
+
+KubeVirt feature flags are defined in the `kubevirt-config` config map in the KubeVirt installation namespace, under `feature-gates` key. For example:
+
+```yaml
+apiVersion: v1
+data:
+  feature-gates: DataVolumes,ImportWithoutTemplate
+kind: ConfigMap
+metadata:
+  name: kubevirt-config
+  namespace: kubevirt
+
+```
+     
+
 The user can provide a custom map to override or extend operator's OS map by providing the map via environment variables to be set for the operator's deployment resource. Both OS config-map name and namespace are required:
 - OS_CONFIGMAP_NAME - the user OS config map name
 - OS_CONFIGMAP_NAMESPACE - the user OS config map namespace

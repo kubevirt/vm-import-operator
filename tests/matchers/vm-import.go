@@ -80,6 +80,19 @@ func BeUnsuccessful(testFramework *framework.Framework) types.GomegaMatcher {
 	return &matcher
 }
 
+// HaveTemplateMatchingFailure creates the matcher checking whether Virtual Machine Import is unsuccessful because of template matching failyre
+func HaveTemplateMatchingFailure(testFramework *framework.Framework) types.GomegaMatcher {
+	matcher := hasConditionInStatus{}
+	matcher.timeout = 3 * time.Minute
+	matcher.pollInterval = 5 * time.Second
+	matcher.testFramework = testFramework
+
+	matcher.conditionType = v2vv1alpha1.Succeeded
+	matcher.reason = string(v2vv1alpha1.VMTemplateMatchingFailed)
+	matcher.status = corev1.ConditionFalse
+	return &matcher
+}
+
 // HaveDataVolumeCreationFailure creates the matcher checking whether Virtual Machine Import failed to create datavolume
 func HaveDataVolumeCreationFailure(testFramework *framework.Framework) types.GomegaMatcher {
 	matcher := hasConditionInStatus{}

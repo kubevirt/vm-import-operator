@@ -25,6 +25,7 @@
 | Basic VM import with non-existing VM ID should fail import | &check; |
 | Basic VM import with missing specified external resource mapping should fail import | &check; |
 | Basic VM import should be stuck retrying to stop the source VM when it does not shut down | &check; |
+| Basic VM import should fail when ImportWithoutTemplate feature gate is disabled and VM template can't be found | &check; |
 
 ## Basic Net VM
 | Test description | Implemented |
