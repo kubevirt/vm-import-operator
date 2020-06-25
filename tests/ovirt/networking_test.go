@@ -97,8 +97,7 @@ var _ = Describe("Import of VM ", func() {
 
 			Expect(vm.Status.Interfaces).To(HaveLen(1))
 			Expect(vm.Status.Interfaces[0].Name).To(BeEquivalentTo(spec.Networks[0].Name))
-			// FIXME: see https://github.com/kubevirt/vm-import-operator/issues/282
-			//Expect(vm.Status.Interfaces[0].MAC).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
+			Expect(vm.Status.Interfaces[0].MAC).To(BeEquivalentTo(vms.BasicNetworkVmNicMAC))
 		})
 	})
 
