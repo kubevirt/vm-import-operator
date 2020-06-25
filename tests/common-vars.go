@@ -11,6 +11,6 @@ var (
 	PodType = "pod"
 	// MultusType defines `pod` resource mapping network type
 	MultusType = "multus"
-	// UnsupportedType defines non-existing, unsupported `unsupported resource mapping network type
+	// UnsupportedType defines non-existing `unsupported` resource mapping network type
 	UnsupportedType = "unsupported"
 )
