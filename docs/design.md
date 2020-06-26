@@ -98,6 +98,8 @@ The import VM operator will be responsible to deduce the configuration of the ta
 * name - should follow the format of 'network-name/vnic-profile-name'
 * id - represents the vnic-profile ID
 
+Type in network mappings can be omitted as long as target namespace is not present as well; in that case "pod" type will be assumed.
+
 ```yaml
 apiVersion: v2v.kubevirt.io/v1alpha1
 kind: ResourceMapping
@@ -146,7 +148,7 @@ metadata:
   namespace: kubevirt
 
 ```
-     
+
 
 The user can provide a custom map to override or extend operator's OS map by providing the map via environment variables to be set for the operator's deployment resource. Both OS config-map name and namespace are required:
 - OS_CONFIGMAP_NAME - the user OS config map name

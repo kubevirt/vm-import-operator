@@ -52,7 +52,7 @@ var _ = Describe("Validating Network mapping", func() {
 		}
 
 		mapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Type: &podType,
 				Source: v2vv1alpha1.Source{
 					Name: srcNetMappingName,
@@ -81,7 +81,7 @@ var _ = Describe("Validating Network mapping", func() {
 		}
 
 		mapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Type: &podType,
 				Source: v2vv1alpha1.Source{
 					ID:   networkID,
@@ -111,7 +111,7 @@ var _ = Describe("Validating Network mapping", func() {
 		}
 
 		mapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Source: v2vv1alpha1.Source{
 					ID: &vnicProfileID,
 				},
@@ -132,7 +132,7 @@ var _ = Describe("Validating Network mapping", func() {
 		otherNetwork := "other-net"
 
 		mapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Source: v2vv1alpha1.Source{
 					ID: &vnicProfileID,
 				},
@@ -141,7 +141,7 @@ var _ = Describe("Validating Network mapping", func() {
 				},
 				Type: &multusType,
 			},
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Source: v2vv1alpha1.Source{
 					ID: &otherNetwork,
 				},
@@ -175,7 +175,7 @@ var _ = Describe("Validating Network mapping", func() {
 		}
 
 		mapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Type: &multusType,
 				Source: v2vv1alpha1.Source{
 					ID: &vnicProfileID,
@@ -197,7 +197,7 @@ var _ = Describe("Validating Network mapping", func() {
 		}
 
 		mapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Type: &multusType,
 				Source: v2vv1alpha1.Source{
 					ID: &vnicProfileID,
@@ -224,7 +224,7 @@ var _ = Describe("Validating Network mapping", func() {
 		}
 		genieType := "genie"
 		mapping := []v2vv1alpha1.ResourceMappingItem{
-			v2vv1alpha1.ResourceMappingItem{
+			{
 				Type: &genieType,
 				Source: v2vv1alpha1.Source{
 					ID:   &vnicProfileID,
@@ -232,6 +232,30 @@ var _ = Describe("Validating Network mapping", func() {
 				},
 				Target: v2vv1alpha1.ObjectIdentifier{
 					Name: "targetNetwork",
+				},
+			},
+		}
+
+		failures := validator.ValidateNetworkMapping(nics, &mapping, namespace)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.NetworkTypeID))
+	})
+	It("should reject nil type and target namespace present", func() {
+		nics := []*ovirtsdk.Nic{
+			createNic(&networkName, &vnicProfileName, &vnicProfileID),
+		}
+
+		mapping := []v2vv1alpha1.ResourceMappingItem{
+			{
+				Type: nil,
+				Source: v2vv1alpha1.Source{
+					ID:   &vnicProfileID,
+					Name: &srcNetMappingName,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name:      "targetNetwork",
+					Namespace: &namespace,
 				},
 			},
 		}
@@ -283,6 +307,6 @@ func createNic(networkName *string, vnicProfileName *string, vnicProfileID *stri
 
 type mockNetAttachDefProvider struct{}
 
-func (m *mockNetAttachDefProvider) Find(name string, namespace string) (*netv1.NetworkAttachmentDefinition, error) {
+func (m *mockNetAttachDefProvider) Find(name string, _ string) (*netv1.NetworkAttachmentDefinition, error) {
 	return findNetAttachDefMock(name)
 }
