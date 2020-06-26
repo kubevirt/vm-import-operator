@@ -11,8 +11,9 @@ import (
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
 
-//NetworkAttachmentDefinitionProvider retrieves NetworkAttachmentDefinition for given name and optional namespace
+//NetworkAttachmentDefinitionProvider provides NetworkAttachmentDefinition retrieval capabilities
 type NetworkAttachmentDefinitionProvider interface {
+	//Find retrieves NetworkAttachmentDefinition for given name and optional namespace
 	Find(name string, namespace string) (*netv1.NetworkAttachmentDefinition, error)
 }
 
@@ -80,10 +81,7 @@ func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, m
 
 	// Validate that all target networks needed by the VM exist in k8s
 	for networkID, networkType := range requiredTargetsSet {
-		if networkType == nil {
-			continue
-		}
-		if failure, valid := v.validateNetwork(networkID, *networkType, crNamespace); !valid {
+		if failure, valid := v.validateNetwork(networkID, networkType, crNamespace); !valid {
 			failures = append(failures, failure)
 		}
 	}
@@ -117,8 +115,19 @@ func (v *NetworkMappingValidator) validateSourceNetworkFormat(mapByName map[stri
 	return ValidationFailure{}, true
 }
 
-func (v *NetworkMappingValidator) validateNetwork(networkID v2vv1alpha1.ObjectIdentifier, networkType string, crNamespace string) (ValidationFailure, bool) {
-	switch networkType {
+func (v *NetworkMappingValidator) validateNetwork(networkID v2vv1alpha1.ObjectIdentifier, networkType *string, crNamespace string) (ValidationFailure, bool) {
+	if networkType == nil {
+		if networkID.Namespace == nil {
+			// unspecified network type is only valid when target network doesn't specify namespace
+			return ValidationFailure{}, true
+		}
+		return ValidationFailure{
+			ID:      NetworkTypeID,
+			Message: fmt.Sprintf("Network %s has unspecified network type and target namespace: %s. When target type is omitted, the namespace must be omitted as well.", utils.ToLoggableResourceName(networkID.Name, networkID.Namespace), *networkID.Namespace),
+		}, false
+	}
+
+	switch *networkType {
 	case "pod":
 		return ValidationFailure{}, true
 	case "multus":
@@ -126,7 +135,7 @@ func (v *NetworkMappingValidator) validateNetwork(networkID v2vv1alpha1.ObjectId
 	default:
 		return ValidationFailure{
 			ID:      NetworkTypeID,
-			Message: fmt.Sprintf("Network %s has unsupported network type: %s", utils.ToLoggableResourceName(networkID.Name, networkID.Namespace), networkType),
+			Message: fmt.Sprintf("Network %s has unsupported network type: %v", utils.ToLoggableResourceName(networkID.Name, networkID.Namespace), networkType),
 		}, false
 	}
 }

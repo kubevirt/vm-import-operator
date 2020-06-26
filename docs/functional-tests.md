@@ -104,6 +104,7 @@
 | Import with missing network resource mapping should be blocked | &check; |
 | Import with network mapping to a non-existing target network should be blocked | &check; |
 | Import with network mapping to unsupported target type should be blocked | &check; |
+| Import with network mapping to missing type and target with a namespace should be blocked | &check; |
 | Import with storage mapping to a non-existing target storage class should be blocked | &check; |
 | Import with disk mapping to a non-existing target storage class should be blocked | &check; |
 
