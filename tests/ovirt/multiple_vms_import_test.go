@@ -133,6 +133,36 @@ var _ = Describe("Multiple VMs import ", func() {
 			Expect(vmBlueprint).To(BeRunning(f))
 		})
 	})
+
+	Context("executed in parallel", func() {
+		It("should create two started VMs in the same namespace from two different source VMs", func() {
+			vmID1 := vms.MultipleVmsNo1VmID
+			test.stub(vmID1, "56:6f:05:0f:00:06")
+
+			vmID2 := vms.MultipleVmsNo2VmID
+			nicsXML := f.LoadTemplate("nics/mac-template.xml", map[string]string{"@MAC": "56:6f:05:0f:00:05"})
+			disk2ID := "cirros2"
+			diskAttachmentsXML := f.LoadTemplate("disk-attachments/disk_id-template.xml", map[string]string{"@DISKID": disk2ID})
+			diskXML := f.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344", "@DISKID": disk2ID})
+			test.stubWithDiskAndNicsXML(vmID2, nicsXML, diskAttachmentsXML, diskXML, disk2ID)
+
+			By("Triggering the first VM import")
+			createdVM1, err := test.triggerVMImport(vmID1, namespace, "vm-no-1", test.secret.Name)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Triggering the second VM import")
+			createdVM2, err := test.triggerVMImport(vmID2, namespace, "vm-no-2", test.secret.Name)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Both import being successful")
+			Expect(createdVM1).To(BeSuccessful(f))
+			Expect(createdVM2).To(BeSuccessful(f))
+
+			By("Both VM instances running")
+			Expect(v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: "vm-no-1", Namespace: namespace}}).To(BeRunning(f))
+			Expect(v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: "vm-no-2", Namespace: namespace}}).To(BeRunning(f))
+		})
+	})
 })
 
 func (t *multipleVmsImportTest) stubAndImportVMAndMakeSureItsRunning(vmID string, namespace string, vmName string, mac string) {
@@ -175,6 +205,10 @@ func (t *multipleVmsImportTest) stub(vmID string, mac string) {
 func (t *multipleVmsImportTest) stubWithNicsXML(vmID string, nicsXML string) {
 	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
 	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	t.stubWithDiskAndNicsXML(vmID, nicsXML, diskAttachmentsXML, diskXML, "disk-1")
+}
+
+func (t *multipleVmsImportTest) stubWithDiskAndNicsXML(vmID string, nicsXML string, diskAttachmentsXML string, diskXML string, diskID string) {
 	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
 	consolesXML := t.framework.LoadFile("graphic-consoles/vnc.xml")
 	networkXML := t.framework.LoadFile("networks/net-1.xml")
@@ -184,7 +218,7 @@ func (t *multipleVmsImportTest) stubWithNicsXML(vmID string, nicsXML string) {
 		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXML).
 		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXML).
 		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXML).
-		StubGet("/ovirt-engine/api/disks/disk-1", &diskXML).
+		StubGet("/ovirt-engine/api/disks/"+diskID, &diskXML).
 		StubGet("/ovirt-engine/api/networks/net-1", &networkXML).
 		StubGet("/ovirt-engine/api/vnicprofiles/vnic-profile-1", &vnicProfileXML).
 		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXML).

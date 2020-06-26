@@ -36,7 +36,7 @@
 ### Multiple VMs import
 | Test description | Implemented |
 | :---------------- | :-----------: |
-| Two VMs should be imported in parallel to the same namespace and started | &cross; |
+| Two VMs should be imported in parallel to the same namespace and started | &check; |
 | Two VMs should be imported in sequence to the same namespace and started | &check; |
 | Import of the same source VM with NIC (and MAC address) to the same namespace should fail | &check; |
 | Import of the same source VM with NIC (and MAC address) to a different namespace should fail | &check; |

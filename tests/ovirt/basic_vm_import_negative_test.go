@@ -219,8 +219,8 @@ func (t *basicVMImportNegativeTest) createInvalidSecret() *corev1.Secret {
 	return created
 }
 func (t *basicVMImportNegativeTest) prepareInvalidVm(vmID string, diskSize string) {
-	diskXML := t.framework.LoadTemplate("disks/invalid-disk.xml", map[string]string{"@DISKSIZE": diskSize})
-	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/invalid-disk.xml")
+	diskXML := t.framework.LoadTemplate("disks/disk_id-template.xml", map[string]string{"@DISKSIZE": diskSize, "@DISKID": "invalid"})
+	diskAttachmentsXML := t.framework.LoadTemplate("disk-attachments/disk_id-template.xml", map[string]string{"@DISKID": "invalid"})
 	t.prepareVmWithDiskXML(vmID, vmID, diskXML, diskAttachmentsXML)
 }
 
