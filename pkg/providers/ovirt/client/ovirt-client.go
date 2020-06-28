@@ -182,6 +182,11 @@ func (client *richOvirtClient) StartVM(id string) (e error) {
 	return nil
 }
 
+// TestConnection checks the connectivity to oVirt provider
+func (client *richOvirtClient) TestConnection() error {
+	return client.connection.Test()
+}
+
 func (client *richOvirtClient) fetchVM(id *string, name *string, clusterName *string, clusterID *string) (*ovirtsdk.Vm, error) {
 	// Id of the VM specified:
 	if id != nil {

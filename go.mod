@@ -46,7 +46,7 @@ require (
 	sigs.k8s.io/yaml v1.1.0
 )
 
-replace github.com/ovirt/go-ovirt => github.com/ovirt/go-ovirt v0.0.0-20200320082526-4e97a11ff083
+replace github.com/ovirt/go-ovirt => github.com/ovirt/go-ovirt v0.0.0-20200428093010-9bcc4fd4e6c0
 
 // Pinned to kubernetes-1.16.2
 replace (

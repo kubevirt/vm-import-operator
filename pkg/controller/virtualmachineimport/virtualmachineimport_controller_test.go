@@ -162,8 +162,9 @@ var _ = Describe("Reconcile steps", func() {
 				return fmt.Errorf("Not there")
 			}
 
-			err := reconciler.initProvider(instance, mock)
+			msg, err := reconciler.initProvider(instance, mock)
 
+			Expect(msg).To(Equal("Failed to read the secret"))
 			Expect(err).To(Not(BeNil()))
 		})
 	})
@@ -194,8 +195,9 @@ var _ = Describe("Reconcile steps", func() {
 				return fmt.Errorf("Not connected")
 			}
 
-			err := reconciler.initProvider(instance, mock)
+			msg, err := reconciler.initProvider(instance, mock)
 
+			Expect(msg).To(Equal("Source provider initialization failed"))
 			Expect(err).To(Not(BeNil()))
 		})
 
@@ -1157,7 +1159,7 @@ var _ = Describe("Reconcile steps", func() {
 			Expect(result).To(Equal(reconcile.Result{}))
 		})
 
-		It("should fail to initiate a provider: ", func() {
+		It("should fail to initiate a provider of new request due to missing secret: ", func() {
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
 				case *v2vv1alpha1.VirtualMachineImport:
@@ -1166,6 +1168,29 @@ var _ = Describe("Reconcile steps", func() {
 							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
 						},
 					}
+				case *corev1.Secret:
+					return fmt.Errorf("Not found")
+
+				}
+				return nil
+			}
+
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To((BeNil()))
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
+
+		It("should fail to initiate a provider of request in progress: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *v2vv1alpha1.VirtualMachineImport:
+					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
+						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+						},
+					}
+					obj.(*v2vv1alpha1.VirtualMachineImport).Annotations = map[string]string{"vmimport.v2v.kubevirt.io/progress": "10"}
 				case *corev1.Secret:
 					return fmt.Errorf("Not found")
 
@@ -1467,6 +1492,11 @@ func (p *mockProvider) Init(secret *corev1.Secret, instance *v2vv1alpha1.Virtual
 	return pinit(secret, instance)
 }
 
+// TestConnection implements Provider.TestConnection
+func (p *mockProvider) TestConnection() error {
+	return nil
+}
+
 // ValidateDiskStatus return true if disk is valid
 func (p *mockProvider) ValidateDiskStatus(string) (bool, error) {
 	return true, nil
@@ -1584,6 +1614,10 @@ func (c *mockOvirtClient) StopVM(id string) error {
 }
 
 func (c *mockOvirtClient) StartVM(id string) error {
+	return nil
+}
+
+func (c *mockOvirtClient) TestConnection() error {
 	return nil
 }
 

@@ -153,6 +153,9 @@ const (
 	// UninitializedProvider represents a failure to initialize the provider
 	UninitializedProvider ValidConditionReason = "UninitializedProvider"
 
+	// UnreachableProvider represents a failure to connect to the provider
+	UnreachableProvider ValidConditionReason = "UnreachableProvider"
+
 	// SourceVmNotFound represents the nonexistence of the source VM
 	SourceVMNotFound ValidConditionReason = "SourceVMNotFound"
 

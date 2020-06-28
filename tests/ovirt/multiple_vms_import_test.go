@@ -62,7 +62,7 @@ var _ = Describe("Multiple VMs import ", func() {
 			By("Importing second VM")
 			created, err := test.triggerVMImport(vmID, namespace, "vm-no-2", test.secret.Name)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(created).To(BeUnsuccessful(f))
+			Expect(created).To(BeUnsuccessful(f, ""))
 		})
 
 		It("should fail importing the same source VM with NIC to different namespace", func() {
@@ -84,7 +84,7 @@ var _ = Describe("Multiple VMs import ", func() {
 			By("Importing second VM")
 			created, err := test.triggerVMImport(vmID, namespace2.Name, "vm-no-2", secret.Name)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(created).To(BeUnsuccessful(f))
+			Expect(created).To(BeUnsuccessful(f, ""))
 		})
 
 		It("should create one started VM from two imports of the same NIC-less source VM with same target name to one namespace ", func() {

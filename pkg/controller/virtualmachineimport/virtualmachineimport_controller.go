@@ -213,9 +213,17 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	if err != nil {
 		return reconcile.Result{}, err
 	}
-	err = r.initProvider(instance, provider)
+	message, err := r.initProvider(instance, provider)
 	if err != nil {
-		return reconcile.Result{}, err
+		if r.vmImportInProgress(instance) {
+			return reconcile.Result{}, err
+		}
+		// fail new request and don't requeue it if the provider couldn't be initialized properly
+		err = r.failNewImportProcess(instance, message, err)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{}, nil
 	}
 	defer provider.Close()
 
@@ -993,27 +1001,63 @@ func shouldFailWith(conditions []v2vv1alpha1.VirtualMachineImportCondition) (boo
 	return valid, message
 }
 
-func (r *ReconcileVirtualMachineImport) initProvider(instance *v2vv1alpha1.VirtualMachineImport, provider provider.Provider) error {
+func (r *ReconcileVirtualMachineImport) initProvider(instance *v2vv1alpha1.VirtualMachineImport, provider provider.Provider) (string, error) {
 	// Fetch source provider secret
 	sourceProviderSecretObj, err := r.fetchSecret(instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			condition := newValidationCondition(v2vv1alpha1.SecretNotFound, "Secret not found")
-			cerr := r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, condition)
+			message := "Secret not found"
+			cerr := r.upsertValidationCondition(instance, v2vv1alpha1.SecretNotFound, message, err)
 			if cerr != nil {
-				return cerr
+				return message, cerr
 			}
 		}
-		return err
+		return "Failed to read the secret", err
 	}
 
 	err = provider.Init(sourceProviderSecretObj, instance)
 	if err != nil {
-		condition := newValidationCondition(v2vv1alpha1.UninitializedProvider, "Failed to initialize the source provider")
-		cerr := r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, condition)
+		message := "Source provider initialization failed"
+		cerr := r.upsertValidationCondition(instance, v2vv1alpha1.UninitializedProvider, message, err)
 		if cerr != nil {
-			return cerr
+			return message, cerr
 		}
+		return message, err
+	}
+
+	if !r.vmImportInProgress(instance) {
+		err = provider.TestConnection()
+		if err != nil {
+			message := "Failed to connect to source provider"
+			cerr := r.upsertValidationCondition(instance, v2vv1alpha1.UnreachableProvider, message, err)
+			if cerr != nil {
+				return message, cerr
+			}
+			return message, err
+		}
+	}
+
+	return "", nil
+}
+
+func (r *ReconcileVirtualMachineImport) upsertValidationCondition(
+	instance *v2vv1alpha1.VirtualMachineImport,
+	reason v2vv1alpha1.ValidConditionReason,
+	message string,
+	err error) error {
+	condition := newValidationCondition(reason, message+": "+err.Error())
+	cerr := r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, condition)
+	if cerr != nil {
+		return cerr
+	}
+	return nil
+}
+
+func (r *ReconcileVirtualMachineImport) failNewImportProcess(instance *v2vv1alpha1.VirtualMachineImport, message string, failure error) error {
+	msg := fmt.Sprintf("Failed to initialize the source provider (%s): %s", message, failure.Error())
+	succeededCond := conditions.NewSucceededCondition(string(v2vv1alpha1.ValidationFailed), msg, corev1.ConditionFalse)
+	err := r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, succeededCond)
+	if err != nil {
 		return err
 	}
 	return nil
@@ -1071,7 +1115,7 @@ func (r *ReconcileVirtualMachineImport) validate(instance *v2vv1alpha1.VirtualMa
 
 			// Emit event vm import blocked:
 			if vmName, err := provider.GetVMName(); err == nil {
-				// This potentially flood events service, consider checking if event already occured and don't emit it if it did,
+				// This potentially flood events service, consider checking if event already occurred and don't emit it if it did,
 				// if any performance implication occur.
 				r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportBlocked, "Virtual Machine %s/%s import blocked: %s", instance.Namespace, vmName, message)
 			}
@@ -1111,6 +1155,11 @@ func (r *ReconcileVirtualMachineImport) templateMatchingFailed(instanceNamespace
 		return err
 	}
 	return nil
+}
+
+func (r *ReconcileVirtualMachineImport) vmImportInProgress(instance *v2vv1alpha1.VirtualMachineImport) bool {
+	_, found := instance.Annotations[AnnCurrentProgress]
+	return found
 }
 
 func newValidationCondition(reason v2vv1alpha1.ValidConditionReason, message string) v2vv1alpha1.VirtualMachineImportCondition {

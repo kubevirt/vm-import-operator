@@ -7,6 +7,7 @@ type Factory interface {
 
 // VMClient provides interface how source virtual machines should be fetched
 type VMClient interface {
+	TestConnection() error
 	GetVM(id *string, name *string, cluster *string, clusterID *string) (interface{}, error)
 	StopVM(id string) error
 	StartVM(id string) error
