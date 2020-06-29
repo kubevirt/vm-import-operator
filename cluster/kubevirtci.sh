@@ -13,7 +13,7 @@
 # limitations under the License.
 
 export KUBEVIRT_PROVIDER=${KUBEVIRT_PROVIDER:-'k8s-1.18'}
-export KUBEVIRTCI_VERSION=${KUBEVIRTCI_VERSION:-'master'}
+export KUBEVIRTCI_VERSION=${KUBEVIRTCI_VERSION:-'463da29b9cbdcaa22daed3a8ef5c5e864f582b0b'}
 
 KUBEVIRTCI_PATH="${PWD}/_kubevirtci"
 
