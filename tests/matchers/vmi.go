@@ -1,8 +1,11 @@
 package matchers
 
 import (
+	"fmt"
 	"sync/atomic"
 	"time"
+
+	"github.com/onsi/ginkgo"
 
 	"github.com/kubevirt/vm-import-operator/tests/framework"
 	"github.com/onsi/gomega/format"
@@ -32,7 +35,8 @@ func (matcher *beRunningMatcher) Match(actual interface{}) (bool, error) {
 		vmi, err := matcher.testFramework.KubeVirtClient.VirtualMachineInstance(vm.Namespace).Get(vm.Name, &metav1.GetOptions{})
 		matcher.lastVirtualMachineInstance.Store(vmi)
 		if err != nil {
-			return false, err
+			fmt.Fprintf(ginkgo.GinkgoWriter, "ERROR: VM instance polling error: %v\n", err)
+			return false, nil
 		}
 		if vmi.Status.Phase == v1.Running {
 			return true, nil
