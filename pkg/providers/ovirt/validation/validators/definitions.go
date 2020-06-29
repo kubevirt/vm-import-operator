@@ -119,8 +119,10 @@ const (
 	NetworkMappingID = CheckID("network.mapping")
 	// NetworkTypeID defines an ID of a check verifying supported network types
 	NetworkTypeID = CheckID("network.type")
-	// NetworkTargetID defines an ID of a check verifyting existence of target network
+	// NetworkTargetID defines an ID of a check verifying existence of target network
 	NetworkTargetID = CheckID("network.target")
+	// NetworkMultiplePodTargetsID defines an ID of a check verifying that there is not more than one network mapped to a pod network
+	NetworkMultiplePodTargetsID = CheckID("network.pod.multiple")
 	// StorageTargetID defines an ID of a check verifying existence of target storage class
 	StorageTargetID = CheckID("storage.target")
 	// DiskTargetID defines an ID of a check verifying existence of target storage class

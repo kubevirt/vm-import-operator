@@ -285,6 +285,64 @@ var _ = Describe("Validating Network mapping", func() {
 
 		Expect(failures).To(BeEmpty())
 	})
+	It("should reject mapping of two nics of the same vnic profile to a pod network", func() {
+		nics := []*ovirtsdk.Nic{
+			createNic(&networkName, &vnicProfileName, &vnicProfileID),
+			createNic(&networkName, &vnicProfileName, &vnicProfileID),
+		}
+
+		mapping := []v2vv1alpha1.ResourceMappingItem{
+			{
+				Source: v2vv1alpha1.Source{
+					ID: &vnicProfileID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: "targetNetwork",
+				},
+				Type: &podType,
+			},
+		}
+
+		failures := validator.ValidateNetworkMapping(nics, &mapping, namespace)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.NetworkMultiplePodTargetsID))
+	})
+	It("should reject mapping of two nics of different vnic profiles to a pod network", func() {
+		networkName2 := "net-2"
+		vnicProfileName2 := "vnic-2"
+		vnicProfileID2 := "vnic-2-id"
+		nics := []*ovirtsdk.Nic{
+			createNic(&networkName, &vnicProfileName, &vnicProfileID),
+			createNic(&networkName2, &vnicProfileName2, &vnicProfileID2),
+		}
+
+		mapping := []v2vv1alpha1.ResourceMappingItem{
+			{
+				Source: v2vv1alpha1.Source{
+					ID: &vnicProfileID,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: "targetNetwork",
+				},
+				Type: &podType,
+			},
+			{
+				Source: v2vv1alpha1.Source{
+					ID: &vnicProfileID2,
+				},
+				Target: v2vv1alpha1.ObjectIdentifier{
+					Name: "targetNetwork2",
+				},
+				Type: &podType,
+			},
+		}
+
+		failures := validator.ValidateNetworkMapping(nics, &mapping, namespace)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.NetworkMultiplePodTargetsID))
+	})
 })
 
 func createNic(networkName *string, vnicProfileName *string, vnicProfileID *string) *ovirtsdk.Nic {

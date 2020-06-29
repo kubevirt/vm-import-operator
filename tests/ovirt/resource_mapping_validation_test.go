@@ -75,28 +75,69 @@ var _ = Describe("VM import ", func() {
 			nil,
 			&[]v2vv1alpha1.ResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.DiskID}, Target: v2vv1alpha1.ObjectIdentifier{Name: "no-such-storage-class"}}}),
 	)
+
+	It("should block import with two networks mapped to a pod network", func() {
+		vmID := vms.TwoNetworksVmID
+		vmXML := f.LoadFile("vms/two-networks-vm.xml")
+		nicsXML := f.LoadFile("nics/two.xml")
+		network2XML := f.LoadFile("networks/net-2.xml")
+		vnicProfile2XML := f.LoadFile("vnic-profiles/vnic-profile-2.xml")
+		stubbing := test.prepareCommonSubResources(vmID).
+			StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXML).
+			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML).
+			StubGet("/ovirt-engine/api/networks/net-2", &network2XML).
+			StubGet("/ovirt-engine/api/vnicprofiles/vnic-profile-2", &vnicProfile2XML).
+			Build()
+		err := f.OvirtStubbingClient.Stub(stubbing)
+		Expect(err).To(BeNil())
+
+		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+		vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
+			NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
+				{
+					Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID},
+					Type:   &tests.PodType,
+					Target: v2vv1alpha1.ObjectIdentifier{
+						Name: "network1",
+					}},
+				{
+					Source: v2vv1alpha1.Source{ID: &vms.VNicProfile2ID},
+					Type:   &tests.PodType,
+					Target: v2vv1alpha1.ObjectIdentifier{
+						Name: "network2",
+					}},
+			},
+		}
+		created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(created).To(HaveValidationFailure(f, string(v2vv1alpha1.IncompleteMappingRules)))
+	})
 })
 
 func (t *resourceMappingValidationTest) stub(vmID string) {
-	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
-	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
-	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
-	consolesXML := t.framework.LoadFile("graphic-consoles/vnc.xml")
 	nicsXML := t.framework.LoadFile("nics/one.xml")
-	networkXML := t.framework.LoadFile("networks/net-1.xml")
-	vnicProfileXML := t.framework.LoadFile("vnic-profiles/vnic-profile-1.xml")
 	vmXML := t.framework.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
-	builder := sapi.NewStubbingBuilder().
-		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXML).
-		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXML).
+	builder := t.prepareCommonSubResources(vmID).
 		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", &nicsXML).
-		StubGet("/ovirt-engine/api/disks/disk-1", &diskXML).
-		StubGet("/ovirt-engine/api/networks/net-1", &networkXML).
-		StubGet("/ovirt-engine/api/vnicprofiles/vnic-profile-1", &vnicProfileXML).
-		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXML).
 		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML)
 	err := t.framework.OvirtStubbingClient.Stub(builder.Build())
 	if err != nil {
 		Fail(err.Error())
 	}
+}
+
+func (t *resourceMappingValidationTest) prepareCommonSubResources(vmID string) *sapi.StubbingBuilder {
+	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
+	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
+	consolesXML := t.framework.LoadFile("graphic-consoles/vnc.xml")
+	networkXML := t.framework.LoadFile("networks/net-1.xml")
+	vnicProfileXML := t.framework.LoadFile("vnic-profiles/vnic-profile-1.xml")
+	return sapi.NewStubbingBuilder().
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXML).
+		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXML).
+		StubGet("/ovirt-engine/api/disks/disk-1", &diskXML).
+		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXML).
+		StubGet("/ovirt-engine/api/networks/net-1", &networkXML).
+		StubGet("/ovirt-engine/api/vnicprofiles/vnic-profile-1", &vnicProfileXML)
 }
