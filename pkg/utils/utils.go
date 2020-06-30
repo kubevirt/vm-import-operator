@@ -22,6 +22,11 @@ const (
 
 var (
 	log = logf.Log.WithName("utils")
+	// windowsUtcCompatibleTimeZones defines Windows-specific UTC-compatible timezones
+	windowsUtcCompatibleTimeZones = map[string]bool{
+		"GMT Standard Time":       true,
+		"Greenwich Standard Time": true,
+	}
 )
 
 // GetMapKeys gets all keys from a map as a slice
@@ -171,6 +176,9 @@ func FormatBytes(bytes int64) (string, error) {
 
 // IsUtcCompatible checks whether given timezone behaves like UTC - has the same offset of 0 and does not observer daylight saving time
 func IsUtcCompatible(timezone string) bool {
+	if windowsUtcCompatibleTimeZones[timezone] {
+		return true
+	}
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
 		return false

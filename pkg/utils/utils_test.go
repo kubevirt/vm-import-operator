@@ -91,6 +91,8 @@ var _ = Describe("UTC detection ", func() {
 		table.Entry("Africa/Abidjan", "Africa/Abidjan"),
 		table.Entry("Africa/Conakry", "Africa/Conakry"),
 		table.Entry("America/Danmarkshavn", "America/Danmarkshavn"),
+		table.Entry("GMT Standard Time", "GMT Standard Time"),
+		table.Entry("Greenwich Standard Time", "Greenwich Standard Time"),
 	)
 
 	table.DescribeTable("should detect non UTC-compatible timezone: ", func(timezone string) {
