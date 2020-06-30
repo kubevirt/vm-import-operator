@@ -10,6 +10,7 @@ import (
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
 	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
@@ -226,6 +227,37 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 	})
 })
 
+var _ = Describe("Test pvc accessmodes", func() {
+	table.DescribeTable("should be : ", func(affinity ovirtsdk.VmAffinity, readonly bool, accessMode corev1.PersistentVolumeAccessMode) {
+		vm := createVMWithAffinityAndDiskRO(affinity, readonly)
+
+		mappings := createMappings()
+		credentials := mapper.DataVolumeCredentials{
+			URL:           "any-url",
+			SecretName:    "secret-name",
+			ConfigMapName: "config-map",
+		}
+		namespace := "the-namespace"
+		mapper := mapper.NewOvirtMapper(vm, &mappings, credentials, namespace, &osFinder)
+		daName := expectedDVName
+		dvs, _ := mapper.MapDataVolumes(&targetVMName)
+
+		Expect(dvs).To(HaveLen(1))
+		Expect(dvs).To(HaveKey(daName))
+
+		dv := dvs[daName]
+		Expect(dv.Namespace).To(Equal(namespace))
+		Expect(dv.Name).To(Equal(daName))
+		Expect(dv.Spec.PVC.AccessModes).To(HaveLen(1))
+		Expect(dv.Spec.PVC.AccessModes).To(ContainElement(accessMode))
+	},
+		table.Entry("readwriteonce for pinned", ovirtsdk.VMAFFINITY_PINNED, false, corev1.ReadWriteOnce),
+		table.Entry("readwriteonce for user migratable", ovirtsdk.VMAFFINITY_USER_MIGRATABLE, false, corev1.ReadWriteOnce),
+		table.Entry("readwritemany for migratable", ovirtsdk.VMAFFINITY_MIGRATABLE, false, corev1.ReadWriteMany),
+		table.Entry("readwritemany for migratable", ovirtsdk.VMAFFINITY_USER_MIGRATABLE, true, corev1.ReadOnlyMany),
+	)
+})
+
 var _ = Describe("Test mapping disks", func() {
 	var (
 		vm *ovirtsdk.Vm
@@ -261,7 +293,7 @@ var _ = Describe("Test mapping disks", func() {
 		Expect(imageio.SecretRef).To(Equal(credentials.SecretName))
 		Expect(imageio.DiskID).To(Equal("disk-ID"))
 
-		Expect(dv.Spec.PVC.AccessModes).To(ContainElement(corev1.ReadWriteOnce))
+		Expect(dv.Spec.PVC.AccessModes).To(ContainElement(corev1.ReadWriteMany))
 		Expect(dv.Spec.PVC.AccessModes).To(HaveLen(1))
 		Expect(dv.Spec.PVC.Resources.Requests).To(HaveKey(corev1.ResourceStorage))
 		storageResource := dv.Spec.PVC.Resources.Requests[corev1.ResourceStorage]
@@ -365,6 +397,10 @@ var _ = Describe("Test mapping disks", func() {
 })
 
 func createVM() *ovirtsdk.Vm {
+	return createVMWithAffinityAndDiskRO(ovirtsdk.VMAFFINITY_MIGRATABLE, false)
+}
+
+func createVMWithAffinityAndDiskRO(affinity ovirtsdk.VmAffinity, readonly bool) *ovirtsdk.Vm {
 	return ovirtsdk.NewVmBuilder().
 		Name("myvm").
 		Bios(
@@ -396,7 +432,7 @@ func createVM() *ovirtsdk.Vm {
 				MustBuild()).
 		PlacementPolicy(
 			ovirtsdk.NewVmPlacementPolicyBuilder().
-				Affinity(ovirtsdk.VMAFFINITY_MIGRATABLE).MustBuild()).
+				Affinity(affinity).MustBuild()).
 		Origin("ovirt").
 		Comment("vmcomment").
 		InstanceType(
@@ -442,6 +478,7 @@ func createVM() *ovirtsdk.Vm {
 		DiskAttachmentsOfAny(
 			ovirtsdk.NewDiskAttachmentBuilder().
 				Id("123").
+				ReadOnly(readonly).
 				Disk(
 					ovirtsdk.NewDiskBuilder().
 						Id("disk-ID").

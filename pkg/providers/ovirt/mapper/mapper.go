@@ -218,6 +218,22 @@ func (o *OvirtMapper) mapDiskInterface(iface ovirtsdk.DiskInterface) string {
 	return string(iface)
 }
 
+// Set the access mode of the PVC based on the VM's disk read only attribute
+// and based on the affinity settings of the VM.
+func (o *OvirtMapper) getAccessMode(diskAttachment *ovirtsdk.DiskAttachment) corev1.PersistentVolumeAccessMode {
+	accessMode := corev1.ReadWriteOnce
+	if readOnly, ok := diskAttachment.ReadOnly(); ok && readOnly {
+		accessMode = corev1.ReadOnlyMany
+	}
+	if pp, ok := o.vm.PlacementPolicy(); ok {
+		if affinity, _ := pp.Affinity(); affinity == ovirtsdk.VMAFFINITY_MIGRATABLE {
+			accessMode = corev1.ReadWriteMany
+		}
+	}
+
+	return accessMode
+}
+
 // MapDataVolumes map the oVirt VM disks to the map of CDI DataVolumes specification, where
 // map key is the target-vm-name + id of the oVirt disk
 func (o *OvirtMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.DataVolume, error) {
@@ -237,6 +253,7 @@ func (o *OvirtMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.Dat
 			return dvs, err
 		}
 		quantity, _ := resource.ParseQuantity(diskSizeConverted)
+		accessMode := o.getAccessMode(diskAttachment)
 
 		dvs[dvName] = cdiv1.DataVolume{
 			TypeMeta: metav1.TypeMeta{
@@ -258,7 +275,7 @@ func (o *OvirtMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.Dat
 				},
 				PVC: &corev1.PersistentVolumeClaimSpec{
 					AccessModes: []corev1.PersistentVolumeAccessMode{
-						corev1.ReadWriteOnce,
+						accessMode,
 					},
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
