@@ -34,10 +34,10 @@ func NewRichOvirtClient(cs *ConnectionSettings) (client.VMClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	client := richOvirtClient{
+	ovirtClient := richOvirtClient{
 		connection: con,
 	}
-	return &client, nil
+	return &ovirtClient, nil
 }
 
 // Close releases the resources used by this client.
@@ -45,8 +45,13 @@ func (client *richOvirtClient) Close() error {
 	return client.connection.Close()
 }
 
-// GetVM rertrieves oVirt VM data for given id or name and cluster. VM will have certain links followed and updated.
-func (client *richOvirtClient) GetVM(id *string, name *string, cluster *string, clusterID *string) (interface{}, error) {
+// GetVM retrieves oVirt VM data for given id or name and cluster. VM will have certain links followed and updated.
+func (client *richOvirtClient) GetVM(id *string, name *string, cluster *string, clusterID *string) (_ interface{}, e error) {
+	defer func() {
+		if err := recover(); err != nil {
+			e = fmt.Errorf("ovirt client panicked: %v", err)
+		}
+	}()
 	vm, err := client.fetchVM(id, name, cluster, clusterID)
 	if err != nil {
 		return nil, err
@@ -103,7 +108,12 @@ func (client *richOvirtClient) GetVM(id *string, name *string, cluster *string, 
 }
 
 // StopVM stop the VM and wait for the vm to be stopped
-func (client *richOvirtClient) StopVM(id string) error {
+func (client *richOvirtClient) StopVM(id string) (e error) {
+	defer func() {
+		if err := recover(); err != nil {
+			e = fmt.Errorf("ovirt client panicked: %v", err)
+		}
+	}()
 	vmService := client.connection.SystemService().VmsService().VmService(id)
 
 	// Stop the VM gracefully:
@@ -148,7 +158,12 @@ func (client *richOvirtClient) StopVM(id string) error {
 }
 
 // StartVM requests VM start and doesn't wait for it to be UP
-func (client *richOvirtClient) StartVM(id string) error {
+func (client *richOvirtClient) StartVM(id string) (e error) {
+	defer func() {
+		if err := recover(); err != nil {
+			e = fmt.Errorf("ovirt client panicked: %v", err)
+		}
+	}()
 	vmService := client.connection.SystemService().VmsService().VmService(id)
 
 	vmResponse, _ := vmService.Get().Send()
@@ -411,7 +426,7 @@ func connect(apiURL string, username string, password string, caCrt []byte) (*ov
 }
 
 func getVMIDs(vms []*ovirtsdk.Vm) []string {
-	ids := make([]string, len(vms), len(vms))
+	ids := make([]string, len(vms))
 	for i := range vms {
 		ids[i] = vms[i].MustId()
 	}
