@@ -179,6 +179,11 @@ func (f *Framework) BeforeEach() {
 
 // AfterEach provides a set of operations to run after each test
 func (f *Framework) AfterEach() {
+	f.CleanUp()
+}
+
+// CleanUp provides a set of operations clean the namespace
+func (f *Framework) CleanUp() {
 	// delete the namespace(s) in a defer in case future code added here could generate
 	// an exception. For now there is only a defer.
 	defer func() {
