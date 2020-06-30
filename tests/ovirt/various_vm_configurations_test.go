@@ -43,14 +43,17 @@ var _ = Describe("Import", func() {
 	})
 
 	Context("should create started VM configured with", func() {
-		It("UTC-compatible timezone", func() {
+		table.DescribeTable("UTC-compatible timezone", func(timezone string) {
 			vmID := vms.UtcCompatibleTimeZoneVmID
-			test.stub(vmID, "timezone-template.xml", map[string]string{"@TIMEZONE": "Africa/Abidjan"})
+			test.stub(vmID, "timezone-template.xml", map[string]string{"@TIMEZONE": timezone})
 			vm := test.ensureVMIsRunning(vmID)
 
 			spec := vm.Spec.Template.Spec
 			Expect(spec.Domain.Clock.UTC).ToNot(BeNil())
-		})
+		},
+			table.Entry("TzData-compatible: `Africa/Abidjan`", "Africa/Abidjan"),
+			table.Entry("Windows-specific: `GMT Standard Time`", "GMT Standard Time"),
+		)
 
 		table.DescribeTable("BIOS type", func(inBIOSType string, targetBootloader v1.Bootloader) {
 			vmID := vms.BIOSTypeVmIDPrefix + inBIOSType
