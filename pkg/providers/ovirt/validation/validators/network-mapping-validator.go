@@ -79,6 +79,14 @@ func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, m
 		})
 	}
 
+	podNetworks := v.getPodNetworks(nics, mapByID, mapByName)
+	if len(podNetworks) > 1 {
+		failures = append(failures, ValidationFailure{
+			ID:      NetworkMultiplePodTargetsID,
+			Message: fmt.Sprintf("There are more than one source networks mapped to a pod network: %v ", podNetworks),
+		})
+	}
+
 	// Validate that all target networks needed by the VM exist in k8s
 	for networkID, networkType := range requiredTargetsSet {
 		if failure, valid := v.validateNetwork(networkID, networkType, crNamespace); !valid {
@@ -86,6 +94,30 @@ func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, m
 		}
 	}
 	return failures
+}
+
+func (v *NetworkMappingValidator) getPodNetworks(nics []*ovirtsdk.Nic, mapByID map[string]v2vv1alpha1.ResourceMappingItem, mapByName map[string]v2vv1alpha1.ResourceMappingItem) []string {
+	var podNetworks []string
+	for _, nic := range nics {
+		if vnicProfile, ok := nic.VnicProfile(); ok {
+			if id, ok := vnicProfile.Id(); ok {
+				if item, found := mapByID[id]; found {
+					if item.Type == nil || *item.Type == "pod" {
+						podNetworks = append(podNetworks, utils.ToLoggableID(item.Source.ID, item.Source.Name))
+						continue
+					}
+				}
+			}
+			if name, found := vnicProfile.Name(); found {
+				if item, ok := mapByName[name]; ok {
+					if item.Type == nil || *item.Type == "pod" {
+						podNetworks = append(podNetworks, utils.ToLoggableID(item.Source.ID, item.Source.Name))
+					}
+				}
+			}
+		}
+	}
+	return podNetworks
 }
 
 func (v *NetworkMappingValidator) hasAtLeastOneWithVNicProfile(nics []*ovirtsdk.Nic) bool {
