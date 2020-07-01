@@ -42,6 +42,44 @@ var _ = Describe("Import", func() {
 		test.secret = s
 	})
 
+	AfterEach(func() {
+		f.CleanUp()
+		// Make sure we clean up the config map as the last of, otherwise it's not
+		// possible to remove the vm with livestrategy enabled.
+		cleanUpConfigMap(f)
+	})
+
+	It("placement policy: 'migratable' and LiveMigration enabled", func() {
+		vmID := vms.PlacementPolicyAffinityVmIDPrefix + "migratable"
+		configMap, err := f.K8sClient.CoreV1().ConfigMaps("kubevirt").Get("kubevirt-config", metav1.GetOptions{})
+		if err != nil {
+			Fail(err.Error())
+		}
+		configMap.Data["feature-gates"] = configMap.Data["feature-gates"] + ",LiveMigration"
+		f.K8sClient.CoreV1().ConfigMaps("kubevirt").Update(configMap)
+		test.stub(vmID, "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "migratable"})
+		test.ensureVMIsRunningOnStorage(vmID, &[]v2vv1alpha1.ResourceMappingItem{
+			{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: vms.NFSStorageclassName}},
+		})
+	})
+})
+
+var _ = Describe("Import", func() {
+
+	var (
+		f    = fwk.NewFrameworkOrDie("various-vm-configurations")
+		test = variousVMConfigurationsTest{framework: f}
+	)
+
+	BeforeEach(func() {
+		test.namespace = f.Namespace.Name
+		s, err := f.CreateOvirtSecretFromBlueprint()
+		if err != nil {
+			Fail("Cannot create secret: " + err.Error())
+		}
+		test.secret = s
+	})
+
 	Context("should create started VM configured with", func() {
 		table.DescribeTable("UTC-compatible timezone", func(timezone string) {
 			vmID := vms.UtcCompatibleTimeZoneVmID
@@ -85,19 +123,6 @@ var _ = Describe("Import", func() {
 			}
 			test.stub(vmID, "watchdog-vm.xml", map[string]string{})
 
-			test.ensureVMIsRunning(vmID)
-		})
-
-		PIt("placement policy: 'migratable' and LiveMigration enabled", func() {
-			vmID := vms.PlacementPolicyAffinityVmIDPrefix + "migratable"
-			configMap, err := f.K8sClient.CoreV1().ConfigMaps("kubevirt").Get("kubevirt-config", metav1.GetOptions{})
-			if err != nil {
-				Fail(err.Error())
-			}
-			configMap.Data["feature-gates"] = configMap.Data["feature-gates"] + ",LiveMigration"
-			f.K8sClient.CoreV1().ConfigMaps("kubevirt").Update(configMap)
-			defer cleanUpConfigMap(f)
-			test.stub(vmID, "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "migratable"})
 			test.ensureVMIsRunning(vmID)
 		})
 
@@ -179,6 +204,10 @@ func cleanUpConfigMap(f *fwk.Framework) {
 }
 
 func (t *variousVMConfigurationsTest) ensureVMIsRunning(vmID string) *v1.VirtualMachine {
+	return t.ensureVMIsRunningOnStorage(vmID, nil)
+}
+
+func (t *variousVMConfigurationsTest) ensureVMIsRunningOnStorage(vmID string, storageMappings *[]v2vv1alpha1.ResourceMappingItem) *v1.VirtualMachine {
 	f := t.framework
 	namespace := t.framework.Namespace.Name
 	vmi := utils.VirtualMachineImportCr(vmID, namespace, t.secret.Name, f.NsPrefix, true)
@@ -187,6 +216,10 @@ func (t *variousVMConfigurationsTest) ensureVMIsRunning(vmID string) *v1.Virtual
 			{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 		},
 	}
+	if storageMappings != nil {
+		vmi.Spec.Source.Ovirt.Mappings.StorageMappings = storageMappings
+	}
+
 	created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
 	Expect(err).NotTo(HaveOccurred())

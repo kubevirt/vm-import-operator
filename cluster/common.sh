@@ -44,3 +44,31 @@ function install_templates {
       ./cluster/kubectl.sh apply -f https://github.com/kubevirt/common-templates/releases/download/${TEMPLATES_VER}/common-templates-${TEMPLATES_VER}.yaml
     fi
 }
+
+function configure_nfs() {
+  #Configure static nfs service and storage class, so we can create NFS PVs during test run.
+  ./cluster/kubectl.sh apply -f ./cluster/manifests/nfs/nfs-sc.yaml
+  ./cluster/kubectl.sh apply -f ./cluster/manifests/nfs/nfs-service.yaml
+  ./cluster/kubectl.sh apply -f ./cluster/manifests/nfs/nfs-server.yaml
+
+  # We don't provide any provisioner for sc, so creating PV manually:
+  nfsIP=`./cluster/kubectl.sh get service nfs-service -o=jsonpath='{.spec.clusterIP}'`
+  cat <<EOF | ./cluster/kubectl.sh apply -f -
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-0
+spec:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: 34Gi
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfs
+  volumeMode: Filesystem
+  nfs:
+    path: /
+    server: $nfsIP
+EOF
+
+}
