@@ -45,8 +45,6 @@ const (
 	InvalidOVirtCACertVmID   = "invalid-ovirt-ca-cert"
 
 	MissingExternalResourceMappingVmID = "missing-external-resource-mapping"
-
-	NFSStorageclassName = "nfs"
 )
 
 var (

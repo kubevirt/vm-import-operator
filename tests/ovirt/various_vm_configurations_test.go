@@ -59,7 +59,7 @@ var _ = Describe("Import", func() {
 		f.K8sClient.CoreV1().ConfigMaps("kubevirt").Update(configMap)
 		test.stub(vmID, "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "migratable"})
 		test.ensureVMIsRunningOnStorage(vmID, &[]v2vv1alpha1.ResourceMappingItem{
-			{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: vms.NFSStorageclassName}},
+			{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.NfsStorageClass}},
 		})
 	})
 })

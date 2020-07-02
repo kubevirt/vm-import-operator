@@ -46,6 +46,8 @@ var (
 	master                   *string
 	ovirtSecretBlueprint     *string
 	kubeVirtInstallNamespace *string
+	defaultStorageClass      *string
+	nfsStorageClass          *string
 )
 
 // This package is based on https://github.com/kubevirt/containerized-data-importer/blob/master/tests/framework/framework.go
@@ -79,6 +81,11 @@ type Framework struct {
 	OVirtSecretName *types.NamespacedName
 	// KubeVirtInstallNamespace namespace where KubeVirt is installed
 	KubeVirtInstallNamespace string
+
+	// DefaultStorageClass specifies the name of a basic, default storage class
+	DefaultStorageClass string
+	//NfsStorageClass specifies the name of an NFS-based storage class
+	NfsStorageClass string
 }
 
 // initialize run-time flags
@@ -90,6 +97,8 @@ func init() {
 	master = flag.String("master", "", "master url:port")
 	ovirtSecretBlueprint = flag.String("ovirt-secret", "", "The namespace/name of the oVirt secret to copy for tests")
 	kubeVirtInstallNamespace = flag.String("kubevirt-namespace", "kubevirt", "Set the namespace KubeVirt is installed in")
+	defaultStorageClass = flag.String("default-sc", "local", "Set the name of the default storage class")
+	nfsStorageClass = flag.String("nfs-sc", "nfs", "Set the name of a NFS-based storage class")
 }
 
 // NewFrameworkOrDie calls NewFramework and handles errors by calling Fail. Config is optional, but
@@ -118,6 +127,8 @@ func NewFramework(prefix string) (*Framework, error) {
 	f.KubeConfig = *kubeConfig
 	f.Master = *master
 	f.KubeVirtInstallNamespace = *kubeVirtInstallNamespace
+	f.DefaultStorageClass = *defaultStorageClass
+	f.NfsStorageClass = *nfsStorageClass
 	ovirtClient := sclient.NewInsecureFakeOvirtClient("https://localhost:12346")
 	f.OvirtStubbingClient = &ovirtClient
 	if ovirtSecretBlueprint != nil && len(*ovirtSecretBlueprint) > 0 {

@@ -4,7 +4,6 @@ import (
 	"time"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
-	"github.com/kubevirt/vm-import-operator/tests"
 	"github.com/onsi/ginkgo/extensions/table"
 
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
@@ -102,14 +101,14 @@ var _ = Describe("Basic VM import ", func() {
 		},
 			table.Entry(" for disk", v2vv1alpha1.OvirtMappings{
 				DiskMappings: &[]v2vv1alpha1.ResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms.DiskID}, Target: v2vv1alpha1.ObjectIdentifier{Name: tests.StorageClass}},
+					{Source: v2vv1alpha1.Source{ID: &vms.DiskID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
-			}, tests.StorageClass),
+			}, f.DefaultStorageClass),
 			table.Entry(" for storage domain", v2vv1alpha1.OvirtMappings{
 				StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: tests.StorageClass}},
+					{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
-			}, tests.StorageClass))
+			}, f.DefaultStorageClass))
 	})
 
 	Context("when it's successful and the import CR is removed", func() {
