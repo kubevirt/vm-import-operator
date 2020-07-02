@@ -51,12 +51,12 @@ var _ = Describe("Import", func() {
 
 	It("placement policy: 'migratable' and LiveMigration enabled", func() {
 		vmID := vms.PlacementPolicyAffinityVmIDPrefix + "migratable"
-		configMap, err := f.K8sClient.CoreV1().ConfigMaps("kubevirt").Get("kubevirt-config", metav1.GetOptions{})
+		configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get("kubevirt-config", metav1.GetOptions{})
 		if err != nil {
 			Fail(err.Error())
 		}
 		configMap.Data["feature-gates"] = configMap.Data["feature-gates"] + ",LiveMigration"
-		f.K8sClient.CoreV1().ConfigMaps("kubevirt").Update(configMap)
+		f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(configMap)
 		test.stub(vmID, "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "migratable"})
 		test.ensureVMIsRunningOnStorage(vmID, &[]v2vv1alpha1.ResourceMappingItem{
 			{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: vms.NFSStorageclassName}},
@@ -192,12 +192,12 @@ var _ = Describe("Import", func() {
 })
 
 func cleanUpConfigMap(f *fwk.Framework) {
-	configMap, err := f.K8sClient.CoreV1().ConfigMaps("kubevirt").Get("kubevirt-config", metav1.GetOptions{})
+	configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get("kubevirt-config", metav1.GetOptions{})
 	if err != nil {
 		Fail(err.Error())
 	}
 	configMap.Data["feature-gates"] = strings.ReplaceAll(configMap.Data["feature-gates"], ",LiveMigration", "")
-	_, err = f.K8sClient.CoreV1().ConfigMaps("kubevirt").Update(configMap)
+	_, err = f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(configMap)
 	if err != nil {
 		Fail(err.Error())
 	}

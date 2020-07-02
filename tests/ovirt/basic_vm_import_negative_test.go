@@ -179,13 +179,13 @@ var _ = Describe("VM import", func() {
 
 	It("should fail when ImportWithoutTemplate feature gate is disabled and VM template can't be found", func() {
 		vmID := vms.BasicVmID
-		configMap, err := f.K8sClient.CoreV1().ConfigMaps("kubevirt").Get("kubevirt-config", metav1.GetOptions{})
+		configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get("kubevirt-config", metav1.GetOptions{})
 		if err != nil {
 			Fail(err.Error())
 		}
 		configMap.Data["feature-gates"] = strings.ReplaceAll(configMap.Data["feature-gates"], ",ImportWithoutTemplate", "")
 
-		f.K8sClient.CoreV1().ConfigMaps("kubevirt").Update(configMap)
+		f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(configMap)
 		defer test.cleanUpConfigMap()
 
 		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
@@ -263,12 +263,12 @@ func (t *basicVMImportNegativeTest) recordStubbing(builder *sapi.StubbingBuilder
 
 func (t *basicVMImportNegativeTest) cleanUpConfigMap() {
 	f := t.framework
-	configMap, err := f.K8sClient.CoreV1().ConfigMaps("kubevirt").Get("kubevirt-config", metav1.GetOptions{})
+	configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get("kubevirt-config", metav1.GetOptions{})
 	if err != nil {
 		Fail(err.Error())
 	}
 	configMap.Data["feature-gates"] = configMap.Data["feature-gates"] + ",ImportWithoutTemplate"
-	_, err = f.K8sClient.CoreV1().ConfigMaps("kubevirt").Update(configMap)
+	_, err = f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(configMap)
 	if err != nil {
 		Fail(err.Error())
 	}
