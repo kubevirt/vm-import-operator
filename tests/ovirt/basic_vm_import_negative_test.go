@@ -85,7 +85,7 @@ var _ = Describe("VM import", func() {
 		created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(created).To(HaveValidationFailure(f, string(v2vv1alpha1.SecretNotFound)))
+		Expect(created).To(BeUnsuccessful(f, string(v2vv1alpha1.ValidationFailed)))
 	})
 
 	It("should fail for invalid secret", func() {
@@ -97,7 +97,7 @@ var _ = Describe("VM import", func() {
 		created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(created).To(HaveValidationFailure(f, string(v2vv1alpha1.UninitializedProvider)))
+		Expect(created).To(BeUnsuccessful(f, string(v2vv1alpha1.ValidationFailed)))
 	})
 
 	table.DescribeTable("should fail for invalid ", func(vmID string, apiURL string, username string, password string, caCert string) {
@@ -111,7 +111,7 @@ var _ = Describe("VM import", func() {
 		created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(created).To(HaveValidationFailure(f, string(v2vv1alpha1.SourceVMNotFound)))
+		Expect(created).To(BeUnsuccessful(f, string(v2vv1alpha1.ValidationFailed)))
 	},
 		table.Entry("oVirt URL", vms.InvalidOVirtUrlVmID, "", ovirt.Username, ovirt.Password, ovirt.CACert),
 		table.Entry("oVirt username", vms.InvalidOVirtUsernameVmID, ovirt.ApiURL, "", ovirt.Password, ovirt.CACert),

@@ -149,6 +149,24 @@ func (o *OvirtProvider) Init(secret *corev1.Secret, instance *v2vv1alpha1.Virtua
 	if err != nil {
 		return err
 	}
+	if _, ok := o.ovirtSecretDataMap["apiUrl"]; !ok {
+		return fmt.Errorf("oVirt secret must contain apiUrl attribute")
+	}
+	if len(o.ovirtSecretDataMap["apiUrl"]) == 0 {
+		return fmt.Errorf("oVirt secret apiUrl cannot be empty")
+	}
+	if _, ok := o.ovirtSecretDataMap["username"]; !ok {
+		return fmt.Errorf("oVirt secret must contain username attribute")
+	}
+	if len(o.ovirtSecretDataMap["username"]) == 0 {
+		return fmt.Errorf("oVirt secret username cannot be empty")
+	}
+	if _, ok := o.ovirtSecretDataMap["password"]; !ok {
+		return fmt.Errorf("oVirt secret must contain password attribute")
+	}
+	if len(o.ovirtSecretDataMap["password"]) == 0 {
+		return fmt.Errorf("oVirt secret password cannot be empty")
+	}
 	if _, ok := o.ovirtSecretDataMap["caCert"]; !ok {
 		return fmt.Errorf("oVirt secret must contain caCert attribute")
 	}
@@ -156,6 +174,19 @@ func (o *OvirtProvider) Init(secret *corev1.Secret, instance *v2vv1alpha1.Virtua
 		return fmt.Errorf("oVirt secret caCert cannot be empty")
 	}
 	o.instance = instance
+	return nil
+}
+
+// TestConnection tests the connection to ovirt provider
+func (o *OvirtProvider) TestConnection() error {
+	client, err := o.getClient()
+	if err != nil {
+		return err
+	}
+	err = client.TestConnection()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

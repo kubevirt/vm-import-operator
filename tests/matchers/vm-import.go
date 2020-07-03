@@ -69,7 +69,7 @@ func BeSuccessful(testFramework *framework.Framework) types.GomegaMatcher {
 }
 
 // BeUnsuccessful creates the matcher checking whether Virtual Machine Import is unsuccessful
-func BeUnsuccessful(testFramework *framework.Framework) types.GomegaMatcher {
+func BeUnsuccessful(testFramework *framework.Framework, reason string) types.GomegaMatcher {
 	matcher := hasConditionInStatus{}
 	matcher.timeout = 3 * time.Minute
 	matcher.pollInterval = 5 * time.Second
@@ -77,6 +77,7 @@ func BeUnsuccessful(testFramework *framework.Framework) types.GomegaMatcher {
 
 	matcher.conditionType = v2vv1alpha1.Succeeded
 	matcher.status = corev1.ConditionFalse
+	matcher.reason = reason
 	return &matcher
 }
 
