@@ -1,53 +1,39 @@
 package framework
 
 import (
-	"fmt"
-
+	ovirtenv "github.com/kubevirt/vm-import-operator/tests/env/ovirt"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// CreateOvirtSecretFromBlueprint copies secret from `f.OVirtSecretName` to the test namespace
-func (f *Framework) CreateOvirtSecretFromBlueprint() (corev1.Secret, error) {
-	return f.CreateOvirtSecretInNamespaceFromBlueprint(f.Namespace.Name)
+// CreateOvirtSecretFromCACert creates Ovirt secret
+func (f *Framework) CreateOvirtSecretFromCACert() (corev1.Secret, error) {
+	return f.CreateOvirtSecretInNamespaceFromCACert(f.Namespace.Name)
 }
 
-// CreateOvirtSecretInNamespaceFromBlueprint copies secret from `f.OVirtSecretName` to given namespace
-func (f *Framework) CreateOvirtSecretInNamespaceFromBlueprint(namespace string) (corev1.Secret, error) {
-	if f.OVirtSecretName == nil {
-		return corev1.Secret{}, fmt.Errorf("OVirt secret namespace and name have not been provided")
-	}
-	blueprint, err := f.K8sClient.CoreV1().Secrets(f.OVirtSecretName.Namespace).Get(f.OVirtSecretName.Name, metav1.GetOptions{})
-	if err != nil {
-		return corev1.Secret{}, err
-	}
-	testSecret := blueprint.DeepCopy()
-	testSecret.ObjectMeta = metav1.ObjectMeta{
-		GenerateName: f.NsPrefix,
-		Namespace:    namespace,
-	}
-
-	created, err := f.K8sClient.CoreV1().Secrets(namespace).Create(testSecret)
-	if err != nil {
-		return corev1.Secret{}, err
-	}
-	return *created, nil
+// CreateOvirtSecretInNamespaceFromCACert creates Ovirt secret in given namespace
+func (f *Framework) CreateOvirtSecretInNamespaceFromCACert(namespace string) (corev1.Secret, error) {
+	return f.CreateOvirtSecretInNamespace(*ovirtenv.NewFakeOvirtEnvironment(f.ImageioInstallNamespace, f.OVirtCA), namespace)
 }
 
-// CreateOvirtSecret creates ovirt secret with given credentials
-func (f *Framework) CreateOvirtSecret(apiURL string, username string, password string, caCert string) (corev1.Secret, error) {
+// CreateOvirtSecret creates ovirt secret with given environment settings
+func (f *Framework) CreateOvirtSecret(environment ovirtenv.Environment) (corev1.Secret, error) {
+	return f.CreateOvirtSecretInNamespace(environment, f.Namespace.Name)
+}
+
+// CreateOvirtSecretInNamespace creates ovirt secret with given environment settings in given namespace
+func (f *Framework) CreateOvirtSecretInNamespace(environment ovirtenv.Environment, namespace string) (corev1.Secret, error) {
 	secretData := make(map[string]string)
-	secretData["apiUrl"] = apiURL
-	secretData["username"] = username
-	secretData["password"] = password
-	secretData["caCert"] = caCert
+	secretData["apiUrl"] = environment.ApiURL
+	secretData["username"] = environment.Username
+	secretData["password"] = environment.Password
+	secretData["caCert"] = environment.CaCert
 
 	marshalled, err := yaml.Marshal(secretData)
 	if err != nil {
 		return corev1.Secret{}, err
 	}
-	namespace := f.Namespace.Name
 	secret := corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: f.NsPrefix,

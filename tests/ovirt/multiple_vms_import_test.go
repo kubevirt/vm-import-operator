@@ -31,7 +31,7 @@ var _ = Describe("Multiple VMs import ", func() {
 	BeforeEach(func() {
 		namespace = f.Namespace.Name
 		test.namespace = namespace
-		s, err := f.CreateOvirtSecretFromBlueprint()
+		s, err := f.CreateOvirtSecretFromCACert()
 		if err != nil {
 			Fail("Cannot create secret: " + err.Error())
 		}
@@ -69,7 +69,7 @@ var _ = Describe("Multiple VMs import ", func() {
 			namespace2, err := f.CreateNamespace(f.NsPrefix, make(map[string]string))
 			Expect(err).ToNot(HaveOccurred())
 			f.AddNamespaceToDelete(namespace2)
-			secret, err := f.CreateOvirtSecretInNamespaceFromBlueprint(namespace2.Name)
+			secret, err := f.CreateOvirtSecretInNamespaceFromCACert(namespace2.Name)
 			if err != nil {
 				Fail("Cannot create secret: " + err.Error())
 			}
@@ -114,7 +114,7 @@ var _ = Describe("Multiple VMs import ", func() {
 			namespace2, err := f.CreateNamespace(f.NsPrefix, make(map[string]string))
 			Expect(err).ToNot(HaveOccurred())
 			f.AddNamespaceToDelete(namespace2)
-			secret, err := f.CreateOvirtSecretInNamespaceFromBlueprint(namespace2.Name)
+			secret, err := f.CreateOvirtSecretInNamespaceFromCACert(namespace2.Name)
 			if err != nil {
 				Fail("Cannot create secret: " + err.Error())
 			}

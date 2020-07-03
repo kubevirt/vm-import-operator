@@ -4,15 +4,13 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
-	"strings"
 	"testing"
 	"time"
 
 	sclient "github.com/machacekondra/fakeovirt/pkg/client"
-
-	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/onsi/gomega"
 	"k8s.io/klog"
@@ -44,10 +42,11 @@ var (
 	kubectlPath              *string
 	kubeConfig               *string
 	master                   *string
-	ovirtSecretBlueprint     *string
+	ovirtCAPath              *string
 	kubeVirtInstallNamespace *string
 	defaultStorageClass      *string
 	nfsStorageClass          *string
+	imageioInstallNamespace  *string
 )
 
 // This package is based on https://github.com/kubevirt/containerized-data-importer/blob/master/tests/framework/framework.go
@@ -78,7 +77,7 @@ type Framework struct {
 	// Master is a test run-time flag to store the id of our master node
 	Master string
 	// The namespaced name of the oVirt secret to copy for tests
-	OVirtSecretName *types.NamespacedName
+	OVirtCA string
 	// KubeVirtInstallNamespace namespace where KubeVirt is installed
 	KubeVirtInstallNamespace string
 
@@ -86,6 +85,9 @@ type Framework struct {
 	DefaultStorageClass string
 	//NfsStorageClass specifies the name of an NFS-based storage class
 	NfsStorageClass string
+
+	// ImageioInstallNamespace namespace where ImageIO and FakeOvirt are installed
+	ImageioInstallNamespace string
 }
 
 // initialize run-time flags
@@ -95,10 +97,11 @@ func init() {
 	kubectlPath = flag.String("kubectl-path", "kubectl", "The path to the kubectl binary")
 	kubeConfig = flag.String("kubeconfig", "/var/run/kubernetes/admin.kubeconfig", "The absolute path to the kubeconfig file")
 	master = flag.String("master", "", "master url:port")
-	ovirtSecretBlueprint = flag.String("ovirt-secret", "", "The namespace/name of the oVirt secret to copy for tests")
+	ovirtCAPath = flag.String("ovirt-ca", "", "Path to the oVirt CA file")
 	kubeVirtInstallNamespace = flag.String("kubevirt-namespace", "kubevirt", "Set the namespace KubeVirt is installed in")
 	defaultStorageClass = flag.String("default-sc", "local", "Set the name of the default storage class")
 	nfsStorageClass = flag.String("nfs-sc", "nfs", "Set the name of a NFS-based storage class")
+	imageioInstallNamespace = flag.String("imageio-namespace", "cdi", "Set the namespace ImageIO and FakeOvirt are installed in")
 }
 
 // NewFrameworkOrDie calls NewFramework and handles errors by calling Fail. Config is optional, but
@@ -129,14 +132,14 @@ func NewFramework(prefix string) (*Framework, error) {
 	f.KubeVirtInstallNamespace = *kubeVirtInstallNamespace
 	f.DefaultStorageClass = *defaultStorageClass
 	f.NfsStorageClass = *nfsStorageClass
+	f.ImageioInstallNamespace = *imageioInstallNamespace
 	ovirtClient := sclient.NewInsecureFakeOvirtClient("https://localhost:12346")
 	f.OvirtStubbingClient = &ovirtClient
-	if ovirtSecretBlueprint != nil && len(*ovirtSecretBlueprint) > 0 {
-		nameSlice := strings.Split(*ovirtSecretBlueprint, "/")
-		if len(nameSlice) == 2 {
-			f.OVirtSecretName = &types.NamespacedName{Namespace: nameSlice[0], Name: nameSlice[1]}
-		}
+	content, err := ioutil.ReadFile(*ovirtCAPath)
+	if err != nil {
+		return nil, errors.Wrap(err, "ERROR, cannot read oVirt CA file")
 	}
+	f.OVirtCA = string(content)
 
 	restConfig, err := f.LoadConfig()
 	if err != nil {

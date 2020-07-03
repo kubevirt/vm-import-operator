@@ -587,6 +587,11 @@ github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
 # github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
 github.com/tomnomnom/linkheader
+# github.com/ulikunitz/xz v0.5.6
+github.com/ulikunitz/xz
+github.com/ulikunitz/xz/internal/hash
+github.com/ulikunitz/xz/internal/xlog
+github.com/ulikunitz/xz/lzma
 # github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2
 github.com/voxelbrain/goptions
 # github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f
@@ -1210,6 +1215,11 @@ kubevirt.io/containerized-data-importer/pkg/client/clientset/versioned
 kubevirt.io/containerized-data-importer/pkg/client/clientset/versioned/scheme
 kubevirt.io/containerized-data-importer/pkg/client/clientset/versioned/typed/core/v1alpha1
 kubevirt.io/containerized-data-importer/pkg/client/clientset/versioned/typed/upload/v1alpha1
+kubevirt.io/containerized-data-importer/pkg/common
+kubevirt.io/containerized-data-importer/pkg/image
+kubevirt.io/containerized-data-importer/pkg/system
+kubevirt.io/containerized-data-importer/pkg/util
+kubevirt.io/containerized-data-importer/tests/utils
 kubevirt.io/containerized-data-importer/tools/util
 # sigs.k8s.io/controller-runtime v0.4.0
 sigs.k8s.io/controller-runtime/pkg/cache

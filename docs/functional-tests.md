@@ -1,8 +1,9 @@
 # Functional tests
 
+## Test cases
 [Functional tests](/tests) for the vm-import-operator are listed below.
 
-## Basic VM
+### Basic VM
 | Test description | Implemented |
 | :---------------- | :-----------: |
 | Basic VM import without resource mapping should create stopped VM | &check; |
@@ -11,7 +12,7 @@
 | Basic import with in-CR resource mapping should create running VM for storage disk mapping | &check; |
 | Target VM and VMI should not be affected when successful import CR is removed | &check; |
 
-## Basic VM negative
+### Basic VM negative
 | Test description | Implemented |
 | :---------------- | :-----------: |
 | Basic VM import with invalid VM image should fail import | &check; |
@@ -27,7 +28,7 @@
 | Basic VM import should be stuck retrying to stop the source VM when it does not shut down | &check; |
 | Basic VM import should fail when ImportWithoutTemplate feature gate is disabled and VM template can't be found | &check; |
 
-## Basic Net VM
+### Basic Net VM
 | Test description | Implemented |
 | :---------------- | :-----------: |
 | Networked VM import should create started VM with pod network when type in network resource mapping is 'pod' | &check; |
@@ -43,7 +44,7 @@
 | Same source VM with no NICs imported second time with the same target name to the same namespace should not be created but import should be successful | &check; |
 | Same VM with no NICs imported second time in a row to a different namespace than the first time should be started | &check; |
 
-## Various VM configurations
+### Various VM configurations
 | Test description | Implemented |
 | :---------------- | :-----------: |
 | VM with 'up' status should be imported and started | &check; |
@@ -60,18 +61,18 @@
 | VM with disabled USB should be imported and started | &check; |
 | VM with 'i6300esb' watchdog should be imported and started | &check; |
 
-## Cancel VM Import
+### Cancel VM Import
 | Test description | Implemented |
 | :---------------- | :-----------: |
 | VM import cancellation should have deleted all the import-associated resources when VM Import is deleted in the foreground | &check; |
 
-## VM Network Validation
+### VM Network Validation
 | Test description | Implemented |
 | :---------------- | :-----------: |
 | VM with unsupported NIC interfaces should be blocked | &check; |
 | VM with vnic profile pass-through enabled should be blocked | &check; |
 
-## VM Storage Validation
+### VM Storage Validation
 | Test description | Implemented |
 | :---------------- | :-----------: |
 | VM with no disk attachments should be blocked | &check; |
@@ -85,7 +86,7 @@
 | VM with disk with SGIO set to "filtered" should be blocked | &check; |
 | VM with disk with SGIO set to "unfiltered" should be blocked | &check; |
 
-## VM Validation
+### VM Validation
 | Test description | Implemented |
 | :---------------- | :---------: |
 | VM with status other than 'up' or 'down' should be blocked | &check; |
@@ -98,7 +99,7 @@
 | VM with watchdog other than 'i6300esb' should be blocked | &check; |
 | VM with non-UTC-compatible (i.e. 'America/New_York')  timezone should be blocked | &check; |
 
-## Resource mapping validation
+### Resource mapping validation
 | Test description | Implemented |
 | :---------------- | :---------:
 | Import with missing network resource mapping should be blocked | &check; |
@@ -108,7 +109,7 @@
 | Import with storage mapping to a non-existing target storage class should be blocked | &check; |
 | Import with disk mapping to a non-existing target storage class should be blocked | &check; |
 
-## Resource mapping
+### Resource mapping
 | Test description | Implemented |
 | :---------------- | :---------: |
 | Import with external resource mapping for network should create running VM | &check; |
@@ -118,20 +119,44 @@
 | Import with in-CR resource mapping overriding external resource mapping for network should create running VM | &check; |
 | Import with in-CR resource mapping overriding external resource mapping for storage domain should create running VM | &check; |
 
-## Multiple disks
+### Multiple disks
 | Test description | Implemented |
 | :---------------- | :---------: |
 | Import of a VM with two disks should create running VM and set correct boot order | &check; |
 
-## Networking
+### Networking
 | Test description | Implemented |
 | :---------------- | :---------: |
 | Import of VM should create running VM with Multus network | &check; |
 | Import of VM should create running VM with two networks: Multus and Pod | &check; |
 | Import of VM should create running VM with two Multus networks | &check; |
 
-## Templates
+### Templates
 | Test description | Implemented |
 | :---------------- | :---------: |
 | Import of a Windows VM should detect and apply correct template to the target VM | &cross; |
 | Import of a Linux VM should detect and apply correct template to the target VM | &cross; |
+
+## Running tests
+
+### With kubevirtci
+Tests can be run against kubevirtci-based local k8s cluster. To run them, execute 
+```bash
+automation/test.sh
+``` 
+
+### With external k8s cluster
+Test suite can be run against existing, external k8s cluster. To do it, execute:
+```bash
+KUBECTL=<kubectl command> IMAGEIO_NAMESPACE=<imageio installation namespace> KUBEVIRT_NAMESPACE=<namespace where kubevirt has been installed> KUBECONFIG=<path to the kubeconfig> automation/execute-tests.sh
+```
+
+for example:
+
+```bash
+KUBECTL=kubectl IMAGEIO_NAMESPACE=kubevirt-hyperconverged KUBEVIRT_NAMESPACE=kubevirt-hyperconverged KUBECONFIG=~/.kube/config automation/execute-tests.sh
+```
+
+Additional options variables that can be provided:
+ - DEFAULT_SC - name of the cluster's default storage class
+ - NFS_SC - name of an NFS-backed storage class

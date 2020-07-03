@@ -28,7 +28,7 @@ var _ = Describe("VM import ", func() {
 
 	BeforeEach(func() {
 		namespace = f.Namespace.Name
-		s, err := f.CreateOvirtSecretFromBlueprint()
+		s, err := f.CreateOvirtSecretFromCACert()
 		if err != nil {
 			Fail("Cannot create secret: " + err.Error())
 		}

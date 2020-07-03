@@ -25,7 +25,7 @@ var _ = Describe("VM storage validation ", func() {
 	)
 
 	BeforeEach(func() {
-		s, err := f.CreateOvirtSecretFromBlueprint()
+		s, err := f.CreateOvirtSecretFromCACert()
 		if err != nil {
 			Fail("Cannot create secret: " + err.Error())
 		}

@@ -4,10 +4,11 @@ import (
 	"strings"
 	"time"
 
+	ovirtenv "github.com/kubevirt/vm-import-operator/tests/env/ovirt"
+
 	"github.com/kubevirt/vm-import-operator/tests"
 
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
-	"github.com/kubevirt/vm-import-operator/tests/ovirt"
 	"github.com/onsi/ginkgo/extensions/table"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "kubevirt.io/client-go/api/v1"
@@ -40,7 +41,7 @@ var _ = Describe("VM import", func() {
 	)
 
 	BeforeEach(func() {
-		secret, err = f.CreateOvirtSecretFromBlueprint()
+		secret, err = f.CreateOvirtSecretFromCACert()
 		if err != nil {
 			Fail("Cannot create secret: " + err.Error())
 		}
@@ -100,8 +101,8 @@ var _ = Describe("VM import", func() {
 		Expect(created).To(BeUnsuccessful(f, string(v2vv1alpha1.ValidationFailed)))
 	})
 
-	table.DescribeTable("should fail for invalid ", func(vmID string, apiURL string, username string, password string, caCert string) {
-		invalidSecret, err := f.CreateOvirtSecret(apiURL, username, password, caCert)
+	table.DescribeTable("should fail for invalid ", func(vmID string, ovirtEnv *ovirtenv.Environment) {
+		invalidSecret, err := f.CreateOvirtSecret(*ovirtEnv)
 		if err != nil {
 			Fail(err.Error())
 		}
@@ -113,10 +114,10 @@ var _ = Describe("VM import", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(BeUnsuccessful(f, string(v2vv1alpha1.ValidationFailed)))
 	},
-		table.Entry("oVirt URL", vms.InvalidOVirtUrlVmID, "", ovirt.Username, ovirt.Password, ovirt.CACert),
-		table.Entry("oVirt username", vms.InvalidOVirtUsernameVmID, ovirt.ApiURL, "", ovirt.Password, ovirt.CACert),
-		table.Entry("oVirt password", vms.InvalidOVirtPasswordVmID, ovirt.ApiURL, ovirt.Username, "", ovirt.CACert),
-		table.Entry("oVirt CA cert", vms.InvalidOVirtCACertVmID, ovirt.ApiURL, ovirt.Username, ovirt.Password, "garbage"),
+		table.Entry("oVirt URL", vms.InvalidOVirtUrlVmID, ovirtenv.NewFakeOvirtEnvironment(f.ImageioInstallNamespace, f.OVirtCA).WithAPIURL("")),
+		table.Entry("oVirt username", vms.InvalidOVirtUsernameVmID, ovirtenv.NewFakeOvirtEnvironment(f.ImageioInstallNamespace, f.OVirtCA).WithUsername("")),
+		table.Entry("oVirt password", vms.InvalidOVirtPasswordVmID, ovirtenv.NewFakeOvirtEnvironment(f.ImageioInstallNamespace, f.OVirtCA).WithPassword("")),
+		table.Entry("oVirt CA cert", vms.InvalidOVirtCACertVmID, ovirtenv.NewFakeOvirtEnvironment(f.ImageioInstallNamespace, "garbage")),
 	)
 
 	It("should fail for non-existing VM ID", func() {
