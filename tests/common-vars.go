@@ -1,9 +1,6 @@
 package tests
 
 var (
-	// StorageClass defines the name of the storage class available in the test cluster
-	StorageClass = "local"
-
 	// TrueVar defines variable with value of `true`
 	TrueVar = true
 
