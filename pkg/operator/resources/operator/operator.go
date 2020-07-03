@@ -2,17 +2,23 @@ package operator
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"github.com/blang/semver"
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	vmimportmetrics "github.com/kubevirt/vm-import-operator/pkg/metrics"
 	osmap "github.com/kubevirt/vm-import-operator/pkg/os"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	csvv1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/version"
+	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
@@ -110,6 +116,7 @@ func getControllerPolicyRules() []rbacv1.PolicyRule {
 				"events",
 				"configmaps",
 				"secrets",
+				"services",
 			},
 			Verbs: []string{
 				"*",
@@ -1186,6 +1193,53 @@ func CreateServiceAccount(namespace string) *corev1.ServiceAccount {
 			Name:      ControllerName,
 			Labels:    utils.WithLabels(nil, commonLabels),
 			Namespace: namespace,
+		},
+	}
+}
+
+// CreateMetricsService create a Service resource for metrics
+func CreateMetricsService(namespace string) *v1.Service {
+	servicePorts := []v1.ServicePort{
+		{Port: vmimportmetrics.MetricsPort, Name: metrics.OperatorPortName, Protocol: v1.ProtocolTCP, TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: vmimportmetrics.MetricsPort}},
+		{Port: vmimportmetrics.OperatorMetricsPort, Name: metrics.CRPortName, Protocol: v1.ProtocolTCP, TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: vmimportmetrics.OperatorMetricsPort}},
+	}
+	labels := map[string]string{"name": operatorName}
+
+	return &v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-metrics", operatorName),
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Spec: v1.ServiceSpec{
+			Ports:    servicePorts,
+			Selector: map[string]string{"v2v.kubevirt.io": "vm-import-controller"},
+		},
+	}
+}
+
+// CreateServiceMonitor create a service monitor for vm-operator metrics
+func CreateServiceMonitor(monitoringNamespace string, svcNamespace string) *monitoringv1.ServiceMonitor {
+	labels := map[string]string{"name": operatorName}
+	var endpoints []monitoringv1.Endpoint
+	for _, name := range []string{metrics.OperatorPortName, metrics.CRPortName} {
+		endpoints = append(endpoints, monitoringv1.Endpoint{Port: name})
+	}
+
+	return &monitoringv1.ServiceMonitor{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-monitor", operatorName),
+			Namespace: monitoringNamespace,
+			Labels:    labels,
+		},
+		Spec: monitoringv1.ServiceMonitorSpec{
+			NamespaceSelector: monitoringv1.NamespaceSelector{
+				MatchNames: []string{svcNamespace},
+			},
+			Selector: metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Endpoints: endpoints,
 		},
 	}
 }

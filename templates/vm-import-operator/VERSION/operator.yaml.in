@@ -107,6 +107,7 @@ rules:
   - configmaps
   - secrets
   - serviceaccounts
+  - services
   verbs:
   - '*'
 - apiGroups:
@@ -135,6 +136,12 @@ rules:
   resources:
   - clusterrolebindings
   - clusterroles
+  verbs:
+  - '*'
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
   verbs:
   - '*'
 ---
@@ -193,3 +200,5 @@ spec:
               value: {{CONTAINER_PREFIX}}/{{CONTROLLER_IMAGE}}:{{IMAGE_TAG}}
             - name: PULL_POLICY
               value: {{IMAGE_PULL_POLICY}}
+            - name: MONITORING_NAMESPACE
+              value: openshift-monitoring

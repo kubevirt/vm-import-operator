@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/kubevirt/vm-import-operator/pkg/config"
+	"github.com/kubevirt/vm-import-operator/pkg/metrics"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
@@ -955,6 +956,7 @@ func (r *ReconcileVirtualMachineImport) updateProgress(instance *v2vv1alpha1.Vir
 }
 
 func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName, p provider.Provider, instance *v2vv1alpha1.VirtualMachineImport) error {
+	metrics.ImportCounter.IncSuccessful()
 	vmiName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	var errs []error
 	err := p.CleanUp(false, instance, r.client)
@@ -975,6 +977,7 @@ func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName
 
 //TODO: use in proper places
 func (r *ReconcileVirtualMachineImport) afterFailure(p provider.Provider, instance *v2vv1alpha1.VirtualMachineImport) error {
+	metrics.ImportCounter.IncFailed()
 	vmiName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	var errs []error
 	err := p.CleanUp(true, instance, r.client)
