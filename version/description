@@ -1,33 +1,42 @@
-v0.0.3
+v0.0.4
 
 Features:
-* Propagate label for tracking created resources
-* Set unique data-volume name
-* Added information about resource mapping resolution and defaults for storage
-* Reduce restrictions on target in mappings
-* Add vm description
-* Update network mapping value for ovirt
-* Taking into account eventual consistency for dependencies removal
-* Update owned CRD in CSV
-* Watch for failures of the disk import
+* CNV-5368: Failing import when template is not found and proper feature gate is not enabled
+* Propagate env variables to vm-import-controller
+* Check disk status before import
+* Refactor importDisks method
+* Remove non-cluster roles and rolebindings from cleanup logic
 
 Tests:
-* CPU pinning functional test
-* Install kubevirt templates for ocp tests
-* Add debugging to fail test provision infra
-* 'migratable' placement policy affinity and LiveMigration feature gate enabled e2e test
-* Simple positive e2e tests. BIOS Type mapping fix
-* Refactored VM validation tests to use more general template files
-* Functional tests for invalid image
-* Timezone validation e2e tests and fix
-* Bump default k8s version to 1.18
-* Defined new VM configuration-related e2e test cases
-* Using dynamic stubbing in all the functional tests
-* Moved functional tests dedicated to oVirt VM provider to a separate directory
-* VM Storage validation functional tests
-* Networking tests - Refactored to use stubbing - Added multus+pod networks VM test - Added multus+multus networks VM test
-* Functional tests for VM validation
+* Allow user to specify storage classes for tests Fixes #318
+* Using kubevirt install namespace passed in the test run arguments. Fixes #317
+* Add nfs storage to automation
+* Pinning kubevirtci version
+* Parallel import of two VMs functional test
+* Re-enabled assertion checking MAC address of the VM instance
+* Sequential import of two VMs functional tests
+* VM import CR removal after successful import - e2e test
+* Functional test for source VM that wouldn't go down
+* Running VM import functional test
+* Updated fakeovirt API dependency
+* Functional tests for failed resource mapping validation
+* Negative import test cases
+* Increased BeRunning matcher timeout and added meaningful information to the failure message
+
+Bugs:
+* Do not requeue new request if provider init failed
+* Allowing for VMs to have Windows-specific UTC-compatible timezonesFixes https://bugzilla.redhat.com/show_bug.cgi\?id\=1852446
+* Recover from oVirt client panic
+* Block import with more than one source network mapped to a pod network
+* Set PVC accessMode based on source VM
+* Network resource mapping type validation hardening
+* Using pod network type when type is missing in the mapping. Fixed #301
+* Make sure DVs od VM import are correct
+* DedicatedCPUPlacement should be set to true for exact pinning. Fixed #269
 
 Docs:
-* Add contribution guidelines
-* Add CODE_OF_CONDUCT
+* Update documentation
+* New various functional test cases definitions
+* New negative test cases descriptions
+* Update examples
+* Align namespace in examples
