@@ -171,7 +171,7 @@ spec:
       containers:
         - name: vm-import-operator
           # Replace this with the built image name
-          image: quay.io/jdzon/vm-import-operator:v0.0.4
+          image: quay.io/kubevirt/vm-import-operator:v0.0.4
           command:
           - vm-import-operator
           imagePullPolicy: Always
@@ -190,6 +190,6 @@ spec:
             - name: OPERATOR_VERSION
               value: v0.0.4
             - name: CONTROLLER_IMAGE
-              value: quay.io/jdzon/vm-import-controller:v0.0.4
+              value: quay.io/kubevirt/vm-import-controller:v0.0.4
             - name: PULL_POLICY
               value: Always
