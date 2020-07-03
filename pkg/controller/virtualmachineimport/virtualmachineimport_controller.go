@@ -202,17 +202,12 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		return reconcile.Result{}, err
 	}
 
-	// Exit if we should not run reconcile:
-	if !shouldReconcile(instance) {
-		reqLogger.Info("Not running reconcile")
-		return reconcile.Result{}, nil
-	}
-
 	// Init provider:
 	provider, err := r.createProvider(instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+
 	message, err := r.initProvider(instance, provider)
 	if err != nil {
 		if r.vmImportInProgress(instance) {
@@ -226,6 +221,21 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		return reconcile.Result{}, nil
 	}
 	defer provider.Close()
+
+	if instance.DeletionTimestamp != nil && utils.HasFinalizer(instance, utils.RestoreVMStateFinalizer) {
+		err := r.finalize(instance, provider)
+		if err != nil {
+			// requeue if locked
+			return reconcile.Result{RequeueAfter: 1 * time.Second}, nil
+		}
+		return reconcile.Result{}, nil
+	}
+
+	// Exit if we should not run reconcile:
+	if !shouldReconcile(instance) {
+		reqLogger.Info("Not running reconcile")
+		return reconcile.Result{}, nil
+	}
 
 	// fetch source vm
 	err = r.fetchVM(instance, provider)
@@ -243,7 +253,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	// Stop the VM
-	if err = provider.StopVM(); err != nil {
+	if err = provider.StopVM(instance, r.client); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -265,7 +275,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	// Import disks:
-	err = r.importDisks(provider, instance, mapper, vmName, request.NamespacedName)
+	err = r.importDisks(provider, instance, mapper, vmName)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -275,6 +285,27 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileVirtualMachineImport) finalize(instance *v2vv1alpha1.VirtualMachineImport, provider provider.Provider) error {
+	reqLogger := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
+	reqLogger.Info("Finalizing - restoring source vm")
+	vmiName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
+
+	err := r.restoreInitialVMState(vmiName, provider)
+	if err != nil {
+		reqLogger.Error(err, "Finalizing - restoring failed")
+		// disk locked is expected and we need to requeue
+		if strings.Contains(err.Error(), "locked") {
+			return err
+		}
+	}
+
+	err = utils.RemoveFinalizer(instance, utils.RestoreVMStateFinalizer, r.client)
+	if err != nil {
+		reqLogger.Error(err, "Finalizing - failed to remove finalizer")
+	}
+	return nil
 }
 
 func (r *ReconcileVirtualMachineImport) addWatchForImportPod(instance *v2vv1alpha1.VirtualMachineImport, dvID string) error {
@@ -296,7 +327,7 @@ func (r *ReconcileVirtualMachineImport) addWatchForImportPod(instance *v2vv1alph
 	)
 }
 
-func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName, vmiName types.NamespacedName) error {
+func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName) error {
 	dvs, err := mapper.MapDataVolumes(&vmName.Name)
 	if err != nil {
 		return err
@@ -383,7 +414,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 			if err := r.updateProgress(instance, progressDone); err != nil {
 				return err
 			}
-			if err := r.afterSuccess(vmName, vmiName, provider); err != nil {
+			if err := r.afterSuccess(vmName, provider, instance); err != nil {
 				return err
 			}
 
@@ -417,7 +448,7 @@ func (r *ReconcileVirtualMachineImport) endImportAsFailed(provider provider.Prov
 	}
 
 	// Cleanup
-	if err := r.afterFailure(instanceNamespacedName, provider); err != nil {
+	if err := r.afterFailure(provider, instance); err != nil {
 		return err
 	}
 
@@ -450,7 +481,7 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 	if err != nil {
 		reqLogger.Info("No matching template was found for the virtual machine.")
 		if !config.ImportWithoutTemplateEnabled() {
-			if err := r.templateMatchingFailed(instanceNamespacedName, err.Error(), &processingCond, provider); err != nil {
+			if err := r.templateMatchingFailed(err.Error(), &processingCond, provider, instance); err != nil {
 				return "", err
 			}
 			return "", err
@@ -517,7 +548,7 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 		}
 
 		// Cleanup after failure
-		if err = r.afterFailure(instanceNamespacedName, provider); err != nil {
+		if err = r.afterFailure(provider, instance); err != nil {
 			return "", err
 		}
 
@@ -603,8 +634,7 @@ func (r *ReconcileVirtualMachineImport) startVM(provider provider.Provider, inst
 				if err = r.updateProgress(instance, progressDone); err != nil {
 					return err
 				}
-				instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
-				if err = r.afterSuccess(vmName, instanceNamespacedName, provider); err != nil {
+				if err = r.afterSuccess(vmName, provider, instance); err != nil {
 					return err
 				}
 			}
@@ -707,7 +737,7 @@ func (r *ReconcileVirtualMachineImport) createDataVolume(provider provider.Provi
 		}
 
 		// Cleanup
-		if err = r.afterFailure(instanceNamespacedName, provider); err != nil {
+		if err = r.afterFailure(provider, instance); err != nil {
 			return err
 		}
 		return err
@@ -924,9 +954,10 @@ func (r *ReconcileVirtualMachineImport) updateProgress(instance *v2vv1alpha1.Vir
 	return nil
 }
 
-func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName, vmiName types.NamespacedName, p provider.Provider) error {
+func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName, p provider.Provider, instance *v2vv1alpha1.VirtualMachineImport) error {
+	vmiName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	var errs []error
-	err := p.CleanUp(false)
+	err := p.CleanUp(false, instance, r.client)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -943,9 +974,10 @@ func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName
 }
 
 //TODO: use in proper places
-func (r *ReconcileVirtualMachineImport) afterFailure(vmiName types.NamespacedName, p provider.Provider) error {
+func (r *ReconcileVirtualMachineImport) afterFailure(p provider.Provider, instance *v2vv1alpha1.VirtualMachineImport) error {
+	vmiName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	var errs []error
-	err := p.CleanUp(true)
+	err := p.CleanUp(true, instance, r.client)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -1139,19 +1171,20 @@ func (r *ReconcileVirtualMachineImport) validate(instance *v2vv1alpha1.VirtualMa
 	return true, nil
 }
 
-func (r *ReconcileVirtualMachineImport) templateMatchingFailed(instanceNamespacedName types.NamespacedName, errorMessage string, processingCond *v2vv1alpha1.VirtualMachineImportCondition, provider provider.Provider) error {
+func (r *ReconcileVirtualMachineImport) templateMatchingFailed(errorMessage string, processingCond *v2vv1alpha1.VirtualMachineImportCondition, provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport) error {
 	succeededCond := conditions.NewSucceededCondition(string(v2vv1alpha1.VMTemplateMatchingFailed), "Couldn't find matching template", corev1.ConditionFalse)
 
 	processingCond.Status = corev1.ConditionFalse
 	processingFailedReason := string(v2vv1alpha1.ProcessingFailed)
 	processingCond.Reason = &processingFailedReason
 	processingCond.Message = &errorMessage
+	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	if err := r.upsertStatusConditions(instanceNamespacedName, succeededCond, *processingCond); err != nil {
 		return err
 	}
 
 	// Cleanup after failure
-	if err := r.afterFailure(instanceNamespacedName, provider); err != nil {
+	if err := r.afterFailure(provider, instance); err != nil {
 		return err
 	}
 	return nil

@@ -23,6 +23,7 @@ import (
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -885,13 +886,11 @@ var _ = Describe("Reconcile steps", func() {
 		var (
 			mockMap *mockMapper
 			vmName  types.NamespacedName
-			vmiName types.NamespacedName
 		)
 
 		BeforeEach(func() {
 			mockMap = &mockMapper{}
 			vmName = types.NamespacedName{Name: "test", Namespace: "default"}
-			vmiName = types.NamespacedName{Name: "test", Namespace: "default"}
 			mapDisks = func() (map[string]cdiv1.DataVolume, error) {
 				return map[string]cdiv1.DataVolume{
 					"test": cdiv1.DataVolume{},
@@ -931,7 +930,7 @@ var _ = Describe("Reconcile steps", func() {
 				return map[string]cdiv1.DataVolume{}, nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
+			err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(BeNil())
 		})
@@ -948,7 +947,7 @@ var _ = Describe("Reconcile steps", func() {
 				return fmt.Errorf("Not created")
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
+			err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -970,7 +969,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
+			err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(BeNil())
 		})
@@ -984,7 +983,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
+			err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -1003,7 +1002,7 @@ var _ = Describe("Reconcile steps", func() {
 				return fmt.Errorf("Not modified")
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
+			err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -1027,7 +1026,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
+			err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(BeNil())
 		})
@@ -1046,7 +1045,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName, vmiName)
+			err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(BeNil())
 		})
@@ -1520,7 +1519,7 @@ func (p *mockProvider) Validate() ([]v2vv1alpha1.VirtualMachineImportCondition, 
 }
 
 // StopVM implements Provider.StopVM
-func (p *mockProvider) StopVM() error {
+func (p *mockProvider) StopVM(cr *v2vv1alpha1.VirtualMachineImport, client rclient.Client) error {
 	return nil
 }
 
@@ -1550,7 +1549,7 @@ func (p *mockProvider) StartVM() error {
 }
 
 // CleanUp implements Provider.CleanUp
-func (p *mockProvider) CleanUp(failure bool) error {
+func (p *mockProvider) CleanUp(failure bool, cr *v2vv1alpha1.VirtualMachineImport, client rclient.Client) error {
 	return cleanUp()
 }
 
