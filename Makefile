@@ -14,6 +14,7 @@ IMAGE_REGISTRY ?= quay.io/$(QUAY_USER)
 IMAGE_TAG ?= latest
 OPERATOR_IMAGE ?= vm-import-operator
 CONTROLLER_IMAGE ?= vm-import-controller
+IMAGEIO_INIT_TAG ?= v0.0.1
 
 # Git parameters
 GITHUB_REPOSITORY ?= https://github.com/kubevirt/vm-import-operator
@@ -113,6 +114,12 @@ operator-push:
 	docker push $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE):$(IMAGE_TAG)
 
 docker-push: controller-push operator-push
+
+imageio-init-build:
+	docker build -f build/imageio-init/Dockerfile -t $(IMAGE_REGISTRY)/imageio-init:$(IMAGEIO_INIT_TAG) .
+
+imageio-init-push:
+	docker push $(IMAGE_REGISTRY)/imageio-init:$(IMAGEIO_INIT_TAG)
 
 cluster-up:
 	./cluster/up.sh

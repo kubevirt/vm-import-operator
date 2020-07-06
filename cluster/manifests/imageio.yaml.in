@@ -1,0 +1,69 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: imageio-deployment
+  namespace: @IMAGEIO_NAMESPACE
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: imageio
+  template:
+    metadata:
+      labels:
+        app: imageio
+    spec:
+      serviceAccountName: cdi-sa
+      initContainers:
+      - name: init
+        image: quay.io/jdzon/imageio-init:v0.0.1
+        imagePullPolicy: Always
+        args: ["-certDir", "/tmp/certs"]
+        volumeMounts:
+        - name: "certs"
+          mountPath: "/tmp"
+      containers:
+      - name: imageiotest
+        image: machacekondra/imageiotest:test
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 12345
+        volumeMounts:
+        - name: "certs"
+          mountPath: "/tmp"
+        command: ["/bin/bash"]
+        args: ["-c", "cp /tmp/certs/ca.pem /ovirt-imageio/daemon/test/pki/ca.pem; cp /tmp/certs/cert.pem /ovirt-imageio/daemon/test/pki/cert.pem; cp /tmp/certs/tls.key /ovirt-imageio/daemon/test/pki/key.pem; cd ovirt-imageio/daemon; ./ovirt-imageio -c test& sleep 3; curl --unix-socket /ovirt-imageio/daemon/test/daemon.sock -X PUT -d '{\"uuid\": \"cirros\", \"size\": 46137344, \"url\": \"file:///images/cirros.img\", \"timeout\": 30000000000000, \"ops\": [\"read\"]}' http://localhost:12345/tickets/cirros; curl --unix-socket /ovirt-imageio/daemon/test/daemon.sock -X PUT -d '{\"uuid\": \"cirros2\", \"size\": 46137344, \"url\": \"file:///images/cirros.img\", \"timeout\": 30000000000000, \"ops\": [\"read\"]}' http://localhost:12345/tickets/cirros2; curl --unix-socket /ovirt-imageio/daemon/test/daemon.sock -X PUT -d '{\"uuid\": \"invalid\", \"size\": 4096, \"url\": \"file:///images/invalid.img\", \"timeout\": 30000000000000, \"ops\": [\"read\"]}' http://localhost:12345/tickets/invalid; sleep infinity"]
+      - name: fakeovirt
+        image: machacekondra/fakeovirt:test
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 12346
+        env:
+          - name: NAMESPACE
+            value: @IMAGEIO_NAMESPACE
+        volumeMounts:
+        - name: "certs"
+          mountPath: "/tmp"
+        command: ["/bin/bash"]
+        args: ["-c", "cp /tmp/certs/tls.crt /app/imageio.crt; cp /tmp/certs/tls.key /app/server.key;/app/main"]
+      volumes:
+      - name: "certs"
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: imageio
+  namespace: @IMAGEIO_NAMESPACE
+spec:
+  selector:
+    app: imageio
+  type: NodePort
+  ports:
+  - name: imageio
+    port: 12345
+    targetPort: 12345
+  - name: fakeovirt
+    port: 12346
+    targetPort: 12346

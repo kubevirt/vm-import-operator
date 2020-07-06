@@ -35,7 +35,7 @@ var _ = Describe("Import", func() {
 
 	BeforeEach(func() {
 		test.namespace = f.Namespace.Name
-		s, err := f.CreateOvirtSecretFromBlueprint()
+		s, err := f.CreateOvirtSecretFromCACert()
 		if err != nil {
 			Fail("Cannot create secret: " + err.Error())
 		}
@@ -73,7 +73,7 @@ var _ = Describe("Import", func() {
 
 	BeforeEach(func() {
 		test.namespace = f.Namespace.Name
-		s, err := f.CreateOvirtSecretFromBlueprint()
+		s, err := f.CreateOvirtSecretFromCACert()
 		if err != nil {
 			Fail("Cannot create secret: " + err.Error())
 		}

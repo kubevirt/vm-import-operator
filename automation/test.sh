@@ -28,13 +28,12 @@ set -ex
 export PATH=$PATH:/usr/local/go/bin
 export KUBEVIRT_PROVIDER=$TARGET
 export KUBEVIRT_WITH_CNAO=true
+export IMAGEIO_NAMESPACE=${IMAGEIO_NAMESPACE:-'cdi'}
 
 make cluster-down
 make cluster-up
 make cluster-sync
 
 # Run functional tests
-./cluster/kubectl.sh create -f tests/cirros/secret.yml
-
-KUBECONFIG=$(./cluster/kubeconfig.sh)
-go test ./tests/ovirt --v -timeout 120m -kubeconfig "$KUBECONFIG" -ovirt-secret "default/ovirt-secret"
+export KUBECONFIG=$(./cluster/kubeconfig.sh)
+./automation/execute-tests.sh
