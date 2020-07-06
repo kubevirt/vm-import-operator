@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/object"
+	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 	"net/url"
 	"time"
@@ -13,12 +14,12 @@ import (
 const timeout = 5 * time.Second
 
 // RichOvirtClient is responsible for retrieving VM data from oVirt API
-type richVmwareClient struct {
+type RichVmwareClient struct {
 	client *govmomi.Client
 }
 
 // NewRichVMwareClient creates new, connected rich vmware client. After it is no longer needed, call Close().
-func NewRichVMWareClient(apiUrl, username, password string, insecure bool) (*richVmwareClient, error) {
+func NewRichVMWareClient(apiUrl, username, password string, insecure bool) (*RichVmwareClient, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -34,52 +35,56 @@ func NewRichVMWareClient(apiUrl, username, password string, insecure bool) (*ric
 	if err != nil {
 		return nil, err
 	}
-	vmwareClient := richVmwareClient{
+	vmwareClient := RichVmwareClient{
 		client: govmomiClient,
 	}
 	return &vmwareClient, nil
 }
 
-func (r richVmwareClient) GetVM(id *string, _ *string, _ *string, _ *string) (interface{}, error) {
-	return r.getVM(*id)
+func (r RichVmwareClient) GetVM(id *string, _ *string, _ *string, _ *string) (interface{}, error) {
+	return r.getVM(*id), nil
 }
 
-func (r richVmwareClient) getVM(id string) (*object.VirtualMachine, error) {
+func (r RichVmwareClient) getVM(id string) *object.VirtualMachine {
 	vmRef := types.ManagedObjectReference{Type: "VirtualMachine", Value: id}
 	vm := object.NewVirtualMachine(r.client.Client, vmRef)
-	return vm, nil
+	return vm
 }
 
-func (r richVmwareClient) StopVM(id string) error {
+func (r RichVmwareClient) GetVMProperties(vm *object.VirtualMachine) (*mo.VirtualMachine, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	vmProperties := &mo.VirtualMachine{}
+	err := vm.Properties(ctx, vm.Reference(), nil, vmProperties)
+	if err != nil {
+		return nil, err
+	}
+	return vmProperties, nil
+}
+
+func (r RichVmwareClient) GetVMHostProperties(vm *object.VirtualMachine) (*mo.HostSystem, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	vm, err := r.getVM(id)
+	hostSystem, err := vm.HostSystem(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	powerState, err := vm.PowerState(ctx)
+
+	hostProperties := &mo.HostSystem{}
+	err = hostSystem.Properties(context.TODO(), hostSystem.Reference(), nil, hostProperties)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if powerState != types.VirtualMachinePowerStatePoweredOff {
-		task, err := vm.PowerOff(ctx)
-		if err != nil {
-			return err
-		}
-		return task.Wait(ctx)
-	}
-	return nil
+
+	return hostProperties, nil
 }
 
-func (r richVmwareClient) StartVM(id string) error {
+func (r RichVmwareClient) StartVM(id string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	vm, err := r.getVM(id)
-	if err != nil {
-		return err
-	}
+	vm := r.getVM(id)
 	powerState, err := vm.PowerState(ctx)
 	if err != nil {
 		return err
@@ -94,7 +99,26 @@ func (r richVmwareClient) StartVM(id string) error {
 	return nil
 }
 
-func (r richVmwareClient) Close() error {
+func (r RichVmwareClient) StopVM(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	vm := r.getVM(id)
+	powerState, err := vm.PowerState(ctx)
+	if err != nil {
+		return err
+	}
+	if powerState != types.VirtualMachinePowerStatePoweredOff {
+		task, err := vm.PowerOff(ctx)
+		if err != nil {
+			return err
+		}
+		return task.Wait(ctx)
+	}
+	return nil
+}
+
+func (r RichVmwareClient) Close() error {
 	// nothing to do
 	return nil
 }
