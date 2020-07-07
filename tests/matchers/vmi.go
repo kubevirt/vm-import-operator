@@ -9,7 +9,6 @@ import (
 
 	"github.com/kubevirt/vm-import-operator/tests/framework"
 	"github.com/onsi/gomega/format"
-	"github.com/onsi/gomega/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	v1 "kubevirt.io/client-go/api/v1"
@@ -21,11 +20,17 @@ type beRunningMatcher struct {
 }
 
 // BeRunning creates the matcher
-func BeRunning(testFramework *framework.Framework) types.GomegaMatcher {
+func BeRunning(testFramework *framework.Framework) *beRunningMatcher {
 	matcher := beRunningMatcher{}
 	matcher.timeout = 5 * time.Minute
 	matcher.testFramework = testFramework
 	return &matcher
+}
+
+// Timeout sets timeout on the matcher
+func (matcher *beRunningMatcher) Timeout(timeout time.Duration) *beRunningMatcher {
+	matcher.timeout = timeout
+	return matcher
 }
 
 // Match checks whether given VM instance is running

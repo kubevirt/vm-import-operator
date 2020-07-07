@@ -25,21 +25,25 @@ func NewFakeOvirtEnvironment(namespace string, caCert string) *Environment {
 	}
 }
 
+// WithAPIURL sets the ApiURL - builder style
 func (b *Environment) WithAPIURL(aPIURL string) *Environment {
 	b.ApiURL = aPIURL
 	return b
 }
 
+// WithUsername sets the Username - builder style
 func (b *Environment) WithUsername(username string) *Environment {
 	b.Username = username
 	return b
 }
 
+// WithPassword sets the Password - builder style
 func (b *Environment) WithPassword(password string) *Environment {
 	b.Password = password
 	return b
 }
 
+// WithCaCert sets the CaCert - builder style
 func (b *Environment) WithCaCert(caCert string) *Environment {
 	b.CaCert = caCert
 	return b

@@ -30,8 +30,6 @@ echo "  NFS_SC: $NFS_SC"
 
 FAKEOVIRT_CA_PATH=${FAKEOVIRT_CA_PATH:-$(pwd)/_out/fakeovirt-ca.pem}
 
-IMAGEIO_POD_NAME=$($KUBECTL get pods --no-headers -o custom-columns=":metadata.name" --selector='app=imageio' -n "$IMAGEIO_NAMESPACE")
-echo "Imageio pod: $IMAGEIO_POD_NAME"
-$KUBECTL -n "$IMAGEIO_NAMESPACE" exec "$IMAGEIO_POD_NAME" -c imageiotest -- cat /tmp/certs/ca.pem > "$FAKEOVIRT_CA_PATH"
+$KUBECTL -n "$IMAGEIO_NAMESPACE" exec deploy/imageio-deployment -c imageiotest -- cat /tmp/certs/ca.pem > "$FAKEOVIRT_CA_PATH"
 
 go test ./tests/ovirt --v -timeout 120m -kubeconfig "$KUBECONFIG" -ovirt-ca "$FAKEOVIRT_CA_PATH" -imageio-namespace "$IMAGEIO_NAMESPACE" -kubevirt-namespace "$KUBEVIRT_NAMESPACE" -default-sc "$DEFAULT_SC" -nfs-sc "$NFS_SC"
