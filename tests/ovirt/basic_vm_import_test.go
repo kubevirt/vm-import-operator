@@ -55,8 +55,7 @@ var _ = Describe("Basic VM import ", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
-			//TODO: set lower timeout on this OnRunning matcher
-			Expect(vmBlueprint).NotTo(BeRunning(f))
+			Expect(vmBlueprint).NotTo(BeRunning(f).Timeout(2 * time.Minute))
 
 			vm := test.validateTargetConfiguration(vmBlueprint.Name)
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveDefaultStorageClass(f))

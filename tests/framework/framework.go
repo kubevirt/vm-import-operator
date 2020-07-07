@@ -83,7 +83,7 @@ type Framework struct {
 
 	// DefaultStorageClass specifies the name of a basic, default storage class
 	DefaultStorageClass string
-	//NfsStorageClass specifies the name of an NFS-based storage class
+	// NfsStorageClass specifies the name of an NFS-based storage class
 	NfsStorageClass string
 
 	// ImageioInstallNamespace namespace where ImageIO and FakeOvirt are installed
