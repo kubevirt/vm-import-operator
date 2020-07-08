@@ -17,7 +17,7 @@ spec:
       vm: # in order to uniquely identify vm on ovirt with need to provide (vm_name,cluster) or use (vm-id)
         id: 80554327-0569-496b-bdeb-fcbbf52b827b
       mappings: # mapping section overrides mapping rules provided by 'resourceMapping' external mapping resource
-        networkMapping:
+        networkMappings:
           - source:
               name: red/profile1 # maps of ovirt 'logic network/vnic profile' to network attachment definition
             target:
