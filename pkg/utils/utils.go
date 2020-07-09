@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -13,11 +14,15 @@ import (
 	"github.com/alecthomas/units"
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
+	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
 	// MaxLabelValueLength specifies max length of k8s label value
 	MaxLabelValueLength = 63
+
+	// RestoreVMStateFinalizer defines restore source vm finalizer
+	RestoreVMStateFinalizer = "vmimport.v2v.kubevirt.io/restore-state"
 )
 
 var (
@@ -246,4 +251,45 @@ func WithLabels(labels map[string]string, existing map[string]string) map[string
 	}
 
 	return labels
+}
+
+// AddFinalizer adds finalizer to VM import CR
+func AddFinalizer(cr *v2vv1alpha1.VirtualMachineImport, name string, client rclient.Client) error {
+	copy := cr.DeepCopy()
+	if HasFinalizer(copy, name) {
+		return nil
+	}
+	copy.Finalizers = append(copy.Finalizers, name)
+
+	patch := rclient.MergeFrom(cr)
+	return client.Patch(context.TODO(), copy, patch)
+}
+
+// HasFinalizer checks whether specific finalizer is set on VM import CR
+func HasFinalizer(cr *v2vv1alpha1.VirtualMachineImport, name string) bool {
+	for _, f := range cr.GetFinalizers() {
+		if f == name {
+			return true
+		}
+	}
+	return false
+}
+
+// RemoveFinalizer removes specific finalizer from VM import CR
+func RemoveFinalizer(cr *v2vv1alpha1.VirtualMachineImport, name string, client rclient.Client) error {
+	copy := cr.DeepCopy()
+	if !HasFinalizer(copy, name) {
+		return nil
+	}
+
+	var finalizers []string
+	for _, f := range copy.Finalizers {
+		if f != name {
+			finalizers = append(finalizers, f)
+		}
+	}
+	copy.Finalizers = finalizers
+
+	patch := rclient.MergeFrom(cr)
+	return client.Patch(context.TODO(), copy, patch)
 }

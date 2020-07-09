@@ -39,6 +39,7 @@ import (
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -292,7 +293,7 @@ func (o *OvirtProvider) Validate() ([]v2vv1alpha1.VirtualMachineImportCondition,
 }
 
 // StopVM stop the source VM on ovirt
-func (o *OvirtProvider) StopVM() error {
+func (o *OvirtProvider) StopVM(cr *v2vv1alpha1.VirtualMachineImport, rclient rclient.Client) error {
 	vm, err := o.getVM()
 	if err != nil {
 		return err
@@ -307,6 +308,10 @@ func (o *OvirtProvider) StopVM() error {
 		return err
 	}
 	err = client.StopVM(vmID)
+	if err != nil {
+		return err
+	}
+	err = utils.AddFinalizer(cr, utils.RestoreVMStateFinalizer, rclient)
 	if err != nil {
 		return err
 	}
@@ -393,10 +398,16 @@ func (o *OvirtProvider) StartVM() error {
 }
 
 // CleanUp removes transient resources created for import
-func (o *OvirtProvider) CleanUp(failure bool) error {
+func (o *OvirtProvider) CleanUp(failure bool, cr *v2vv1alpha1.VirtualMachineImport, client rclient.Client) error {
 	var errs []error
+
+	err := utils.RemoveFinalizer(cr, utils.RestoreVMStateFinalizer, client)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	vmiName := o.GetVmiNamespacedName()
-	err := o.secretsManager.DeleteFor(vmiName)
+	err = o.secretsManager.DeleteFor(vmiName)
 	if err != nil {
 		errs = append(errs, err)
 	}

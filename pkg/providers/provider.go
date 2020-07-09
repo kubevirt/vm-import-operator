@@ -6,6 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
+	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const (
@@ -24,12 +25,12 @@ type Provider interface {
 	PrepareResourceMapping(*v2vv1alpha1.ResourceMappingSpec, v2vv1alpha1.VirtualMachineImportSourceSpec)
 	Validate() ([]v2vv1alpha1.VirtualMachineImportCondition, error)
 	ValidateDiskStatus(string) (bool, error)
-	StopVM() error
+	StopVM(*v2vv1alpha1.VirtualMachineImport, rclient.Client) error
 	CreateMapper() (Mapper, error)
 	GetVMStatus() (VMStatus, error)
 	GetVMName() (string, error)
 	StartVM() error
-	CleanUp(bool) error
+	CleanUp(bool, *v2vv1alpha1.VirtualMachineImport, rclient.Client) error
 	FindTemplate() (*oapiv1.Template, error)
 	ProcessTemplate(*oapiv1.Template, *string, string) (*kubevirtv1.VirtualMachine, error)
 }
