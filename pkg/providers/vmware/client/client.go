@@ -16,6 +16,7 @@ const timeout = 5 * time.Second
 // RichOvirtClient is responsible for retrieving VM data from oVirt API
 type RichVmwareClient struct {
 	client *govmomi.Client
+	url *url.URL
 }
 
 // NewRichVMwareClient creates new, connected rich vmware client. After it is no longer needed, call Close().
@@ -37,6 +38,7 @@ func NewRichVMWareClient(apiUrl, username, password string, insecure bool) (*Ric
 	}
 	vmwareClient := RichVmwareClient{
 		client: govmomiClient,
+		url: u,
 	}
 	return &vmwareClient, nil
 }
@@ -121,4 +123,10 @@ func (r RichVmwareClient) StopVM(id string) error {
 func (r RichVmwareClient) Close() error {
 	// nothing to do
 	return nil
+}
+
+func (r RichVmwareClient) TestConnection() error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	return r.client.Login(ctx, r.url.User)
 }
