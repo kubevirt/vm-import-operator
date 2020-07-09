@@ -39,6 +39,20 @@ function install_templates {
     fi
 }
 
+function install_prometheus() {
+  ./cluster/kubectl.sh get -n kube-system cm/coredns -o yaml > /tmp/coredns.yaml
+  sed -i 's/\/etc\/resolv.conf/8.8.8.8/g' /tmp/coredns.yaml
+  ./cluster/kubectl.sh replace -n kube-system -f /tmp/coredns.yaml
+
+  git clone https://github.com/coreos/kube-prometheus.git || true
+  ./cluster/kubectl.sh create -f kube-prometheus/manifests/setup
+  until ./cluster/kubectl.sh get servicemonitors --all-namespaces ; do date; sleep 1; echo ""; done
+  ./cluster/kubectl.sh create -f kube-prometheus/manifests/
+  ./cluster/kubectl.sh wait deploy/prometheus-operator --for=condition=Available -n monitoring --timeout=1200s
+  ./cluster/kubectl.sh wait pod prometheus-k8s-0 -n monitoring --for=condition=Ready --timeout=1200s
+  ./cluster/kubectl.sh wait pod prometheus-k8s-1 -n monitoring --for=condition=Ready --timeout=1200s
+}
+
 function configure_nfs() {
   #Configure static nfs service and storage class, so we can create NFS PVs during test run.
   ./cluster/kubectl.sh apply -f ./cluster/manifests/nfs/nfs-sc.yaml

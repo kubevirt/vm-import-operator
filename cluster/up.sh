@@ -32,6 +32,7 @@ fi
 ensure_golang
 
 configure_nfs
+install_prometheus
 install_cdi
 install_kubevirt
 install_templates
