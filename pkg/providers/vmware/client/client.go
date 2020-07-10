@@ -2,9 +2,11 @@ package client
 
 import (
 	"context"
-	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/object"
+	"github.com/vmware/govmomi/session"
+	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/mo"
+	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
 	"net/url"
 	"time"
@@ -15,12 +17,13 @@ const timeout = 5 * time.Second
 
 // RichOvirtClient is responsible for retrieving VM data from oVirt API
 type RichVmwareClient struct {
-	client *govmomi.Client
-	url *url.URL
+	client         *vim25.Client
+	url            *url.URL
+	sessionManager *session.Manager
 }
 
 // NewRichVMwareClient creates new, connected rich vmware client. After it is no longer needed, call Close().
-func NewRichVMWareClient(apiUrl, username, password string, insecure bool) (*RichVmwareClient, error) {
+func NewRichVMWareClient(apiUrl, username, password string, thumbprint string) (*RichVmwareClient, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -32,13 +35,23 @@ func NewRichVMWareClient(apiUrl, username, password string, insecure bool) (*Ric
 		u.User = url.UserPassword(username, password)
 	}
 
-	govmomiClient, err := govmomi.NewClient(ctx, u, insecure)
+	soapClient := soap.NewClient(u, false)
+	soapClient.SetThumbprint(u.Host, thumbprint)
+	vimClient, err := vim25.NewClient(ctx, soapClient)
 	if err != nil {
 		return nil, err
 	}
+
+	sessionManager := session.NewManager(vimClient)
+	err = sessionManager.Login(ctx, u.User)
+	if err != nil {
+		return nil, err
+	}
+
 	vmwareClient := RichVmwareClient{
-		client: govmomiClient,
-		url: u,
+		client:         vimClient,
+		url:            u,
+		sessionManager: sessionManager,
 	}
 	return &vmwareClient, nil
 }
@@ -49,7 +62,7 @@ func (r RichVmwareClient) GetVM(id *string, _ *string, _ *string, _ *string) (in
 
 func (r RichVmwareClient) getVM(id string) *object.VirtualMachine {
 	vmRef := types.ManagedObjectReference{Type: "VirtualMachine", Value: id}
-	vm := object.NewVirtualMachine(r.client.Client, vmRef)
+	vm := object.NewVirtualMachine(r.client, vmRef)
 	return vm
 }
 
@@ -128,5 +141,5 @@ func (r RichVmwareClient) Close() error {
 func (r RichVmwareClient) TestConnection() error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	return r.client.Login(ctx, r.url.User)
+	return r.sessionManager.Login(ctx, r.url.User)
 }

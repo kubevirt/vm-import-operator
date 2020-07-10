@@ -3,7 +3,6 @@ package client
 import (
 	ovirtclient "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/client"
 	vmwareclient "github.com/kubevirt/vm-import-operator/pkg/providers/vmware/client"
-	"strconv"
 )
 
 // Factory creates new clients
@@ -41,13 +40,9 @@ func (f *SourceClientFactory) NewOvirtClient(dataMap map[string]string) (VMClien
 
 // NewVmwareClient creates new VMWare clients
 func (f *SourceClientFactory) NewVmwareClient(dataMap map[string]string) (VMClient, error) {
-	insecure, err := strconv.ParseBool(dataMap["insecure"])
-	if err != nil {
-		return nil, err
-	}
 	return vmwareclient.NewRichVMWareClient(
 		dataMap["apiUrl"],
 		dataMap["username"],
 		dataMap["password"],
-		insecure)
+		dataMap["thumbprint"])
 }

@@ -10,11 +10,12 @@ import (
 
 var _ = Describe("Test VMware rich client with vCenter", func() {
 	var (
-		model  *simulator.Model
-		server *simulator.Server
-		vm     *simulator.VirtualMachine
-		username string
-		password string
+		model               *simulator.Model
+		server              *simulator.Server
+		vm                  *simulator.VirtualMachine
+		username            string
+		password            string
+		simulatorThumbprint = ""
 	)
 
 	BeforeEach(func() {
@@ -32,12 +33,12 @@ var _ = Describe("Test VMware rich client with vCenter", func() {
 	})
 
 	It("should connect to vCenter", func() {
-		_, err := client.NewRichVMWareClient(server.URL.String(), username, password, false)
+		_, err := client.NewRichVMWareClient(server.URL.String(), username, password, simulatorThumbprint)
 		Expect(err).To(BeNil())
 	})
 
 	It("should retrieve a VM by ID", func() {
-		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, false)
+		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, simulatorThumbprint)
 		Expect(err).To(BeNil())
 		vmRef := vm.Reference().Value
 		rawVm, err := richClient.GetVM(&vmRef, nil, nil, nil)
@@ -48,7 +49,7 @@ var _ = Describe("Test VMware rich client with vCenter", func() {
 	})
 
 	It("should power off and on a VM by ID", func() {
-		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, false)
+		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, simulatorThumbprint)
 		Expect(err).To(BeNil())
 		vmRef := vm.Reference().Value
 		err = richClient.StopVM(vmRef)
@@ -58,7 +59,7 @@ var _ = Describe("Test VMware rich client with vCenter", func() {
 	})
 
 	It("should not throw an error when trying to power off an VM that's already off", func() {
-		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, false)
+		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, simulatorThumbprint)
 		Expect(err).To(BeNil())
 		vmRef := vm.Reference().Value
 		err = richClient.StopVM(vmRef)
@@ -68,7 +69,7 @@ var _ = Describe("Test VMware rich client with vCenter", func() {
 	})
 
 	It("should not throw an error when trying to power on a VM that's already on", func() {
-		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, false)
+		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, simulatorThumbprint)
 		Expect(err).To(BeNil())
 		vmRef := vm.Reference().Value
 		err = richClient.StopVM(vmRef)
@@ -82,11 +83,12 @@ var _ = Describe("Test VMware rich client with vCenter", func() {
 
 var _ = Describe("Test VMware rich client with ESXi", func() {
 	var (
-		model  *simulator.Model
-		server *simulator.Server
-		vm     *simulator.VirtualMachine
-		username string
-		password string
+		model               *simulator.Model
+		server              *simulator.Server
+		vm                  *simulator.VirtualMachine
+		username            string
+		password            string
+		simulatorThumbprint = ""
 	)
 
 	BeforeEach(func() {
@@ -104,12 +106,12 @@ var _ = Describe("Test VMware rich client with ESXi", func() {
 	})
 
 	It("should connect to the ESXi host", func() {
-		_, err := client.NewRichVMWareClient(server.URL.String(), username, password, false)
+		_, err := client.NewRichVMWareClient(server.URL.String(), username, password, simulatorThumbprint)
 		Expect(err).To(BeNil())
 	})
 
 	It("should retrieve a VM by ID", func() {
-		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, false)
+		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, simulatorThumbprint)
 		Expect(err).To(BeNil())
 		vmRef := vm.Reference().Value
 		rawVm, err := richClient.GetVM(&vmRef, nil, nil, nil)
@@ -120,7 +122,7 @@ var _ = Describe("Test VMware rich client with ESXi", func() {
 	})
 
 	It("should power off and on a VM by ID", func() {
-		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, false)
+		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, simulatorThumbprint)
 		Expect(err).To(BeNil())
 		vmRef := vm.Reference().Value
 		err = richClient.StopVM(vmRef)
@@ -130,7 +132,7 @@ var _ = Describe("Test VMware rich client with ESXi", func() {
 	})
 
 	It("should not throw an error when trying to power off an VM that's already off", func() {
-		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, false)
+		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, simulatorThumbprint)
 		Expect(err).To(BeNil())
 		vmRef := vm.Reference().Value
 		err = richClient.StopVM(vmRef)
@@ -140,7 +142,7 @@ var _ = Describe("Test VMware rich client with ESXi", func() {
 	})
 
 	It("should not throw an error when trying to power on a VM that's already on", func() {
-		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, false)
+		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, simulatorThumbprint)
 		Expect(err).To(BeNil())
 		vmRef := vm.Reference().Value
 		err = richClient.StopVM(vmRef)
@@ -151,4 +153,3 @@ var _ = Describe("Test VMware rich client with ESXi", func() {
 		Expect(err).To(BeNil())
 	})
 })
-
