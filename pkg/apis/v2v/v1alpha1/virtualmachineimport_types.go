@@ -85,6 +85,8 @@ type VirtualMachineImportStatus struct {
 	TargetVMName string `json:"targetVmName"`
 
 	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
 	Conditions []VirtualMachineImportCondition `json:"conditions"`
 
 	// +optional
