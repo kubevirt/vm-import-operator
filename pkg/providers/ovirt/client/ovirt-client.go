@@ -2,6 +2,7 @@ package ovirtclient
 
 import (
 	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/kubevirt/vm-import-operator/pkg/client"
@@ -49,7 +50,8 @@ func (client *richOvirtClient) Close() error {
 func (client *richOvirtClient) GetVM(id *string, name *string, cluster *string, clusterID *string) (_ interface{}, e error) {
 	defer func() {
 		if err := recover(); err != nil {
-			e = fmt.Errorf("ovirt client panicked: %v", err)
+			e = fmt.Errorf("ovirt client panicked GetVM: %v", err)
+			debug.PrintStack()
 		}
 	}()
 	vm, err := client.fetchVM(id, name, cluster, clusterID)
@@ -111,7 +113,8 @@ func (client *richOvirtClient) GetVM(id *string, name *string, cluster *string, 
 func (client *richOvirtClient) StopVM(id string) (e error) {
 	defer func() {
 		if err := recover(); err != nil {
-			e = fmt.Errorf("ovirt client panicked: %v", err)
+			e = fmt.Errorf("ovirt client panicked in StopVM: %v", err)
+			debug.PrintStack()
 		}
 	}()
 	vmService := client.connection.SystemService().VmsService().VmService(id)
@@ -161,7 +164,8 @@ func (client *richOvirtClient) StopVM(id string) (e error) {
 func (client *richOvirtClient) StartVM(id string) (e error) {
 	defer func() {
 		if err := recover(); err != nil {
-			e = fmt.Errorf("ovirt client panicked: %v", err)
+			e = fmt.Errorf("ovirt client panicked in StartVM: %v", err)
+			debug.PrintStack()
 		}
 	}()
 	vmService := client.connection.SystemService().VmsService().VmService(id)
