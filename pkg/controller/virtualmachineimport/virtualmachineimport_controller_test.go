@@ -110,6 +110,9 @@ var _ = Describe("Reconcile steps", func() {
 		getConfig = func() config.KubeVirtConfig {
 			return config.KubeVirtConfig{FeatureGates: "ImportWithoutTemplate"}
 		}
+		update = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+			return nil
+		}
 		vmName = types.NamespacedName{Name: "test", Namespace: "default"}
 		rec := record.NewFakeRecorder(2)
 
@@ -485,7 +488,7 @@ var _ = Describe("Reconcile steps", func() {
 		})
 
 		It("should fail to modify progress: ", func() {
-			counter := 3
+			counter := 2
 			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
 				switch obj.(type) {
 				case *v2vv1alpha1.VirtualMachineImport:
@@ -642,13 +645,8 @@ var _ = Describe("Reconcile steps", func() {
 				}
 				return nil
 			}
-			counter := 2
 			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
-				counter--
-				if counter == 0 {
-					return fmt.Errorf("Not modified")
-				}
-				return nil
+				return fmt.Errorf("Not modified")
 			}
 
 			err := reconciler.startVM(mock, instance, vmName)
@@ -785,8 +783,8 @@ var _ = Describe("Reconcile steps", func() {
 		})
 
 		It("should fail to update data volumes: ", func() {
-			counter := 4
-			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
+			counter := 2
+			update = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 				counter--
 				if counter == 0 {
 					return fmt.Errorf("Not modified")
@@ -801,10 +799,9 @@ var _ = Describe("Reconcile steps", func() {
 		})
 
 		It("should fail to update virtual machine: ", func() {
-			counter := 5
 			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
-				counter--
-				if counter == 0 {
+				switch obj.(type) {
+				case *kubevirtv1.VirtualMachine:
 					return fmt.Errorf("Not modified")
 				}
 				return nil
@@ -870,7 +867,7 @@ var _ = Describe("Reconcile steps", func() {
 		})
 
 		It("should fail to update status condition: ", func() {
-			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
+			update = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 				return fmt.Errorf("Not modified")
 			}
 			done := map[string]bool{"test": true, "test2": true}
@@ -1480,6 +1477,7 @@ var _ = Describe("Disks import progress", func() {
 func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory pclient.Factory, kvConfigProvider config.KubeVirtConfigProvider, recorder record.EventRecorder, controller controller.Controller) *ReconcileVirtualMachineImport {
 	return &ReconcileVirtualMachineImport{
 		client:                 client,
+		apiReader:              client,
 		resourceMappingsFinder: finder,
 		scheme:                 scheme,
 		ownerreferencesmgr:     ownerreferencesmgr,
