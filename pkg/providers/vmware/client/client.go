@@ -13,7 +13,7 @@ import (
 )
 
 // timeout value in seconds for vmware api requests
-const timeout = 5 * time.Second
+const timeout = 30 * time.Second
 
 // RichOvirtClient is responsible for retrieving VM data from oVirt API
 type RichVmwareClient struct {
