@@ -40,6 +40,8 @@ const (
 	DefaultStorageClassTargetName = ""
 )
 
+var _true bool = true
+
 // BiosTypeMapping defines mapping of BIOS types between oVirt and kubevirt domains
 var BiosTypeMapping = map[string]*kubevirtv1.Bootloader{
 	"q35_sea_bios":    &kubevirtv1.Bootloader{BIOS: &kubevirtv1.BIOS{}},
@@ -136,6 +138,9 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 
 	// Map bios
 	vmSpec.Spec.Template.Spec.Domain.Firmware = o.mapFirmware()
+
+	// Map features
+	vmSpec.Spec.Template.Spec.Domain.Features = o.mapFeatures()
 
 	// Map machine type
 	vmSpec.Spec.Template.Spec.Domain.Machine = *o.mapArchitecture()
@@ -701,6 +706,23 @@ func (o *OvirtMapper) mapPlacementPolicy() *kubevirtv1.EvictionStrategy {
 	}
 
 	return nil
+}
+
+func (o *OvirtMapper) mapFeatures() *kubevirtv1.Features {
+	features := &kubevirtv1.Features{}
+
+	bios, _ := o.vm.Bios()
+	biosType, _ := bios.Type()
+	bootloader := BiosTypeMapping[string(biosType)]
+
+	// Enabling EFI will also enable Secure Boot, which requires SMM to be enabled.
+	if bootloader.EFI != nil {
+		features.SMM = &kubevirtv1.FeatureState{
+			Enabled: &_true,
+		}
+	}
+
+	return features
 }
 
 func (o *OvirtMapper) mapTimeZone() *kubevirtv1.Clock {
