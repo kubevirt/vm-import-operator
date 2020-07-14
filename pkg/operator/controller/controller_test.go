@@ -14,6 +14,7 @@ import (
 
 	conditions "github.com/openshift/custom-resource-status/conditions/v1"
 
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	vmimportv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 	resources "github.com/kubevirt/vm-import-operator/pkg/operator/resources/operator"
 	appsv1 "k8s.io/api/apps/v1"
@@ -55,6 +56,7 @@ var (
 func init() {
 	vmimportv1alpha1.AddToScheme(scheme.Scheme)
 	extv1beta1.AddToScheme(scheme.Scheme)
+	monitoringv1.AddToScheme(scheme.Scheme)
 }
 
 type modifyResource func(toModify runtime.Object) (runtime.Object, runtime.Object, error)

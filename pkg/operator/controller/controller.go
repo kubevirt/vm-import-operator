@@ -18,6 +18,7 @@ import (
 	resources "github.com/kubevirt/vm-import-operator/pkg/operator/resources/operator"
 	osmap "github.com/kubevirt/vm-import-operator/pkg/os"
 	conditions "github.com/openshift/custom-resource-status/conditions/v1"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -30,8 +31,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/jsonmergepatch"
 	"k8s.io/apimachinery/pkg/util/mergepatch"
+	"k8s.io/client-go/discovery"
 	"kubevirt.io/client-go/util"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -45,6 +48,7 @@ const (
 	createVersionLabel          = "operator.v2v.kubevirt.io/createVersion"
 	updateVersionLabel          = "operator.v2v.kubevirt.io/updateVersion"
 	lastAppliedConfigAnnotation = "operator.v2v.kubevirt.io/lastAppliedConfiguration"
+	MonitoringNamespace         = "MONITORING_NAMESPACE"
 )
 
 var log = logf.Log.WithName("vmimport-operator")
@@ -68,6 +72,7 @@ type OperatorArgs struct {
 	Namespace              string
 	OsConfigMapName        string
 	OsConfigMapNamespace   string
+	MonitoringNamespace    string
 }
 
 // newReconciler returns a new reconcile.Reconciler
@@ -770,6 +775,9 @@ func (r *ReconcileVMImportConfig) getOperatorArgs(cr *vmimportv1alpha1.VMImportC
 			if env.Name == osmap.OsConfigMapNamespace {
 				result.OsConfigMapNamespace = env.Value
 			}
+			if env.Name == MonitoringNamespace {
+				result.MonitoringNamespace = env.Value
+			}
 		}
 	}
 
@@ -791,7 +799,7 @@ func (r *ReconcileVMImportConfig) getAllResources(cr *vmimportv1alpha1.VMImportC
 }
 
 func createControllerResources(args *OperatorArgs) []runtime.Object {
-	return []runtime.Object{
+	objs := []runtime.Object{
 		resources.CreateServiceAccount(args.Namespace),
 		resources.CreateControllerRole(),
 		resources.CreateControllerRoleBinding(args.Namespace),
@@ -805,6 +813,30 @@ func createControllerResources(args *OperatorArgs) []runtime.Object {
 			int32(1),
 		),
 	}
+	// Add metrics objects if servicemonitor is available:
+	if ok, err := hasServiceMonitor(); ok && err == nil {
+		objs = append(objs,
+			resources.CreateMetricsService(args.Namespace),
+			resources.CreateServiceMonitor(args.MonitoringNamespace, args.Namespace),
+		)
+	}
+
+	return objs
+}
+
+// hasServiceMonitor checks if ServiceMonitor is registered in the cluster.
+func hasServiceMonitor() (bool, error) {
+	// Get a config to talk to the apiserver
+	cfg, err := config.GetConfig()
+	if err != nil {
+		return false, fmt.Errorf("Can't load restconfig")
+	}
+
+	dc := discovery.NewDiscoveryClientForConfigOrDie(cfg)
+	apiVersion := "monitoring.coreos.com/v1"
+	kind := "ServiceMonitor"
+
+	return k8sutil.ResourceExists(dc, apiVersion, kind)
 }
 
 func createCRDResources() []runtime.Object {

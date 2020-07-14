@@ -7,6 +7,7 @@ import (
 	"os"
 	"runtime"
 
+	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/kubevirt/vm-import-operator/pkg/apis"
 	"github.com/kubevirt/vm-import-operator/pkg/operator/controller"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -69,6 +70,12 @@ func main() {
 	}
 
 	if err := extv1beta1.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Setup Scheme for monitoringv1 resources
+	if err := monitoringv1.AddToScheme(mgr.GetScheme()); err != nil {
 		log.Error(err, "")
 		os.Exit(1)
 	}

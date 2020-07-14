@@ -27,7 +27,7 @@ export VM_IMPORT_CONFIG_STATUS=${VM_IMPORT_CONFIG_STATUS:-''}
 ./cluster/kubectl.sh create -f _out/vm-import-operator/${VERSION}/vmimportconfig_cr.yaml
 # When `kubectl wait` will support `--ignore-not` found parameter this `if` can be removed.
 if [[ "$(./cluster/kubectl.sh get deploy/vm-import-controller -n kubevirt 2>&1)" =~ "not found" ]]; then
-    sleep 2
+    sleep 10
 fi
 ./cluster/kubectl.sh wait deploy/vm-import-controller -n kubevirt --for=condition=Available --timeout=600s
 
