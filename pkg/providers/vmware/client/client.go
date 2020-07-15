@@ -24,7 +24,7 @@ type RichVmwareClient struct {
 	sessionManager *session.Manager
 }
 
-// NewRichVMwareClient creates a new, connected rich VMWare client.
+// NewRichVMWareClient creates a new, connected rich VMWare client.
 func NewRichVMWareClient(apiUrl, username, password string, thumbprint string) (*RichVmwareClient, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -58,10 +58,10 @@ func NewRichVMWareClient(apiUrl, username, password string, thumbprint string) (
 	return &vmwareClient, nil
 }
 
-// GetVM retrieves a VM from a vCenter or ESXI host by id (MoRef) or by name/inventory path.
+// GetVM retrieves a VM from a vCenter or ESXI host by UUID or by name/inventory path.
 func (r RichVmwareClient) GetVM(id *string, name *string, _ *string, _ *string) (interface{}, error) {
 	if id != nil {
-		return r.getVMByID(*id), nil
+		return r.getVMByUUID(*id)
 	}
 	if name != nil {
 		return r.getVMByInventoryPath(*name)
@@ -69,11 +69,18 @@ func (r RichVmwareClient) GetVM(id *string, name *string, _ *string, _ *string) 
 	return nil, errors.New("not found")
 }
 
-// getVMByID gets a VM by its managed object reference
-func (r RichVmwareClient) getVMByID(id string) *object.VirtualMachine {
-	vmRef := types.ManagedObjectReference{Type: "VirtualMachine", Value: id}
-	vm := object.NewVirtualMachine(r.client, vmRef)
-	return vm
+// getVMByUUID gets a VM by its UUID
+func (r RichVmwareClient) getVMByUUID(id string) (*object.VirtualMachine, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	searchIndex := object.NewSearchIndex(r.client)
+	instanceUUID := false
+	vmRef, err := searchIndex.FindByUuid(ctx, nil, id, true, &instanceUUID)
+	if err != nil {
+		return nil, err
+	}
+	vm := object.NewVirtualMachine(r.client, vmRef.Reference())
+	return vm, nil
 }
 
 // getVMByInventoryPath gets a VM by its complete inventory path or by name alone.
@@ -125,7 +132,10 @@ func (r RichVmwareClient) StartVM(id string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	vm := r.getVMByID(id)
+	vm, err := r.getVMByUUID(id)
+	if err != nil {
+		return err
+	}
 	powerState, err := vm.PowerState(ctx)
 	if err != nil {
 		return err
@@ -144,7 +154,10 @@ func (r RichVmwareClient) StopVM(id string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	vm := r.getVMByID(id)
+	vm, err := r.getVMByUUID(id)
+	if err != nil {
+		return err
+	}
 	powerState, err := vm.PowerState(ctx)
 	if err != nil {
 		return err
@@ -161,9 +174,8 @@ func (r RichVmwareClient) StopVM(id string) error {
 
 // TestConnection checks the connectivity to the vCenter or ESXi host.
 func (r RichVmwareClient) TestConnection() error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	return r.sessionManager.Login(ctx, r.user)
+	_, err := r.client.Get(r.client.URL().String())
+	return err
 }
 
 // Close is a no-op which is present in order to satisfy the VMClient interface.

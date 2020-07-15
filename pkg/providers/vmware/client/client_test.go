@@ -16,10 +16,9 @@ var _ = Describe("Test VMware rich client", func() {
 		server := model.Service.NewServer()
 		defer model.Remove()
 		defer server.Close()
-		username := server.URL.User.Username()
-		password, _ := server.URL.User.Password()
-
-		_, err := client.NewRichVMWareClient(server.URL.String(), username, password, "")
+		richClient, err := createRichClient(server)
+		Expect(err).To(BeNil())
+		err = richClient.TestConnection()
 		Expect(err).To(BeNil())
 	},
 		Entry("vCenter", simulator.VPX()),
@@ -31,19 +30,16 @@ var _ = Describe("Test VMware rich client", func() {
 		server := model.Service.NewServer()
 		defer model.Remove()
 		defer server.Close()
-		vm := simulator.Map.Any("VirtualMachine").(*simulator.VirtualMachine)
-		username := server.URL.User.Username()
-		password, _ := server.URL.User.Password()
-		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, "")
+		richClient, err := createRichClient(server)
 		Expect(err).To(BeNil())
-		vmRef := vm.Reference().Value
+		vmRef, uuid := getVMIdentifiers()
 
-		rawVm, err := richClient.GetVM(&vmRef, nil, nil, nil)
+		rawVm, err := richClient.GetVM(&uuid, nil, nil, nil)
 
 		Expect(err).To(BeNil())
 		retrievedVm, ok := rawVm.(*object.VirtualMachine)
 		Expect(ok).To(BeTrue())
-		Expect(retrievedVm.Reference()).To(Equal(vm.Reference()))
+		Expect(retrievedVm.Reference().Value).To(Equal(vmRef))
 	},
 		Entry("vCenter", simulator.VPX()),
 		Entry("ESXi", simulator.ESX()),
@@ -55,9 +51,7 @@ var _ = Describe("Test VMware rich client", func() {
 		defer model.Remove()
 		defer server.Close()
 		vm := simulator.Map.Any("VirtualMachine").(*simulator.VirtualMachine)
-		username := server.URL.User.Username()
-		password, _ := server.URL.User.Password()
-		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, "")
+		richClient, err := createRichClient(server)
 		Expect(err).To(BeNil())
 
 		rawVm, err := richClient.GetVM(nil, &vm.Name, nil, nil)
@@ -76,17 +70,14 @@ var _ = Describe("Test VMware rich client", func() {
 		server := model.Service.NewServer()
 		defer model.Remove()
 		defer server.Close()
-		vm := simulator.Map.Any("VirtualMachine").(*simulator.VirtualMachine)
-		username := server.URL.User.Username()
-		password, _ := server.URL.User.Password()
-		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, "")
+		richClient, err := createRichClient(server)
 		Expect(err).To(BeNil())
-		vmRef := vm.Reference().Value
+		_, uuid := getVMIdentifiers()
 
-		err = richClient.StopVM(vmRef)
+		err = richClient.StopVM(uuid)
 		Expect(err).To(BeNil())
 
-		err = richClient.StartVM(vmRef)
+		err = richClient.StartVM(uuid)
 		Expect(err).To(BeNil())
 	},
 		Entry("vCenter", simulator.VPX()),
@@ -98,17 +89,14 @@ var _ = Describe("Test VMware rich client", func() {
 		server := model.Service.NewServer()
 		defer model.Remove()
 		defer server.Close()
-		vm := simulator.Map.Any("VirtualMachine").(*simulator.VirtualMachine)
-		username := server.URL.User.Username()
-		password, _ := server.URL.User.Password()
-		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, "")
+		richClient, err := createRichClient(server)
 		Expect(err).To(BeNil())
-		vmRef := vm.Reference().Value
+		_, uuid := getVMIdentifiers()
 
-		err = richClient.StopVM(vmRef)
+		err = richClient.StopVM(uuid)
 		Expect(err).To(BeNil())
 
-		err = richClient.StopVM(vmRef)
+		err = richClient.StopVM(uuid)
 		Expect(err).To(BeNil())
 	},
 		Entry("vCenter", simulator.VPX()),
@@ -120,20 +108,30 @@ var _ = Describe("Test VMware rich client", func() {
 		server := model.Service.NewServer()
 		defer model.Remove()
 		defer server.Close()
-		vm := simulator.Map.Any("VirtualMachine").(*simulator.VirtualMachine)
 		username := server.URL.User.Username()
 		password, _ := server.URL.User.Password()
 		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, "")
 		Expect(err).To(BeNil())
-		vmRef := vm.Reference().Value
+		_, uuid := getVMIdentifiers()
 
-		err = richClient.StartVM(vmRef)
+		err = richClient.StartVM(uuid)
 		Expect(err).To(BeNil())
 
-		err = richClient.StartVM(vmRef)
+		err = richClient.StartVM(uuid)
 		Expect(err).To(BeNil())
 	},
 		Entry("vCenter", simulator.VPX()),
 		Entry("ESXi", simulator.ESX()),
 	)
 })
+
+func createRichClient(server *simulator.Server) (*client.RichVmwareClient, error) {
+	username := server.URL.User.Username()
+	password, _ := server.URL.User.Password()
+	return client.NewRichVMWareClient(server.URL.String(), username, password, "")
+}
+
+func getVMIdentifiers() (string, string) {
+	vm := simulator.Map.Any("VirtualMachine").(*simulator.VirtualMachine)
+	return vm.Reference().Value, vm.Config.Uuid
+}
