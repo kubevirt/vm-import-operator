@@ -29,6 +29,43 @@ var (
 	osFinder = mockOsFinder{}
 )
 
+var _true bool = true
+var _false bool = false
+
+var _ = Describe("Test mapping virtual machine bios type", func() {
+	BeforeEach(func() {
+		findOs = func(vm *ovirtsdk.Vm) (string, error) {
+			return "linux", nil
+		}
+	})
+
+	table.DescribeTable("to smm feature ", func(biostype ovirtsdk.BiosType, smm *bool) {
+		vm := createVMGeneric(ovirtsdk.VMAFFINITY_USER_MIGRATABLE, true, biostype)
+
+		mappings := createMappings()
+		credentials := mapper.DataVolumeCredentials{
+			URL:           "any-url",
+			SecretName:    "secret-name",
+			ConfigMapName: "config-map",
+		}
+		namespace := "the-namespace"
+		mapper := mapper.NewOvirtMapper(vm, &mappings, credentials, namespace, &osFinder)
+		vmSpec, _ := mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+
+		Expect(vmSpec.Spec.Template.Spec.Domain.Features).ToNot(BeNil())
+		if *smm {
+			Expect(vmSpec.Spec.Template.Spec.Domain.Features.SMM.Enabled).To(Equal(smm))
+		} else {
+			Expect(vmSpec.Spec.Template.Spec.Domain.Features.SMM).To(BeNil())
+		}
+
+	},
+		table.Entry("q35_ovmf", ovirtsdk.BIOSTYPE_Q35_OVMF, &_true),
+		table.Entry("q35_secure_boot", ovirtsdk.BIOSTYPE_Q35_SECURE_BOOT, &_false),
+		table.Entry("q35_sea_bios", ovirtsdk.BIOSTYPE_Q35_SEA_BIOS, &_false),
+	)
+})
+
 var _ = Describe("Test mapping virtual machine attributes", func() {
 	var (
 		vm       *ovirtsdk.Vm
@@ -229,7 +266,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 var _ = Describe("Test pvc accessmodes", func() {
 	table.DescribeTable("should be : ", func(affinity ovirtsdk.VmAffinity, readonly bool, accessMode corev1.PersistentVolumeAccessMode) {
-		vm := createVMWithAffinityAndDiskRO(affinity, readonly)
+		vm := createVMGeneric(affinity, readonly, ovirtsdk.BIOSTYPE_Q35_SEA_BIOS)
 
 		mappings := createMappings()
 		credentials := mapper.DataVolumeCredentials{
@@ -397,15 +434,15 @@ var _ = Describe("Test mapping disks", func() {
 })
 
 func createVM() *ovirtsdk.Vm {
-	return createVMWithAffinityAndDiskRO(ovirtsdk.VMAFFINITY_MIGRATABLE, false)
+	return createVMGeneric(ovirtsdk.VMAFFINITY_MIGRATABLE, false, ovirtsdk.BIOSTYPE_Q35_SEA_BIOS)
 }
 
-func createVMWithAffinityAndDiskRO(affinity ovirtsdk.VmAffinity, readonly bool) *ovirtsdk.Vm {
+func createVMGeneric(affinity ovirtsdk.VmAffinity, readonly bool, biostype ovirtsdk.BiosType) *ovirtsdk.Vm {
 	return ovirtsdk.NewVmBuilder().
 		Name("myvm").
 		Bios(
 			ovirtsdk.NewBiosBuilder().
-				Type(ovirtsdk.BIOSTYPE_Q35_SEA_BIOS).MustBuild()).
+				Type(biostype).MustBuild()).
 		Cpu(
 			ovirtsdk.NewCpuBuilder().
 				Topology(
