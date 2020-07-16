@@ -200,6 +200,18 @@ var _ = Describe("VM import", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(HaveTemplateMatchingFailure(f))
 	})
+
+	It("should fail when targetVMName is too long", func() {
+		vmID := vms.BasicVmID
+		vmName := strings.Repeat("x", 64)
+		vmi := utils.VirtualMachineImportCrWithName(vmID, namespace, secret.Name, f.NsPrefix, true, vmName)
+		test.prepareVm(vmID)
+
+		_, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("spec.targetVmName in body should be at most 63 chars long"))
+	})
 })
 
 func (t *basicVMImportNegativeTest) createInvalidSecret() *corev1.Secret {

@@ -393,7 +393,7 @@ func (o *OvirtMapper) ResolveVMName(targetVMName *string) *string {
 		return nil
 	}
 	// VM name is put in label values and has to be shorter than regular k8s name
-	// https://bugzilla.redhat.com/show_bug.cgi?id=1857165
+	// https://bugzilla.redhat.com/1857165
 	name := utils.EnsureLabelValueLength(*vmNameBase)
 	return &name
 }

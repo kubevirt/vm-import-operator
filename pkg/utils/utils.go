@@ -110,7 +110,7 @@ func WithMessage(message string, newMessage string) string {
 	return fmt.Sprintf("%s, %s", message, newMessage)
 }
 
-// EnsureLabelValueLength shortens given value to the maximal label value length of 63 characters
+// EnsureLabelValueLength shortens given value to the maximum label value length of 63 characters
 func EnsureLabelValueLength(value string) string {
 	n := len(value)
 	if n > k8svalidation.LabelValueMaxLength {
