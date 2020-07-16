@@ -1106,7 +1106,7 @@ var _ = Describe("Reconcile steps", func() {
 			create = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
 				return nil
 			}
-			rec := record.NewFakeRecorder(2)
+			rec := record.NewFakeRecorder(3)
 			reconciler.recorder = rec
 		})
 
@@ -1309,6 +1309,71 @@ var _ = Describe("Reconcile steps", func() {
 			Expect(event).To(ContainSubstring("creation failed"))
 
 			Expect(err).To(Not(BeNil()))
+			Expect(result).To(Equal(reconcile.Result{}))
+		})
+
+		It("should fail to import disks when VM update fails: ", func() {
+			vmImportGetCounter := 10
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *v2vv1alpha1.VirtualMachineImport:
+					vmImport := obj.(*v2vv1alpha1.VirtualMachineImport)
+					vmImport.Spec = v2vv1alpha1.VirtualMachineImportSpec{
+						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+						},
+					}
+					conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
+					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+						Status: corev1.ConditionTrue,
+						Type:   v2vv1alpha1.Valid,
+					})
+					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+						Status: corev1.ConditionTrue,
+						Type:   v2vv1alpha1.MappingRulesVerified,
+					})
+					vmImport.Status.Conditions = conditions
+					vmImport.Status.DataVolumes = []v2vv1alpha1.DataVolumeItem{}
+					name := "test"
+					vmImportGetCounter--
+					if vmImportGetCounter == 0 {
+						vmImport.Status.TargetVMName = name
+					}
+					vmImport.Spec.TargetVMName = &name
+					vmImport.Annotations = map[string]string{"vmimport.v2v.kubevirt.io/source-vm-initial-state": "down"}
+
+				case *corev1.Secret:
+					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
+				case *cdiv1.DataVolume:
+					return errors.NewNotFound(schema.GroupResource{}, "")
+				case *kubevirtv1.VirtualMachine:
+					obj.(*kubevirtv1.VirtualMachine).Spec.Template = &kubevirtv1.VirtualMachineInstanceTemplateSpec{
+						Spec: kubevirtv1.VirtualMachineInstanceSpec{
+							Volumes: []kubevirtv1.Volume{},
+						},
+					}
+				}
+				return nil
+			}
+			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
+				switch obj.(type) {
+				case *kubevirtv1.VirtualMachine:
+					return fmt.Errorf("Not modified")
+				}
+
+				return nil
+			}
+
+			result, err := reconciler.Reconcile(request)
+
+			event := <-reconciler.recorder.(*record.FakeRecorder).Events
+			Expect(event).To(ContainSubstring("ImportScheduled"))
+			event = <-reconciler.recorder.(*record.FakeRecorder).Events
+			Expect(event).To(ContainSubstring("ImportInProgress"))
+			event = <-reconciler.recorder.(*record.FakeRecorder).Events
+			Expect(event).To(ContainSubstring("DVCreationFailed"))
+
+			Expect(err).To(BeNil())
 			Expect(result).To(Equal(reconcile.Result{}))
 		})
 

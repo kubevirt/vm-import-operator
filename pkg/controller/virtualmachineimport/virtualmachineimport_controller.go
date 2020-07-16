@@ -3,6 +3,7 @@ package virtualmachineimport
 import (
 	"context"
 	"encoding/json"
+	liberrors "errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -352,11 +353,14 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 			}
 			if valid {
 				if err = r.createDataVolume(provider, mapper, instance, dv, vmName); err != nil {
+					if err = r.endImportAsFailed(provider, instance, foundDv, err.Error()); err != nil {
+						return err
+					}
 					return err
 				}
 			} else {
 				// If disk status is wrong, end the import as failed:
-				if err = r.endImportAsFailed(provider, instance, foundDv); err != nil {
+				if err = r.endImportAsFailed(provider, instance, foundDv, "disk is in illegal status"); err != nil {
 					return err
 				}
 			}
@@ -365,7 +369,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 			if foundDv.Status.Phase == cdiv1.Succeeded {
 				dvsDone[dvID] = true
 			} else if foundDv.Status.Phase == cdiv1.Failed {
-				if err = r.endImportAsFailed(provider, instance, foundDv); err != nil {
+				if err = r.endImportAsFailed(provider, instance, foundDv, "dv is in Failed Phase"); err != nil {
 					return err
 				}
 			} else if foundDv.Status.Phase == cdiv1.ImportInProgress {
@@ -376,7 +380,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 				if err == nil {
 					for _, cs := range foundPod.Status.ContainerStatuses {
 						if cs.State.Waiting != nil && cs.State.Waiting.Reason == podCrashLoopBackOff && cs.RestartCount > int32(importPodRestartTolerance) {
-							if err = r.endImportAsFailed(provider, instance, foundDv); err != nil {
+							if err = r.endImportAsFailed(provider, instance, foundDv, "pod CrashLoopBackoff restart exceeded"); err != nil {
 								return err
 							}
 						}
@@ -427,13 +431,13 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 	return nil
 }
 
-func (r *ReconcileVirtualMachineImport) endImportAsFailed(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, dv *cdiv1.DataVolume) error {
-	errorMessage := fmt.Sprintf("Error while importing disk image: %s", dv.Name)
+func (r *ReconcileVirtualMachineImport) endImportAsFailed(provider provider.Provider, instance *v2vv1alpha1.VirtualMachineImport, dv *cdiv1.DataVolume, message string) error {
+	errorMessage := fmt.Sprintf("Error while importing disk image: %s. %s", dv.Name, message)
 	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 
 	// Update processing condition to failed:
-	proccessingCond := conditions.NewProcessingCondition(string(v2vv1alpha1.ProcessingFailed), errorMessage, corev1.ConditionFalse)
-	if err := r.upsertStatusConditions(instanceNamespacedName, proccessingCond); err != nil {
+	processingCond := conditions.NewProcessingCondition(string(v2vv1alpha1.ProcessingFailed), errorMessage, corev1.ConditionFalse)
+	if err := r.upsertStatusConditions(instanceNamespacedName, processingCond); err != nil {
 		return err
 	}
 
@@ -447,6 +451,9 @@ func (r *ReconcileVirtualMachineImport) endImportAsFailed(provider provider.Prov
 	if err := r.updateProgress(instance, progressDone); err != nil {
 		return err
 	}
+
+	// Update event:
+	r.recorder.Event(instance, corev1.EventTypeWarning, EventDVCreationFailed, message)
 
 	// Cleanup
 	if err := r.afterFailure(provider, instance); err != nil {
@@ -725,23 +732,8 @@ func (r *ReconcileVirtualMachineImport) createDataVolume(provider provider.Provi
 	err = r.client.Create(context.TODO(), &dv)
 	if err != nil {
 		message := fmt.Sprintf("Data volume %s/%s creation failed: %s", dv.Namespace, dv.Name, err)
-		// Update event:
-		r.recorder.Event(instance, corev1.EventTypeWarning, EventDVCreationFailed, message)
-
-		// Update condition to failed:
-		succeededCond := conditions.NewSucceededCondition(string(v2vv1alpha1.DataVolumeCreationFailed), message, corev1.ConditionFalse)
-		processingCond.Status = corev1.ConditionFalse
-		processingFailedReason := string(v2vv1alpha1.ProcessingFailed)
-		processingCond.Reason = &processingFailedReason
-		if err = r.upsertStatusConditions(instanceNamespacedName, processingCond, succeededCond); err != nil {
-			return err
-		}
-
-		// Cleanup
-		if err = r.afterFailure(provider, instance); err != nil {
-			return err
-		}
-		return err
+		log.Error(err, message)
+		return liberrors.New(message)
 	}
 
 	// Set VM as owner reference:
@@ -765,7 +757,7 @@ func (r *ReconcileVirtualMachineImport) createDataVolume(provider provider.Provi
 	// Update VM spec with imported disks:
 	err = r.updateVMSpecDataVolumes(mapper, types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, dv)
 	if err != nil {
-		log.Error(err, "Cannot update VMSpec Data Volumes")
+		log.Error(err, "Cannot update VM with Data Volumes")
 		return err
 	}
 
