@@ -205,8 +205,6 @@ var _ = Describe("Import", func() {
 	},
 		table.Entry("47 - disk and volume names would be at the limit: dv-<name>-attachment-1", 47),
 		table.Entry("63 - label limit", 63),
-		table.Entry("64 - slightly above label limit", 64),
-		table.Entry("128 - way above label limit", 64),
 	)
 })
 
