@@ -765,6 +765,7 @@ func (r *ReconcileVirtualMachineImport) createDataVolume(provider provider.Provi
 	// Update VM spec with imported disks:
 	err = r.updateVMSpecDataVolumes(mapper, types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, dv)
 	if err != nil {
+		log.Error(err, "Cannot update VMSpec Data Volumes")
 		return err
 	}
 

@@ -18,9 +18,6 @@ import (
 )
 
 const (
-	// MaxLabelValueLength specifies max length of k8s label value
-	MaxLabelValueLength = 63
-
 	// RestoreVMStateFinalizer defines restore source vm finalizer
 	RestoreVMStateFinalizer = "vmimport.v2v.kubevirt.io/restore-state"
 )
@@ -123,17 +120,16 @@ func WithMessage(message string, newMessage string) string {
 	return fmt.Sprintf("%s, %s", message, newMessage)
 }
 
-// MakeLabelFrom creates label value from given CR name
-func MakeLabelFrom(name string) string {
-	n := len(name)
-	if n > MaxLabelValueLength {
-		log.Info("Label value will be shortened to 63 characters", "CR name", name)
+// EnsureLabelValueLength shortens given value to the maximal label value length of 63 characters
+func EnsureLabelValueLength(value string) string {
+	n := len(value)
+	if n > k8svalidation.LabelValueMaxLength {
 		suffix := strconv.Itoa(n)
 		suffixLen := len(suffix)
-		maxNameLen := MaxLabelValueLength - suffixLen - 1
-		return fmt.Sprintf("%s_%s", name[:maxNameLen], suffix)
+		maxNameLen := k8svalidation.LabelValueMaxLength - suffixLen - 1
+		return fmt.Sprintf("%s-%s", value[:maxNameLen], suffix)
 	}
-	return name
+	return value
 }
 
 // AppendMap adds a map
