@@ -75,7 +75,7 @@ var _ = Describe("VM import", func() {
 		}
 	},
 		table.Entry("invalid disk image", "4096"),
-		table.Entry("invalid disk size", "0"),
+		table.Entry("invalid disk size", "1"),
 	)
 
 	It("should fail for missing secret", func() {
