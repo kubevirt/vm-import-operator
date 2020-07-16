@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"fmt"
 	"time"
 
 	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
@@ -48,6 +49,18 @@ func (f *Framework) WaitForVMImportConditionInStatus(pollInterval time.Duration,
 		}
 		return true, nil
 	})
+	if pollErr == wait.ErrWaitTimeout {
+		retrieved, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(vmiName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		return fmt.Errorf(
+			"Timed out waiting for the condition type 'VirtualMachineImportCondition(type: %v, reason: %v, status: %v)', got instead '%v'",
+			conditionType, reason, status, retrieved.Status.Conditions,
+		)
+	}
+
 	return pollErr
 }
 

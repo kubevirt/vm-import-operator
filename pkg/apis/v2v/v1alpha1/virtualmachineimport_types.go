@@ -1,6 +1,8 @@
 package v1alpha1
 
 import (
+	"fmt"
+
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -225,6 +227,13 @@ type VirtualMachineImportCondition struct {
 	// The last time the condition transit from one status to another
 	// +optional
 	LastTransitionTime *metav1.Time `json:"lastTransitionTime,omitempty"`
+}
+
+func (cond VirtualMachineImportCondition) String() string {
+	return fmt.Sprintf(
+		"VirtualMachineImportCondition{type: %v, status: %v, reason: %v, message: %v}",
+		cond.Type, cond.Status, *cond.Reason, *cond.Message,
+	)
 }
 
 // DataVolumeItem defines the details of a data volume created by the VM import process

@@ -109,6 +109,7 @@ func init() {
 func NewFrameworkOrDie(prefix string) *Framework {
 	f, err := NewFramework(prefix)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %s", err)
 		ginkgo.Fail(fmt.Sprintf("failed to create test framework: %v", err))
 	}
 	return f
