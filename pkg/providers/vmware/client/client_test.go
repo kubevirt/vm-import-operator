@@ -108,9 +108,7 @@ var _ = Describe("Test VMware rich client", func() {
 		server := model.Service.NewServer()
 		defer model.Remove()
 		defer server.Close()
-		username := server.URL.User.Username()
-		password, _ := server.URL.User.Password()
-		richClient, err := client.NewRichVMWareClient(server.URL.String(), username, password, "")
+		richClient, err := createRichClient(server)
 		Expect(err).To(BeNil())
 		_, uuid := getVMIdentifiers()
 
