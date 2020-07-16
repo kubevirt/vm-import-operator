@@ -31,7 +31,7 @@ func NewManager(client client.Client) Manager {
 func (m *Manager) FindFor(vmiCrName types.NamespacedName) (*corev1.ConfigMap, error) {
 	mapList := corev1.ConfigMapList{}
 	labels := client.MatchingLabels{
-		vmiNameLabel: utils.MakeLabelFrom(vmiCrName.Name),
+		vmiNameLabel: utils.EnsureLabelValueLength(vmiCrName.Name),
 	}
 
 	err := m.client.List(context.TODO(), &mapList, labels, client.InNamespace(vmiCrName.Namespace))
@@ -58,7 +58,7 @@ func (m *Manager) CreateFor(configMap *corev1.ConfigMap, vmiCrName types.Namespa
 	if configMap.Labels == nil {
 		configMap.Labels = make(map[string]string)
 	}
-	configMap.Labels[vmiNameLabel] = utils.MakeLabelFrom(vmiCrName.Name)
+	configMap.Labels[vmiNameLabel] = utils.EnsureLabelValueLength(vmiCrName.Name)
 
 	return m.client.Create(context.TODO(), configMap)
 }
