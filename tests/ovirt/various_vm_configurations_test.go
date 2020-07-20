@@ -189,6 +189,23 @@ var _ = Describe("Import", func() {
 
 		test.ensureVMIsRunning(vmID)
 	})
+
+	table.DescribeTable("should create started VM for targetVMName with length", func(nameLength int) {
+		vmID := vms.BasicVmID
+		test.stub(vmID, "basic-vm.xml", map[string]string{})
+
+		vm := test.ensureVMIsRunningOnStorageWithVMName(vmID, nil, strings.Repeat("x", nameLength))
+
+		disks := vm.Spec.Template.Spec.Domain.Devices.Disks
+		Expect(disks).To(HaveLen(1))
+		volumes := vm.Spec.Template.Spec.Volumes
+		Expect(volumes).To(HaveLen(1))
+
+		Expect(volumes[0].Name).To(BeEquivalentTo(disks[0].Name))
+	},
+		table.Entry("47 - disk and volume names would be at the limit: dv-<name>-attachment-1", 47),
+		table.Entry("63 - label limit", 63),
+	)
 })
 
 func cleanUpConfigMap(f *fwk.Framework) {
@@ -208,9 +225,13 @@ func (t *variousVMConfigurationsTest) ensureVMIsRunning(vmID string) *v1.Virtual
 }
 
 func (t *variousVMConfigurationsTest) ensureVMIsRunningOnStorage(vmID string, storageMappings *[]v2vv1alpha1.ResourceMappingItem) *v1.VirtualMachine {
+	return t.ensureVMIsRunningOnStorageWithVMName(vmID, storageMappings, "target-vm")
+}
+
+func (t *variousVMConfigurationsTest) ensureVMIsRunningOnStorageWithVMName(vmID string, storageMappings *[]v2vv1alpha1.ResourceMappingItem, targetVMName string) *v1.VirtualMachine {
 	f := t.framework
 	namespace := t.framework.Namespace.Name
-	vmi := utils.VirtualMachineImportCr(vmID, namespace, t.secret.Name, f.NsPrefix, true)
+	vmi := utils.VirtualMachineImportCrWithName(vmID, namespace, t.secret.Name, f.NsPrefix, true, targetVMName)
 	vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
 		NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
 			{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},

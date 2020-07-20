@@ -121,7 +121,7 @@ var _ = Describe("VM import cancellation ", func() {
 
 func getTemporaryConfigMap(f *framework.Framework, namespace string, vmiName string) (*corev1.ConfigMap, error) {
 	listOptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("vmimport.v2v.kubevirt.io/vmi-name=%s", oputils.MakeLabelFrom(vmiName)),
+		LabelSelector: fmt.Sprintf("vmimport.v2v.kubevirt.io/vmi-name=%s", oputils.EnsureLabelValueLength(vmiName)),
 	}
 	list, err := f.K8sClient.CoreV1().ConfigMaps(namespace).List(listOptions)
 	if err != nil {
@@ -135,7 +135,7 @@ func getTemporaryConfigMap(f *framework.Framework, namespace string, vmiName str
 
 func getTemporarySecret(f *framework.Framework, namespace string, vmiName string) (*corev1.Secret, error) {
 	listOptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("vmimport.v2v.kubevirt.io/vmi-name=%s", oputils.MakeLabelFrom(vmiName)),
+		LabelSelector: fmt.Sprintf("vmimport.v2v.kubevirt.io/vmi-name=%s", oputils.EnsureLabelValueLength(vmiName)),
 	}
 	list, err := f.K8sClient.CoreV1().Secrets(namespace).List(listOptions)
 	if err != nil {

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/util/validation"
+
 	"github.com/blang/semver"
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	vmimportmetrics "github.com/kubevirt/vm-import-operator/pkg/metrics"
@@ -547,6 +549,7 @@ func CreateVMImportConfig() *extv1beta1.CustomResourceDefinition {
 
 // CreateVMImport creates the VM Import CRD
 func CreateVMImport() *extv1beta1.CustomResourceDefinition {
+	maxTargetVMName := int64(validation.LabelValueMaxLength)
 	return &extv1beta1.CustomResourceDefinition{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apiextensions.k8s.io/v1beta1",
@@ -806,7 +809,8 @@ the disk alias on ovirt DiskMappings is respected only when provided in context 
 									Type: "boolean",
 								},
 								"targetVmName": {
-									Type: "string",
+									Type:      "string",
+									MaxLength: &maxTargetVMName,
 								},
 							},
 							Required: []string{"providerCredentialsSecret", "source"},

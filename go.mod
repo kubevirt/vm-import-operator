@@ -9,7 +9,6 @@ require (
 	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
 	github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30
 	github.com/blang/semver v3.5.1+incompatible
-	github.com/coreos/etcd v3.3.15+incompatible
 	github.com/coreos/prometheus-operator v0.35.0
 	github.com/evanphx/json-patch v4.5.0+incompatible
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32

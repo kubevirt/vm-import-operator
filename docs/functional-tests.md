@@ -140,10 +140,10 @@
 ## Running tests
 
 ### With kubevirtci
-Tests can be run against kubevirtci-based local k8s cluster. To run them, execute 
+Tests can be run against kubevirtci-based local k8s cluster. To run them, execute
 ```bash
 automation/test.sh
-``` 
+```
 
 ### With external k8s cluster
 Test suite can be run against existing, external k8s cluster. To do it, execute:
