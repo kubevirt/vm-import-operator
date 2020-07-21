@@ -5,7 +5,6 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/kubevirt/vm-import-operator/pkg/client"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
 
@@ -30,7 +29,7 @@ type richOvirtClient struct {
 }
 
 // NewRichOvirtClient creates new, connected rich oVirt client. After it is no longer needed, call Close().
-func NewRichOvirtClient(cs *ConnectionSettings) (client.VMClient, error) {
+func NewRichOvirtClient(cs *ConnectionSettings) (*richOvirtClient, error) {
 	con, err := connect(cs.URL, cs.Username, cs.Password, cs.CACert)
 	if err != nil {
 		return nil, err

@@ -106,7 +106,7 @@ func newReconciler(mgr manager.Manager, kvConfigProvider config.KubeVirtConfigPr
 	client := mgr.GetClient()
 	finder := mappings.NewResourceMappingsFinder(client)
 	ownerreferencesmgr := ownerreferences.NewOwnerReferenceManager(client)
-	factory := ovirtprovider.NewSourceClientFactory()
+	factory := pclient.NewSourceClientFactory()
 	return &ReconcileVirtualMachineImport{client: client,
 		scheme:                 mgr.GetScheme(),
 		resourceMappingsFinder: finder,
