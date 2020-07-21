@@ -42,7 +42,7 @@ var _ = Describe("VM import ", func() {
 		It("should create running VM", func() {
 			vmID := vms.BasicNetworkVmID
 			ovirtMappings := v2vv1alpha1.OvirtMappings{
-				NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
+				NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
 					{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 				},
 			}
@@ -82,7 +82,7 @@ var _ = Describe("VM import ", func() {
 		It("should create running VM", func() {
 			vmID := vms.BasicVmID
 			mappings := v2vv1alpha1.OvirtMappings{
-				StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{
+				StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
 					{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
 			}
@@ -148,10 +148,10 @@ var _ = Describe("VM import ", func() {
 		},
 			table.Entry("with default storage class ignoring external mapping",
 				v2vv1alpha1.OvirtMappings{
-					DiskMappings: &[]v2vv1alpha1.ResourceMappingItem{
+					DiskMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
 						{Source: v2vv1alpha1.Source{ID: &vms.DiskID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 					},
-					NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
+					NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
 						{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 					},
 				},
@@ -159,34 +159,34 @@ var _ = Describe("VM import ", func() {
 				nil),
 			table.Entry("with storage class based on internal storage domain",
 				v2vv1alpha1.OvirtMappings{
-					NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
+					NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
 						{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 					},
 				},
 				v2vv1alpha1.OvirtMappings{
-					StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{
+					StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
 						{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 					},
 				},
 				&f.DefaultStorageClass),
 			table.Entry("with storage class based on internal mapping overriding external mapping",
 				v2vv1alpha1.OvirtMappings{
-					StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{
+					StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
 						{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: "wrong-sc"}},
 					},
-					NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
+					NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
 						{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 					},
 				},
 				v2vv1alpha1.OvirtMappings{
-					StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{
+					StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
 						{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 					},
 				},
 				&f.DefaultStorageClass),
 			table.Entry("with pod network based on internal network mapping overriding external mapping",
 				v2vv1alpha1.OvirtMappings{
-					NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
+					NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
 						{
 							Type:   &tests.MultusType,
 							Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID},
@@ -195,7 +195,7 @@ var _ = Describe("VM import ", func() {
 					},
 				},
 				v2vv1alpha1.OvirtMappings{
-					NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
+					NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
 						{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 					},
 				},

@@ -30,7 +30,7 @@ func NewNetworkMappingValidator(provider NetworkAttachmentDefinitionProvider) Ne
 }
 
 //ValidateNetworkMapping validates network mapping
-func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.ResourceMappingItem, crNamespace string) []ValidationFailure {
+func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.NetworkResourceMappingItem, crNamespace string) []ValidationFailure {
 	var failures []ValidationFailure
 	// Check whether mapping for network is required and was provided
 	if mapping == nil {
@@ -44,7 +44,7 @@ func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, m
 	}
 
 	// Map source id and name to ResourceMappingItem
-	mapByID, mapByName := utils.IndexByIDAndName(mapping)
+	mapByID, mapByName := utils.IndexNetworkByIDAndName(mapping)
 
 	// validate source network format comply to network-name/vnic-profile-name
 	failure, ok := v.validateSourceNetworkFormat(mapByName)
@@ -96,7 +96,7 @@ func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, m
 	return failures
 }
 
-func (v *NetworkMappingValidator) getPodNetworks(nics []*ovirtsdk.Nic, mapByID map[string]v2vv1alpha1.ResourceMappingItem, mapByName map[string]v2vv1alpha1.ResourceMappingItem) []string {
+func (v *NetworkMappingValidator) getPodNetworks(nics []*ovirtsdk.Nic, mapByID map[string]v2vv1alpha1.NetworkResourceMappingItem, mapByName map[string]v2vv1alpha1.NetworkResourceMappingItem) []string {
 	var podNetworks []string
 	for _, nic := range nics {
 		if vnicProfile, ok := nic.VnicProfile(); ok {
@@ -129,7 +129,7 @@ func (v *NetworkMappingValidator) hasAtLeastOneWithVNicProfile(nics []*ovirtsdk.
 	return false
 }
 
-func (v *NetworkMappingValidator) validateSourceNetworkFormat(mapByName map[string]v2vv1alpha1.ResourceMappingItem) (ValidationFailure, bool) {
+func (v *NetworkMappingValidator) validateSourceNetworkFormat(mapByName map[string]v2vv1alpha1.NetworkResourceMappingItem) (ValidationFailure, bool) {
 	invalidNames := make([]string, 0)
 	for k := range mapByName {
 		if !strings.Contains(k, "/") {

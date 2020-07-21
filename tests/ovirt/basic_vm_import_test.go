@@ -25,11 +25,12 @@ type basicVmImportTest struct {
 var _ = Describe("Basic VM import ", func() {
 
 	var (
-		f         = fwk.NewFrameworkOrDie("basic-vm-import")
-		test      = basicVmImportTest{framework: f}
-		secret    corev1.Secret
-		namespace string
-		vmID      = vms.BasicVmID
+		f               = fwk.NewFrameworkOrDie("basic-vm-import")
+		test            = basicVmImportTest{framework: f}
+		secret          corev1.Secret
+		namespace       string
+		vmID            = vms.BasicVmID
+		volumeModeBlock = corev1.PersistentVolumeBlock
 	)
 
 	BeforeEach(func() {
@@ -82,6 +83,7 @@ var _ = Describe("Basic VM import ", func() {
 
 	Context(" with in-CR resource mapping", func() {
 		table.DescribeTable("should create running VM", func(mappings v2vv1alpha1.OvirtMappings, storageClass string) {
+
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Ovirt.Mappings = &mappings
 
@@ -100,13 +102,18 @@ var _ = Describe("Basic VM import ", func() {
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveStorageClass(storageClass, f))
 		},
 			table.Entry(" for disk", v2vv1alpha1.OvirtMappings{
-				DiskMappings: &[]v2vv1alpha1.ResourceMappingItem{
+				DiskMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
 					{Source: v2vv1alpha1.Source{ID: &vms.DiskID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
 			}, f.DefaultStorageClass),
 			table.Entry(" for storage domain", v2vv1alpha1.OvirtMappings{
-				StorageMappings: &[]v2vv1alpha1.ResourceMappingItem{
+				StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
 					{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+				},
+			}, f.DefaultStorageClass),
+			table.Entry(" for storage domain on block volume mode", v2vv1alpha1.OvirtMappings{
+				StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
+					{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}, VolumeMode: &volumeModeBlock},
 				},
 			}, f.DefaultStorageClass))
 	})

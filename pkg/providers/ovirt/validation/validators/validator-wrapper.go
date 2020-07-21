@@ -57,15 +57,15 @@ func (v *ValidatorWrapper) ValidateNics(nics []*ovirtsdk.Nic) []ValidationFailur
 }
 
 // ValidateNetworkMapping wraps networkMappingValidator call
-func (v *ValidatorWrapper) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.ResourceMappingItem, crNamespace string) []ValidationFailure {
+func (v *ValidatorWrapper) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.NetworkResourceMappingItem, crNamespace string) []ValidationFailure {
 	return v.networkMappingValidator.ValidateNetworkMapping(nics, mapping, crNamespace)
 }
 
 // ValidateStorageMapping wraps storageMappingValidator call
 func (v *ValidatorWrapper) ValidateStorageMapping(
 	attachments []*ovirtsdk.DiskAttachment,
-	storageMapping *[]v2vv1alpha1.ResourceMappingItem,
-	diskMappings *[]v2vv1alpha1.ResourceMappingItem,
+	storageMapping *[]v2vv1alpha1.StorageResourceMappingItem,
+	diskMappings *[]v2vv1alpha1.StorageResourceMappingItem,
 ) []ValidationFailure {
 	return v.storageMappingValidator.ValidateStorageMapping(attachments, storageMapping, diskMappings)
 }

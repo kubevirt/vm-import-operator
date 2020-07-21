@@ -58,7 +58,7 @@ var _ = Describe("Import", func() {
 		configMap.Data["feature-gates"] = configMap.Data["feature-gates"] + ",LiveMigration"
 		f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(configMap)
 		test.stub(vmID, "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "migratable"})
-		test.ensureVMIsRunningOnStorage(vmID, &[]v2vv1alpha1.ResourceMappingItem{
+		test.ensureVMIsRunningOnStorage(vmID, &[]v2vv1alpha1.StorageResourceMappingItem{
 			{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.NfsStorageClass}},
 		})
 	})
@@ -224,16 +224,16 @@ func (t *variousVMConfigurationsTest) ensureVMIsRunning(vmID string) *v1.Virtual
 	return t.ensureVMIsRunningOnStorage(vmID, nil)
 }
 
-func (t *variousVMConfigurationsTest) ensureVMIsRunningOnStorage(vmID string, storageMappings *[]v2vv1alpha1.ResourceMappingItem) *v1.VirtualMachine {
+func (t *variousVMConfigurationsTest) ensureVMIsRunningOnStorage(vmID string, storageMappings *[]v2vv1alpha1.StorageResourceMappingItem) *v1.VirtualMachine {
 	return t.ensureVMIsRunningOnStorageWithVMName(vmID, storageMappings, "target-vm")
 }
 
-func (t *variousVMConfigurationsTest) ensureVMIsRunningOnStorageWithVMName(vmID string, storageMappings *[]v2vv1alpha1.ResourceMappingItem, targetVMName string) *v1.VirtualMachine {
+func (t *variousVMConfigurationsTest) ensureVMIsRunningOnStorageWithVMName(vmID string, storageMappings *[]v2vv1alpha1.StorageResourceMappingItem, targetVMName string) *v1.VirtualMachine {
 	f := t.framework
 	namespace := t.framework.Namespace.Name
 	vmi := utils.VirtualMachineImportCrWithName(vmID, namespace, t.secret.Name, f.NsPrefix, true, targetVMName)
 	vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
-		NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
+		NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
 			{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 		},
 	}

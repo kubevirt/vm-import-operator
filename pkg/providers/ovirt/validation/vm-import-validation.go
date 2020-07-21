@@ -102,11 +102,11 @@ type Validator interface {
 	ValidateDiskStatus(diskAttachment ovirtsdk.DiskAttachment) bool
 	ValidateDiskAttachments(diskAttachments []*ovirtsdk.DiskAttachment) []validators.ValidationFailure
 	ValidateNics(nics []*ovirtsdk.Nic) []validators.ValidationFailure
-	ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.ResourceMappingItem, crNamespace string) []validators.ValidationFailure
+	ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.NetworkResourceMappingItem, crNamespace string) []validators.ValidationFailure
 	ValidateStorageMapping(
 		attachments []*ovirtsdk.DiskAttachment,
-		storageMapping *[]v2vv1alpha1.ResourceMappingItem,
-		diskMappings *[]v2vv1alpha1.ResourceMappingItem,
+		storageMapping *[]v2vv1alpha1.StorageResourceMappingItem,
+		diskMappings *[]v2vv1alpha1.StorageResourceMappingItem,
 	) []validators.ValidationFailure
 }
 

@@ -40,7 +40,11 @@ const (
 	DefaultStorageClassTargetName = ""
 )
 
-var _true bool = true
+var (
+	_true bool = true
+	// DefaultVolumeMode is default volume mode passed to PVC of datavolume we map.
+	DefaultVolumeMode = corev1.PersistentVolumeFilesystem
+)
 
 // BiosTypeMapping defines mapping of BIOS types between oVirt and kubevirt domains
 var BiosTypeMapping = map[string]*kubevirtv1.Bootloader{
@@ -253,7 +257,6 @@ func (o *OvirtMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.Dat
 		dvName := buildDataVolumeName(*targetVMName, diskAttachID)
 		disk, _ := diskAttachment.Disk()
 		diskID, _ := disk.Id()
-		sdClass := o.getStorageClassForDisk(disk, o.mappings)
 		diskSize, _ := disk.ProvisionedSize()
 		diskSizeConverted, err := utils.FormatBytes(diskSize)
 		if err != nil {
@@ -261,6 +264,10 @@ func (o *OvirtMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.Dat
 		}
 		quantity, _ := resource.ParseQuantity(diskSizeConverted)
 		accessMode := o.getAccessMode(diskAttachment)
+
+		mapping := o.getMapping(disk, o.mappings)
+		sdClass := o.getStorageClassForDisk(mapping)
+		volumeMode := o.getVolumeMode(mapping)
 
 		dvs[dvName] = cdiv1.DataVolume{
 			TypeMeta: metav1.TypeMeta{
@@ -289,6 +296,7 @@ func (o *OvirtMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.Dat
 							corev1.ResourceStorage: quantity,
 						},
 					},
+					VolumeMode: volumeMode,
 				},
 			},
 		}
@@ -381,7 +389,7 @@ func (o *OvirtMapper) getNetworkForNic(vnicProfile *ovirtsdk.VnicProfile) kubevi
 	return kubevirtNet
 }
 
-func (o *OvirtMapper) mapNetworkType(mapping v2vv1alpha1.ResourceMappingItem, kubevirtNet *kubevirtv1.Network) {
+func (o *OvirtMapper) mapNetworkType(mapping v2vv1alpha1.NetworkResourceMappingItem, kubevirtNet *kubevirtv1.Network) {
 	if mapping.Type == nil || *mapping.Type == networkTypePod {
 		kubevirtNet.Pod = &kubevirtv1.PodNetwork{}
 	} else if *mapping.Type == networkTypeMultus {
@@ -422,22 +430,17 @@ func (o *OvirtMapper) resolveVMNameBase(targetVMName *string) *string {
 	return &name
 }
 
-func (o *OvirtMapper) getStorageClassForDisk(disk *ovirtsdk.Disk, mappings *v2vv1alpha1.OvirtMappings) *string {
+func (o *OvirtMapper) getMapping(disk *ovirtsdk.Disk, mappings *v2vv1alpha1.OvirtMappings) *v2vv1alpha1.StorageResourceMappingItem {
 	if mappings.DiskMappings != nil {
 		for _, mapping := range *mappings.DiskMappings {
-			targetName := mapping.Target.Name
 			if mapping.Source.ID != nil {
 				if id, _ := disk.Id(); id == *mapping.Source.ID {
-					if targetName != DefaultStorageClassTargetName {
-						return &targetName
-					}
+					return &mapping
 				}
 			}
 			if mapping.Source.Name != nil {
 				if name, _ := disk.Alias(); name == *mapping.Source.Name {
-					if targetName != DefaultStorageClassTargetName {
-						return &targetName
-					}
+					return &mapping
 				}
 			}
 		}
@@ -446,21 +449,35 @@ func (o *OvirtMapper) getStorageClassForDisk(disk *ovirtsdk.Disk, mappings *v2vv
 	if mappings.StorageMappings != nil {
 		sd, _ := disk.StorageDomain()
 		for _, mapping := range *mappings.StorageMappings {
-			targetName := mapping.Target.Name
 			if mapping.Source.ID != nil {
 				if id, _ := sd.Id(); id == *mapping.Source.ID {
-					if targetName != DefaultStorageClassTargetName {
-						return &targetName
-					}
+					return &mapping
 				}
 			}
 			if mapping.Source.Name != nil {
 				if name, _ := sd.Name(); name == *mapping.Source.Name {
-					if targetName != DefaultStorageClassTargetName {
-						return &targetName
-					}
+					return &mapping
 				}
 			}
+		}
+	}
+
+	return nil
+}
+
+func (o *OvirtMapper) getVolumeMode(mapping *v2vv1alpha1.StorageResourceMappingItem) *corev1.PersistentVolumeMode {
+	if mapping != nil {
+		return mapping.VolumeMode
+	}
+
+	return &DefaultVolumeMode
+}
+
+func (o *OvirtMapper) getStorageClassForDisk(mapping *v2vv1alpha1.StorageResourceMappingItem) *string {
+	if mapping != nil {
+		targetName := mapping.Target.Name
+		if targetName != DefaultStorageClassTargetName {
+			return &targetName
 		}
 	}
 

@@ -51,7 +51,7 @@ var _ = Describe("Validating Network mapping", func() {
 			nic,
 		}
 
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
 			{
 				Type: &podType,
 				Source: v2vv1alpha1.Source{
@@ -80,7 +80,7 @@ var _ = Describe("Validating Network mapping", func() {
 			nic,
 		}
 
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
 			{
 				Type: &podType,
 				Source: v2vv1alpha1.Source{
@@ -110,7 +110,7 @@ var _ = Describe("Validating Network mapping", func() {
 			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					ID: &vnicProfileID,
@@ -131,7 +131,7 @@ var _ = Describe("Validating Network mapping", func() {
 		}
 		otherNetwork := "other-net"
 
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					ID: &vnicProfileID,
@@ -174,7 +174,7 @@ var _ = Describe("Validating Network mapping", func() {
 			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
 			{
 				Type: &multusType,
 				Source: v2vv1alpha1.Source{
@@ -196,7 +196,7 @@ var _ = Describe("Validating Network mapping", func() {
 			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
 			{
 				Type: &multusType,
 				Source: v2vv1alpha1.Source{
@@ -223,7 +223,7 @@ var _ = Describe("Validating Network mapping", func() {
 			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 		genieType := "genie"
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
 			{
 				Type: &genieType,
 				Source: v2vv1alpha1.Source{
@@ -246,7 +246,7 @@ var _ = Describe("Validating Network mapping", func() {
 			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
 			{
 				Type: nil,
 				Source: v2vv1alpha1.Source{
@@ -291,7 +291,7 @@ var _ = Describe("Validating Network mapping", func() {
 			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					ID: &vnicProfileID,
@@ -317,7 +317,7 @@ var _ = Describe("Validating Network mapping", func() {
 			createNic(&networkName2, &vnicProfileName2, &vnicProfileID2),
 		}
 
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					ID: &vnicProfileID,

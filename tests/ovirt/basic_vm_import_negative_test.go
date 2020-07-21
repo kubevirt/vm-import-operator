@@ -191,7 +191,7 @@ var _ = Describe("VM import", func() {
 
 		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 		vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
-			NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
+			NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
 				{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 			},
 		}

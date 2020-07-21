@@ -78,3 +78,32 @@ function check_structural_schema {
     echo "CRD $crd is a StructuralSchema"
   done
 }
+
+function configure_block_pv() {
+  ./cluster/cli.sh ssh node01 sudo -- dd if=/dev/zero of=loop0 bs=100M count=10
+  ./cluster/cli.sh ssh node01 sudo -- losetup /dev/loop0 loop0
+  cat <<EOF | ./cluster/kubectl.sh apply -f -
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: import-block-pv
+spec:
+  accessModes:
+  - ReadWriteOnce
+  capacity:
+    storage: 1Gi
+  local:
+    path: /dev/loop0
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - node01
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: local
+  volumeMode: Block
+EOF
+}
