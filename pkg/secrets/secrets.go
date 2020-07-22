@@ -31,7 +31,7 @@ func NewManager(client client.Client) Manager {
 func (m *Manager) FindFor(vmiCrName types.NamespacedName) (*corev1.Secret, error) {
 	secretList := corev1.SecretList{}
 	labels := client.MatchingLabels{
-		vmiNameLabel: utils.MakeLabelFrom(vmiCrName.Name),
+		vmiNameLabel: utils.EnsureLabelValueLength(vmiCrName.Name),
 	}
 
 	err := m.client.List(context.TODO(), &secretList, labels, client.InNamespace(vmiCrName.Namespace))
@@ -58,7 +58,7 @@ func (m *Manager) CreateFor(secret *corev1.Secret, vmiCrName types.NamespacedNam
 	if secret.Labels == nil {
 		secret.Labels = make(map[string]string)
 	}
-	secret.Labels[vmiNameLabel] = utils.MakeLabelFrom(vmiCrName.Name)
+	secret.Labels[vmiNameLabel] = utils.EnsureLabelValueLength(vmiCrName.Name)
 
 	return m.client.Create(context.TODO(), secret)
 }

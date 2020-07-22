@@ -181,8 +181,10 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 // MapDisk map VM disk
 func (o *OvirtMapper) MapDisk(vmSpec *kubevirtv1.VirtualMachine, dv cdiv1.DataVolume) {
 	// Map volume
+	name := fmt.Sprintf("dv-%v", dv.Name)
+	name = utils.EnsureLabelValueLength(name)
 	volume := kubevirtv1.Volume{
-		Name: fmt.Sprintf("dv-%v", dv.Name),
+		Name: name,
 		VolumeSource: kubevirtv1.VolumeSource{
 			DataVolume: &kubevirtv1.DataVolumeSource{
 				Name: dv.Name,
@@ -195,7 +197,7 @@ func (o *OvirtMapper) MapDisk(vmSpec *kubevirtv1.VirtualMachine, dv cdiv1.DataVo
 	diskAttachment := getDiskAttachmentByID(dv.Name, diskAttachments, vmSpec.ObjectMeta.Name)
 	iface, _ := diskAttachment.Interface()
 	disk := kubevirtv1.Disk{
-		Name: fmt.Sprintf("dv-%v", dv.Name),
+		Name: name,
 		DiskDevice: kubevirtv1.DiskDevice{
 			Disk: &kubevirtv1.DiskTarget{
 				Bus: o.mapDiskInterface(iface),
@@ -386,6 +388,17 @@ func (o *OvirtMapper) mapNetworkType(mapping v2vv1alpha1.ResourceMappingItem, ku
 
 // ResolveVMName resolves the target VM name
 func (o *OvirtMapper) ResolveVMName(targetVMName *string) *string {
+	vmNameBase := o.resolveVMNameBase(targetVMName)
+	if vmNameBase == nil {
+		return nil
+	}
+	// VM name is put in label values and has to be shorter than regular k8s name
+	// https://bugzilla.redhat.com/1857165
+	name := utils.EnsureLabelValueLength(*vmNameBase)
+	return &name
+}
+
+func (o *OvirtMapper) resolveVMNameBase(targetVMName *string) *string {
 	if targetVMName != nil {
 		return targetVMName
 	}
