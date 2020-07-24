@@ -31,7 +31,14 @@ fi
 
 ensure_golang
 
+## Validate
+operator_crds=$(./cluster/kubectl.sh get crd -l operator.v2v.kubevirt.io -o jsonpath={.items[*].metadata.name})
+check_structural_schema "${operator_crds[@]}"
+
+## Configure
 configure_nfs
+
+## Install
 install_cdi
 install_kubevirt
 install_templates
