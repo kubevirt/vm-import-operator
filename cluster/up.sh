@@ -37,6 +37,7 @@ check_structural_schema "${operator_crds[@]}"
 
 ## Configure
 configure_nfs
+configure_block_pv
 
 ## Install
 install_cdi

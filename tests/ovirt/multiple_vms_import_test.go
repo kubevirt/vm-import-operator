@@ -187,7 +187,7 @@ func (t *multipleVmsImportTest) importVMWithSecretAndMakeSureItsRunning(vmID str
 func (t *multipleVmsImportTest) triggerVMImport(vmID string, namespace string, vmName string, secretName string) (*v2vv1alpha1.VirtualMachineImport, error) {
 	vmi := utils.VirtualMachineImportCrWithName(vmID, namespace, secretName, t.framework.NsPrefix+"-"+vmID, true, vmName)
 	vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
-		NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
+		NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
 			{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 		},
 	}

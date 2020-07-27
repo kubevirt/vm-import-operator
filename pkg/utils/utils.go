@@ -66,9 +66,24 @@ func ToLoggableID(id *string, name *string) string {
 }
 
 // IndexByIDAndName indexes mapping array by ID and by Name
-func IndexByIDAndName(mapping *[]v2vv1alpha1.ResourceMappingItem) (mapByID map[string]v2vv1alpha1.ResourceMappingItem, mapByName map[string]v2vv1alpha1.ResourceMappingItem) {
-	mapByID = make(map[string]v2vv1alpha1.ResourceMappingItem)
-	mapByName = make(map[string]v2vv1alpha1.ResourceMappingItem)
+func IndexStorageItemByIDAndName(mapping *[]v2vv1alpha1.StorageResourceMappingItem) (mapByID map[string]v2vv1alpha1.StorageResourceMappingItem, mapByName map[string]v2vv1alpha1.StorageResourceMappingItem) {
+	mapByID = make(map[string]v2vv1alpha1.StorageResourceMappingItem)
+	mapByName = make(map[string]v2vv1alpha1.StorageResourceMappingItem)
+	for _, item := range *mapping {
+		if item.Source.ID != nil {
+			mapByID[*item.Source.ID] = item
+		}
+		if item.Source.Name != nil {
+			mapByName[*item.Source.Name] = item
+		}
+	}
+	return
+}
+
+// IndexNetworkByIDAndName indexes mapping array by ID and by Name
+func IndexNetworkByIDAndName(mapping *[]v2vv1alpha1.NetworkResourceMappingItem) (mapByID map[string]v2vv1alpha1.NetworkResourceMappingItem, mapByName map[string]v2vv1alpha1.NetworkResourceMappingItem) {
+	mapByID = make(map[string]v2vv1alpha1.NetworkResourceMappingItem)
+	mapByName = make(map[string]v2vv1alpha1.NetworkResourceMappingItem)
 	for _, item := range *mapping {
 		if item.Source.ID != nil {
 			mapByID[*item.Source.ID] = item

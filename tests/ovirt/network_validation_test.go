@@ -62,7 +62,7 @@ func (t *networkValidationTest) prepareImport(vmID string, secretName string) *v
 	namespace := t.framework.Namespace.Name
 	vmi := utils.VirtualMachineImportCr(vmID, namespace, secretName, t.framework.NsPrefix, true)
 	vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
-		NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
+		NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
 			{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 		},
 	}

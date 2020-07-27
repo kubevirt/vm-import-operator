@@ -46,7 +46,7 @@ var _ = Describe("Validating Storage mapping", func() {
 			da,
 		}
 
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.StorageResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					Name: domainName,
@@ -73,7 +73,7 @@ var _ = Describe("Validating Storage mapping", func() {
 			da,
 		}
 
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.StorageResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					Name: domainName,
@@ -99,7 +99,7 @@ var _ = Describe("Validating Storage mapping", func() {
 			da,
 		}
 
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.StorageResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					Name: &domainName,
@@ -122,7 +122,7 @@ var _ = Describe("Validating Storage mapping", func() {
 			da,
 		}
 
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.StorageResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					Name: &domainName,
@@ -151,7 +151,7 @@ var _ = Describe("Validating Storage mapping", func() {
 			createDiskAttachment(createDomain(&otherDomainName, &otherDomainID)),
 		}
 
-		mapping := []v2vv1alpha1.ResourceMappingItem{
+		mapping := []v2vv1alpha1.StorageResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					Name: &domainName,
@@ -217,7 +217,7 @@ var _ = Describe("Validating Disk mapping", func() {
 			da,
 		}
 
-		diskMapping := []v2vv1alpha1.ResourceMappingItem{
+		diskMapping := []v2vv1alpha1.StorageResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					Name: diskName,
@@ -244,7 +244,7 @@ var _ = Describe("Validating Disk mapping", func() {
 			da,
 		}
 
-		diskMapping := []v2vv1alpha1.ResourceMappingItem{
+		diskMapping := []v2vv1alpha1.StorageResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					Name: diskName,
@@ -270,9 +270,9 @@ var _ = Describe("Validating Disk mapping", func() {
 			da,
 		}
 
-		diskMapping := []v2vv1alpha1.ResourceMappingItem{
+		diskMapping := []v2vv1alpha1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+					Source: v2vv1alpha1.Source{
 					Name: &diskName,
 					ID:   &diskID,
 				},
@@ -292,7 +292,7 @@ var _ = Describe("Validating Disk mapping", func() {
 			da,
 		}
 
-		diskMapping := []v2vv1alpha1.ResourceMappingItem{
+		diskMapping := []v2vv1alpha1.StorageResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					Name: &diskName,
@@ -320,7 +320,7 @@ var _ = Describe("Validating Disk mapping", func() {
 			createCustomDiskAttachment(createDomain(&domainName, &domainID), diskID, diskName),
 			createCustomDiskAttachment(createDomain(&domainName, &domainID), otherDiskID, otherDiskName),
 		}
-		diskMapping := []v2vv1alpha1.ResourceMappingItem{
+		diskMapping := []v2vv1alpha1.StorageResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					Name: &diskName,
@@ -361,7 +361,7 @@ var _ = Describe("Validating Disk mapping", func() {
 			da,
 		}
 
-		failures := validator.ValidateStorageMapping(das, &[]v2vv1alpha1.ResourceMappingItem{}, nil)
+		failures := validator.ValidateStorageMapping(das, &[]v2vv1alpha1.StorageResourceMappingItem{}, nil)
 
 		Expect(failures).To(BeEmpty())
 	})
@@ -380,7 +380,7 @@ var _ = Describe("Validating Disk mapping", func() {
 			cda,
 		}
 
-		storageMapping := []v2vv1alpha1.ResourceMappingItem{
+		storageMapping := []v2vv1alpha1.StorageResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					Name: &domainName,
@@ -392,7 +392,7 @@ var _ = Describe("Validating Disk mapping", func() {
 			},
 		}
 
-		diskMapping := []v2vv1alpha1.ResourceMappingItem{
+		diskMapping := []v2vv1alpha1.StorageResourceMappingItem{
 			{
 				Source: v2vv1alpha1.Source{
 					Name: &customName,

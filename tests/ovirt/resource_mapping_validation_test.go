@@ -36,7 +36,7 @@ var _ = Describe("VM import ", func() {
 		secret = s
 	})
 
-	table.DescribeTable("should block VM import with", func(networkMappings *[]v2vv1alpha1.ResourceMappingItem, storageMappings *[]v2vv1alpha1.ResourceMappingItem, diskMapping *[]v2vv1alpha1.ResourceMappingItem) {
+	table.DescribeTable("should block VM import with", func(networkMappings *[]v2vv1alpha1.NetworkResourceMappingItem, storageMappings *[]v2vv1alpha1.StorageResourceMappingItem, diskMapping *[]v2vv1alpha1.StorageResourceMappingItem) {
 		vmID := vms.BasicNetworkVmID
 		test.stub(vmID)
 		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
@@ -55,25 +55,25 @@ var _ = Describe("VM import ", func() {
 			nil,
 			nil),
 		table.Entry("network mapping to non-existing target network",
-			&[]v2vv1alpha1.ResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.MultusType, Target: v2vv1alpha1.ObjectIdentifier{Name: "no-such-net-attach-def"}}},
+			&[]v2vv1alpha1.NetworkResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.MultusType, Target: v2vv1alpha1.ObjectIdentifier{Name: "no-such-net-attach-def"}}},
 			nil,
 			nil),
 		table.Entry("network mapping to unsupported target type",
-			&[]v2vv1alpha1.ResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.UnsupportedType, Target: v2vv1alpha1.ObjectIdentifier{Name: "some-network"}}},
+			&[]v2vv1alpha1.NetworkResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.UnsupportedType, Target: v2vv1alpha1.ObjectIdentifier{Name: "some-network"}}},
 			nil,
 			nil),
 		table.Entry("network mapping to missing type and target with a namespace",
-			&[]v2vv1alpha1.ResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: nil, Target: v2vv1alpha1.ObjectIdentifier{Name: "some-network", Namespace: &namespace}}},
+			&[]v2vv1alpha1.NetworkResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: nil, Target: v2vv1alpha1.ObjectIdentifier{Name: "some-network", Namespace: &namespace}}},
 			nil,
 			nil),
 		table.Entry("storage domain mapping to non-existing target storage class",
-			&[]v2vv1alpha1.ResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType}},
-			&[]v2vv1alpha1.ResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: "no-such-storage-class"}}},
+			&[]v2vv1alpha1.NetworkResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType}},
+			&[]v2vv1alpha1.StorageResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: "no-such-storage-class"}}},
 			nil),
 		table.Entry("disk mapping to non-existing target storage class",
-			&[]v2vv1alpha1.ResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType}},
+			&[]v2vv1alpha1.NetworkResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType}},
 			nil,
-			&[]v2vv1alpha1.ResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.DiskID}, Target: v2vv1alpha1.ObjectIdentifier{Name: "no-such-storage-class"}}}),
+			&[]v2vv1alpha1.StorageResourceMappingItem{{Source: v2vv1alpha1.Source{ID: &vms.DiskID}, Target: v2vv1alpha1.ObjectIdentifier{Name: "no-such-storage-class"}}}),
 	)
 
 	It("should block import with two networks mapped to a pod network", func() {
@@ -93,7 +93,7 @@ var _ = Describe("VM import ", func() {
 
 		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 		vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
-			NetworkMappings: &[]v2vv1alpha1.ResourceMappingItem{
+			NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
 				{
 					Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID},
 					Type:   &tests.PodType,

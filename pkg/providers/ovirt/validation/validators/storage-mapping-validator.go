@@ -45,18 +45,18 @@ type mappingSource struct {
 // ValidateStorageMapping validates storage domain mapping and disk mapping
 func (v *StorageMappingValidator) ValidateStorageMapping(
 	attachments []*ovirtsdk.DiskAttachment,
-	storageMapping *[]v2vv1alpha1.ResourceMappingItem,
-	diskMapping *[]v2vv1alpha1.ResourceMappingItem,
+	storageMapping *[]v2vv1alpha1.StorageResourceMappingItem,
+	diskMapping *[]v2vv1alpha1.StorageResourceMappingItem,
 ) []ValidationFailure {
 	// Don't validate lack of mapping
 	if isNilOrEmpty(storageMapping) && isNilOrEmpty(diskMapping) && len(attachments) > 0 {
 		return []ValidationFailure{}
 	}
 	if storageMapping == nil {
-		storageMapping = &[]v2vv1alpha1.ResourceMappingItem{}
+		storageMapping = &[]v2vv1alpha1.StorageResourceMappingItem{}
 	}
 	if diskMapping == nil {
-		diskMapping = &[]v2vv1alpha1.ResourceMappingItem{}
+		diskMapping = &[]v2vv1alpha1.StorageResourceMappingItem{}
 	}
 	// requiredTargetsSet holds the storage classes required for mapping
 	requiredTargetsSet := v.getRequiredStorageClasses(attachments, diskMapping, storageMapping)
@@ -68,12 +68,12 @@ func (v *StorageMappingValidator) ValidateStorageMapping(
 // getRequiredStorageClasses returns a set of required storage classes mapped to source description
 func (v *StorageMappingValidator) getRequiredStorageClasses(
 	attachments []*ovirtsdk.DiskAttachment,
-	diskMapping *[]v2vv1alpha1.ResourceMappingItem,
-	storageMapping *[]v2vv1alpha1.ResourceMappingItem,
+	diskMapping *[]v2vv1alpha1.StorageResourceMappingItem,
+	storageMapping *[]v2vv1alpha1.StorageResourceMappingItem,
 ) map[v2vv1alpha1.ObjectIdentifier][]mappingSource {
 	// Map diskMapping source id and name to ResourceMappingItem
-	mapDiskByID, mapDiskByName := utils.IndexByIDAndName(diskMapping)
-	mapDomainByID, mapDomainByName := utils.IndexByIDAndName(storageMapping)
+	mapDiskByID, mapDiskByName := utils.IndexStorageItemByIDAndName(diskMapping)
+	mapDomainByID, mapDomainByName := utils.IndexStorageItemByIDAndName(storageMapping)
 	storageMappingTargetSet := make(map[v2vv1alpha1.ObjectIdentifier][]mappingSource)
 	for _, da := range attachments {
 		if disk, ok := da.Disk(); ok {
@@ -140,6 +140,6 @@ func getCheckID(source mappingSource) CheckID {
 	}
 }
 
-func isNilOrEmpty(mapping *[]v2vv1alpha1.ResourceMappingItem) bool {
+func isNilOrEmpty(mapping *[]v2vv1alpha1.StorageResourceMappingItem) bool {
 	return mapping == nil || len(*mapping) == 0
 }

@@ -696,7 +696,7 @@ attachment definitions on kubevirt by using vnic profile to network attachment d
 															Items: &extv1beta1.JSONSchemaPropsOrArray{
 																Schema: &extv1beta1.JSONSchemaProps{
 																	Type:        "object",
-																	Description: `ResourceMappingItem defines the mapping of a single resource from the provider to kubevirt`,
+																	Description: `StorageResourceMappingItem defines the mapping of a single storage resource from the provider to kubevirt`,
 																	Properties: map[string]extv1beta1.JSONSchemaProps{
 																		"source": {
 																			Description: `Source defines how to identify a resource on the provider, either by ID or by name`,
@@ -726,6 +726,9 @@ attachment definitions on kubevirt by using vnic profile to network attachment d
 																		"type": {
 																			Type: "string",
 																		},
+																		"volumeMode": {
+																			Type: "string",
+																		},
 																	},
 																	Required: []string{"source"},
 																},
@@ -739,7 +742,7 @@ the disk alias on ovirt DiskMappings is respected only when provided in context 
 															Items: &extv1beta1.JSONSchemaPropsOrArray{
 																Schema: &extv1beta1.JSONSchemaProps{
 																	Type:        "object",
-																	Description: `ResourceMappingItem defines the mapping of a single resource from the provider to kubevirt`,
+																	Description: `NetworkResourceMappingItem defines the mapping of a single disk resource from the provider to kubevirt`,
 																	Properties: map[string]extv1beta1.JSONSchemaProps{
 																		"source": {
 																			Description: `Source defines how to identify a resource on the provider, either by ID or by name`,
@@ -767,6 +770,9 @@ the disk alias on ovirt DiskMappings is respected only when provided in context 
 																			Required: []string{"name"},
 																		},
 																		"type": {
+																			Type: "string",
+																		},
+																		"volumeMode": {
 																			Type: "string",
 																		},
 																	},
@@ -998,7 +1004,7 @@ to multiple network attachment definitions on kubevirt by using vnic profile to 
 											Items: &extv1beta1.JSONSchemaPropsOrArray{
 												Schema: &extv1beta1.JSONSchemaProps{
 													Type:        "object",
-													Description: `ResourceMappingItem defines the mapping of a single resource from the provider to kubevirt`,
+													Description: `StorageResourceMappingItem defines the mapping of a single storage resource from the provider to kubevirt`,
 													Properties: map[string]extv1beta1.JSONSchemaProps{
 														"source": {
 															Description: `Source defines how to identify a resource on the provider, either by ID or by name`,
@@ -1028,6 +1034,9 @@ to multiple network attachment definitions on kubevirt by using vnic profile to 
 														"type": {
 															Type: "string",
 														},
+														"volumeMode": {
+															Type: "string",
+														},
 													},
 													Required: []string{"source", "target"},
 												},
@@ -1041,7 +1050,7 @@ the disk alias on ovirt DiskMappings is respected only when provided in context 
 											Items: &extv1beta1.JSONSchemaPropsOrArray{
 												Schema: &extv1beta1.JSONSchemaProps{
 													Type:        "object",
-													Description: `ResourceMappingItem defines the mapping of a single resource from the provider to kubevirt`,
+													Description: `NetworkResourceMappingItem defines the mapping of a single disk resource from the provider to kubevirt`,
 													Properties: map[string]extv1beta1.JSONSchemaProps{
 														"source": {
 															Description: `Source defines how to identify a resource on the provider, either by ID or by name`,
@@ -1069,6 +1078,9 @@ the disk alias on ovirt DiskMappings is respected only when provided in context 
 															Required: []string{"name"},
 														},
 														"type": {
+															Type: "string",
+														},
+														"volumeMode": {
 															Type: "string",
 														},
 													},
