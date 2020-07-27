@@ -41,6 +41,8 @@ type Predicate interface {
 var _ Predicate = Funcs{}
 var _ Predicate = ResourceVersionChangedPredicate{}
 var _ Predicate = GenerationChangedPredicate{}
+var _ Predicate = or{}
+var _ Predicate = and{}
 
 // Funcs is a function that implements Predicate.
 type Funcs struct {
@@ -112,10 +114,7 @@ func (ResourceVersionChangedPredicate) Update(e event.UpdateEvent) bool {
 		log.Error(nil, "UpdateEvent has no new metadata", "event", e)
 		return false
 	}
-	if e.MetaNew.GetResourceVersion() == e.MetaOld.GetResourceVersion() {
-		return false
-	}
-	return true
+	return e.MetaNew.GetResourceVersion() != e.MetaOld.GetResourceVersion()
 }
 
 // GenerationChangedPredicate implements a default update predicate function on Generation change.
@@ -156,8 +155,95 @@ func (GenerationChangedPredicate) Update(e event.UpdateEvent) bool {
 		log.Error(nil, "Update event has no new metadata", "event", e)
 		return false
 	}
-	if e.MetaNew.GetGeneration() == e.MetaOld.GetGeneration() {
-		return false
+	return e.MetaNew.GetGeneration() != e.MetaOld.GetGeneration()
+}
+
+// And returns a composite predicate that implements a logical AND of the predicates passed to it.
+func And(predicates ...Predicate) Predicate {
+	return and{predicates}
+}
+
+type and struct {
+	predicates []Predicate
+}
+
+func (a and) Create(e event.CreateEvent) bool {
+	for _, p := range a.predicates {
+		if !p.Create(e) {
+			return false
+		}
 	}
 	return true
+}
+
+func (a and) Update(e event.UpdateEvent) bool {
+	for _, p := range a.predicates {
+		if !p.Update(e) {
+			return false
+		}
+	}
+	return true
+}
+
+func (a and) Delete(e event.DeleteEvent) bool {
+	for _, p := range a.predicates {
+		if !p.Delete(e) {
+			return false
+		}
+	}
+	return true
+}
+
+func (a and) Generic(e event.GenericEvent) bool {
+	for _, p := range a.predicates {
+		if !p.Generic(e) {
+			return false
+		}
+	}
+	return true
+}
+
+// Or returns a composite predicate that implements a logical OR of the predicates passed to it.
+func Or(predicates ...Predicate) Predicate {
+	return or{predicates}
+}
+
+type or struct {
+	predicates []Predicate
+}
+
+func (o or) Create(e event.CreateEvent) bool {
+	for _, p := range o.predicates {
+		if p.Create(e) {
+			return true
+		}
+	}
+	return false
+}
+
+func (o or) Update(e event.UpdateEvent) bool {
+	for _, p := range o.predicates {
+		if p.Update(e) {
+			return true
+		}
+	}
+	return false
+}
+
+func (o or) Delete(e event.DeleteEvent) bool {
+	for _, p := range o.predicates {
+		if p.Delete(e) {
+			return true
+		}
+	}
+	return false
+}
+
+func (o or) Generic(e event.GenericEvent) bool {
+	for _, p := range o.predicates {
+		if p.Generic(e) {
+			return true
+		}
+	}
+	return false
 }

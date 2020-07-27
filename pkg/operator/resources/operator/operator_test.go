@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	vmioperator "github.com/kubevirt/vm-import-operator/pkg/operator/resources/operator"
-	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	"github.com/RHsyseng/operator-utils/pkg/validation"
 	"github.com/ghodss/yaml"
@@ -16,7 +16,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-type createCrd func() *extv1beta1.CustomResourceDefinition
+type createCrd func() *extv1.CustomResourceDefinition
 
 type crdToCreator struct {
 	resource interface{}
@@ -132,7 +132,7 @@ func getSchema(crdCreator createCrd) validation.Schema {
 	Expect(err).ToNot(HaveOccurred())
 	yamlString := string(crdFiles)
 	Expect(err).ToNot(HaveOccurred())
-	schema, err := validation.New([]byte(yamlString))
+	schema, err := validation.NewVersioned([]byte(yamlString), "v1alpha1")
 	Expect(err).ToNot(HaveOccurred())
 	return schema
 }

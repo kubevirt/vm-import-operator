@@ -146,7 +146,7 @@ type controllerManager struct {
 	// leaseDuration is the duration that non-leader candidates will
 	// wait to force acquire leadership.
 	leaseDuration time.Duration
-	// renewDeadline is the duration that the acting master will retry
+	// renewDeadline is the duration that the acting controlplane will retry
 	// refreshing leadership before giving up.
 	renewDeadline time.Duration
 	// retryPeriod is the duration the LeaderElector clients should wait
@@ -360,11 +360,9 @@ func (cm *controllerManager) serveMetrics(stop <-chan struct{}) {
 	}()
 
 	// Shutdown the server when stop is closed
-	select {
-	case <-stop:
-		if err := server.Shutdown(context.Background()); err != nil {
-			cm.errSignal.SignalError(err)
-		}
+	<-stop
+	if err := server.Shutdown(context.Background()); err != nil {
+		cm.errSignal.SignalError(err)
 	}
 }
 
@@ -392,11 +390,9 @@ func (cm *controllerManager) serveHealthProbes(stop <-chan struct{}) {
 	cm.mu.Unlock()
 
 	// Shutdown the server when stop is closed
-	select {
-	case <-stop:
-		if err := server.Shutdown(context.Background()); err != nil {
-			cm.errSignal.SignalError(err)
-		}
+	<-stop
+	if err := server.Shutdown(context.Background()); err != nil {
+		cm.errSignal.SignalError(err)
 	}
 }
 

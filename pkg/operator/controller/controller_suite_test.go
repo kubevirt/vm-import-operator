@@ -8,8 +8,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
 	resources "github.com/kubevirt/vm-import-operator/pkg/operator/resources/operator"
-	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/client-go/rest"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
@@ -34,7 +35,7 @@ var _ = BeforeSuite(func(done Done) {
 	Expect(err).NotTo(HaveOccurred())
 
 	opts := envtest.CRDInstallOptions{
-		CRDs: []*extv1beta1.CustomResourceDefinition{crd},
+		CRDs: []runtime.Object{crd},
 	}
 
 	crds, err := envtest.InstallCRDs(cfg, opts)

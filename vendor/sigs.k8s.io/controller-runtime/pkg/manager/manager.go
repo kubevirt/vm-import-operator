@@ -111,6 +111,8 @@ type Options struct {
 	// reconciled. A lower period will correct entropy more quickly, but reduce
 	// responsiveness to change if there are many watched resources. Change this
 	// value only if you know what you are doing. Defaults to 10 hours if unset.
+	// there will a 10 percent jitter between the SyncPeriod of all controllers
+	// so that all controllers will not send list requests simultaneously.
 	SyncPeriod *time.Duration
 
 	// LeaderElection determines whether or not to use leader election when
@@ -125,11 +127,15 @@ type Options struct {
 	// will use for holding the leader lock.
 	LeaderElectionID string
 
+	// LeaderElectionConfig can be specified to override the default configuration
+	// that is used to build the leader election client.
+	LeaderElectionConfig *rest.Config
+
 	// LeaseDuration is the duration that non-leader candidates will
 	// wait to force acquire leadership. This is measured against time of
 	// last observed ack. Default is 15 seconds.
 	LeaseDuration *time.Duration
-	// RenewDeadline is the duration that the acting master will retry
+	// RenewDeadline is the duration that the acting controlplane will retry
 	// refreshing leadership before giving up. Default is 10 seconds.
 	RenewDeadline *time.Duration
 	// RetryPeriod is the duration the LeaderElector clients should wait
@@ -168,7 +174,8 @@ type Options struct {
 
 	// CertDir is the directory that contains the server key and certificate.
 	// if not set, webhook server would look up the server key and certificate in
-	// {TempDir}/k8s-webhook-server/serving-certs
+	// {TempDir}/k8s-webhook-server/serving-certs. The server key and certificate
+	// must be named tls.key and tls.crt, respectively.
 	CertDir string
 	// Functions to all for a user to customize the values that will be injected.
 
@@ -263,7 +270,11 @@ func New(config *rest.Config, options Options) (Manager, error) {
 	}
 
 	// Create the resource lock to enable leader election)
-	resourceLock, err := options.newResourceLock(config, recorderProvider, leaderelection.Options{
+	leaderConfig := config
+	if options.LeaderElectionConfig != nil {
+		leaderConfig = options.LeaderElectionConfig
+	}
+	resourceLock, err := options.newResourceLock(leaderConfig, recorderProvider, leaderelection.Options{
 		LeaderElection:          options.LeaderElection,
 		LeaderElectionID:        options.LeaderElectionID,
 		LeaderElectionNamespace: options.LeaderElectionNamespace,

@@ -19,7 +19,7 @@ import (
 	resources "github.com/kubevirt/vm-import-operator/pkg/operator/resources/operator"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -55,7 +55,7 @@ var (
 
 func init() {
 	vmimportv1alpha1.AddToScheme(scheme.Scheme)
-	extv1beta1.AddToScheme(scheme.Scheme)
+	extv1.AddToScheme(scheme.Scheme)
 	monitoringv1.AddToScheme(scheme.Scheme)
 }
 
@@ -87,7 +87,7 @@ var _ = Describe("Controller", func() {
 				err = vmimportv1alpha1.AddToScheme(mgr.GetScheme())
 				Expect(err).ToNot(HaveOccurred())
 
-				err = extv1beta1.AddToScheme(mgr.GetScheme())
+				err = extv1.AddToScheme(mgr.GetScheme())
 				Expect(err).ToNot(HaveOccurred())
 
 				err = Add(mgr)
@@ -103,7 +103,7 @@ var _ = Describe("Controller", func() {
 		Expect(err).ToNot(HaveOccurred())
 	},
 		Entry("VMImportConfig type", createConfig("vm-import-config", "I am unique")),
-		Entry("CRD type", &extv1beta1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "crd"}}),
+		Entry("CRD type", &extv1.CustomResourceDefinition{ObjectMeta: metav1.ObjectMeta{Name: "crd"}}),
 	)
 
 	Describe("Deploying Config", func() {
@@ -620,9 +620,9 @@ var _ = Describe("Controller", func() {
 
 		Entry("verify - unused crd deleted",
 			func() (runtime.Object, error) {
-				crd := &extv1beta1.CustomResourceDefinition{
+				crd := &extv1.CustomResourceDefinition{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: "apiextensions.k8s.io/v1beta1",
+						APIVersion: "apiextensions.k8s.io/v1",
 						Kind:       "CustomResourceDefinition",
 					},
 					ObjectMeta: metav1.ObjectMeta{
@@ -631,19 +631,22 @@ var _ = Describe("Controller", func() {
 							"operator.v2v.kubevirt.io": "",
 						},
 					},
-					Spec: extv1beta1.CustomResourceDefinitionSpec{
-						Group:   "v2v.kubevirt.io",
-						Version: "v1alpha1",
-						Scope:   "Cluster",
+					Spec: extv1.CustomResourceDefinitionSpec{
+						Group: "v2v.kubevirt.io",
+						Scope: "Cluster",
 
-						Versions: []extv1beta1.CustomResourceDefinitionVersion{
+						Versions: []extv1.CustomResourceDefinitionVersion{
 							{
 								Name:    "v1alpha1",
 								Served:  true,
 								Storage: true,
+								AdditionalPrinterColumns: []extv1.CustomResourceColumnDefinition{
+									{Name: "Age", Type: "date", JSONPath: ".metadata.creationTimestamp"},
+									{Name: "Phase", Type: "string", JSONPath: ".status.phase"},
+								},
 							},
 						},
-						Names: extv1beta1.CustomResourceDefinitionNames{
+						Names: extv1.CustomResourceDefinitionNames{
 							Kind:     "FakeVMImportConfig",
 							ListKind: "VMImportConfigList",
 							Plural:   "fakevmimportconfigs",
@@ -652,11 +655,6 @@ var _ = Describe("Controller", func() {
 								"all",
 							},
 							ShortNames: []string{"fakevmimportconfig", "fakevmimportconfigs"},
-						},
-
-						AdditionalPrinterColumns: []extv1beta1.CustomResourceColumnDefinition{
-							{Name: "Age", Type: "date", JSONPath: ".metadata.creationTimestamp"},
-							{Name: "Phase", Type: "string", JSONPath: ".status.phase"},
 						},
 					},
 				}
