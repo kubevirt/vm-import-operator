@@ -66,3 +66,15 @@ spec:
 EOF
 
 }
+
+function check_structural_schema {
+  for crd in "$@"; do
+    status=$(./cluster/kubectl.sh get crd $crd -o jsonpath={.status.conditions[?\(@.type==\"NonStructuralSchema\"\)].status})
+    if [ "$status" == "True" ]; then
+      echo "ERROR CRD $crd is not a structural schema!, please fix"
+      ./cluster/kubectl.sh get crd $crd -o yaml
+      exit 1
+    fi
+    echo "CRD $crd is a StructuralSchema"
+  done
+}
