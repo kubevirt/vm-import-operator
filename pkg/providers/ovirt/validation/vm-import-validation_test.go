@@ -4,7 +4,7 @@ import (
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation"
-	validators "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -18,8 +18,9 @@ var (
 	errorReason = string(v2vv1.MappingRulesVerificationFailed)
 	okReason    = string(v2vv1.MappingRulesVerificationCompleted)
 
-	incompleteMappingRulesReason = string(v2vv1.IncompleteMappingRules)
-	validationCompletedReason    = string(v2vv1.ValidationCompleted)
+	incompleteMappingRulesReason     = string(v2vv1.IncompleteMappingRules)
+	validationReportedWarningsReason = string(v2vv1.ValidationReportedWarnings)
+	validationCompletedReason        = string(v2vv1.ValidationCompleted)
 )
 var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 	var vmImportValidator validation.VirtualMachineImportValidator
@@ -341,14 +342,15 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		Expect(*condition.Message).To(ContainSubstring(vmFailure2.Message))
 		Expect(*condition.Reason).To(Equal(errorReason))
 	})
-	It("should reject VirtualMachineImport spec with failed network mapping check ", func() {
+	table.DescribeTable("should reject VirtualMachineImport spec with failed network mapping check when ", func(checkId validators.CheckID) {
 		vm := newVM()
 		crName := newNamespacedName()
 		message := "Mapping - boom!"
 		validateNetworkMappingsMock = func(nics []*ovirtsdk.Nic, mapping *[]v2vv1.NetworkResourceMappingItem, crNamespace string) []validators.ValidationFailure {
+
 			return []validators.ValidationFailure{
-				validators.ValidationFailure{
-					ID:      validators.NetworkMappingID,
+				{
+					ID:      checkId,
 					Message: message,
 				},
 			}
@@ -361,8 +363,13 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		Expect(condition.Status).To(Equal(v1.ConditionFalse))
 		Expect(*condition.Message).To(ContainSubstring(message))
 		Expect(*condition.Reason).To(Equal(incompleteMappingRulesReason))
-	})
-	It("should reject VirtualMachineImport spec with failed storage mapping check ", func() {
+	},
+		table.Entry("missing mapping", validators.NetworkMappingID),
+		table.Entry("more than one network mapped to pod network", validators.NetworkMultiplePodTargetsID),
+		table.Entry("target network does not exist", validators.NetworkTargetID),
+		table.Entry("network type is unsupported", validators.NetworkTypeID),
+	)
+	table.DescribeTable("should reject VirtualMachineImport spec with failed storage mapping check when", func(checkId validators.CheckID) {
 		vm := newVM()
 		crName := newNamespacedName()
 		message := "Mapping - boom!"
@@ -373,7 +380,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		) []validators.ValidationFailure {
 			return []validators.ValidationFailure{
 				{
-					ID:      validators.StorageTargetID,
+					ID:      checkId,
 					Message: message,
 				},
 			}
@@ -386,12 +393,43 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		Expect(condition.Status).To(Equal(v1.ConditionFalse))
 		Expect(*condition.Message).To(ContainSubstring(message))
 		Expect(*condition.Reason).To(Equal(incompleteMappingRulesReason))
-	})
+	},
+		table.Entry("target storage class for storage domain does not exist", validators.StorageTargetID),
+		table.Entry("target storage class for disk does not exist", validators.DiskTargetID),
+	)
+	table.DescribeTable("should accept VirtualMachineImport spec with storage mapping warning for ", func(checkId validators.CheckID) {
+		vm := newVM()
+		crName := newNamespacedName()
+
+		message := "Some warning"
+		validateStorageMappingMock = func(
+			attachments []*ovirtsdk.DiskAttachment,
+			storageMapping *[]v2vv1.StorageResourceMappingItem,
+			diskMapping *[]v2vv1.StorageResourceMappingItem,
+		) []validators.ValidationFailure {
+			return []validators.ValidationFailure{
+				{
+					ID:      checkId,
+					Message: message,
+				},
+			}
+		}
+
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+
+		condition := conditions.FindConditionOfType(result, v2vv1.Valid)
+		Expect(condition.Type).To(Equal(v2vv1.Valid))
+		Expect(condition.Status).To(Equal(v1.ConditionTrue))
+		Expect(*condition.Message).To(ContainSubstring(message))
+		Expect(*condition.Reason).To(Equal(validationReportedWarningsReason))
+	},
+		table.Entry("default storage class", validators.StorageTargetDefaultClass),
+	)
 })
 
 func oneValidationFailure(checkID validators.CheckID, message string) []validators.ValidationFailure {
 	return []validators.ValidationFailure{
-		validators.ValidationFailure{
+		{
 			ID:      checkID,
 			Message: message,
 		},
@@ -404,11 +442,11 @@ func newOvirtMappings() *v2vv1.OvirtMappings {
 func newVM() *ovirtsdk.Vm {
 	vm := ovirtsdk.Vm{}
 	nicSlice := ovirtsdk.NicSlice{}
-	nicSlice.SetSlice([]*ovirtsdk.Nic{&ovirtsdk.Nic{}})
+	nicSlice.SetSlice([]*ovirtsdk.Nic{{}})
 	vm.SetNics(&nicSlice)
 
 	daSlice := ovirtsdk.DiskAttachmentSlice{}
-	daSlice.SetSlice([]*ovirtsdk.DiskAttachment{&ovirtsdk.DiskAttachment{}})
+	daSlice.SetSlice([]*ovirtsdk.DiskAttachment{{}})
 	vm.SetDiskAttachments(&daSlice)
 
 	return &vm

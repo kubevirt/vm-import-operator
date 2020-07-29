@@ -3,6 +3,8 @@ package ovirt_test
 import (
 	"time"
 
+	"github.com/kubevirt/vm-import-operator/pkg/conditions"
+
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/onsi/ginkgo/extensions/table"
 
@@ -55,6 +57,10 @@ var _ = Describe("Basic VM import ", func() {
 			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
+			validCondition := conditions.FindConditionOfType(retrieved.Status.Conditions, v2vv1.Valid)
+			Expect(validCondition.Status).To(BeEquivalentTo(corev1.ConditionTrue))
+			Expect(*validCondition.Reason).To(BeEquivalentTo(v2vv1.ValidationReportedWarnings))
+
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).NotTo(BeRunning(f).Timeout(2 * time.Minute))
 
@@ -72,6 +78,10 @@ var _ = Describe("Basic VM import ", func() {
 
 			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
+
+			validCondition := conditions.FindConditionOfType(retrieved.Status.Conditions, v2vv1.Valid)
+			Expect(validCondition.Status).To(BeEquivalentTo(corev1.ConditionTrue))
+			Expect(*validCondition.Reason).To(BeEquivalentTo(v2vv1.ValidationReportedWarnings))
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).To(BeRunning(f))

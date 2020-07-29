@@ -29,8 +29,9 @@ const (
 	errorReason = string(v2vv1.MappingRulesVerificationFailed)
 	okReason    = string(v2vv1.MappingRulesVerificationCompleted)
 
-	incompleteMappingRulesReason = string(v2vv1.IncompleteMappingRules)
-	validationCompletedReason    = string(v2vv1.ValidationCompleted)
+	incompleteMappingRulesReason     = string(v2vv1.IncompleteMappingRules)
+	validationReportedWarningsReason = string(v2vv1.ValidationReportedWarnings)
+	validationCompletedReason        = string(v2vv1.ValidationCompleted)
 )
 
 var checkToAction = map[validators.CheckID]action{
@@ -94,6 +95,15 @@ var checkToAction = map[validators.CheckID]action{
 	validators.VMCdromsID:                        log,
 	validators.VMFloppiesID:                      log,
 	validators.VMTimezoneID:                      block,
+	// Network mapping validation
+	validators.NetworkTargetID:             block,
+	validators.NetworkMappingID:            block,
+	validators.NetworkMultiplePodTargetsID: block,
+	validators.NetworkTypeID:               block,
+	// Storage mapping validation
+	validators.StorageTargetID:           block,
+	validators.DiskTargetID:              block,
+	validators.StorageTargetDefaultClass: warn,
 }
 
 // Validator validates different properties of a VM
@@ -157,21 +167,27 @@ func (validator *VirtualMachineImportValidator) validateMappings(vm *ovirtsdk.Vm
 }
 
 func (validator *VirtualMachineImportValidator) processMappingValidationFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) v2vv1.VirtualMachineImportCondition {
-	var message string
-
-	for _, failure := range failures {
-		message = utils.WithMessage(message, failure.Message)
-	}
-	if len(failures) > 0 {
-		return conditions.NewCondition(v2vv1.Valid, incompleteMappingRulesReason, message, v1.ConditionFalse)
+	warnMessage, errorMessage := validator.processFailures(failures, vmiCrName)
+	if errorMessage != "" {
+		return conditions.NewCondition(v2vv1.Valid, incompleteMappingRulesReason, errorMessage, v1.ConditionFalse)
+	} else if warnMessage != "" {
+		return conditions.NewCondition(v2vv1.Valid, validationReportedWarningsReason, warnMessage, v1.ConditionTrue)
 	}
 	return conditions.NewCondition(v2vv1.Valid, validationCompletedReason, "Validation completed successfully", v1.ConditionTrue)
 }
 
 func (validator *VirtualMachineImportValidator) processValidationFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) v2vv1.VirtualMachineImportCondition {
-	valid := true
-	var warnMessage, errorMessage string
+	warnMessage, errorMessage := validator.processFailures(failures, vmiCrName)
+	if errorMessage != "" {
+		return conditions.NewCondition(v2vv1.MappingRulesVerified, errorReason, errorMessage, v1.ConditionFalse)
+	} else if warnMessage != "" {
+		return conditions.NewCondition(v2vv1.MappingRulesVerified, warnReason, warnMessage, v1.ConditionTrue)
+	}
+	return conditions.NewCondition(v2vv1.MappingRulesVerified, okReason, "All mapping rules checks passed", v1.ConditionTrue)
+}
 
+func (validator *VirtualMachineImportValidator) processFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) (string, string) {
+	var warnMessage, errorMessage string
 	for _, failure := range failures {
 		switch checkToAction[failure.ID] {
 		case log:
@@ -179,16 +195,8 @@ func (validator *VirtualMachineImportValidator) processValidationFailures(failur
 		case warn:
 			warnMessage = utils.WithMessage(warnMessage, failure.Message)
 		case block:
-			valid = false
 			errorMessage = utils.WithMessage(errorMessage, failure.Message)
 		}
 	}
-
-	if !valid {
-		return conditions.NewCondition(v2vv1.MappingRulesVerified, errorReason, errorMessage, v1.ConditionFalse)
-	} else if warnMessage != "" {
-		return conditions.NewCondition(v2vv1.MappingRulesVerified, warnReason, warnMessage, v1.ConditionTrue)
-	} else {
-		return conditions.NewCondition(v2vv1.MappingRulesVerified, okReason, "All mapping rules checks passed", v1.ConditionTrue)
-	}
+	return warnMessage, errorMessage
 }
