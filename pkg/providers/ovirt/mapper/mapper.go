@@ -8,7 +8,7 @@ import (
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	outils "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/utils"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
@@ -73,14 +73,14 @@ type DataVolumeCredentials struct {
 // OvirtMapper is struct that holds attributes needed to map oVirt VM to kubevirt VM
 type OvirtMapper struct {
 	vm        *ovirtsdk.Vm
-	mappings  *v2vv1alpha1.OvirtMappings
+	mappings  *v2vv1.OvirtMappings
 	creds     DataVolumeCredentials
 	namespace string
 	osFinder  oos.OSFinder
 }
 
 // NewOvirtMapper create ovirt mapper object
-func NewOvirtMapper(vm *ovirtsdk.Vm, mappings *v2vv1alpha1.OvirtMappings, creds DataVolumeCredentials, namespace string, osFinder oos.OSFinder) *OvirtMapper {
+func NewOvirtMapper(vm *ovirtsdk.Vm, mappings *v2vv1.OvirtMappings, creds DataVolumeCredentials, namespace string, osFinder oos.OSFinder) *OvirtMapper {
 	return &OvirtMapper{
 		vm:        vm,
 		mappings:  mappings,
@@ -389,7 +389,7 @@ func (o *OvirtMapper) getNetworkForNic(vnicProfile *ovirtsdk.VnicProfile) kubevi
 	return kubevirtNet
 }
 
-func (o *OvirtMapper) mapNetworkType(mapping v2vv1alpha1.NetworkResourceMappingItem, kubevirtNet *kubevirtv1.Network) {
+func (o *OvirtMapper) mapNetworkType(mapping v2vv1.NetworkResourceMappingItem, kubevirtNet *kubevirtv1.Network) {
 	if mapping.Type == nil || *mapping.Type == networkTypePod {
 		kubevirtNet.Pod = &kubevirtv1.PodNetwork{}
 	} else if *mapping.Type == networkTypeMultus {
@@ -430,7 +430,7 @@ func (o *OvirtMapper) resolveVMNameBase(targetVMName *string) *string {
 	return &name
 }
 
-func (o *OvirtMapper) getMapping(disk *ovirtsdk.Disk, mappings *v2vv1alpha1.OvirtMappings) *v2vv1alpha1.StorageResourceMappingItem {
+func (o *OvirtMapper) getMapping(disk *ovirtsdk.Disk, mappings *v2vv1.OvirtMappings) *v2vv1.StorageResourceMappingItem {
 	if mappings.DiskMappings != nil {
 		for _, mapping := range *mappings.DiskMappings {
 			if mapping.Source.ID != nil {
@@ -465,7 +465,7 @@ func (o *OvirtMapper) getMapping(disk *ovirtsdk.Disk, mappings *v2vv1alpha1.Ovir
 	return nil
 }
 
-func (o *OvirtMapper) getVolumeMode(mapping *v2vv1alpha1.StorageResourceMappingItem) *corev1.PersistentVolumeMode {
+func (o *OvirtMapper) getVolumeMode(mapping *v2vv1.StorageResourceMappingItem) *corev1.PersistentVolumeMode {
 	if mapping != nil {
 		return mapping.VolumeMode
 	}
@@ -473,7 +473,7 @@ func (o *OvirtMapper) getVolumeMode(mapping *v2vv1alpha1.StorageResourceMappingI
 	return &DefaultVolumeMode
 }
 
-func (o *OvirtMapper) getStorageClassForDisk(mapping *v2vv1alpha1.StorageResourceMappingItem) *string {
+func (o *OvirtMapper) getStorageClassForDisk(mapping *v2vv1.StorageResourceMappingItem) *string {
 	if mapping != nil {
 		targetName := mapping.Target.Name
 		if targetName != DefaultStorageClassTargetName {

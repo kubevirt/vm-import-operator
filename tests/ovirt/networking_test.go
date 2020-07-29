@@ -1,7 +1,7 @@
 package ovirt_test
 
 import (
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
@@ -63,19 +63,19 @@ var _ = Describe("Import of VM ", func() {
 			Expect(err).To(BeNil())
 
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
-			vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
-				NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.MultusType, Target: v2vv1alpha1.ObjectIdentifier{
+			vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
+				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+					{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.MultusType, Target: v2vv1.ObjectIdentifier{
 						Name:      networkName,
 						Namespace: &f.Namespace.Name,
 					}},
 				},
 			}
-			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
@@ -118,20 +118,20 @@ var _ = Describe("Import of VM ", func() {
 			Expect(err).To(BeNil())
 
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
-			vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
-				NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.MultusType, Target: v2vv1alpha1.ObjectIdentifier{
+			vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
+				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+					{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.MultusType, Target: v2vv1.ObjectIdentifier{
 						Name:      networkName,
 						Namespace: &f.Namespace.Name,
 					}},
-					{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile2ID}, Type: &tests.PodType},
+					{Source: v2vv1.Source{ID: &vms.VNicProfile2ID}, Type: &tests.PodType},
 				},
 			}
-			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
@@ -204,29 +204,29 @@ var _ = Describe("Import of VM ", func() {
 			network2Name := nad2.Name
 
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
-			vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
-				NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
+			vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
+				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
 					{
-						Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID},
+						Source: v2vv1.Source{ID: &vms.VNicProfile1ID},
 						Type:   &tests.MultusType,
-						Target: v2vv1alpha1.ObjectIdentifier{
+						Target: v2vv1.ObjectIdentifier{
 							Name:      networkName,
 							Namespace: &f.Namespace.Name,
 						}},
 					{
-						Source: v2vv1alpha1.Source{ID: &vms.VNicProfile2ID},
+						Source: v2vv1.Source{ID: &vms.VNicProfile2ID},
 						Type:   &tests.MultusType,
-						Target: v2vv1alpha1.ObjectIdentifier{
+						Target: v2vv1.ObjectIdentifier{
 							Name:      network2Name,
 							Namespace: &f.Namespace.Name,
 						}},
 				},
 			}
-			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}

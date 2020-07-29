@@ -1,5 +1,5 @@
 ---
-apiVersion: v2v.kubevirt.io/v1alpha1
+apiVersion: v2v.kubevirt.io/v1beta1
 kind: VMImportConfig
 metadata:
   name: vm-import-operator-config

@@ -30,7 +30,7 @@ CODEGEN_PKG=${CODEGEN_PKG:-$(
 #                  instead of the $GOPATH directly. For normal projects this can be dropped.
 bash "${CODEGEN_PKG}"/generate-groups.sh "client" \
   github.com/kubevirt/vm-import-operator/pkg/api-client github.com/kubevirt/vm-import-operator/pkg/apis \
-  v2v:v1alpha1 \
+  v2v:v1beta1 \
   --fake-clientset=false \
   --output-base "$SCRIPT_ROOT/../../../" \
   --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt

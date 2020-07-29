@@ -3,15 +3,15 @@ package conditions
 import (
 	"time"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // NewCondition creates condition of a given type in the conditions list with given reason, message and status
-func NewCondition(conditionType v2vv1alpha1.VirtualMachineImportConditionType, reason string, message string, status v1.ConditionStatus) v2vv1alpha1.VirtualMachineImportCondition {
+func NewCondition(conditionType v2vv1.VirtualMachineImportConditionType, reason string, message string, status v1.ConditionStatus) v2vv1.VirtualMachineImportCondition {
 	now := metav1.NewTime(time.Now())
-	condition := v2vv1alpha1.VirtualMachineImportCondition{
+	condition := v2vv1.VirtualMachineImportCondition{
 		Type:               conditionType,
 		LastTransitionTime: &now,
 		LastHeartbeatTime:  &now,
@@ -23,17 +23,17 @@ func NewCondition(conditionType v2vv1alpha1.VirtualMachineImportConditionType, r
 }
 
 // NewSucceededCondition creates a condition of type Succeeded of specific reason, message and status
-func NewSucceededCondition(reason string, message string, status v1.ConditionStatus) v2vv1alpha1.VirtualMachineImportCondition {
-	return NewCondition(v2vv1alpha1.Succeeded, reason, message, status)
+func NewSucceededCondition(reason string, message string, status v1.ConditionStatus) v2vv1.VirtualMachineImportCondition {
+	return NewCondition(v2vv1.Succeeded, reason, message, status)
 }
 
 // NewProcessingCondition create a condition of type Processing of specific reason and message
-func NewProcessingCondition(reason string, message string, status v1.ConditionStatus) v2vv1alpha1.VirtualMachineImportCondition {
-	return NewCondition(v2vv1alpha1.Processing, reason, message, status)
+func NewProcessingCondition(reason string, message string, status v1.ConditionStatus) v2vv1.VirtualMachineImportCondition {
+	return NewCondition(v2vv1.Processing, reason, message, status)
 }
 
 // UpsertCondition updates or creates condition in the virtualMachineImportStatus
-func UpsertCondition(vmi *v2vv1alpha1.VirtualMachineImport, condition v2vv1alpha1.VirtualMachineImportCondition) {
+func UpsertCondition(vmi *v2vv1.VirtualMachineImport, condition v2vv1.VirtualMachineImportCondition) {
 	existingCondition := FindConditionOfType(vmi.Status.Conditions, condition.Type)
 	now := metav1.NewTime(time.Now())
 
@@ -51,7 +51,7 @@ func UpsertCondition(vmi *v2vv1alpha1.VirtualMachineImport, condition v2vv1alpha
 }
 
 // FindConditionOfType finds condition of a conditionType type in the conditions slice
-func FindConditionOfType(conditions []v2vv1alpha1.VirtualMachineImportCondition, conditionType v2vv1alpha1.VirtualMachineImportConditionType) *v2vv1alpha1.VirtualMachineImportCondition {
+func FindConditionOfType(conditions []v2vv1.VirtualMachineImportCondition, conditionType v2vv1.VirtualMachineImportConditionType) *v2vv1.VirtualMachineImportCondition {
 	for i := range conditions {
 		if conditions[i].Type == conditionType {
 			return &conditions[i]
@@ -61,9 +61,9 @@ func FindConditionOfType(conditions []v2vv1alpha1.VirtualMachineImportCondition,
 }
 
 // HasSucceededConditionOfReason finds condition of a Succeeded type with conditionReason reason in the conditions slice
-func HasSucceededConditionOfReason(conditions []v2vv1alpha1.VirtualMachineImportCondition, conditionReason ...v2vv1alpha1.SucceededConditionReason) bool {
+func HasSucceededConditionOfReason(conditions []v2vv1.VirtualMachineImportCondition, conditionReason ...v2vv1.SucceededConditionReason) bool {
 	for _, cond := range conditions {
-		if cond.Type == v2vv1alpha1.Succeeded {
+		if cond.Type == v2vv1.Succeeded {
 			for _, reason := range conditionReason {
 				if *cond.Reason == string(reason) {
 					return true

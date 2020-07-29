@@ -7,7 +7,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
@@ -70,7 +70,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 	var (
 		vm       *ovirtsdk.Vm
 		vmSpec   *kubevirtv1.VirtualMachine
-		mappings v2vv1alpha1.OvirtMappings
+		mappings v2vv1.OvirtMappings
 	)
 
 	BeforeEach(func() {
@@ -345,20 +345,20 @@ var _ = Describe("Test mapping disks", func() {
 		diskID := "disk-ID"
 		targetStorageClass := "storageclassname"
 		fsMode := corev1.PersistentVolumeFilesystem
-		disks := []v2vv1alpha1.StorageResourceMappingItem{
+		disks := []v2vv1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					ID: &diskID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetStorageClass,
 				},
 				VolumeMode: &fsMode,
 			},
 		}
-		mappings := v2vv1alpha1.OvirtMappings{
+		mappings := v2vv1.OvirtMappings{
 			DiskMappings:    &disks,
-			StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{},
+			StorageMappings: &[]v2vv1.StorageResourceMappingItem{},
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
@@ -374,20 +374,20 @@ var _ = Describe("Test mapping disks", func() {
 		diskID := "disk-ID"
 		targetStorageClass := ""
 		blockMode := corev1.PersistentVolumeBlock
-		disks := []v2vv1alpha1.StorageResourceMappingItem{
+		disks := []v2vv1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					ID: &diskID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetStorageClass,
 				},
 				VolumeMode: &blockMode,
 			},
 		}
-		mappings := v2vv1alpha1.OvirtMappings{
+		mappings := v2vv1.OvirtMappings{
 			DiskMappings:    &disks,
-			StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{},
+			StorageMappings: &[]v2vv1.StorageResourceMappingItem{},
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
@@ -401,18 +401,18 @@ var _ = Describe("Test mapping disks", func() {
 	It("should map empty storage domain storage class to nil", func() {
 		storageDomainName := "mystoragedomain"
 		targetStorageClass := ""
-		domains := []v2vv1alpha1.StorageResourceMappingItem{
+		domains := []v2vv1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: &storageDomainName,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetStorageClass,
 				},
 			},
 		}
-		mappings := v2vv1alpha1.OvirtMappings{
-			DiskMappings:    &[]v2vv1alpha1.StorageResourceMappingItem{},
+		mappings := v2vv1.OvirtMappings{
+			DiskMappings:    &[]v2vv1.StorageResourceMappingItem{},
 			StorageMappings: &domains,
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
@@ -424,9 +424,9 @@ var _ = Describe("Test mapping disks", func() {
 		Expect(dvs[expectedDVName].Spec.PVC.StorageClassName).To(BeNil())
 	})
 	It("should map missing mapping to nil storage class", func() {
-		mappings := v2vv1alpha1.OvirtMappings{
-			DiskMappings:    &[]v2vv1alpha1.StorageResourceMappingItem{},
-			StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{},
+		mappings := v2vv1.OvirtMappings{
+			DiskMappings:    &[]v2vv1.StorageResourceMappingItem{},
+			StorageMappings: &[]v2vv1.StorageResourceMappingItem{},
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
@@ -535,46 +535,46 @@ func createVMGeneric(affinity ovirtsdk.VmAffinity, readonly bool, biostype ovirt
 		MustBuild()
 }
 
-func createMappings() v2vv1alpha1.OvirtMappings {
+func createMappings() v2vv1.OvirtMappings {
 	// network mappings
-	var networks []v2vv1alpha1.NetworkResourceMappingItem
+	var networks []v2vv1.NetworkResourceMappingItem
 	multusNetwork := "multus"
 	podNetwork := "pod"
 	multusNetworkName := "network1/profile1"
 	podNetworkName := "network2/profile2"
 	networks = append(networks,
-		v2vv1alpha1.NetworkResourceMappingItem{
-			Source: v2vv1alpha1.Source{
+		v2vv1.NetworkResourceMappingItem{
+			Source: v2vv1.Source{
 				Name: &multusNetworkName,
 			},
-			Target: v2vv1alpha1.ObjectIdentifier{
+			Target: v2vv1.ObjectIdentifier{
 				Name: "net-attach-def",
 			},
 			Type: &multusNetwork,
 		},
-		v2vv1alpha1.NetworkResourceMappingItem{
-			Source: v2vv1alpha1.Source{
+		v2vv1.NetworkResourceMappingItem{
+			Source: v2vv1.Source{
 				Name: &podNetworkName,
 			},
 			Type: &podNetwork,
 		})
 
 	// storage mappings
-	var storages []v2vv1alpha1.StorageResourceMappingItem
+	var storages []v2vv1.StorageResourceMappingItem
 	storageName := "mystoragedomain"
-	storages = append(storages, v2vv1alpha1.StorageResourceMappingItem{
-		Source: v2vv1alpha1.Source{
+	storages = append(storages, v2vv1.StorageResourceMappingItem{
+		Source: v2vv1.Source{
 			Name: &storageName,
 		},
-		Target: v2vv1alpha1.ObjectIdentifier{
+		Target: v2vv1.ObjectIdentifier{
 			Name: "storageclassname",
 		},
 	})
 
-	return v2vv1alpha1.OvirtMappings{
+	return v2vv1.OvirtMappings{
 		NetworkMappings: &networks,
 		StorageMappings: &storages,
-		DiskMappings:    &[]v2vv1alpha1.StorageResourceMappingItem{},
+		DiskMappings:    &[]v2vv1.StorageResourceMappingItem{},
 	}
 }
 

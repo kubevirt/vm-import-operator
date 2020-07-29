@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
@@ -28,7 +28,7 @@ func NewManager(client client.Client) Manager {
 
 // FindFor return virtualmachine for the VM import object
 func (m *Manager) FindFor(vmiCrName types.NamespacedName) (*kubevirtv1.VirtualMachine, error) {
-	instance := &v2vv1alpha1.VirtualMachineImport{}
+	instance := &v2vv1.VirtualMachineImport{}
 	if err := m.client.Get(context.TODO(), vmiCrName, instance); err != nil {
 		return nil, err
 	}

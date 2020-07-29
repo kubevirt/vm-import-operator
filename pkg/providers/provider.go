@@ -1,7 +1,7 @@
 package provider
 
 import (
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	oapiv1 "github.com/openshift/api/template/v1"
 	corev1 "k8s.io/api/core/v1"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
@@ -18,19 +18,19 @@ const (
 
 // Provider defines the methods required by source providers for importing a VM
 type Provider interface {
-	Init(*corev1.Secret, *v2vv1alpha1.VirtualMachineImport) error
+	Init(*corev1.Secret, *v2vv1.VirtualMachineImport) error
 	TestConnection() error
 	Close()
-	LoadVM(v2vv1alpha1.VirtualMachineImportSourceSpec) error
-	PrepareResourceMapping(*v2vv1alpha1.ResourceMappingSpec, v2vv1alpha1.VirtualMachineImportSourceSpec)
-	Validate() ([]v2vv1alpha1.VirtualMachineImportCondition, error)
+	LoadVM(v2vv1.VirtualMachineImportSourceSpec) error
+	PrepareResourceMapping(*v2vv1.ResourceMappingSpec, v2vv1.VirtualMachineImportSourceSpec)
+	Validate() ([]v2vv1.VirtualMachineImportCondition, error)
 	ValidateDiskStatus(string) (bool, error)
-	StopVM(*v2vv1alpha1.VirtualMachineImport, rclient.Client) error
+	StopVM(*v2vv1.VirtualMachineImport, rclient.Client) error
 	CreateMapper() (Mapper, error)
 	GetVMStatus() (VMStatus, error)
 	GetVMName() (string, error)
 	StartVM() error
-	CleanUp(bool, *v2vv1alpha1.VirtualMachineImport, rclient.Client) error
+	CleanUp(bool, *v2vv1.VirtualMachineImport, rclient.Client) error
 	FindTemplate() (*oapiv1.Template, error)
 	ProcessTemplate(*oapiv1.Template, *string, string) (*kubevirtv1.VirtualMachine, error)
 }

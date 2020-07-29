@@ -15,7 +15,7 @@ import (
 
 	"github.com/kubevirt/vm-import-operator/pkg/config"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	"github.com/kubevirt/vm-import-operator/pkg/configmaps"
 	"github.com/kubevirt/vm-import-operator/pkg/datavolumes"
@@ -89,7 +89,7 @@ type OvirtProvider struct {
 	vm                    *ovirtsdk.Vm
 	vmiObjectMeta         metav1.ObjectMeta
 	vmiTypeMeta           metav1.TypeMeta
-	resourceMapping       *v2vv1alpha1.OvirtMappings
+	resourceMapping       *v2vv1.OvirtMappings
 	osFinder              oos.OSFinder
 	templateFinder        *otemplates.TemplateFinder
 	templateHandler       *templates.TemplateHandler
@@ -98,7 +98,7 @@ type OvirtProvider struct {
 	datavolumesManager    DataVolumesManager
 	virtualMachineManager VirtualMachineManager
 	factory               pclient.Factory
-	instance              *v2vv1alpha1.VirtualMachineImport
+	instance              *v2vv1.VirtualMachineImport
 }
 
 // NewOvirtProvider creates new OvirtProvider configured with dependencies
@@ -143,7 +143,7 @@ func (o *OvirtProvider) GetVMStatus() (provider.VMStatus, error) {
 }
 
 // Init ovirt provider using given secret
-func (o *OvirtProvider) Init(secret *corev1.Secret, instance *v2vv1alpha1.VirtualMachineImport) error {
+func (o *OvirtProvider) Init(secret *corev1.Secret, instance *v2vv1.VirtualMachineImport) error {
 	o.ovirtSecretDataMap = make(map[string]string)
 	err := yaml.Unmarshal(secret.Data[ovirtSecretKey], &o.ovirtSecretDataMap)
 	if err != nil {
@@ -229,7 +229,7 @@ func (o *OvirtProvider) Close() {
 }
 
 // LoadVM fetch the source VM from ovirt and set it on the provider
-func (o *OvirtProvider) LoadVM(sourceSpec v2vv1alpha1.VirtualMachineImportSourceSpec) error {
+func (o *OvirtProvider) LoadVM(sourceSpec v2vv1.VirtualMachineImportSourceSpec) error {
 	ovirtSourceSpec := sourceSpec.Ovirt
 	sourceVMID := ovirtSourceSpec.VM.ID
 	sourceVMName := ovirtSourceSpec.VM.Name
@@ -252,7 +252,7 @@ func (o *OvirtProvider) LoadVM(sourceSpec v2vv1alpha1.VirtualMachineImportSource
 }
 
 // PrepareResourceMapping merges external resource mapping and resource mapping provided in the virtual machine import spec
-func (o *OvirtProvider) PrepareResourceMapping(externalResourceMapping *v2vv1alpha1.ResourceMappingSpec, vmiSpec v2vv1alpha1.VirtualMachineImportSourceSpec) {
+func (o *OvirtProvider) PrepareResourceMapping(externalResourceMapping *v2vv1.ResourceMappingSpec, vmiSpec v2vv1.VirtualMachineImportSourceSpec) {
 	o.resourceMapping = mappings.MergeMappings(externalResourceMapping, vmiSpec.Ovirt.Mappings)
 }
 
@@ -279,20 +279,20 @@ func (o *OvirtProvider) ValidateDiskStatus(diskName string) (bool, error) {
 }
 
 // Validate validates whether loaded previously VM and resource mapping is valid. The validation results are recorded in th VMI CR identified by vmiCrName and in case of a validation failure error is returned.
-func (o *OvirtProvider) Validate() ([]v2vv1alpha1.VirtualMachineImportCondition, error) {
+func (o *OvirtProvider) Validate() ([]v2vv1.VirtualMachineImportCondition, error) {
 	vm, err := o.getVM()
 	if err != nil {
 		return nil, err
 	}
 	if vm == nil {
-		return []v2vv1alpha1.VirtualMachineImportCondition{}, errors.New("VM has not been loaded")
+		return []v2vv1.VirtualMachineImportCondition{}, errors.New("VM has not been loaded")
 	}
 	vmiName := o.GetVmiNamespacedName()
 	return o.validator.Validate(vm, &vmiName, o.resourceMapping), nil
 }
 
 // StopVM stop the source VM on ovirt
-func (o *OvirtProvider) StopVM(cr *v2vv1alpha1.VirtualMachineImport, rclient rclient.Client) error {
+func (o *OvirtProvider) StopVM(cr *v2vv1.VirtualMachineImport, rclient rclient.Client) error {
 	vm, err := o.getVM()
 	if err != nil {
 		return err
@@ -397,7 +397,7 @@ func (o *OvirtProvider) StartVM() error {
 }
 
 // CleanUp removes transient resources created for import
-func (o *OvirtProvider) CleanUp(failure bool, cr *v2vv1alpha1.VirtualMachineImport, client rclient.Client) error {
+func (o *OvirtProvider) CleanUp(failure bool, cr *v2vv1.VirtualMachineImport, client rclient.Client) error {
 	var errs []error
 
 	err := utils.RemoveFinalizer(cr, utils.RestoreVMStateFinalizer, client)

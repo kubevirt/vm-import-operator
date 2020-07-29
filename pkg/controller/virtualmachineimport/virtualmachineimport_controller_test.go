@@ -6,7 +6,7 @@ import (
 
 	"github.com/kubevirt/vm-import-operator/pkg/config"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	"github.com/kubevirt/vm-import-operator/pkg/mappings"
 	"github.com/kubevirt/vm-import-operator/pkg/ownerreferences"
@@ -38,10 +38,10 @@ import (
 
 var (
 	get                func(context.Context, client.ObjectKey, runtime.Object) error
-	pinit              func(*corev1.Secret, *v2vv1alpha1.VirtualMachineImport) error
-	loadVM             func(v2vv1alpha1.VirtualMachineImportSourceSpec) error
-	getResourceMapping func(types.NamespacedName) (*v2vv1alpha1.ResourceMapping, error)
-	validate           func() ([]v2vv1alpha1.VirtualMachineImportCondition, error)
+	pinit              func(*corev1.Secret, *v2vv1.VirtualMachineImport) error
+	loadVM             func(v2vv1.VirtualMachineImportSourceSpec) error
+	getResourceMapping func(types.NamespacedName) (*v2vv1.ResourceMapping, error)
+	validate           func() ([]v2vv1.VirtualMachineImportCondition, error)
 	statusPatch        func(ctx context.Context, obj runtime.Object, patch client.Patch) error
 	getVMStatus        func() (provider.VMStatus, error)
 	findTemplate       func() (*oapiv1.Template, error)
@@ -58,21 +58,21 @@ var (
 var _ = Describe("Reconcile steps", func() {
 	var (
 		reconciler *ReconcileVirtualMachineImport
-		instance   *v2vv1alpha1.VirtualMachineImport
+		instance   *v2vv1.VirtualMachineImport
 		vmName     types.NamespacedName
 		mock       *mockProvider
 	)
 
 	BeforeEach(func() {
-		instance = &v2vv1alpha1.VirtualMachineImport{}
+		instance = &v2vv1.VirtualMachineImport{}
 		mockClient := &mockClient{}
 		finder := &mockFinder{}
 		scheme := runtime.NewScheme()
 		factory := &mockFactory{}
 		controller := &mockController{}
 		kvConfigProviderMock := &mockKubeVirtConfigProvider{}
-		scheme.AddKnownTypes(v2vv1alpha1.SchemeGroupVersion,
-			&v2vv1alpha1.VirtualMachineImport{},
+		scheme.AddKnownTypes(v2vv1.SchemeGroupVersion,
+			&v2vv1.VirtualMachineImport{},
 		)
 		scheme.AddKnownTypes(cdiv1.SchemeGroupVersion,
 			&cdiv1.DataVolume{},
@@ -83,10 +83,10 @@ var _ = Describe("Reconcile steps", func() {
 
 		get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 			switch obj.(type) {
-			case *v2vv1alpha1.VirtualMachineImport:
-				obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{}
-			case *v2vv1alpha1.ResourceMapping:
-				obj.(*v2vv1alpha1.ResourceMapping).Spec = v2vv1alpha1.ResourceMappingSpec{}
+			case *v2vv1.VirtualMachineImport:
+				obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{}
+			case *v2vv1.ResourceMapping:
+				obj.(*v2vv1.ResourceMapping).Spec = v2vv1.ResourceMappingSpec{}
 			case *corev1.Secret:
 				obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
 			}
@@ -95,8 +95,8 @@ var _ = Describe("Reconcile steps", func() {
 		statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
 			return nil
 		}
-		validate = func() ([]v2vv1alpha1.VirtualMachineImportCondition, error) {
-			return []v2vv1alpha1.VirtualMachineImportCondition{}, nil
+		validate = func() ([]v2vv1.VirtualMachineImportCondition, error) {
+			return []v2vv1.VirtualMachineImportCondition{}, nil
 		}
 		getVMStatus = func() (provider.VMStatus, error) {
 			return provider.VMStatusDown, nil
@@ -128,7 +128,7 @@ var _ = Describe("Reconcile steps", func() {
 
 	Describe("Init steps", func() {
 		BeforeEach(func() {
-			instance.Spec.Source.Ovirt = &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{}
+			instance.Spec.Source.Ovirt = &v2vv1.VirtualMachineImportOvirtSourceSpec{}
 			instance.Name = "test"
 			instance.Namespace = "test"
 		})
@@ -154,7 +154,7 @@ var _ = Describe("Reconcile steps", func() {
 	Describe("Create steps", func() {
 
 		BeforeEach(func() {
-			instance.Spec.Source.Ovirt = &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{}
+			instance.Spec.Source.Ovirt = &v2vv1.VirtualMachineImportOvirtSourceSpec{}
 			instance.Name = "test"
 			instance.Namespace = "test"
 
@@ -176,18 +176,18 @@ var _ = Describe("Reconcile steps", func() {
 	Describe("fetchVM step", func() {
 
 		BeforeEach(func() {
-			pinit = func(*corev1.Secret, *v2vv1alpha1.VirtualMachineImport) error {
+			pinit = func(*corev1.Secret, *v2vv1.VirtualMachineImport) error {
 				return nil
 			}
-			loadVM = func(v2vv1alpha1.VirtualMachineImportSourceSpec) error {
+			loadVM = func(v2vv1.VirtualMachineImportSourceSpec) error {
 				return nil
 			}
-			getResourceMapping = func(types.NamespacedName) (*v2vv1alpha1.ResourceMapping, error) {
-				return &v2vv1alpha1.ResourceMapping{
-					Spec: v2vv1alpha1.ResourceMappingSpec{},
+			getResourceMapping = func(types.NamespacedName) (*v2vv1.ResourceMapping, error) {
+				return &v2vv1.ResourceMapping{
+					Spec: v2vv1.ResourceMappingSpec{},
 				}, nil
 			}
-			instance.Spec.Source.Ovirt = &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{}
+			instance.Spec.Source.Ovirt = &v2vv1.VirtualMachineImportOvirtSourceSpec{}
 			instance.Name = "test"
 			instance.Namespace = "test"
 
@@ -195,7 +195,7 @@ var _ = Describe("Reconcile steps", func() {
 		})
 
 		It("should fail to connect: ", func() {
-			pinit = func(*corev1.Secret, *v2vv1alpha1.VirtualMachineImport) error {
+			pinit = func(*corev1.Secret, *v2vv1.VirtualMachineImport) error {
 				return fmt.Errorf("Not connected")
 			}
 
@@ -206,7 +206,7 @@ var _ = Describe("Reconcile steps", func() {
 		})
 
 		It("should fail to load vms: ", func() {
-			loadVM = func(v2vv1alpha1.VirtualMachineImportSourceSpec) error {
+			loadVM = func(v2vv1.VirtualMachineImportSourceSpec) error {
 				return fmt.Errorf("Not loaded")
 			}
 
@@ -216,10 +216,10 @@ var _ = Describe("Reconcile steps", func() {
 		})
 
 		It("should fail to fetch resource mapping: ", func() {
-			getResourceMapping = func(namespacedName types.NamespacedName) (*v2vv1alpha1.ResourceMapping, error) {
+			getResourceMapping = func(namespacedName types.NamespacedName) (*v2vv1.ResourceMapping, error) {
 				return nil, fmt.Errorf("Not there")
 			}
-			instance.Spec.ResourceMapping = &v2vv1alpha1.ObjectIdentifier{}
+			instance.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{}
 
 			err := reconciler.fetchVM(instance, mock)
 
@@ -227,7 +227,7 @@ var _ = Describe("Reconcile steps", func() {
 		})
 
 		It("should init provider: ", func() {
-			instance.Spec.ResourceMapping = &v2vv1alpha1.ObjectIdentifier{}
+			instance.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{}
 
 			err := reconciler.fetchVM(instance, mock)
 
@@ -238,8 +238,8 @@ var _ = Describe("Reconcile steps", func() {
 
 	Describe("validate step", func() {
 		BeforeEach(func() {
-			instance.Spec.Source.Ovirt = &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{}
-			instance.Spec.ResourceMapping = &v2vv1alpha1.ObjectIdentifier{}
+			instance.Spec.Source.Ovirt = &v2vv1.VirtualMachineImportOvirtSourceSpec{}
+			instance.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{}
 			instance.Name = "test"
 			instance.Namespace = "test"
 			mock = &mockProvider{}
@@ -253,7 +253,7 @@ var _ = Describe("Reconcile steps", func() {
 		})
 
 		It("should fail to validate: ", func() {
-			validate = func() ([]v2vv1alpha1.VirtualMachineImportCondition, error) {
+			validate = func() ([]v2vv1.VirtualMachineImportCondition, error) {
 				return nil, fmt.Errorf("Failed")
 			}
 
@@ -266,24 +266,24 @@ var _ = Describe("Reconcile steps", func() {
 		It("should not validate again: ", func() {
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
+				case *v2vv1.VirtualMachineImport:
 					return fmt.Errorf("Let's make it fail if it tries to validate")
-				case *v2vv1alpha1.ResourceMapping:
-					obj.(*v2vv1alpha1.ResourceMapping).Spec = v2vv1alpha1.ResourceMappingSpec{}
+				case *v2vv1.ResourceMapping:
+					obj.(*v2vv1.ResourceMapping).Spec = v2vv1.ResourceMappingSpec{}
 				default:
 					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
 				}
 				return nil
 			}
 
-			conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
-			conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+			conditions := []v2vv1.VirtualMachineImportCondition{}
+			conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 				Status: corev1.ConditionTrue,
-				Type:   v2vv1alpha1.Valid,
+				Type:   v2vv1.Valid,
 			})
-			conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+			conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 				Status: corev1.ConditionTrue,
-				Type:   v2vv1alpha1.MappingRulesVerified,
+				Type:   v2vv1.MappingRulesVerified,
 			})
 			instance.Status.Conditions = conditions
 
@@ -296,10 +296,10 @@ var _ = Describe("Reconcile steps", func() {
 		It("should fail to update conditions: ", func() {
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
+				case *v2vv1.VirtualMachineImport:
 					return fmt.Errorf("Not found")
-				case *v2vv1alpha1.ResourceMapping:
-					obj.(*v2vv1alpha1.ResourceMapping).Spec = v2vv1alpha1.ResourceMappingSpec{}
+				case *v2vv1.ResourceMapping:
+					obj.(*v2vv1.ResourceMapping).Spec = v2vv1.ResourceMappingSpec{}
 				default:
 					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
 				}
@@ -325,9 +325,9 @@ var _ = Describe("Reconcile steps", func() {
 
 		It("should fail with error conditions: ", func() {
 			message := "message"
-			validate = func() ([]v2vv1alpha1.VirtualMachineImportCondition, error) {
-				conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
-				conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+			validate = func() ([]v2vv1.VirtualMachineImportCondition, error) {
+				conditions := []v2vv1.VirtualMachineImportCondition{}
+				conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 					Status:  corev1.ConditionFalse,
 					Message: &message,
 				})
@@ -353,7 +353,7 @@ var _ = Describe("Reconcile steps", func() {
 
 		It("should fail to store vm status: ", func() {
 			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
-				if obj.(*v2vv1alpha1.VirtualMachineImport).Annotations[sourceVMInitialState] == string(provider.VMStatusDown) {
+				if obj.(*v2vv1.VirtualMachineImport).Annotations[sourceVMInitialState] == string(provider.VMStatusDown) {
 					return fmt.Errorf("Not modified")
 				}
 				return nil
@@ -393,9 +393,9 @@ var _ = Describe("Reconcile steps", func() {
 			}
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch vmImport := obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
+				case *v2vv1.VirtualMachineImport:
 					vmImport.Annotations = map[string]string{"vmimport.v2v.kubevirt.io/source-vm-initial-state": "down"}
-					vmImport.Spec = v2vv1alpha1.VirtualMachineImportSpec{}
+					vmImport.Spec = v2vv1.VirtualMachineImportSpec{}
 				}
 				return nil
 			}
@@ -455,9 +455,9 @@ var _ = Describe("Reconcile steps", func() {
 			}
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{}
-					obj.(*v2vv1alpha1.VirtualMachineImport).Annotations = map[string]string{sourceVMInitialState: string(provider.VMStatusUp)}
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{}
+					obj.(*v2vv1.VirtualMachineImport).Annotations = map[string]string{sourceVMInitialState: string(provider.VMStatusUp)}
 				}
 				return nil
 			}
@@ -472,7 +472,7 @@ var _ = Describe("Reconcile steps", func() {
 			counter := 2
 			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
 				switch obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
+				case *v2vv1.VirtualMachineImport:
 					counter--
 					if counter == 0 {
 						return fmt.Errorf("Not modified")
@@ -491,7 +491,7 @@ var _ = Describe("Reconcile steps", func() {
 			counter := 2
 			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
 				switch obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
+				case *v2vv1.VirtualMachineImport:
 					counter--
 					if counter == 0 {
 						return fmt.Errorf("Not modified")
@@ -551,18 +551,18 @@ var _ = Describe("Reconcile steps", func() {
 		BeforeEach(func() {
 			shouldStart := true
 			instance.Spec.StartVM = &shouldStart
-			conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
-			reason := string(v2vv1alpha1.VirtualMachineReady)
-			conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+			conditions := []v2vv1.VirtualMachineImportCondition{}
+			reason := string(v2vv1.VirtualMachineReady)
+			conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 				Status: corev1.ConditionTrue,
-				Type:   v2vv1alpha1.Succeeded,
+				Type:   v2vv1.Succeeded,
 				Reason: &reason,
 			})
 			instance.Status.Conditions = conditions
 		})
 
 		It("should not start vm: ", func() {
-			instance.Status.Conditions = []v2vv1alpha1.VirtualMachineImportCondition{}
+			instance.Status.Conditions = []v2vv1.VirtualMachineImportCondition{}
 
 			err := reconciler.startVM(mock, instance, vmName)
 
@@ -852,11 +852,11 @@ var _ = Describe("Reconcile steps", func() {
 		It("should do nothing: ", func() {
 			done := map[string]bool{}
 			number := len(done)
-			conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
-			reason := string(v2vv1alpha1.VirtualMachineReady)
-			conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+			conditions := []v2vv1.VirtualMachineImportCondition{}
+			reason := string(v2vv1.VirtualMachineReady)
+			conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 				Status: corev1.ConditionTrue,
-				Type:   v2vv1alpha1.Succeeded,
+				Type:   v2vv1.Succeeded,
 				Reason: &reason,
 			})
 			instance.Status.Conditions = conditions
@@ -1035,9 +1035,9 @@ var _ = Describe("Reconcile steps", func() {
 					obj.(*cdiv1.DataVolume).Status = cdiv1.DataVolumeStatus{
 						Phase: cdiv1.Failed,
 					}
-				case *v2vv1alpha1.VirtualMachineImport:
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{}
-					obj.(*v2vv1alpha1.VirtualMachineImport).Annotations = map[string]string{sourceVMInitialState: string(provider.VMStatusDown)}
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{}
+					obj.(*v2vv1.VirtualMachineImport).Annotations = map[string]string{sourceVMInitialState: string(provider.VMStatusDown)}
 				}
 				return nil
 			}
@@ -1058,24 +1058,24 @@ var _ = Describe("Reconcile steps", func() {
 			request = reconcile.Request{}
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
-						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
-							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{
+						Source: v2vv1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
 						},
 					}
-					conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
-					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+					conditions := []v2vv1.VirtualMachineImportCondition{}
+					conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 						Status: corev1.ConditionTrue,
-						Type:   v2vv1alpha1.Valid,
+						Type:   v2vv1.Valid,
 					})
-					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+					conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 						Status: corev1.ConditionTrue,
-						Type:   v2vv1alpha1.MappingRulesVerified,
+						Type:   v2vv1.MappingRulesVerified,
 					})
-					obj.(*v2vv1alpha1.VirtualMachineImport).Status.Conditions = conditions
+					obj.(*v2vv1.VirtualMachineImport).Status.Conditions = conditions
 					name := "test"
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec.TargetVMName = &name
+					obj.(*v2vv1.VirtualMachineImport).Spec.TargetVMName = &name
 				case *corev1.Secret:
 					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
 				}
@@ -1139,9 +1139,9 @@ var _ = Describe("Reconcile steps", func() {
 		It("should fail to create a provider: ", func() {
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
-						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{
+						Source: v2vv1.VirtualMachineImportSourceSpec{
 							Ovirt: nil,
 						},
 					}
@@ -1158,10 +1158,10 @@ var _ = Describe("Reconcile steps", func() {
 		It("should fail to initiate a provider of new request due to missing secret: ", func() {
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
-						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
-							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{
+						Source: v2vv1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
 						},
 					}
 				case *corev1.Secret:
@@ -1180,13 +1180,13 @@ var _ = Describe("Reconcile steps", func() {
 		It("should fail to initiate a provider of request in progress: ", func() {
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
-						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
-							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{
+						Source: v2vv1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
 						},
 					}
-					obj.(*v2vv1alpha1.VirtualMachineImport).Annotations = map[string]string{"vmimport.v2v.kubevirt.io/progress": "10"}
+					obj.(*v2vv1.VirtualMachineImport).Annotations = map[string]string{"vmimport.v2v.kubevirt.io/progress": "10"}
 				case *corev1.Secret:
 					return fmt.Errorf("Not found")
 
@@ -1203,10 +1203,10 @@ var _ = Describe("Reconcile steps", func() {
 		It("should fail to validate: ", func() {
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
-						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
-							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{
+						Source: v2vv1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
 						},
 					}
 				case *corev1.Secret:
@@ -1264,24 +1264,24 @@ var _ = Describe("Reconcile steps", func() {
 		It("should fail to import disks: ", func() {
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
-						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
-							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{
+						Source: v2vv1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
 						},
 					}
-					conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
-					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+					conditions := []v2vv1.VirtualMachineImportCondition{}
+					conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 						Status: corev1.ConditionTrue,
-						Type:   v2vv1alpha1.Valid,
+						Type:   v2vv1.Valid,
 					})
-					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+					conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 						Status: corev1.ConditionTrue,
-						Type:   v2vv1alpha1.MappingRulesVerified,
+						Type:   v2vv1.MappingRulesVerified,
 					})
-					obj.(*v2vv1alpha1.VirtualMachineImport).Status.Conditions = conditions
+					obj.(*v2vv1.VirtualMachineImport).Status.Conditions = conditions
 					name := "test"
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec.TargetVMName = &name
+					obj.(*v2vv1.VirtualMachineImport).Spec.TargetVMName = &name
 				case *corev1.Secret:
 					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
 				case *cdiv1.DataVolume:
@@ -1313,24 +1313,24 @@ var _ = Describe("Reconcile steps", func() {
 			vmImportGetCounter := 10
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
-					vmImport := obj.(*v2vv1alpha1.VirtualMachineImport)
-					vmImport.Spec = v2vv1alpha1.VirtualMachineImportSpec{
-						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
-							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+				case *v2vv1.VirtualMachineImport:
+					vmImport := obj.(*v2vv1.VirtualMachineImport)
+					vmImport.Spec = v2vv1.VirtualMachineImportSpec{
+						Source: v2vv1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
 						},
 					}
-					conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
-					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+					conditions := []v2vv1.VirtualMachineImportCondition{}
+					conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 						Status: corev1.ConditionTrue,
-						Type:   v2vv1alpha1.Valid,
+						Type:   v2vv1.Valid,
 					})
-					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+					conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 						Status: corev1.ConditionTrue,
-						Type:   v2vv1alpha1.MappingRulesVerified,
+						Type:   v2vv1.MappingRulesVerified,
 					})
 					vmImport.Status.Conditions = conditions
-					vmImport.Status.DataVolumes = []v2vv1alpha1.DataVolumeItem{}
+					vmImport.Status.DataVolumes = []v2vv1.DataVolumeItem{}
 					name := "test"
 					vmImportGetCounter--
 					if vmImportGetCounter == 0 {
@@ -1377,32 +1377,32 @@ var _ = Describe("Reconcile steps", func() {
 		It("should fail to start vm: ", func() {
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
-					conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
-					reason := string(v2vv1alpha1.VirtualMachineReady)
-					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+				case *v2vv1.VirtualMachineImport:
+					conditions := []v2vv1.VirtualMachineImportCondition{}
+					reason := string(v2vv1.VirtualMachineReady)
+					conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 						Status: corev1.ConditionTrue,
 						Reason: &reason,
-						Type:   v2vv1alpha1.Succeeded,
+						Type:   v2vv1.Succeeded,
 					})
-					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+					conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 						Status: corev1.ConditionTrue,
-						Type:   v2vv1alpha1.Valid,
+						Type:   v2vv1.Valid,
 					})
-					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+					conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 						Status: corev1.ConditionTrue,
-						Type:   v2vv1alpha1.MappingRulesVerified,
+						Type:   v2vv1.MappingRulesVerified,
 					})
-					obj.(*v2vv1alpha1.VirtualMachineImport).Status.Conditions = conditions
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
-						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
-							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+					obj.(*v2vv1.VirtualMachineImport).Status.Conditions = conditions
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{
+						Source: v2vv1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
 						},
 					}
 					start := true
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec.StartVM = &start
+					obj.(*v2vv1.VirtualMachineImport).Spec.StartVM = &start
 					name := "test"
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec.TargetVMName = &name
+					obj.(*v2vv1.VirtualMachineImport).Spec.TargetVMName = &name
 				case *corev1.Secret:
 					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
 				case *kubevirtv1.VirtualMachineInstance:
@@ -1427,24 +1427,24 @@ var _ = Describe("Reconcile steps", func() {
 		It("should exit early if vm condition is succeed: ", func() {
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
-				case *v2vv1alpha1.VirtualMachineImport:
-					conditions := []v2vv1alpha1.VirtualMachineImportCondition{}
-					reason := string(v2vv1alpha1.VirtualMachineRunning)
-					conditions = append(conditions, v2vv1alpha1.VirtualMachineImportCondition{
+				case *v2vv1.VirtualMachineImport:
+					conditions := []v2vv1.VirtualMachineImportCondition{}
+					reason := string(v2vv1.VirtualMachineRunning)
+					conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
 						Status: corev1.ConditionTrue,
 						Reason: &reason,
-						Type:   v2vv1alpha1.Succeeded,
+						Type:   v2vv1.Succeeded,
 					})
-					obj.(*v2vv1alpha1.VirtualMachineImport).Status.Conditions = conditions
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec = v2vv1alpha1.VirtualMachineImportSpec{
-						Source: v2vv1alpha1.VirtualMachineImportSourceSpec{
-							Ovirt: &v2vv1alpha1.VirtualMachineImportOvirtSourceSpec{},
+					obj.(*v2vv1.VirtualMachineImport).Status.Conditions = conditions
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{
+						Source: v2vv1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
 						},
 					}
 					start := true
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec.StartVM = &start
+					obj.(*v2vv1.VirtualMachineImport).Spec.StartVM = &start
 					name := "test"
-					obj.(*v2vv1alpha1.VirtualMachineImport).Spec.TargetVMName = &name
+					obj.(*v2vv1.VirtualMachineImport).Spec.TargetVMName = &name
 				case *corev1.Secret:
 					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
 				}
@@ -1547,12 +1547,12 @@ func (c *mockClient) Status() client.StatusWriter {
 }
 
 // GetResourceMapping implements ResourceFinder.GetResourceMapping
-func (m *mockFinder) GetResourceMapping(namespacedName types.NamespacedName) (*v2vv1alpha1.ResourceMapping, error) {
+func (m *mockFinder) GetResourceMapping(namespacedName types.NamespacedName) (*v2vv1.ResourceMapping, error) {
 	return getResourceMapping(namespacedName)
 }
 
 // Init implements Provider.Init
-func (p *mockProvider) Init(secret *corev1.Secret, instance *v2vv1alpha1.VirtualMachineImport) error {
+func (p *mockProvider) Init(secret *corev1.Secret, instance *v2vv1.VirtualMachineImport) error {
 	return pinit(secret, instance)
 }
 
@@ -1570,21 +1570,21 @@ func (p *mockProvider) ValidateDiskStatus(string) (bool, error) {
 func (p *mockProvider) Close() {}
 
 // LoadVM implements Provider.LoadVM
-func (p *mockProvider) LoadVM(spec v2vv1alpha1.VirtualMachineImportSourceSpec) error {
+func (p *mockProvider) LoadVM(spec v2vv1.VirtualMachineImportSourceSpec) error {
 	return loadVM(spec)
 }
 
 // PrepareResourceMapping implements Provider.PrepareResourceMapping
-func (p *mockProvider) PrepareResourceMapping(*v2vv1alpha1.ResourceMappingSpec, v2vv1alpha1.VirtualMachineImportSourceSpec) {
+func (p *mockProvider) PrepareResourceMapping(*v2vv1.ResourceMappingSpec, v2vv1.VirtualMachineImportSourceSpec) {
 }
 
 // LoadVM implements Provider.LoadVM
-func (p *mockProvider) Validate() ([]v2vv1alpha1.VirtualMachineImportCondition, error) {
+func (p *mockProvider) Validate() ([]v2vv1.VirtualMachineImportCondition, error) {
 	return validate()
 }
 
 // StopVM implements Provider.StopVM
-func (p *mockProvider) StopVM(cr *v2vv1alpha1.VirtualMachineImport, client rclient.Client) error {
+func (p *mockProvider) StopVM(cr *v2vv1.VirtualMachineImport, client rclient.Client) error {
 	return nil
 }
 
@@ -1614,7 +1614,7 @@ func (p *mockProvider) StartVM() error {
 }
 
 // CleanUp implements Provider.CleanUp
-func (p *mockProvider) CleanUp(failure bool, cr *v2vv1alpha1.VirtualMachineImport, client rclient.Client) error {
+func (p *mockProvider) CleanUp(failure bool, cr *v2vv1.VirtualMachineImport, client rclient.Client) error {
 	return cleanUp()
 }
 

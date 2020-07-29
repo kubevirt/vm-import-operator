@@ -41,12 +41,12 @@ var _ = Describe("VM import ", func() {
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, tests.TrueVar)
 			vmi.Spec.StartVM = &tests.TrueVar
 			test.stub(vmID)
-			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}

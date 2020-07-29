@@ -3,7 +3,7 @@ package conditions_test
 import (
 	"time"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,13 +13,13 @@ import (
 
 var _ = Describe("Condition management", func() {
 	It("should find condition by type", func() {
-		validating := v2vv1alpha1.VirtualMachineImportCondition{
-			Type: v2vv1alpha1.Valid,
+		validating := v2vv1.VirtualMachineImportCondition{
+			Type: v2vv1.Valid,
 		}
-		processing := v2vv1alpha1.VirtualMachineImportCondition{
-			Type: v2vv1alpha1.Processing,
+		processing := v2vv1.VirtualMachineImportCondition{
+			Type: v2vv1.Processing,
 		}
-		vmiConditions := []v2vv1alpha1.VirtualMachineImportCondition{
+		vmiConditions := []v2vv1.VirtualMachineImportCondition{
 			validating,
 			processing,
 		}
@@ -31,28 +31,28 @@ var _ = Describe("Condition management", func() {
 		Expect(*foundProcessing).To(Equal(processing))
 	})
 	It("should not find condition by type when it doesn't exist", func() {
-		validating := v2vv1alpha1.VirtualMachineImportCondition{
-			Type: v2vv1alpha1.Valid,
+		validating := v2vv1.VirtualMachineImportCondition{
+			Type: v2vv1.Valid,
 		}
-		processing := v2vv1alpha1.VirtualMachineImportCondition{
-			Type: v2vv1alpha1.Processing,
+		processing := v2vv1.VirtualMachineImportCondition{
+			Type: v2vv1.Processing,
 		}
-		vmiConditions := []v2vv1alpha1.VirtualMachineImportCondition{
+		vmiConditions := []v2vv1.VirtualMachineImportCondition{
 			validating,
 			processing,
 		}
 
-		found := conditions.FindConditionOfType(vmiConditions, v2vv1alpha1.MappingRulesVerified)
+		found := conditions.FindConditionOfType(vmiConditions, v2vv1.MappingRulesVerified)
 
 		Expect(found).To(BeNil())
 	})
 	It("should add condition", func() {
-		validating := v2vv1alpha1.VirtualMachineImportCondition{
-			Type: v2vv1alpha1.Valid,
+		validating := v2vv1.VirtualMachineImportCondition{
+			Type: v2vv1.Valid,
 		}
-		vmi := v2vv1alpha1.VirtualMachineImport{
-			Status: v2vv1alpha1.VirtualMachineImportStatus{
-				Conditions: []v2vv1alpha1.VirtualMachineImportCondition{
+		vmi := v2vv1.VirtualMachineImport{
+			Status: v2vv1.VirtualMachineImportStatus{
+				Conditions: []v2vv1.VirtualMachineImportCondition{
 					validating,
 				},
 			},
@@ -62,8 +62,8 @@ var _ = Describe("Condition management", func() {
 		reason := "reason"
 		status := v1.ConditionTrue
 		now := metav1.NewTime(time.Now())
-		newCondition := v2vv1alpha1.VirtualMachineImportCondition{
-			Type:               v2vv1alpha1.Processing,
+		newCondition := v2vv1.VirtualMachineImportCondition{
+			Type:               v2vv1.Processing,
 			Message:            &message,
 			Reason:             &reason,
 			Status:             status,
@@ -75,10 +75,10 @@ var _ = Describe("Condition management", func() {
 
 		updatedConditions := vmi.Status.Conditions
 		Expect(updatedConditions).To(HaveLen(2))
-		foundValidating := conditions.FindConditionOfType(updatedConditions, v2vv1alpha1.Valid)
+		foundValidating := conditions.FindConditionOfType(updatedConditions, v2vv1.Valid)
 		Expect(*foundValidating).To(Equal(validating))
 
-		foundProcessing := conditions.FindConditionOfType(updatedConditions, v2vv1alpha1.Processing)
+		foundProcessing := conditions.FindConditionOfType(updatedConditions, v2vv1.Processing)
 		Expect(*foundProcessing.Message).To(Equal(message))
 		Expect(*foundProcessing.Reason).To(Equal(reason))
 		Expect(foundProcessing.Status).To(Equal(status))
@@ -90,17 +90,17 @@ var _ = Describe("Condition management", func() {
 		oldMessage := "old-message"
 		oldReason := "old-reason"
 		minuteAgo := metav1.NewTime(time.Now().Add(-time.Minute))
-		beforeUpdate := v2vv1alpha1.VirtualMachineImportCondition{
-			Type:               v2vv1alpha1.Valid,
+		beforeUpdate := v2vv1.VirtualMachineImportCondition{
+			Type:               v2vv1.Valid,
 			Message:            &oldMessage,
 			Reason:             &oldReason,
 			Status:             v1.ConditionFalse,
 			LastHeartbeatTime:  &minuteAgo,
 			LastTransitionTime: &minuteAgo,
 		}
-		vmi := v2vv1alpha1.VirtualMachineImport{
-			Status: v2vv1alpha1.VirtualMachineImportStatus{
-				Conditions: []v2vv1alpha1.VirtualMachineImportCondition{
+		vmi := v2vv1.VirtualMachineImport{
+			Status: v2vv1.VirtualMachineImportStatus{
+				Conditions: []v2vv1.VirtualMachineImportCondition{
 					beforeUpdate,
 				},
 			},
@@ -110,8 +110,8 @@ var _ = Describe("Condition management", func() {
 		reason := "reason"
 		status := v1.ConditionTrue
 		now := metav1.NewTime(time.Now())
-		newCondition := v2vv1alpha1.VirtualMachineImportCondition{
-			Type:               v2vv1alpha1.Valid,
+		newCondition := v2vv1.VirtualMachineImportCondition{
+			Type:               v2vv1.Valid,
 			Message:            &message,
 			Reason:             &reason,
 			Status:             status,
@@ -123,7 +123,7 @@ var _ = Describe("Condition management", func() {
 
 		updatedConditions := vmi.Status.Conditions
 		Expect(updatedConditions).To(HaveLen(1))
-		found := conditions.FindConditionOfType(updatedConditions, v2vv1alpha1.Valid)
+		found := conditions.FindConditionOfType(updatedConditions, v2vv1.Valid)
 		Expect(*found.Message).To(Equal(message))
 		Expect(*found.Reason).To(Equal(reason))
 		Expect(found.Status).To(Equal(status))

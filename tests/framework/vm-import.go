@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	corev1 "k8s.io/api/core/v1"
 
@@ -16,7 +16,7 @@ import (
 // EnsureVMImportDoesNotExist blocks until VM import with given name does not exist in the cluster
 func (f *Framework) EnsureVMImportDoesNotExist(vmiName string) error {
 	return wait.PollImmediate(2*time.Second, 1*time.Minute, func() (bool, error) {
-		_, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(f.Namespace.Name).Get(vmiName, metav1.GetOptions{})
+		_, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(f.Namespace.Name).Get(vmiName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return true, nil
@@ -28,9 +28,9 @@ func (f *Framework) EnsureVMImportDoesNotExist(vmiName string) error {
 }
 
 // WaitForVMImportConditionInStatus blocks until VM import with given name has given status condition with given status
-func (f *Framework) WaitForVMImportConditionInStatus(pollInterval time.Duration, timeout time.Duration, vmiName string, conditionType v2vv1alpha1.VirtualMachineImportConditionType, status corev1.ConditionStatus, reason string, namespace string) error {
+func (f *Framework) WaitForVMImportConditionInStatus(pollInterval time.Duration, timeout time.Duration, vmiName string, conditionType v2vv1.VirtualMachineImportConditionType, status corev1.ConditionStatus, reason string, namespace string) error {
 	pollErr := wait.PollImmediate(pollInterval, timeout, func() (bool, error) {
-		retrieved, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(vmiName, metav1.GetOptions{})
+		retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(vmiName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -50,7 +50,7 @@ func (f *Framework) WaitForVMImportConditionInStatus(pollInterval time.Duration,
 		return true, nil
 	})
 	if pollErr == wait.ErrWaitTimeout {
-		retrieved, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(vmiName, metav1.GetOptions{})
+		retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(vmiName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -66,5 +66,5 @@ func (f *Framework) WaitForVMImportConditionInStatus(pollInterval time.Duration,
 
 // WaitForVMToBeProcessing blocks until VM import with given name is in Processing state
 func (f *Framework) WaitForVMToBeProcessing(vmiName string) error {
-	return f.WaitForVMImportConditionInStatus(2*time.Second, time.Minute, vmiName, v2vv1alpha1.Processing, corev1.ConditionTrue, "", f.Namespace.Name)
+	return f.WaitForVMImportConditionInStatus(2*time.Second, time.Minute, vmiName, v2vv1.Processing, corev1.ConditionTrue, "", f.Namespace.Name)
 }

@@ -3,7 +3,7 @@ package ovirt_test
 import (
 	"time"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/onsi/ginkgo/extensions/table"
 
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
@@ -47,12 +47,12 @@ var _ = Describe("Basic VM import ", func() {
 		It("should create stopped VM", func() {
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, false)
 
-			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
@@ -65,12 +65,12 @@ var _ = Describe("Basic VM import ", func() {
 		It("should create started VM", func() {
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 
-			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
@@ -82,17 +82,17 @@ var _ = Describe("Basic VM import ", func() {
 	})
 
 	Context(" with in-CR resource mapping", func() {
-		table.DescribeTable("should create running VM", func(mappings v2vv1alpha1.OvirtMappings, storageClass string) {
+		table.DescribeTable("should create running VM", func(mappings v2vv1.OvirtMappings, storageClass string) {
 
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Ovirt.Mappings = &mappings
 
-			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
@@ -101,19 +101,19 @@ var _ = Describe("Basic VM import ", func() {
 			vm := test.validateTargetConfiguration(vmBlueprint.Name)
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveStorageClass(storageClass, f))
 		},
-			table.Entry(" for disk", v2vv1alpha1.OvirtMappings{
-				DiskMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms.DiskID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+			table.Entry(" for disk", v2vv1.OvirtMappings{
+				DiskMappings: &[]v2vv1.StorageResourceMappingItem{
+					{Source: v2vv1.Source{ID: &vms.DiskID}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
 			}, f.DefaultStorageClass),
-			table.Entry(" for storage domain", v2vv1alpha1.OvirtMappings{
-				StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+			table.Entry(" for storage domain", v2vv1.OvirtMappings{
+				StorageMappings: &[]v2vv1.StorageResourceMappingItem{
+					{Source: v2vv1.Source{ID: &vms.StorageDomainID}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
 			}, f.DefaultStorageClass),
-			table.Entry(" for storage domain on block volume mode", v2vv1alpha1.OvirtMappings{
-				StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}, VolumeMode: &volumeModeBlock},
+			table.Entry(" for storage domain on block volume mode", v2vv1.OvirtMappings{
+				StorageMappings: &[]v2vv1.StorageResourceMappingItem{
+					{Source: v2vv1.Source{ID: &vms.StorageDomainID}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}, VolumeMode: &volumeModeBlock},
 				},
 			}, f.DefaultStorageClass))
 	})
@@ -122,7 +122,7 @@ var _ = Describe("Basic VM import ", func() {
 		It("should not affect imported VM or VMI", func() {
 			By("Creating Virtual Machine Import")
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
-			vmImports := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace)
+			vmImports := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace)
 
 			created, err := vmImports.Create(&vmi)
 

@@ -1,7 +1,7 @@
 package ovirt_test
 
 import (
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
@@ -58,15 +58,15 @@ var _ = Describe("VM network validation ", func() {
 	})
 })
 
-func (t *networkValidationTest) prepareImport(vmID string, secretName string) *v2vv1alpha1.VirtualMachineImport {
+func (t *networkValidationTest) prepareImport(vmID string, secretName string) *v2vv1.VirtualMachineImport {
 	namespace := t.framework.Namespace.Name
 	vmi := utils.VirtualMachineImportCr(vmID, namespace, secretName, t.framework.NsPrefix, true)
-	vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
-		NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
-			{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+	vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
+		NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+			{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 		},
 	}
-	created, err := t.framework.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+	created, err := t.framework.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 	if err != nil {
 		Fail(err.Error())
 	}

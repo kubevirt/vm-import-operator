@@ -435,7 +435,7 @@ func CreateVMImportConfig() *extv1.CustomResourceDefinition {
 			Scope: "Cluster",
 			Versions: []extv1.CustomResourceDefinitionVersion{
 				{
-					Name:    "v1alpha1",
+					Name:    "v1beta1",
 					Served:  true,
 					Storage: true,
 					Subresources: &extv1.CustomResourceSubresources{
@@ -565,7 +565,7 @@ func CreateVMImport() *extv1.CustomResourceDefinition {
 			Scope: "Namespaced",
 			Versions: []extv1.CustomResourceDefinitionVersion{
 				{
-					Name:    "v1alpha1",
+					Name:    "v1beta1",
 					Served:  true,
 					Storage: true,
 					Subresources: &extv1.CustomResourceSubresources{
@@ -907,7 +907,7 @@ func CreateResourceMapping() *extv1.CustomResourceDefinition {
 			Scope: "Namespaced",
 			Versions: []extv1.CustomResourceDefinitionVersion{
 				{
-					Name:    "v1alpha1",
+					Name:    "v1beta1",
 					Served:  true,
 					Storage: true,
 					Subresources: &extv1.CustomResourceSubresources{
@@ -1307,7 +1307,7 @@ func NewClusterServiceVersion(data *ClusterServiceVersionData) (*csvv1.ClusterSe
 				"alm-examples": `
       [
         {
-          "apiVersion":"v2v.kubevirt.io/v1alpha1",
+          "apiVersion":"v2v.kubevirt.io/v1beta1",
           "kind":"VMImportConfig",
           "metadata": {
             "name":"vm-import-operator-config"
@@ -1373,7 +1373,7 @@ func NewClusterServiceVersion(data *ClusterServiceVersionData) (*csvv1.ClusterSe
 				Owned: []csvv1.CRDDescription{
 					{
 						Name:        "vmimportconfigs.v2v.kubevirt.io",
-						Version:     "v1alpha1",
+						Version:     "v1beta1",
 						Kind:        "VMImportConfig",
 						DisplayName: "Virtual Machine import config",
 						Description: "Represents a virtual machine import config",

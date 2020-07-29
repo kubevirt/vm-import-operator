@@ -3,7 +3,7 @@ package validation
 import (
 	"fmt"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
@@ -25,12 +25,12 @@ const (
 	warn  = 1
 	block = 2
 
-	warnReason  = string(v2vv1alpha1.MappingRulesVerificationReportedWarnings)
-	errorReason = string(v2vv1alpha1.MappingRulesVerificationFailed)
-	okReason    = string(v2vv1alpha1.MappingRulesVerificationCompleted)
+	warnReason  = string(v2vv1.MappingRulesVerificationReportedWarnings)
+	errorReason = string(v2vv1.MappingRulesVerificationFailed)
+	okReason    = string(v2vv1.MappingRulesVerificationCompleted)
 
-	incompleteMappingRulesReason = string(v2vv1alpha1.IncompleteMappingRules)
-	validationCompletedReason    = string(v2vv1alpha1.ValidationCompleted)
+	incompleteMappingRulesReason = string(v2vv1.IncompleteMappingRules)
+	validationCompletedReason    = string(v2vv1.ValidationCompleted)
 )
 
 var checkToAction = map[validators.CheckID]action{
@@ -102,11 +102,11 @@ type Validator interface {
 	ValidateDiskStatus(diskAttachment ovirtsdk.DiskAttachment) bool
 	ValidateDiskAttachments(diskAttachments []*ovirtsdk.DiskAttachment) []validators.ValidationFailure
 	ValidateNics(nics []*ovirtsdk.Nic) []validators.ValidationFailure
-	ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.NetworkResourceMappingItem, crNamespace string) []validators.ValidationFailure
+	ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1.NetworkResourceMappingItem, crNamespace string) []validators.ValidationFailure
 	ValidateStorageMapping(
 		attachments []*ovirtsdk.DiskAttachment,
-		storageMapping *[]v2vv1alpha1.StorageResourceMappingItem,
-		diskMappings *[]v2vv1alpha1.StorageResourceMappingItem,
+		storageMapping *[]v2vv1.StorageResourceMappingItem,
+		diskMappings *[]v2vv1.StorageResourceMappingItem,
 	) []validators.ValidationFailure
 }
 
@@ -123,8 +123,8 @@ func NewVirtualMachineImportValidator(validator Validator) VirtualMachineImportV
 }
 
 // Validate validates whether VM described in VirtualMachineImport can be imported
-func (validator *VirtualMachineImportValidator) Validate(vm *ovirtsdk.Vm, vmiCrName *types.NamespacedName, mappings *v2vv1alpha1.OvirtMappings) []v2vv1alpha1.VirtualMachineImportCondition {
-	var validationResults []v2vv1alpha1.VirtualMachineImportCondition
+func (validator *VirtualMachineImportValidator) Validate(vm *ovirtsdk.Vm, vmiCrName *types.NamespacedName, mappings *v2vv1.OvirtMappings) []v2vv1.VirtualMachineImportCondition {
+	var validationResults []v2vv1.VirtualMachineImportCondition
 	mappingsCheckResult := validator.validateMappings(vm, mappings, vmiCrName)
 	validationResults = append(validationResults, mappingsCheckResult)
 
@@ -141,7 +141,7 @@ func (validator *VirtualMachineImportValidator) Validate(vm *ovirtsdk.Vm, vmiCrN
 	return validationResults
 }
 
-func (validator *VirtualMachineImportValidator) validateMappings(vm *ovirtsdk.Vm, mappings *v2vv1alpha1.OvirtMappings, vmiCrName *types.NamespacedName) v2vv1alpha1.VirtualMachineImportCondition {
+func (validator *VirtualMachineImportValidator) validateMappings(vm *ovirtsdk.Vm, mappings *v2vv1.OvirtMappings, vmiCrName *types.NamespacedName) v2vv1.VirtualMachineImportCondition {
 	var failures []validators.ValidationFailure
 
 	if nics, ok := vm.Nics(); ok {
@@ -156,19 +156,19 @@ func (validator *VirtualMachineImportValidator) validateMappings(vm *ovirtsdk.Vm
 	return validator.processMappingValidationFailures(failures, vmiCrName)
 }
 
-func (validator *VirtualMachineImportValidator) processMappingValidationFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) v2vv1alpha1.VirtualMachineImportCondition {
+func (validator *VirtualMachineImportValidator) processMappingValidationFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) v2vv1.VirtualMachineImportCondition {
 	var message string
 
 	for _, failure := range failures {
 		message = utils.WithMessage(message, failure.Message)
 	}
 	if len(failures) > 0 {
-		return conditions.NewCondition(v2vv1alpha1.Valid, incompleteMappingRulesReason, message, v1.ConditionFalse)
+		return conditions.NewCondition(v2vv1.Valid, incompleteMappingRulesReason, message, v1.ConditionFalse)
 	}
-	return conditions.NewCondition(v2vv1alpha1.Valid, validationCompletedReason, "Validation completed successfully", v1.ConditionTrue)
+	return conditions.NewCondition(v2vv1.Valid, validationCompletedReason, "Validation completed successfully", v1.ConditionTrue)
 }
 
-func (validator *VirtualMachineImportValidator) processValidationFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) v2vv1alpha1.VirtualMachineImportCondition {
+func (validator *VirtualMachineImportValidator) processValidationFailures(failures []validators.ValidationFailure, vmiCrName *types.NamespacedName) v2vv1.VirtualMachineImportCondition {
 	valid := true
 	var warnMessage, errorMessage string
 
@@ -185,10 +185,10 @@ func (validator *VirtualMachineImportValidator) processValidationFailures(failur
 	}
 
 	if !valid {
-		return conditions.NewCondition(v2vv1alpha1.MappingRulesVerified, errorReason, errorMessage, v1.ConditionFalse)
+		return conditions.NewCondition(v2vv1.MappingRulesVerified, errorReason, errorMessage, v1.ConditionFalse)
 	} else if warnMessage != "" {
-		return conditions.NewCondition(v2vv1alpha1.MappingRulesVerified, warnReason, warnMessage, v1.ConditionTrue)
+		return conditions.NewCondition(v2vv1.MappingRulesVerified, warnReason, warnMessage, v1.ConditionTrue)
 	} else {
-		return conditions.NewCondition(v2vv1alpha1.MappingRulesVerified, okReason, "All mapping rules checks passed", v1.ConditionTrue)
+		return conditions.NewCondition(v2vv1.MappingRulesVerified, okReason, "All mapping rules checks passed", v1.ConditionTrue)
 	}
 }

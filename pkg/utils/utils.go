@@ -12,7 +12,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/alecthomas/units"
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -66,9 +66,9 @@ func ToLoggableID(id *string, name *string) string {
 }
 
 // IndexByIDAndName indexes mapping array by ID and by Name
-func IndexStorageItemByIDAndName(mapping *[]v2vv1alpha1.StorageResourceMappingItem) (mapByID map[string]v2vv1alpha1.StorageResourceMappingItem, mapByName map[string]v2vv1alpha1.StorageResourceMappingItem) {
-	mapByID = make(map[string]v2vv1alpha1.StorageResourceMappingItem)
-	mapByName = make(map[string]v2vv1alpha1.StorageResourceMappingItem)
+func IndexStorageItemByIDAndName(mapping *[]v2vv1.StorageResourceMappingItem) (mapByID map[string]v2vv1.StorageResourceMappingItem, mapByName map[string]v2vv1.StorageResourceMappingItem) {
+	mapByID = make(map[string]v2vv1.StorageResourceMappingItem)
+	mapByName = make(map[string]v2vv1.StorageResourceMappingItem)
 	for _, item := range *mapping {
 		if item.Source.ID != nil {
 			mapByID[*item.Source.ID] = item
@@ -81,9 +81,9 @@ func IndexStorageItemByIDAndName(mapping *[]v2vv1alpha1.StorageResourceMappingIt
 }
 
 // IndexNetworkByIDAndName indexes mapping array by ID and by Name
-func IndexNetworkByIDAndName(mapping *[]v2vv1alpha1.NetworkResourceMappingItem) (mapByID map[string]v2vv1alpha1.NetworkResourceMappingItem, mapByName map[string]v2vv1alpha1.NetworkResourceMappingItem) {
-	mapByID = make(map[string]v2vv1alpha1.NetworkResourceMappingItem)
-	mapByName = make(map[string]v2vv1alpha1.NetworkResourceMappingItem)
+func IndexNetworkByIDAndName(mapping *[]v2vv1.NetworkResourceMappingItem) (mapByID map[string]v2vv1.NetworkResourceMappingItem, mapByName map[string]v2vv1.NetworkResourceMappingItem) {
+	mapByID = make(map[string]v2vv1.NetworkResourceMappingItem)
+	mapByName = make(map[string]v2vv1.NetworkResourceMappingItem)
 	for _, item := range *mapping {
 		if item.Source.ID != nil {
 			mapByID[*item.Source.ID] = item
@@ -265,7 +265,7 @@ func WithLabels(labels map[string]string, existing map[string]string) map[string
 }
 
 // AddFinalizer adds finalizer to VM import CR
-func AddFinalizer(cr *v2vv1alpha1.VirtualMachineImport, name string, client rclient.Client) error {
+func AddFinalizer(cr *v2vv1.VirtualMachineImport, name string, client rclient.Client) error {
 	copy := cr.DeepCopy()
 	if HasFinalizer(copy, name) {
 		return nil
@@ -277,7 +277,7 @@ func AddFinalizer(cr *v2vv1alpha1.VirtualMachineImport, name string, client rcli
 }
 
 // HasFinalizer checks whether specific finalizer is set on VM import CR
-func HasFinalizer(cr *v2vv1alpha1.VirtualMachineImport, name string) bool {
+func HasFinalizer(cr *v2vv1.VirtualMachineImport, name string) bool {
 	for _, f := range cr.GetFinalizers() {
 		if f == name {
 			return true
@@ -287,7 +287,7 @@ func HasFinalizer(cr *v2vv1alpha1.VirtualMachineImport, name string) bool {
 }
 
 // RemoveFinalizer removes specific finalizer from VM import CR
-func RemoveFinalizer(cr *v2vv1alpha1.VirtualMachineImport, name string, client rclient.Client) error {
+func RemoveFinalizer(cr *v2vv1.VirtualMachineImport, name string, client rclient.Client) error {
 	copy := cr.DeepCopy()
 	if !HasFinalizer(copy, name) {
 		return nil

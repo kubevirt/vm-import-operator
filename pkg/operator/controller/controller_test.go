@@ -15,7 +15,7 @@ import (
 	conditions "github.com/openshift/custom-resource-status/conditions/v1"
 
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
-	vmimportv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	resources "github.com/kubevirt/vm-import-operator/pkg/operator/resources/operator"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -39,7 +39,7 @@ const (
 )
 
 type args struct {
-	config     *vmimportv1alpha1.VMImportConfig
+	config     *v2vv1.VMImportConfig
 	client     client.Client
 	reconciler *ReconcileVMImportConfig
 }
@@ -54,7 +54,7 @@ var (
 )
 
 func init() {
-	vmimportv1alpha1.AddToScheme(scheme.Scheme)
+	v2vv1.AddToScheme(scheme.Scheme)
 	extv1.AddToScheme(scheme.Scheme)
 	monitoringv1.AddToScheme(scheme.Scheme)
 }
@@ -84,7 +84,7 @@ var _ = Describe("Controller", func() {
 				mgr, err := manager.New(cfg, manager.Options{})
 				Expect(err).ToNot(HaveOccurred())
 
-				err = vmimportv1alpha1.AddToScheme(mgr.GetScheme())
+				err = v2vv1.AddToScheme(mgr.GetScheme())
 				Expect(err).ToNot(HaveOccurred())
 
 				err = extv1.AddToScheme(mgr.GetScheme())
@@ -228,7 +228,7 @@ var _ = Describe("Controller", func() {
 
 				doReconcile(args)
 
-				Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseDeleted))
+				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeleted))
 
 				_, err = getObject(args.client, pod)
 				Expect(errors.IsNotFound(err)).To(BeTrue())
@@ -246,7 +246,7 @@ var _ = Describe("Controller", func() {
 			Expect(args.config.Status.ObservedVersion).Should(Equal(newVersion))
 			Expect(args.config.Status.OperatorVersion).Should(Equal(newVersion))
 			Expect(args.config.Status.TargetVersion).Should(Equal(newVersion))
-			Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseDeployed))
+			Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 
 			//Modify CRD to be of previousVersion
 			err := args.reconciler.crSetVersion(args.config, prevVersion)
@@ -265,13 +265,13 @@ var _ = Describe("Controller", func() {
 				Expect(args.config.Status.OperatorVersion).Should(Equal(newVersion))
 				Expect(args.config.Status.ObservedVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.TargetVersion).Should(Equal(newVersion))
-				Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseUpgrading))
+				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseUpgrading))
 			} else {
 				//verify upgraded hasn't started
 				Expect(args.config.Status.OperatorVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.ObservedVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.TargetVersion).Should(Equal(prevVersion))
-				Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseDeployed))
+				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 			}
 
 			//change deployment to ready
@@ -281,13 +281,13 @@ var _ = Describe("Controller", func() {
 			//now should be upgraded
 			if shouldUpgrade {
 				//verify versions were updated
-				Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseDeployed))
+				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 				Expect(args.config.Status.OperatorVersion).Should(Equal(newVersion))
 				Expect(args.config.Status.TargetVersion).Should(Equal(newVersion))
 				Expect(args.config.Status.ObservedVersion).Should(Equal(newVersion))
 			} else {
 				//verify versions remained unchaged
-				Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseDeployed))
+				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 				Expect(args.config.Status.OperatorVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.TargetVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.ObservedVersion).Should(Equal(prevVersion))
@@ -313,7 +313,7 @@ var _ = Describe("Controller", func() {
 				Expect(isReady).Should(Equal(true))
 
 				//verify on int version is set
-				Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseDeployed))
+				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 
 				//Modify CRD to be of previousVersion
 				args.reconciler.crSetVersion(args.config, prevVersion)
@@ -328,7 +328,7 @@ var _ = Describe("Controller", func() {
 				Expect(args.config.Status.OperatorVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.ObservedVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.TargetVersion).Should(Equal(prevVersion))
-				Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseDeleted))
+				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeleted))
 			})
 
 			It("should delete CR if it is marked for deletion during upgrade flow", func() {
@@ -341,7 +341,7 @@ var _ = Describe("Controller", func() {
 				setDeploymentsReady(args)
 
 				//verify on int version is set
-				Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseDeployed))
+				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 
 				//Modify CRD to be of previousVersion
 				args.reconciler.crSetVersion(args.config, prevVersion)
@@ -365,7 +365,7 @@ var _ = Describe("Controller", func() {
 
 				doReconcile(args)
 				//verify the version cr is marked as deleted
-				Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseDeleted))
+				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeleted))
 			})
 		})
 	})
@@ -380,7 +380,7 @@ var _ = Describe("Controller", func() {
 		setDeploymentsReady(args)
 
 		//verify on int version is set
-		Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseDeployed))
+		Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 
 		//Modify CRD to be of previousVersion
 		args.reconciler.crSetVersion(args.config, prevVersion)
@@ -406,14 +406,14 @@ var _ = Describe("Controller", func() {
 		doReconcile(args)
 
 		//verify upgraded has started
-		Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseUpgrading))
+		Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseUpgrading))
 
 		//change deployment to ready
 		isReady := setDeploymentsReady(args)
 		Expect(isReady).Should(Equal(true))
 
 		doReconcile(args)
-		Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseDeployed))
+		Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 
 		//verify that stored object equals to object in getResources
 		storedObj, err = getObject(args.client, oModified)
@@ -572,7 +572,7 @@ var _ = Describe("Controller", func() {
 		setDeploymentsReady(args)
 
 		//verify on int version is set
-		Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseDeployed))
+		Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 
 		//Modify CRD to be of previousVersion
 		args.reconciler.crSetVersion(args.config, prevVersion)
@@ -595,7 +595,7 @@ var _ = Describe("Controller", func() {
 		doReconcile(args)
 
 		//verify upgraded has started
-		Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseUpgrading))
+		Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseUpgrading))
 
 		//verify unused exists before upgrade is done
 		_, err = getObject(args.client, unusedObj)
@@ -606,7 +606,7 @@ var _ = Describe("Controller", func() {
 		Expect(isReady).Should(Equal(true))
 
 		doReconcile(args)
-		Expect(args.config.Status.Phase).Should(Equal(vmimportv1alpha1.PhaseDeployed))
+		Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 
 		//verify that object no longer exists after upgrade
 		_, err = getObject(args.client, unusedObj)
@@ -637,7 +637,7 @@ var _ = Describe("Controller", func() {
 
 						Versions: []extv1.CustomResourceDefinitionVersion{
 							{
-								Name:    "v1alpha1",
+								Name:    "v1beta1",
 								Served:  true,
 								Storage: true,
 								AdditionalPrinterColumns: []extv1.CustomResourceColumnDefinition{
@@ -699,8 +699,8 @@ func createClient(objs ...runtime.Object) realClient.Client {
 	return fakeClient.NewFakeClientWithScheme(scheme.Scheme, objs...)
 }
 
-func createConfig(name, uid string) *vmimportv1alpha1.VMImportConfig {
-	return &vmimportv1alpha1.VMImportConfig{ObjectMeta: metav1.ObjectMeta{Name: name, UID: types.UID(uid)}}
+func createConfig(name, uid string) *v2vv1.VMImportConfig {
+	return &v2vv1.VMImportConfig{ObjectMeta: metav1.ObjectMeta{Name: name, UID: types.UID(uid)}}
 }
 
 func getObject(client realClient.Client, obj runtime.Object) (runtime.Object, error) {
@@ -769,12 +769,12 @@ func doReconcile(args *args) {
 	Expect(err).ToNot(HaveOccurred())
 }
 
-func getConfig(client realClient.Client, config *vmimportv1alpha1.VMImportConfig) (*vmimportv1alpha1.VMImportConfig, error) {
+func getConfig(client realClient.Client, config *v2vv1.VMImportConfig) (*v2vv1.VMImportConfig, error) {
 	result, err := getObject(client, config)
 	if err != nil {
 		return nil, err
 	}
-	return result.(*vmimportv1alpha1.VMImportConfig), nil
+	return result.(*v2vv1.VMImportConfig), nil
 }
 
 func setDeploymentsReady(args *args) bool {
@@ -822,7 +822,7 @@ func getDeployment(client realClient.Client, deployment *appsv1.Deployment) (*ap
 	return result.(*appsv1.Deployment), nil
 }
 
-func getModifiedResource(reconciler *ReconcileVMImportConfig, cr *vmimportv1alpha1.VMImportConfig, modify modifyResource, tomodify isModifySubject) (runtime.Object, runtime.Object, error) {
+func getModifiedResource(reconciler *ReconcileVMImportConfig, cr *v2vv1.VMImportConfig, modify modifyResource, tomodify isModifySubject) (runtime.Object, runtime.Object, error) {
 	resources, err := reconciler.getAllResources(cr)
 	if err != nil {
 		return nil, nil, err

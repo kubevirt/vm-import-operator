@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	netv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	outils "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/utils"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
@@ -30,7 +30,7 @@ func NewNetworkMappingValidator(provider NetworkAttachmentDefinitionProvider) Ne
 }
 
 //ValidateNetworkMapping validates network mapping
-func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.NetworkResourceMappingItem, crNamespace string) []ValidationFailure {
+func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1.NetworkResourceMappingItem, crNamespace string) []ValidationFailure {
 	var failures []ValidationFailure
 	// Check whether mapping for network is required and was provided
 	if mapping == nil {
@@ -56,7 +56,7 @@ func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, m
 	// Get all vnic profiles needed by the VM as slice of sources
 	requiredVnicProfiles := v.getRequiredVnicProfiles(nics)
 
-	requiredTargetsSet := make(map[v2vv1alpha1.ObjectIdentifier]*string)
+	requiredTargetsSet := make(map[v2vv1.ObjectIdentifier]*string)
 	// Validate that all vm networks are mapped and populate requiredTargetsSet for target existence check
 	for _, vnic := range requiredVnicProfiles {
 		if vnic.ID != nil {
@@ -96,7 +96,7 @@ func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, m
 	return failures
 }
 
-func (v *NetworkMappingValidator) getPodNetworks(nics []*ovirtsdk.Nic, mapByID map[string]v2vv1alpha1.NetworkResourceMappingItem, mapByName map[string]v2vv1alpha1.NetworkResourceMappingItem) []string {
+func (v *NetworkMappingValidator) getPodNetworks(nics []*ovirtsdk.Nic, mapByID map[string]v2vv1.NetworkResourceMappingItem, mapByName map[string]v2vv1.NetworkResourceMappingItem) []string {
 	var podNetworks []string
 	for _, nic := range nics {
 		if vnicProfile, ok := nic.VnicProfile(); ok {
@@ -129,7 +129,7 @@ func (v *NetworkMappingValidator) hasAtLeastOneWithVNicProfile(nics []*ovirtsdk.
 	return false
 }
 
-func (v *NetworkMappingValidator) validateSourceNetworkFormat(mapByName map[string]v2vv1alpha1.NetworkResourceMappingItem) (ValidationFailure, bool) {
+func (v *NetworkMappingValidator) validateSourceNetworkFormat(mapByName map[string]v2vv1.NetworkResourceMappingItem) (ValidationFailure, bool) {
 	invalidNames := make([]string, 0)
 	for k := range mapByName {
 		if !strings.Contains(k, "/") {
@@ -147,7 +147,7 @@ func (v *NetworkMappingValidator) validateSourceNetworkFormat(mapByName map[stri
 	return ValidationFailure{}, true
 }
 
-func (v *NetworkMappingValidator) validateNetwork(networkID v2vv1alpha1.ObjectIdentifier, networkType *string, crNamespace string) (ValidationFailure, bool) {
+func (v *NetworkMappingValidator) validateNetwork(networkID v2vv1.ObjectIdentifier, networkType *string, crNamespace string) (ValidationFailure, bool) {
 	if networkType == nil {
 		if networkID.Namespace == nil {
 			// unspecified network type is only valid when target network doesn't specify namespace
@@ -172,7 +172,7 @@ func (v *NetworkMappingValidator) validateNetwork(networkID v2vv1alpha1.ObjectId
 	}
 }
 
-func (v *NetworkMappingValidator) isValidMultusNetwork(networkID v2vv1alpha1.ObjectIdentifier, crNamespace string) (ValidationFailure, bool) {
+func (v *NetworkMappingValidator) isValidMultusNetwork(networkID v2vv1.ObjectIdentifier, crNamespace string) (ValidationFailure, bool) {
 	namespace := crNamespace
 	if networkID.Namespace != nil {
 		namespace = *networkID.Namespace
@@ -188,8 +188,8 @@ func (v *NetworkMappingValidator) isValidMultusNetwork(networkID v2vv1alpha1.Obj
 	return ValidationFailure{}, true
 }
 
-func (v *NetworkMappingValidator) getRequiredVnicProfiles(nics []*ovirtsdk.Nic) []v2vv1alpha1.Source {
-	sourcesSet := make(map[v2vv1alpha1.Source]bool)
+func (v *NetworkMappingValidator) getRequiredVnicProfiles(nics []*ovirtsdk.Nic) []v2vv1.Source {
+	sourcesSet := make(map[v2vv1.Source]bool)
 	for _, nic := range nics {
 		if vnic, ok := nic.VnicProfile(); ok {
 			if network, ok := vnic.Network(); ok {
@@ -199,20 +199,20 @@ func (v *NetworkMappingValidator) getRequiredVnicProfiles(nics []*ovirtsdk.Nic) 
 			}
 		}
 	}
-	var sources []v2vv1alpha1.Source
+	var sources []v2vv1.Source
 	for source := range sourcesSet {
 		sources = append(sources, source)
 	}
 	return sources
 }
 
-func (v *NetworkMappingValidator) createSourceNetworkIdentifier(network *ovirtsdk.Network, vnic *ovirtsdk.VnicProfile) (*v2vv1alpha1.Source, bool) {
+func (v *NetworkMappingValidator) createSourceNetworkIdentifier(network *ovirtsdk.Network, vnic *ovirtsdk.VnicProfile) (*v2vv1.Source, bool) {
 	id, okID := vnic.Id()
 	networkName, okNetworkName := network.Name()
 	vnicName, okVnicName := vnic.Name()
 	if okID || okNetworkName && okVnicName {
 		name := outils.GetNetworkMappingName(networkName, vnicName)
-		src := v2vv1alpha1.Source{
+		src := v2vv1.Source{
 			ID:   &id,
 			Name: &name}
 		return &src, true

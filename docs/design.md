@@ -24,7 +24,7 @@ VirtualMachineImport is a namespaced custom resource that defines the source of 
 An example of the [VirtualMachineImport](/examples/ovirt/vmimport-external-mapping.yaml) resource is shown below.
 
 ```yaml
-apiVersion: v2v.kubevirt.io/v1alpha1
+apiVersion: v2v.kubevirt.io/v1beta1
 kind: VirtualMachineImport
 Metadata:
   annotations:
@@ -101,7 +101,7 @@ The import VM operator will be responsible to deduce the configuration of the ta
 Type in network mappings can be omitted as long as target namespace is not present as well; in that case "pod" type will be assumed.
 
 ```yaml
-apiVersion: v2v.kubevirt.io/v1alpha1
+apiVersion: v2v.kubevirt.io/v1beta1
 kind: ResourceMapping
 metadata:
  name: example-ovirtresourcemappings

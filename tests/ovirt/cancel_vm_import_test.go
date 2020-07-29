@@ -6,9 +6,9 @@ import (
 
 	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 
-	v2vvmiclient "github.com/kubevirt/vm-import-operator/pkg/api-client/clientset/versioned/typed/v2v/v1alpha1"
+	v2vvmiclient "github.com/kubevirt/vm-import-operator/pkg/api-client/clientset/versioned/typed/v2v/v1beta1"
 	oputils "github.com/kubevirt/vm-import-operator/pkg/utils"
 	"github.com/kubevirt/vm-import-operator/tests/framework"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
@@ -26,7 +26,7 @@ var _ = Describe("VM import cancellation ", func() {
 		secret    corev1.Secret
 		namespace string
 		vmImports v2vvmiclient.VirtualMachineImportInterface
-		vmi       *v2vv1alpha1.VirtualMachineImport
+		vmi       *v2vv1.VirtualMachineImport
 		vmiName   string
 	)
 
@@ -37,7 +37,7 @@ var _ = Describe("VM import cancellation ", func() {
 			Fail("Cannot create secret: " + err.Error())
 		}
 		secret = s
-		vmImports = f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace)
+		vmImports = f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace)
 		vmID := vms.BasicVmID
 		cr := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
 		stub(f, vmID)
