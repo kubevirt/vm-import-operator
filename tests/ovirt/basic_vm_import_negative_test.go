@@ -86,7 +86,10 @@ var _ = Describe("VM import", func() {
 		created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
 		Expect(err).NotTo(HaveOccurred())
+		Expect(created).To(HaveValidationFailure(f, string(v2vv1alpha1.SecretNotFound)))
 		Expect(created).To(BeUnsuccessful(f, string(v2vv1alpha1.ValidationFailed)))
+		retrieved, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+		Expect(retrieved.Status.Conditions).To(HaveLen(2))
 	})
 
 	It("should fail for invalid secret", func() {
@@ -98,7 +101,10 @@ var _ = Describe("VM import", func() {
 		created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
 		Expect(err).NotTo(HaveOccurred())
+		Expect(created).To(HaveValidationFailure(f, string(v2vv1alpha1.UninitializedProvider)))
 		Expect(created).To(BeUnsuccessful(f, string(v2vv1alpha1.ValidationFailed)))
+		retrieved, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+		Expect(retrieved.Status.Conditions).To(HaveLen(2))
 	})
 
 	table.DescribeTable("should fail for invalid ", func(vmID string, ovirtEnv *ovirtenv.Environment) {
@@ -112,13 +118,35 @@ var _ = Describe("VM import", func() {
 		created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
 
 		Expect(err).NotTo(HaveOccurred())
+		Expect(created).To(HaveValidationFailure(f, string(v2vv1alpha1.UninitializedProvider)))
 		Expect(created).To(BeUnsuccessful(f, string(v2vv1alpha1.ValidationFailed)))
+		retrieved, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+		Expect(retrieved.Status.Conditions).To(HaveLen(2))
 	},
 		table.Entry("oVirt URL", vms.InvalidOVirtUrlVmID, ovirtenv.NewFakeOvirtEnvironment(f.ImageioInstallNamespace, f.OVirtCA).WithAPIURL("")),
 		table.Entry("oVirt username", vms.InvalidOVirtUsernameVmID, ovirtenv.NewFakeOvirtEnvironment(f.ImageioInstallNamespace, f.OVirtCA).WithUsername("")),
 		table.Entry("oVirt password", vms.InvalidOVirtPasswordVmID, ovirtenv.NewFakeOvirtEnvironment(f.ImageioInstallNamespace, f.OVirtCA).WithPassword("")),
-		table.Entry("oVirt CA cert", vms.InvalidOVirtCACertVmID, ovirtenv.NewFakeOvirtEnvironment(f.ImageioInstallNamespace, "garbage")),
+		table.Entry("oVirt CA cert", vms.InvalidOVirtCACertVmID, ovirtenv.NewFakeOvirtEnvironment(f.ImageioInstallNamespace, "")),
 	)
+
+	It("should fail for invalid CA Cert", func() {
+		vmID := vms.InvalidOVirtCACertVmID
+		ovirtEnv := ovirtenv.NewFakeOvirtEnvironment(f.ImageioInstallNamespace, "garbage")
+		invalidSecret, err := f.CreateOvirtSecret(*ovirtEnv)
+		if err != nil {
+			Fail(err.Error())
+		}
+		vmi := utils.VirtualMachineImportCr(vmID, namespace, invalidSecret.Name, f.NsPrefix, true)
+		test.prepareVm(vmID)
+
+		created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(created).To(HaveValidationFailure(f, string(v2vv1alpha1.UnreachableProvider)))
+		Expect(created).To(BeUnsuccessful(f, string(v2vv1alpha1.ValidationFailed)))
+		retrieved, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+		Expect(retrieved.Status.Conditions).To(HaveLen(2))
+	})
 
 	It("should fail for non-existing VM ID", func() {
 		vmID := "does-not-exist"

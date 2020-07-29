@@ -103,11 +103,13 @@ func newReconciler(mgr manager.Manager, kvConfigProvider config.KubeVirtConfigPr
 		log.Error(err, "Unable to get OC client")
 		panic("Controller cannot operate without OC client")
 	}
+	reader := mgr.GetAPIReader()
 	client := mgr.GetClient()
 	finder := mappings.NewResourceMappingsFinder(client)
 	ownerreferencesmgr := ownerreferences.NewOwnerReferenceManager(client)
 	factory := pclient.NewSourceClientFactory()
 	return &ReconcileVirtualMachineImport{client: client,
+		apiReader:              reader,
 		scheme:                 mgr.GetScheme(),
 		resourceMappingsFinder: finder,
 		ocClient:               tempClient,
@@ -179,6 +181,7 @@ type ReconcileVirtualMachineImport struct {
 	kvConfigProvider       config.KubeVirtConfigProvider
 	recorder               record.EventRecorder
 	controller             controller.Controller
+	apiReader              client.Reader
 }
 
 // Reconcile reads that state of the cluster for a VirtualMachineImport object and makes changes based on the state read
@@ -831,7 +834,7 @@ func (r *ReconcileVirtualMachineImport) updateToRunning(vmName types.NamespacedN
 
 func (r *ReconcileVirtualMachineImport) updateDVs(vmiName types.NamespacedName, dv cdiv1.DataVolume) error {
 	var instance v2vv1alpha1.VirtualMachineImport
-	err := r.client.Get(context.TODO(), vmiName, &instance)
+	err := r.apiReader.Get(context.TODO(), vmiName, &instance)
 	if err != nil {
 		return err
 	}
@@ -847,8 +850,7 @@ func (r *ReconcileVirtualMachineImport) updateDVs(vmiName types.NamespacedName, 
 	// Patch the status only in case DV is not already part of the VMImport status:
 	if !dvFound {
 		copy.Status.DataVolumes = append(copy.Status.DataVolumes, v2vv1alpha1.DataVolumeItem{Name: dv.Name})
-		patch := client.MergeFrom(&instance)
-		err = r.client.Status().Patch(context.TODO(), copy, patch)
+		err = r.client.Status().Update(context.TODO(), copy)
 		if err != nil {
 			return err
 		}
@@ -893,22 +895,15 @@ func (r *ReconcileVirtualMachineImport) updateVMSpecDataVolumes(mapper provider.
 
 func (r *ReconcileVirtualMachineImport) upsertStatusConditions(vmiName types.NamespacedName, newConditions ...v2vv1alpha1.VirtualMachineImportCondition) error {
 	var instance v2vv1alpha1.VirtualMachineImport
-	err := r.client.Get(context.TODO(), vmiName, &instance)
+	err := r.apiReader.Get(context.TODO(), vmiName, &instance)
 	if err != nil {
 		return err
 	}
-
 	copy := instance.DeepCopy()
 	for _, condition := range newConditions {
 		conditions.UpsertCondition(copy, condition)
 	}
-
-	patch := client.MergeFrom(&instance)
-	err = r.client.Status().Patch(context.TODO(), copy, patch)
-	if err != nil {
-		return err
-	}
-	return nil
+	return r.client.Status().Update(context.TODO(), copy)
 }
 
 func (r *ReconcileVirtualMachineImport) storeSourceVMStatus(instance *v2vv1alpha1.VirtualMachineImport, vmStatus string) error {

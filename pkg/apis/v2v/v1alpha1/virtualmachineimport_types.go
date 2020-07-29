@@ -90,7 +90,7 @@ type VirtualMachineImportStatus struct {
 	Conditions []VirtualMachineImportCondition `json:"conditions"`
 
 	// +optional
-	DataVolumes []DataVolumeItem `json:"dataVolumes"`
+	DataVolumes []DataVolumeItem `json:"dataVolumes,omitempty"`
 }
 
 // VirtualMachineImportConditionType defines the condition of VM import
