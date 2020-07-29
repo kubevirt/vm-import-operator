@@ -1,0 +1,35 @@
+apiVersion: v2v.kubevirt.io/v1beta1
+kind: VirtualMachineImport
+metadata:
+  name: vmimport-example
+  namespace: default
+spec:
+  providerCredentialsSecret: # A secret holding the access credentials to the vCenter or ESXi host, see example secret.yaml
+    name: my-secret-with-vmware-credentials
+    namespace: default # optional, if not specified, use CR's namespace
+  resourceMapping:
+    name: example # a mapping of VM resources (network, storage)
+    namespace: default # optional, if not specified, use CR's namespace
+  targetVmName: examplevm # The target name is optional. If not provided, the import will attempt to use the origin name of the VM or to normalize it.
+  startVm: true # should the vm be started after the vm was created on kubevirt
+  source:
+    vmware:
+      vm:
+        id: 42253ce0-5f76-918d-d85c-d7506f7cc056 # VirtualMachine UUID
+      mappings: # mapping section overrides mapping rules provided by 'resourceMapping' external mapping resource
+        networkMappings:
+          - source:
+              name: VM Network
+            target:
+              name: pod
+            type: pod
+        storageMappings:
+          - source:
+              name: vmware_datastore_1
+            target:
+              name: storage_class_1
+        diskMappings: # specifies per-disk placement on storage class
+          - source:
+              id: 421-2000 # VirtualDisk DiskObjectId or vDiskID
+            target:
+              name: storage_class_1

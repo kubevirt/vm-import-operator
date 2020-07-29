@@ -54,6 +54,7 @@ type VmwareMappings struct {
 	NetworkMappings *[]NetworkResourceMappingItem `json:"networkMappings,omitempty"`
 
 	// StorageMappings defines the mapping of datastores to storage classes
+	// StorageMappings.Source.Name represents the name of the Datastore in vCenter
 	// +optional
 	StorageMappings *[]StorageResourceMappingItem `json:"storageMappings,omitempty"`
 

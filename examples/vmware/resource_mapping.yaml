@@ -1,0 +1,18 @@
+apiVersion: v2v.kubevirt.io/v1beta1
+kind: ResourceMapping
+metadata:
+  name: example
+  namespace: default
+spec:
+  vmware:
+    networkMappings:
+      - source:
+          name: VM Network
+        target:
+          name: pod
+        type: pod
+    storageMappings:
+      - source:
+          name: vmware_datastore # maps VMware datastore to a storage class
+        target:
+          name: storage_class_1

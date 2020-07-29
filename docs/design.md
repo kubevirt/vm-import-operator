@@ -2,9 +2,7 @@
 
 ## Introduction
 
-VM Import operator is responsible for importing virtual machines that originated in an external virtual system into a kubevirt cluster. The current proposal refers to importing a single VM from [oVirt](https://www.ovirt.org/) to kubevirt. However it should remain open to support additional sources (e.g. vmware/OVA).
-
-A [repository](https://github.com/kubevirt/vm-import-operator) was created with a proposal for the vm-import resource and additional required resources to enable access to the source oVirt provider, a custom resource that specifies the mapping of oVirt resources to KubeVirt resources and the custom resource that defines the VM Import.
+VM Import Operator is responsible for importing virtual machines that originated in an external virtual system into a kubevirt cluster.
 
 Contact Information: Moti Asayag ([masayag@redhat.com](mailto:masayag@redhat.com))
 
@@ -88,11 +86,13 @@ Monitoring the progress of the vm import will be done by updating an annotation 
 
 ### Resource Mappings
 
-The mapping between ovirt to kubevirt resources is defined in ResourceMapping custom resource. The CR will contain sections for the mapping resources: network and storage. The example below demonstrates how multiple entities of each resource type can be declared and mapped.
+The mapping of resources from the external VM provider to kubevirt is defined in the ResourceMapping custom resource. The CR will contain sections for the mapping resources: network and storage. The example below demonstrates how multiple entities of each resource type can be declared and mapped.
 
-Each section specifies the mapping between ovirt entity to kubevirt’s entity, and allows to provide an additional piece of information, e.g. interface type if needed to complete the VM spec.
+Each section specifies the mapping from the external resources to kubevirt resources, and allows to provide an additional piece of information, e.g. interface type if needed to complete the VM spec.
 
-The import VM operator will be responsible to deduce the configuration of the target VM based on the configuration of the source and perform the transformation in a way that will preserve the attributes of the source VM, e.g. boot sequence, MAC address, [run strategy](https://kubevirt.io/user-guide/docs/latest/creating-virtual-machines/run-strategies.html), [domain specification](https://kubevirt.io/api-reference/v0.26.1/definitions.html#_v1_domainspec) and hostname if available on ovirt by the guest agent.
+The import VM operator will be responsible to deduce the configuration of the target VM based on the configuration of the source and perform the transformation in a way that will preserve the attributes of the source VM, e.g. boot sequence, MAC address, [run strategy](https://kubevirt.io/user-guide/docs/latest/creating-virtual-machines/run-strategies.html), [domain specification](https://kubevirt.io/api-reference/v0.26.1/definitions.html#_v1_domainspec) and hostname if available.
+
+#### oVirt Mappings
 
 “networkMappings“ section under “ovirt“ source describes the mapping of oVirt's vNIC Profile to network attachment definition:
 * name - should follow the format of 'network-name/vnic-profile-name'
@@ -121,6 +121,32 @@ Spec:
     storageMappings:
     - source:
         name: ovirt_storage_domain_1 # maps ovirt storage domains to storage class
+      target: storage_class_1
+```
+
+#### VMware Mappings
+
+```yaml
+apiVersion: v2v.kubevirt.io/v1beta1
+kind: ResourceMapping
+metadata:
+ name: example-vmware-resourcemappings
+ namespace: example-ns
+spec:
+  vmware:
+    networkMappings:
+    - source:
+        name: VM Network # map network name to network attachment definition
+      target: xyz
+      type: multus
+    - source:
+        id: 00:1B:44:11:3A:B7 # alternatively the network can be mapped by mac address
+      Target:
+        name: pod
+      type: pod
+    storageMappings:
+    - source:
+        name: iSCSI_Datastore # maps disks in a given VMware datastore to a storage class
       target: storage_class_1
 ```
 
@@ -221,6 +247,7 @@ data:
 
 ### Provider Secret
 
+#### oVirt Secret Example
 The [example](/examples/ovirt/secret.yaml) of secret below defines oVirt connectivity and authentication method:
 
 ```yaml
@@ -242,12 +269,32 @@ stringData:
    -----END CERTIFICATE-----
 ```
 
+#### VMware Secret Example
+The [example](/examples/vmware/secret.yaml) secret below defines VMware vCenter connectivity and authentication method:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+ name: my-secret-with-vmware-credentials
+type: Opaque
+stringData:
+ vmware: |-
+   # API URL of the vCenter or ESXi host
+   apiUrl: "https://my.vcenter.example.com/sdk"
+   # Username provided in the format of username@domain.
+   username: administrator@vsphere.local 
+   password: 123456
+   # The certificate thumbprint of the vCenter or ESXi host, in colon-separated hexidecimal octets.
+   thumbprint: 21:EA:74:11:59:89:5E:20:D5:D9:A2:39:5C:6A:2D:36:38:B2:52:2B
+```
+
 ### Import Validations
 
-Due to the fact that oVirt provides a wider set of features that aren’t supported by kubevirt, the target VM might be created differently than the source VM configuration. That requires to warn the user or to block the import process.
+Due to the fact that external VM providers may provide a wider set of features than are supported by kubevirt, the target VM might be created differently than the source VM configuration. That requires to warn the user or to block the import process.
 
 The admission rules will be split into three categories: log, warn and block:
-* Log - a validation rule that cannot map ovirt behavior to kubevirt, however, it is harmless. In that case, that violation will be logged. E.g.. nic_boot set to false on source VM, a logical name set to a disk on the source, Rng_device other than urandom and more.
+* Log - a validation rule that cannot map VM provider behavior to kubevirt, however, it is harmless. In that case, that violation will be logged. E.g.. nic_boot set to false on source VM, a logical name set to a disk on the source, Rng_device other than urandom and more.
 * Warn - a validation rule that might introduce an issue. The violation will be recorded to the status of the CR, letting the user decide if the import should be cancelled. E.g., vm nic was unplugged on ovirt. In that case, the interface is not added to the target VM.
 * Block - a validation that fails the import action if violated. In this case, the import is failed. E.g., a missing mapping entry.
 
