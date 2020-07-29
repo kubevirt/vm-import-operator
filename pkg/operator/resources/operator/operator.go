@@ -599,10 +599,12 @@ func CreateVMImport() *extv1.CustomResourceDefinition {
 											Description: "ProviderCredentialsSecret defines how a secret resource should be identified on kubevirt",
 											Properties: map[string]extv1.JSONSchemaProps{
 												"name": {
-													Type: "string",
+													Description: "Name of the secret to be used for the virtual machine import",
+													Type:        "string",
 												},
 												"namespace": {
-													Type: "string",
+													Description: "Namespace of the secret to be used for the virtual machine import",
+													Type:        "string",
 												},
 											},
 											Required: []string{"name"},
@@ -612,10 +614,12 @@ func CreateVMImport() *extv1.CustomResourceDefinition {
 											Description: "ObjectIdentifier defines how a resource should be identified",
 											Properties: map[string]extv1.JSONSchemaProps{
 												"name": {
-													Type: "string",
+													Description: "Name of the ResourceMapping to be used for the virtual machine import",
+													Type:        "string",
 												},
 												"namespace": {
-													Type: "string",
+													Description: "Namespace of the ResourceMapping to be used for the virtual machine import",
+													Type:        "string",
 												},
 											},
 											Required: []string{"name"},
@@ -777,18 +781,22 @@ func CreateVMImport() *extv1.CustomResourceDefinition {
 																	Type:        "object",
 																	Properties: map[string]extv1.JSONSchemaProps{
 																		"id": {
-																			Type: "string",
+																			Description: `id defines the id of the source cluster where VM resides`,
+																			Type:        "string",
 																		},
 																		"name": {
-																			Type: "string",
+																			Description: `name defines the name of the source cluster where VM resides`,
+																			Type:        "string",
 																		},
 																	},
 																},
 																"id": {
-																	Type: "string",
+																	Description: `id defines the id of the source VM`,
+																	Type:        "string",
 																},
 																"name": {
-																	Type: "string",
+																	Description: `name defines the name of the source VM`,
+																	Type:        "string",
 																},
 															},
 														},
@@ -798,11 +806,13 @@ func CreateVMImport() *extv1.CustomResourceDefinition {
 											},
 										},
 										"startVm": {
-											Type: "boolean",
+											Type:        "boolean",
+											Description: `If true imported virtual machine will be started`,
 										},
 										"targetVmName": {
-											Type:      "string",
-											MaxLength: &maxTargetVMName,
+											Description: `Specifies the name of the imported virtual machine`,
+											Type:        "string",
+											MaxLength:   &maxTargetVMName,
 										},
 									},
 									Required: []string{"providerCredentialsSecret", "source"},
@@ -857,7 +867,8 @@ func CreateVMImport() *extv1.CustomResourceDefinition {
 													Type: "object",
 													Properties: map[string]extv1.JSONSchemaProps{
 														"name": {
-															Type: "string",
+															Description: `Name of the DataVolume that was created by virtual machine import`,
+															Type:        "string",
 														},
 													},
 													Required: []string{"name"},
