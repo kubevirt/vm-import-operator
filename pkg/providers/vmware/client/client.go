@@ -3,6 +3,9 @@ package client
 import (
 	"context"
 	"errors"
+	"net/url"
+	"time"
+
 	"github.com/vmware/govmomi/find"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/session"
@@ -10,8 +13,6 @@ import (
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/soap"
 	"github.com/vmware/govmomi/vim25/types"
-	"net/url"
-	"time"
 )
 
 // timeout value in seconds for vmware api requests
