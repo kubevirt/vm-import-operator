@@ -37,7 +37,7 @@ export GO111MODULE=on
 GINKGO_EXTRA_ARGS ?=
 GINKGO_ARGS ?= --v -r --progress $(GINKGO_EXTRA_ARGS)
 GINKGO ?= build/_output/bin/ginkgo
-KUBEBUILDER_VERSION="2.2.0"
+KUBEBUILDER_VERSION="2.3.1"
 ARCH="amd64"
 KUBEBUILDER_DIR=/usr/local/kubebuilder
 

@@ -17,8 +17,8 @@ require (
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20191119172530-79f836b90111
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/machacekondra/fakeovirt v0.0.0-20200617055337-1afdfa789aab
-	github.com/onsi/ginkgo v1.12.0
-	github.com/onsi/gomega v1.7.1
+	github.com/onsi/ginkgo v1.12.1
+	github.com/onsi/gomega v1.10.1
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
 	github.com/openshift/client-go v0.0.0
 	github.com/openshift/custom-resource-status v0.0.0-20190822192428-e62f2f3b79f3
@@ -31,22 +31,20 @@ require (
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
 	github.com/vmware/govmomi v0.23.0
 	github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2 // indirect
-	golang.org/x/net v0.0.0-20200222125558-5a598a2470a0 // indirect
-	golang.org/x/sys v0.0.0-20200223170610-d5e6a3e2c0ae // indirect
 	golang.org/x/tools v0.0.0-20200212150539-ea181f53ac56
-	gopkg.in/yaml.v2 v2.2.5
-	k8s.io/api v0.17.1
-	k8s.io/apiextensions-apiserver v0.16.4
-	k8s.io/apimachinery v0.17.1
+	gopkg.in/yaml.v2 v2.3.0
+	k8s.io/api v0.17.8
+	k8s.io/apiextensions-apiserver v0.17.8
+	k8s.io/apimachinery v0.17.8
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/code-generator v0.17.1
 	k8s.io/klog v1.0.0
 	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
-	k8s.io/utils v0.0.0-20191010214722-8d271d903fe4
+	k8s.io/utils v0.0.0-20200619165400-6e3d28b6ed19
 	kubevirt.io/client-go v0.26.2
 	kubevirt.io/containerized-data-importer v1.15.0
-	sigs.k8s.io/controller-runtime v0.4.0
-	sigs.k8s.io/yaml v1.1.0
+	sigs.k8s.io/controller-runtime v0.5.9
+	sigs.k8s.io/yaml v1.2.0
 )
 
 replace github.com/ovirt/go-ovirt => github.com/ovirt/go-ovirt v0.0.0-20200428093010-9bcc4fd4e6c0
