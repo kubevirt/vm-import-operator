@@ -20,7 +20,7 @@ package versioned
 import (
 	"fmt"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/api-client/clientset/versioned/typed/v2v/v1alpha1"
+	v2vv1beta1 "github.com/kubevirt/vm-import-operator/pkg/api-client/clientset/versioned/typed/v2v/v1beta1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -28,19 +28,19 @@ import (
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
-	V2vV1alpha1() v2vv1alpha1.V2vV1alpha1Interface
+	V2vV1beta1() v2vv1beta1.V2vV1beta1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
 // version included in a Clientset.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	v2vV1alpha1 *v2vv1alpha1.V2vV1alpha1Client
+	v2vV1beta1 *v2vv1beta1.V2vV1beta1Client
 }
 
-// V2vV1alpha1 retrieves the V2vV1alpha1Client
-func (c *Clientset) V2vV1alpha1() v2vv1alpha1.V2vV1alpha1Interface {
-	return c.v2vV1alpha1
+// V2vV1beta1 retrieves the V2vV1beta1Client
+func (c *Clientset) V2vV1beta1() v2vv1beta1.V2vV1beta1Interface {
+	return c.v2vV1beta1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -64,7 +64,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	}
 	var cs Clientset
 	var err error
-	cs.v2vV1alpha1, err = v2vv1alpha1.NewForConfig(&configShallowCopy)
+	cs.v2vV1beta1, err = v2vv1beta1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 // panics if there is an error in the config.
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
-	cs.v2vV1alpha1 = v2vv1alpha1.NewForConfigOrDie(c)
+	cs.v2vV1beta1 = v2vv1beta1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -89,7 +89,7 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
-	cs.v2vV1alpha1 = v2vv1alpha1.New(c)
+	cs.v2vV1beta1 = v2vv1beta1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

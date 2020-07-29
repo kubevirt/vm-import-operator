@@ -1,7 +1,7 @@
 package ovirt_test
 
 import (
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
@@ -41,9 +41,9 @@ var _ = Describe("VM import ", func() {
 	Context("with external resource mapping for network", func() {
 		It("should create running VM", func() {
 			vmID := vms.BasicNetworkVmID
-			ovirtMappings := v2vv1alpha1.OvirtMappings{
-				NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+			ovirtMappings := v2vv1.OvirtMappings{
+				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+					{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 				},
 			}
 			rm, err := f.CreateResourceMapping(ovirtMappings)
@@ -53,13 +53,13 @@ var _ = Describe("VM import ", func() {
 			nicsXml := f.LoadFile("nics/one.xml")
 			test.stub(vmID, &nicsXml)
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
-			vmi.Spec.ResourceMapping = &v2vv1alpha1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
-			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+			vmi.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
@@ -81,9 +81,9 @@ var _ = Describe("VM import ", func() {
 	Context("with external resource mapping for storage domain", func() {
 		It("should create running VM", func() {
 			vmID := vms.BasicVmID
-			mappings := v2vv1alpha1.OvirtMappings{
-				StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
-					{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+			mappings := v2vv1.OvirtMappings{
+				StorageMappings: &[]v2vv1.StorageResourceMappingItem{
+					{Source: v2vv1.Source{ID: &vms.StorageDomainID}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
 			}
 			rm, err := f.CreateResourceMapping(mappings)
@@ -93,13 +93,13 @@ var _ = Describe("VM import ", func() {
 			nicsXml := f.LoadFile("nics/empty.xml")
 			test.stub(vmID, &nicsXml)
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
-			vmi.Spec.ResourceMapping = &v2vv1alpha1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
-			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+			vmi.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
@@ -112,7 +112,7 @@ var _ = Describe("VM import ", func() {
 	})
 
 	Context("with both internal and external storage mappings", func() {
-		table.DescribeTable("should create running VM", func(externalMapping v2vv1alpha1.OvirtMappings, internalMapping v2vv1alpha1.OvirtMappings, storageClass *string) {
+		table.DescribeTable("should create running VM", func(externalMapping v2vv1.OvirtMappings, internalMapping v2vv1.OvirtMappings, storageClass *string) {
 			vmID := vms.BasicNetworkVmID
 			rm, err := f.CreateResourceMapping(externalMapping)
 			if err != nil {
@@ -121,14 +121,14 @@ var _ = Describe("VM import ", func() {
 			nicsXml := f.LoadFile("nics/one.xml")
 			test.stub(vmID, &nicsXml)
 			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
-			vmi.Spec.ResourceMapping = &v2vv1alpha1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
+			vmi.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
 			vmi.Spec.Source.Ovirt.Mappings = &internalMapping
-			created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
@@ -147,56 +147,56 @@ var _ = Describe("VM import ", func() {
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveStorageClassReference(storageClass, f))
 		},
 			table.Entry("with default storage class ignoring external mapping",
-				v2vv1alpha1.OvirtMappings{
-					DiskMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &vms.DiskID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+				v2vv1.OvirtMappings{
+					DiskMappings: &[]v2vv1.StorageResourceMappingItem{
+						{Source: v2vv1.Source{ID: &vms.DiskID}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 					},
-					NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+					NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+						{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 					},
 				},
-				v2vv1alpha1.OvirtMappings{},
+				v2vv1.OvirtMappings{},
 				nil),
 			table.Entry("with storage class based on internal storage domain",
-				v2vv1alpha1.OvirtMappings{
-					NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+				v2vv1.OvirtMappings{
+					NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+						{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 					},
 				},
-				v2vv1alpha1.OvirtMappings{
-					StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+				v2vv1.OvirtMappings{
+					StorageMappings: &[]v2vv1.StorageResourceMappingItem{
+						{Source: v2vv1.Source{ID: &vms.StorageDomainID}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 					},
 				},
 				&f.DefaultStorageClass),
 			table.Entry("with storage class based on internal mapping overriding external mapping",
-				v2vv1alpha1.OvirtMappings{
-					StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: "wrong-sc"}},
+				v2vv1.OvirtMappings{
+					StorageMappings: &[]v2vv1.StorageResourceMappingItem{
+						{Source: v2vv1.Source{ID: &vms.StorageDomainID}, Target: v2vv1.ObjectIdentifier{Name: "wrong-sc"}},
 					},
-					NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+					NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+						{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 					},
 				},
-				v2vv1alpha1.OvirtMappings{
-					StorageMappings: &[]v2vv1alpha1.StorageResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+				v2vv1.OvirtMappings{
+					StorageMappings: &[]v2vv1.StorageResourceMappingItem{
+						{Source: v2vv1.Source{ID: &vms.StorageDomainID}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 					},
 				},
 				&f.DefaultStorageClass),
 			table.Entry("with pod network based on internal network mapping overriding external mapping",
-				v2vv1alpha1.OvirtMappings{
-					NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
+				v2vv1.OvirtMappings{
+					NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
 						{
 							Type:   &tests.MultusType,
-							Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID},
-							Target: v2vv1alpha1.ObjectIdentifier{Name: "wrong-network"},
+							Source: v2vv1.Source{ID: &vms.VNicProfile1ID},
+							Target: v2vv1.ObjectIdentifier{Name: "wrong-network"},
 						},
 					},
 				},
-				v2vv1alpha1.OvirtMappings{
-					NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
-						{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+				v2vv1.OvirtMappings{
+					NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+						{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 					},
 				},
 				nil),

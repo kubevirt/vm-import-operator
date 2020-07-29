@@ -5,7 +5,7 @@ import (
 
 	"github.com/onsi/ginkgo/extensions/table"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/tests"
 
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
@@ -58,8 +58,8 @@ var _ = Describe("Import", func() {
 		configMap.Data["feature-gates"] = configMap.Data["feature-gates"] + ",LiveMigration"
 		f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(configMap)
 		test.stub(vmID, "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "migratable"})
-		test.ensureVMIsRunningOnStorage(vmID, &[]v2vv1alpha1.StorageResourceMappingItem{
-			{Source: v2vv1alpha1.Source{ID: &vms.StorageDomainID}, Target: v2vv1alpha1.ObjectIdentifier{Name: f.NfsStorageClass}},
+		test.ensureVMIsRunningOnStorage(vmID, &[]v2vv1.StorageResourceMappingItem{
+			{Source: v2vv1.Source{ID: &vms.StorageDomainID}, Target: v2vv1.ObjectIdentifier{Name: f.NfsStorageClass}},
 		})
 	})
 })
@@ -224,29 +224,29 @@ func (t *variousVMConfigurationsTest) ensureVMIsRunning(vmID string) *v1.Virtual
 	return t.ensureVMIsRunningOnStorage(vmID, nil)
 }
 
-func (t *variousVMConfigurationsTest) ensureVMIsRunningOnStorage(vmID string, storageMappings *[]v2vv1alpha1.StorageResourceMappingItem) *v1.VirtualMachine {
+func (t *variousVMConfigurationsTest) ensureVMIsRunningOnStorage(vmID string, storageMappings *[]v2vv1.StorageResourceMappingItem) *v1.VirtualMachine {
 	return t.ensureVMIsRunningOnStorageWithVMName(vmID, storageMappings, "target-vm")
 }
 
-func (t *variousVMConfigurationsTest) ensureVMIsRunningOnStorageWithVMName(vmID string, storageMappings *[]v2vv1alpha1.StorageResourceMappingItem, targetVMName string) *v1.VirtualMachine {
+func (t *variousVMConfigurationsTest) ensureVMIsRunningOnStorageWithVMName(vmID string, storageMappings *[]v2vv1.StorageResourceMappingItem, targetVMName string) *v1.VirtualMachine {
 	f := t.framework
 	namespace := t.framework.Namespace.Name
 	vmi := utils.VirtualMachineImportCrWithName(vmID, namespace, t.secret.Name, f.NsPrefix, true, targetVMName)
-	vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
-		NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
-			{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+	vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
+		NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+			{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 		},
 	}
 	if storageMappings != nil {
 		vmi.Spec.Source.Ovirt.Mappings.StorageMappings = storageMappings
 	}
 
-	created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+	created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
 	Expect(err).NotTo(HaveOccurred())
 	Expect(created).To(BeSuccessful(f))
 
-	retrieved, _ := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+	retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kubevirt/vm-import-operator/tests/framework"
@@ -14,7 +14,7 @@ import (
 
 type hasConditionInStatus struct {
 	pollingMatcher
-	conditionType v2vv1alpha1.VirtualMachineImportConditionType
+	conditionType v2vv1.VirtualMachineImportConditionType
 	status        corev1.ConditionStatus
 	reason        string
 }
@@ -26,7 +26,7 @@ func HaveMappingRulesVerificationFailure(testFramework *framework.Framework) typ
 	matcher.pollInterval = 1 * time.Second
 	matcher.testFramework = testFramework
 
-	matcher.conditionType = v2vv1alpha1.MappingRulesVerified
+	matcher.conditionType = v2vv1.MappingRulesVerified
 	matcher.status = corev1.ConditionFalse
 	return &matcher
 }
@@ -38,7 +38,7 @@ func HaveValidationFailure(testFramework *framework.Framework, reason string) ty
 	matcher.pollInterval = 1 * time.Second
 	matcher.testFramework = testFramework
 
-	matcher.conditionType = v2vv1alpha1.Valid
+	matcher.conditionType = v2vv1.Valid
 	matcher.status = corev1.ConditionFalse
 	matcher.reason = reason
 	return &matcher
@@ -51,7 +51,7 @@ func BeProcessing(testFramework *framework.Framework) types.GomegaMatcher {
 	matcher.pollInterval = 2 * time.Second
 	matcher.testFramework = testFramework
 
-	matcher.conditionType = v2vv1alpha1.Processing
+	matcher.conditionType = v2vv1.Processing
 	matcher.status = corev1.ConditionTrue
 	return &matcher
 }
@@ -63,7 +63,7 @@ func BeSuccessful(testFramework *framework.Framework) types.GomegaMatcher {
 	matcher.pollInterval = 5 * time.Second
 	matcher.testFramework = testFramework
 
-	matcher.conditionType = v2vv1alpha1.Succeeded
+	matcher.conditionType = v2vv1.Succeeded
 	matcher.status = corev1.ConditionTrue
 	return &matcher
 }
@@ -75,7 +75,7 @@ func BeUnsuccessful(testFramework *framework.Framework, reason string) types.Gom
 	matcher.pollInterval = 5 * time.Second
 	matcher.testFramework = testFramework
 
-	matcher.conditionType = v2vv1alpha1.Succeeded
+	matcher.conditionType = v2vv1.Succeeded
 	matcher.status = corev1.ConditionFalse
 	matcher.reason = reason
 	return &matcher
@@ -88,8 +88,8 @@ func HaveTemplateMatchingFailure(testFramework *framework.Framework) types.Gomeg
 	matcher.pollInterval = 5 * time.Second
 	matcher.testFramework = testFramework
 
-	matcher.conditionType = v2vv1alpha1.Succeeded
-	matcher.reason = string(v2vv1alpha1.VMTemplateMatchingFailed)
+	matcher.conditionType = v2vv1.Succeeded
+	matcher.reason = string(v2vv1.VMTemplateMatchingFailed)
 	matcher.status = corev1.ConditionFalse
 	return &matcher
 }
@@ -101,15 +101,15 @@ func HaveDataVolumeCreationFailure(testFramework *framework.Framework) types.Gom
 	matcher.pollInterval = 5 * time.Second
 	matcher.testFramework = testFramework
 
-	matcher.conditionType = v2vv1alpha1.Succeeded
-	matcher.reason = string(v2vv1alpha1.DataVolumeCreationFailed)
+	matcher.conditionType = v2vv1.Succeeded
+	matcher.reason = string(v2vv1.DataVolumeCreationFailed)
 	matcher.status = corev1.ConditionFalse
 	return &matcher
 }
 
 // Match polls cluster until the virtual machine import is marked as expected
 func (matcher *hasConditionInStatus) Match(actual interface{}) (bool, error) {
-	vmBluePrint := actual.(*v2vv1alpha1.VirtualMachineImport)
+	vmBluePrint := actual.(*v2vv1.VirtualMachineImport)
 	pollErr := matcher.testFramework.WaitForVMImportConditionInStatus(
 		matcher.pollInterval,
 		matcher.timeout,

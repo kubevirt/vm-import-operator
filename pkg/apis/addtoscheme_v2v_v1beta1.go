@@ -17,10 +17,10 @@ limitations under the License.
 package apis
 
 import (
-	"github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 )
 
 func init() {
 	// Register the types with the Scheme so the components can map objects to GroupVersionKinds and back
-	AddToSchemes = append(AddToSchemes, v1alpha1.SchemeBuilder.AddToScheme)
+	AddToSchemes = append(AddToSchemes, v2vv1.SchemeBuilder.AddToScheme)
 }

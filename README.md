@@ -49,7 +49,7 @@ The CA Certificate can be obtained from oVirt according to the instructions spec
 ## Create oVirt resource mappings that defines how oVirt resources are mapped to kubevirt:
 ```bash
 cat <<EOF | kubectl create -f -
-apiVersion: v2v.kubevirt.io/v1alpha1
+apiVersion: v2v.kubevirt.io/v1beta1
 kind: ResourceMapping
 metadata:
   name: example-resourcemappings
@@ -73,7 +73,7 @@ EOF
 ## Create VM Import resource for importing a specific VM from oVirt to KubeVirt:
 ```bash
 cat <<EOF | kubectl create -f -
-apiVersion: v2v.kubevirt.io/v1alpha1
+apiVersion: v2v.kubevirt.io/v1beta1
 kind: VirtualMachineImport
 metadata:
   name: example-virtualmachineimport
@@ -112,7 +112,7 @@ kubectl logs -n kubevirt-hyperconverged deploy/vm-import-controller
 
 An example of a VM Import resource during creation:
 ```
-apiVersion: v2v.kubevirt.io/v1alpha1
+apiVersion: v2v.kubevirt.io/v1beta1
 kind: VirtualMachineImport
 metadata:
   annotations:

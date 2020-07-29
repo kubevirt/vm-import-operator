@@ -1,7 +1,7 @@
 package ovirt_test
 
 import (
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
@@ -40,18 +40,18 @@ var _ = Describe("Networked VM import ", func() {
 	table.DescribeTable("should create started VM with pod network", func(networkType *string) {
 		vmID := vms.BasicVmID
 		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
-		vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
-			NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
-				{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: networkType},
+		vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
+			NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+				{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: networkType},
 			},
 		}
 		test.stub(vmID)
-		created, err := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(BeSuccessful(f))
 
-		retrieved, _ := f.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+		retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}

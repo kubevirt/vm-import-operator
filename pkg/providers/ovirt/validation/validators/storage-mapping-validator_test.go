@@ -3,7 +3,7 @@ package validators_test
 import (
 	"fmt"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
@@ -46,13 +46,13 @@ var _ = Describe("Validating Storage mapping", func() {
 			da,
 		}
 
-		mapping := []v2vv1alpha1.StorageResourceMappingItem{
+		mapping := []v2vv1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: domainName,
 					ID:   domainID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetStorageClass,
 				},
 			},
@@ -73,13 +73,13 @@ var _ = Describe("Validating Storage mapping", func() {
 			da,
 		}
 
-		mapping := []v2vv1alpha1.StorageResourceMappingItem{
+		mapping := []v2vv1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: domainName,
 					ID:   domainID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetStorageClass,
 				},
 			},
@@ -99,13 +99,13 @@ var _ = Describe("Validating Storage mapping", func() {
 			da,
 		}
 
-		mapping := []v2vv1alpha1.StorageResourceMappingItem{
+		mapping := []v2vv1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: &domainName,
 					ID:   &domainID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: "",
 				},
 			},
@@ -122,13 +122,13 @@ var _ = Describe("Validating Storage mapping", func() {
 			da,
 		}
 
-		mapping := []v2vv1alpha1.StorageResourceMappingItem{
+		mapping := []v2vv1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: &domainName,
 					ID:   &domainID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetStorageClass,
 				},
 			},
@@ -151,22 +151,22 @@ var _ = Describe("Validating Storage mapping", func() {
 			createDiskAttachment(createDomain(&otherDomainName, &otherDomainID)),
 		}
 
-		mapping := []v2vv1alpha1.StorageResourceMappingItem{
+		mapping := []v2vv1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: &domainName,
 					ID:   &domainID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetStorageClass,
 				},
 			},
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: &otherDomainName,
 					ID:   &otherDomainID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetStorageClass,
 				},
 			},
@@ -217,13 +217,13 @@ var _ = Describe("Validating Disk mapping", func() {
 			da,
 		}
 
-		diskMapping := []v2vv1alpha1.StorageResourceMappingItem{
+		diskMapping := []v2vv1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: diskName,
 					ID:   diskID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetStorageClass,
 				},
 			},
@@ -244,13 +244,13 @@ var _ = Describe("Validating Disk mapping", func() {
 			da,
 		}
 
-		diskMapping := []v2vv1alpha1.StorageResourceMappingItem{
+		diskMapping := []v2vv1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: diskName,
 					ID:   diskID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetStorageClass,
 				},
 			},
@@ -270,13 +270,13 @@ var _ = Describe("Validating Disk mapping", func() {
 			da,
 		}
 
-		diskMapping := []v2vv1alpha1.StorageResourceMappingItem{
+		diskMapping := []v2vv1.StorageResourceMappingItem{
 			{
-					Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: &diskName,
 					ID:   &diskID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: "",
 				},
 			},
@@ -292,13 +292,13 @@ var _ = Describe("Validating Disk mapping", func() {
 			da,
 		}
 
-		diskMapping := []v2vv1alpha1.StorageResourceMappingItem{
+		diskMapping := []v2vv1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: &diskName,
 					ID:   &diskID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetStorageClass,
 				},
 			},
@@ -320,22 +320,22 @@ var _ = Describe("Validating Disk mapping", func() {
 			createCustomDiskAttachment(createDomain(&domainName, &domainID), diskID, diskName),
 			createCustomDiskAttachment(createDomain(&domainName, &domainID), otherDiskID, otherDiskName),
 		}
-		diskMapping := []v2vv1alpha1.StorageResourceMappingItem{
+		diskMapping := []v2vv1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: &diskName,
 					ID:   &diskID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetStorageClass,
 				},
 			},
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: &otherDiskName,
 					ID:   &otherDiskID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetStorageClass,
 				},
 			},
@@ -361,7 +361,7 @@ var _ = Describe("Validating Disk mapping", func() {
 			da,
 		}
 
-		failures := validator.ValidateStorageMapping(das, &[]v2vv1alpha1.StorageResourceMappingItem{}, nil)
+		failures := validator.ValidateStorageMapping(das, &[]v2vv1.StorageResourceMappingItem{}, nil)
 
 		Expect(failures).To(BeEmpty())
 	})
@@ -380,25 +380,25 @@ var _ = Describe("Validating Disk mapping", func() {
 			cda,
 		}
 
-		storageMapping := []v2vv1alpha1.StorageResourceMappingItem{
+		storageMapping := []v2vv1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: &domainName,
 					ID:   &domainID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetStorageClass,
 				},
 			},
 		}
 
-		diskMapping := []v2vv1alpha1.StorageResourceMappingItem{
+		diskMapping := []v2vv1.StorageResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: &customName,
 					ID:   &customID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: customTargetStorageClass,
 				},
 			},

@@ -1,7 +1,7 @@
 package validators
 
 import (
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/pkg/config"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,15 +57,15 @@ func (v *ValidatorWrapper) ValidateNics(nics []*ovirtsdk.Nic) []ValidationFailur
 }
 
 // ValidateNetworkMapping wraps networkMappingValidator call
-func (v *ValidatorWrapper) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.NetworkResourceMappingItem, crNamespace string) []ValidationFailure {
+func (v *ValidatorWrapper) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1.NetworkResourceMappingItem, crNamespace string) []ValidationFailure {
 	return v.networkMappingValidator.ValidateNetworkMapping(nics, mapping, crNamespace)
 }
 
 // ValidateStorageMapping wraps storageMappingValidator call
 func (v *ValidatorWrapper) ValidateStorageMapping(
 	attachments []*ovirtsdk.DiskAttachment,
-	storageMapping *[]v2vv1alpha1.StorageResourceMappingItem,
-	diskMappings *[]v2vv1alpha1.StorageResourceMappingItem,
+	storageMapping *[]v2vv1.StorageResourceMappingItem,
+	diskMappings *[]v2vv1.StorageResourceMappingItem,
 ) []ValidationFailure {
 	return v.storageMappingValidator.ValidateStorageMapping(attachments, storageMapping, diskMappings)
 }

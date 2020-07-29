@@ -2,7 +2,7 @@ package validators_test
 
 import (
 	netv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
@@ -51,14 +51,14 @@ var _ = Describe("Validating Network mapping", func() {
 			nic,
 		}
 
-		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
+		mapping := []v2vv1.NetworkResourceMappingItem{
 			{
 				Type: &podType,
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					Name: srcNetMappingName,
 					ID:   vnicProfileID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: "targetNetwork",
 				},
 			},
@@ -80,14 +80,14 @@ var _ = Describe("Validating Network mapping", func() {
 			nic,
 		}
 
-		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
+		mapping := []v2vv1.NetworkResourceMappingItem{
 			{
 				Type: &podType,
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					ID:   networkID,
 					Name: networkName,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: "targetNetwork",
 				},
 			},
@@ -110,12 +110,12 @@ var _ = Describe("Validating Network mapping", func() {
 			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 
-		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
+		mapping := []v2vv1.NetworkResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					ID: &vnicProfileID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: "targetNetwork",
 				},
 			},
@@ -131,21 +131,21 @@ var _ = Describe("Validating Network mapping", func() {
 		}
 		otherNetwork := "other-net"
 
-		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
+		mapping := []v2vv1.NetworkResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					ID: &vnicProfileID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: targetNetworkName,
 				},
 				Type: &multusType,
 			},
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					ID: &otherNetwork,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: wrongSrcNetMappingName,
 				},
 				Type: &multusType,
@@ -174,13 +174,13 @@ var _ = Describe("Validating Network mapping", func() {
 			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 
-		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
+		mapping := []v2vv1.NetworkResourceMappingItem{
 			{
 				Type: &multusType,
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					ID: &vnicProfileID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name:      targetNetworkName,
 					Namespace: &targetNetworkNamespace,
 				},
@@ -196,13 +196,13 @@ var _ = Describe("Validating Network mapping", func() {
 			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 
-		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
+		mapping := []v2vv1.NetworkResourceMappingItem{
 			{
 				Type: &multusType,
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					ID: &vnicProfileID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name:      targetNetworkName,
 					Namespace: &targetNetworkNamespace,
 				},
@@ -223,14 +223,14 @@ var _ = Describe("Validating Network mapping", func() {
 			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 		genieType := "genie"
-		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
+		mapping := []v2vv1.NetworkResourceMappingItem{
 			{
 				Type: &genieType,
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					ID:   &vnicProfileID,
 					Name: &srcNetMappingName,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: "targetNetwork",
 				},
 			},
@@ -246,14 +246,14 @@ var _ = Describe("Validating Network mapping", func() {
 			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 
-		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
+		mapping := []v2vv1.NetworkResourceMappingItem{
 			{
 				Type: nil,
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					ID:   &vnicProfileID,
 					Name: &srcNetMappingName,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name:      "targetNetwork",
 					Namespace: &namespace,
 				},
@@ -291,12 +291,12 @@ var _ = Describe("Validating Network mapping", func() {
 			createNic(&networkName, &vnicProfileName, &vnicProfileID),
 		}
 
-		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
+		mapping := []v2vv1.NetworkResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					ID: &vnicProfileID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: "targetNetwork",
 				},
 				Type: &podType,
@@ -317,21 +317,21 @@ var _ = Describe("Validating Network mapping", func() {
 			createNic(&networkName2, &vnicProfileName2, &vnicProfileID2),
 		}
 
-		mapping := []v2vv1alpha1.NetworkResourceMappingItem{
+		mapping := []v2vv1.NetworkResourceMappingItem{
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					ID: &vnicProfileID,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: "targetNetwork",
 				},
 				Type: &podType,
 			},
 			{
-				Source: v2vv1alpha1.Source{
+				Source: v2vv1.Source{
 					ID: &vnicProfileID2,
 				},
-				Target: v2vv1alpha1.ObjectIdentifier{
+				Target: v2vv1.ObjectIdentifier{
 					Name: "targetNetwork2",
 				},
 				Type: &podType,

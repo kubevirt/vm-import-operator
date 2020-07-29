@@ -1,7 +1,7 @@
 package ovirt_test
 
 import (
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
@@ -174,7 +174,7 @@ func (t *multipleVmsImportTest) importVMWithSecretAndMakeSureItsRunning(vmID str
 	created, err := t.triggerVMImport(vmID, namespace, vmName, secretName)
 	Expect(created).To(BeSuccessful(t.framework))
 
-	retrieved, _ := t.framework.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+	retrieved, _ := t.framework.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	effectiveTargetVMName := retrieved.Status.TargetVMName
@@ -184,14 +184,14 @@ func (t *multipleVmsImportTest) importVMWithSecretAndMakeSureItsRunning(vmID str
 	Expect(vmBlueprint).To(BeRunning(t.framework))
 }
 
-func (t *multipleVmsImportTest) triggerVMImport(vmID string, namespace string, vmName string, secretName string) (*v2vv1alpha1.VirtualMachineImport, error) {
+func (t *multipleVmsImportTest) triggerVMImport(vmID string, namespace string, vmName string, secretName string) (*v2vv1.VirtualMachineImport, error) {
 	vmi := utils.VirtualMachineImportCrWithName(vmID, namespace, secretName, t.framework.NsPrefix+"-"+vmID, true, vmName)
-	vmi.Spec.Source.Ovirt.Mappings = &v2vv1alpha1.OvirtMappings{
-		NetworkMappings: &[]v2vv1alpha1.NetworkResourceMappingItem{
-			{Source: v2vv1alpha1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+	vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
+		NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+			{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 		},
 	}
-	created, err := t.framework.VMImportClient.V2vV1alpha1().VirtualMachineImports(namespace).Create(&vmi)
+	created, err := t.framework.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
 	Expect(err).NotTo(HaveOccurred())
 	return created, err

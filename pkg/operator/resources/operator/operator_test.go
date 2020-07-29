@@ -3,12 +3,12 @@ package operator_test
 import (
 	"fmt"
 
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	vmioperator "github.com/kubevirt/vm-import-operator/pkg/operator/resources/operator"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
 	"github.com/RHsyseng/operator-utils/pkg/validation"
 	"github.com/ghodss/yaml"
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
 
 	"strings"
 
@@ -25,15 +25,15 @@ type crdToCreator struct {
 
 var crdTypeMap = map[string]crdToCreator{
 	"vmimport-crd": {
-		&v2vv1alpha1.VirtualMachineImport{},
+		&v2vv1.VirtualMachineImport{},
 		vmioperator.CreateVMImport,
 	},
 	"resource-mapping-crd": {
-		&v2vv1alpha1.ResourceMapping{},
+		&v2vv1.ResourceMapping{},
 		vmioperator.CreateResourceMapping,
 	},
 	"vmimportconfig-crd": {
-		&v2vv1alpha1.VMImportConfig{},
+		&v2vv1.VMImportConfig{},
 		vmioperator.CreateVMImportConfig,
 	},
 }
@@ -56,7 +56,7 @@ var _ = Describe("Operator resource test", func() {
 
 	It("Test valid VMImportConfig custom resources", func() {
 		crFileName := []byte(`{
-		  "apiVersion":"v2v.kubevirt.io/v1alpha1",
+		  "apiVersion":"v2v.kubevirt.io/v1beta1",
 		  "kind":"VMImportConfig",
 		  "metadata": {
 		    name: vm-import-operator-config
@@ -79,7 +79,7 @@ var _ = Describe("Operator resource test", func() {
 
 	It("Test invalid ResourceMapping custom resource", func() {
 		crFileName := []byte(`{
-		  "apiVersion":"v2v.kubevirt.io/v1alpha1",
+		  "apiVersion":"v2v.kubevirt.io/v1beta1",
 		  "kind":"ResourceMapping",
 		  "metadata": {
 		    name: resource-mapping
@@ -106,7 +106,7 @@ var _ = Describe("Operator resource test", func() {
 
 	It("Test invalid VMImport custom resource", func() {
 		crFileName := []byte(`{
-		  "apiVersion":"v2v.kubevirt.io/v1alpha1",
+		  "apiVersion":"v2v.kubevirt.io/v1beta1",
 		  "kind":"VirtualMachineImport",
 		  "metadata": {
 		    name: vm-import
@@ -132,7 +132,7 @@ func getSchema(crdCreator createCrd) validation.Schema {
 	Expect(err).ToNot(HaveOccurred())
 	yamlString := string(crdFiles)
 	Expect(err).ToNot(HaveOccurred())
-	schema, err := validation.NewVersioned([]byte(yamlString), "v1alpha1")
+	schema, err := validation.NewVersioned([]byte(yamlString), "v1beta1")
 	Expect(err).ToNot(HaveOccurred())
 	return schema
 }

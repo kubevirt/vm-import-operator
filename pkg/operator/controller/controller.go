@@ -14,7 +14,7 @@ import (
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/go-logr/logr"
 	"github.com/kelseyhightower/envconfig"
-	vmimportv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	resources "github.com/kubevirt/vm-import-operator/pkg/operator/resources/operator"
 	osmap "github.com/kubevirt/vm-import-operator/pkg/os"
 	conditions "github.com/openshift/custom-resource-status/conditions/v1"
@@ -135,7 +135,7 @@ func (r *ReconcileVMImportConfig) Reconcile(request reconcile.Request) (reconcil
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling VMImportConfig")
 
-	cr := &vmimportv1alpha1.VMImportConfig{}
+	cr := &v2vv1.VMImportConfig{}
 	crKey := client.ObjectKey{Namespace: "", Name: request.NamespacedName.Name}
 	if err := r.client.Get(context.TODO(), crKey, cr); err != nil {
 		if errors.IsNotFound(err) {
@@ -230,7 +230,7 @@ func shouldTakeUpdatePath(logger logr.Logger, targetVersion, currentVersion stri
 	return true, nil
 }
 
-func (r *ReconcileVMImportConfig) updateResourceForUpgrade(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) error {
+func (r *ReconcileVMImportConfig) updateResourceForUpgrade(logger logr.Logger, cr *v2vv1.VMImportConfig) error {
 	if cr.Status.OperatorVersion != r.operatorArgs.OperatorVersion {
 		cr.Status.OperatorVersion = r.operatorArgs.OperatorVersion
 		cr.Status.TargetVersion = r.operatorArgs.OperatorVersion
@@ -244,10 +244,10 @@ func (r *ReconcileVMImportConfig) updateResourceForUpgrade(logger logr.Logger, c
 		return err
 	}
 
-	if isUpgrade && cr.Status.Phase != vmimportv1alpha1.PhaseUpgrading {
+	if isUpgrade && cr.Status.Phase != v2vv1.PhaseUpgrading {
 		logger.Info("Observed version is not target version. Begin upgrade", "Observed version ", cr.Status.ObservedVersion, "TargetVersion", r.operatorArgs.OperatorVersion)
-		markCrUpgradeHealingDegraded(cr, vmimportv1alpha1.UpgradeStartedReason, fmt.Sprintf("Started upgrade to version %s", r.operatorArgs.OperatorVersion))
-		if err := r.crUpdate(vmimportv1alpha1.PhaseUpgrading, cr); err != nil {
+		markCrUpgradeHealingDegraded(cr, v2vv1.UpgradeStartedReason, fmt.Sprintf("Started upgrade to version %s", r.operatorArgs.OperatorVersion))
+		if err := r.crUpdate(v2vv1.PhaseUpgrading, cr); err != nil {
 			return err
 		}
 	}
@@ -256,7 +256,7 @@ func (r *ReconcileVMImportConfig) updateResourceForUpgrade(logger logr.Logger, c
 }
 
 // markCrUpgradeHealingDegraded marks the passed CR as upgrading and degraded.
-func markCrUpgradeHealingDegraded(cr *vmimportv1alpha1.VMImportConfig, reason, message string) {
+func markCrUpgradeHealingDegraded(cr *v2vv1.VMImportConfig, reason, message string) {
 	conditions.SetStatusCondition(&cr.Status.Conditions, conditions.Condition{
 		Type:   conditions.ConditionAvailable,
 		Status: corev1.ConditionTrue,
@@ -278,7 +278,7 @@ func newDefaultInstance(obj runtime.Object) runtime.Object {
 	return reflect.New(typ).Interface().(runtime.Object)
 }
 
-func (r *ReconcileVMImportConfig) reconcileUpdate(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) (reconcile.Result, error) {
+func (r *ReconcileVMImportConfig) reconcileUpdate(logger logr.Logger, cr *v2vv1.VMImportConfig) (reconcile.Result, error) {
 	if err := r.updateResourceForUpgrade(logger, cr); err != nil {
 		return reconcile.Result{}, err
 	}
@@ -363,11 +363,11 @@ func (r *ReconcileVMImportConfig) reconcileUpdate(logger logr.Logger, cr *vmimpo
 		return reconcile.Result{}, err
 	}
 
-	if cr.Status.Phase != vmimportv1alpha1.PhaseDeployed && !r.isUpgrading(cr) && !degraded {
+	if cr.Status.Phase != v2vv1.PhaseDeployed && !r.isUpgrading(cr) && !degraded {
 		//We are not moving to Deployed phase until new operator deployment is ready in case of Upgrade
 		cr.Status.ObservedVersion = r.operatorArgs.OperatorVersion
 		MarkCrHealthyMessage(cr, "DeployCompleted", "Deployment Completed")
-		if err = r.crUpdate(vmimportv1alpha1.PhaseDeployed, cr); err != nil {
+		if err = r.crUpdate(v2vv1.PhaseDeployed, cr); err != nil {
 			return reconcile.Result{}, err
 		}
 
@@ -448,11 +448,11 @@ func logJSONDiff(logger logr.Logger, objA, objB interface{}) {
 	logger.Info("DIFF", "obj", objA, "patch", string(pBytes))
 }
 
-func (r *ReconcileVMImportConfig) isUpgrading(cr *vmimportv1alpha1.VMImportConfig) bool {
+func (r *ReconcileVMImportConfig) isUpgrading(cr *v2vv1.VMImportConfig) bool {
 	return cr.Status.ObservedVersion != "" && cr.Status.ObservedVersion != cr.Status.TargetVersion
 }
 
-func (r *ReconcileVMImportConfig) completeUpgrade(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) error {
+func (r *ReconcileVMImportConfig) completeUpgrade(logger logr.Logger, cr *v2vv1.VMImportConfig) error {
 	if err := r.cleanupUnusedResources(logger, cr); err != nil {
 		return err
 	}
@@ -461,7 +461,7 @@ func (r *ReconcileVMImportConfig) completeUpgrade(logger logr.Logger, cr *vmimpo
 	cr.Status.ObservedVersion = r.operatorArgs.OperatorVersion
 
 	MarkCrHealthyMessage(cr, "DeployCompleted", "Deployment Completed")
-	if err := r.crUpdate(vmimportv1alpha1.PhaseDeployed, cr); err != nil {
+	if err := r.crUpdate(v2vv1.PhaseDeployed, cr); err != nil {
 		return err
 	}
 
@@ -471,7 +471,7 @@ func (r *ReconcileVMImportConfig) completeUpgrade(logger logr.Logger, cr *vmimpo
 }
 
 // MarkCrHealthyMessage marks the passed in CR as healthy.
-func MarkCrHealthyMessage(cr *vmimportv1alpha1.VMImportConfig, reason, message string) {
+func MarkCrHealthyMessage(cr *v2vv1.VMImportConfig, reason, message string) {
 	conditions.SetStatusCondition(&cr.Status.Conditions, conditions.Condition{
 		Type:    conditions.ConditionAvailable,
 		Status:  corev1.ConditionTrue,
@@ -488,7 +488,7 @@ func MarkCrHealthyMessage(cr *vmimportv1alpha1.VMImportConfig, reason, message s
 	})
 }
 
-func (r *ReconcileVMImportConfig) cleanupUnusedResources(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) error {
+func (r *ReconcileVMImportConfig) cleanupUnusedResources(logger logr.Logger, cr *v2vv1.VMImportConfig) error {
 	desiredResources, err := r.getAllResources(cr)
 	if err != nil {
 		return err
@@ -545,9 +545,9 @@ func (r *ReconcileVMImportConfig) cleanupUnusedResources(logger logr.Logger, cr 
 	return nil
 }
 
-func (r *ReconcileVMImportConfig) reconcileDelete(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) (reconcile.Result, error) {
-	if cr.Status.Phase != vmimportv1alpha1.PhaseDeleting {
-		if err := r.crUpdate(vmimportv1alpha1.PhaseDeleting, cr); err != nil {
+func (r *ReconcileVMImportConfig) reconcileDelete(logger logr.Logger, cr *v2vv1.VMImportConfig) (reconcile.Result, error) {
+	if cr.Status.Phase != v2vv1.PhaseDeleting {
+		if err := r.crUpdate(v2vv1.PhaseDeleting, cr); err != nil {
 			return reconcile.Result{}, err
 		}
 	}
@@ -577,7 +577,7 @@ func (r *ReconcileVMImportConfig) reconcileDelete(logger logr.Logger, cr *vmimpo
 		return reconcile.Result{}, err
 	}
 
-	if err := r.crUpdate(vmimportv1alpha1.PhaseDeleted, cr); err != nil {
+	if err := r.crUpdate(v2vv1.PhaseDeleted, cr); err != nil {
 		return reconcile.Result{}, err
 	}
 
@@ -619,8 +619,8 @@ func isControllerDeployment(d *appsv1.Deployment) bool {
 	return d.Name == "vm-import-deployment"
 }
 
-func (r *ReconcileVMImportConfig) crUpdate(phase vmimportv1alpha1.VMImportPhase, cr *vmimportv1alpha1.VMImportConfig) error {
-	var instance vmimportv1alpha1.VMImportConfig
+func (r *ReconcileVMImportConfig) crUpdate(phase v2vv1.VMImportPhase, cr *v2vv1.VMImportConfig) error {
+	var instance v2vv1.VMImportConfig
 	namespacedName := types.NamespacedName{Name: cr.ObjectMeta.Name, Namespace: cr.ObjectMeta.Namespace}
 	err := r.client.Get(context.TODO(), namespacedName, &instance)
 	if err != nil {
@@ -640,7 +640,7 @@ func (r *ReconcileVMImportConfig) crUpdate(phase vmimportv1alpha1.VMImportPhase,
 	return nil
 }
 
-func (r *ReconcileVMImportConfig) checkDegraded(logger logr.Logger, cr *vmimportv1alpha1.VMImportConfig) (bool, error) {
+func (r *ReconcileVMImportConfig) checkDegraded(logger logr.Logger, cr *v2vv1.VMImportConfig) (bool, error) {
 	degraded := false
 
 	deployments, err := r.getAllDeployments(cr)
@@ -664,7 +664,7 @@ func (r *ReconcileVMImportConfig) checkDegraded(logger logr.Logger, cr *vmimport
 	logger.Info("VMImport degraded check", "Degraded", degraded)
 
 	// If deployed and degraded, mark degraded, otherwise we are still deploying or not degraded.
-	if degraded && cr.Status.Phase == vmimportv1alpha1.PhaseDeployed {
+	if degraded && cr.Status.Phase == v2vv1.PhaseDeployed {
 		conditions.SetStatusCondition(&cr.Status.Conditions, conditions.Condition{
 			Type:   conditions.ConditionDegraded,
 			Status: corev1.ConditionTrue,
@@ -711,10 +711,10 @@ func (r *ReconcileVMImportConfig) add(mgr manager.Manager) error {
 }
 
 func (r *ReconcileVMImportConfig) watchVMImportConfig() error {
-	return r.controller.Watch(&source.Kind{Type: &vmimportv1alpha1.VMImportConfig{}}, &handler.EnqueueRequestForObject{})
+	return r.controller.Watch(&source.Kind{Type: &v2vv1.VMImportConfig{}}, &handler.EnqueueRequestForObject{})
 }
 
-func (r *ReconcileVMImportConfig) watchDependantResources(cr *vmimportv1alpha1.VMImportConfig) error {
+func (r *ReconcileVMImportConfig) watchDependantResources(cr *v2vv1.VMImportConfig) error {
 	r.watchMutex.Lock()
 	defer r.watchMutex.Unlock()
 
@@ -736,7 +736,7 @@ func (r *ReconcileVMImportConfig) watchDependantResources(cr *vmimportv1alpha1.V
 	return nil
 }
 
-func (r *ReconcileVMImportConfig) getAllDeployments(cr *vmimportv1alpha1.VMImportConfig) ([]*appsv1.Deployment, error) {
+func (r *ReconcileVMImportConfig) getAllDeployments(cr *v2vv1.VMImportConfig) ([]*appsv1.Deployment, error) {
 	var result []*appsv1.Deployment
 
 	resources, err := r.getAllResources(cr)
@@ -753,7 +753,7 @@ func (r *ReconcileVMImportConfig) getAllDeployments(cr *vmimportv1alpha1.VMImpor
 	return result, nil
 }
 
-func (r *ReconcileVMImportConfig) getOperatorArgs(cr *vmimportv1alpha1.VMImportConfig) *OperatorArgs {
+func (r *ReconcileVMImportConfig) getOperatorArgs(cr *v2vv1.VMImportConfig) *OperatorArgs {
 	result := *r.operatorArgs
 
 	if cr != nil {
@@ -784,7 +784,7 @@ func (r *ReconcileVMImportConfig) getOperatorArgs(cr *vmimportv1alpha1.VMImportC
 	return &result
 }
 
-func (r *ReconcileVMImportConfig) getAllResources(cr *vmimportv1alpha1.VMImportConfig) ([]runtime.Object, error) {
+func (r *ReconcileVMImportConfig) getAllResources(cr *v2vv1.VMImportConfig) ([]runtime.Object, error) {
 	var resources []runtime.Object
 
 	if deployClusterResources() {
@@ -861,7 +861,7 @@ func (r *ReconcileVMImportConfig) watchResourceTypes(resources []runtime.Object)
 
 		eventHandler := &handler.EnqueueRequestForOwner{
 			IsController: true,
-			OwnerType:    &vmimportv1alpha1.VMImportConfig{},
+			OwnerType:    &v2vv1.VMImportConfig{},
 		}
 
 		if err := r.controller.Watch(&source.Kind{Type: resource}, eventHandler); err != nil {
@@ -916,10 +916,10 @@ func sameResource(obj1, obj2 runtime.Object) bool {
 }
 
 // this is used for testing.  wish this a helper function in test file instead of member
-func (r *ReconcileVMImportConfig) crSetVersion(cr *vmimportv1alpha1.VMImportConfig, version string) error {
-	phase := vmimportv1alpha1.PhaseDeployed
+func (r *ReconcileVMImportConfig) crSetVersion(cr *v2vv1.VMImportConfig, version string) error {
+	phase := v2vv1.PhaseDeployed
 	if version == "" {
-		phase = vmimportv1alpha1.VMImportPhase("")
+		phase = v2vv1.VMImportPhase("")
 	}
 	cr.Status.ObservedVersion = version
 	cr.Status.OperatorVersion = version

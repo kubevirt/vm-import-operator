@@ -1,7 +1,7 @@
 package validation_test
 
 import (
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	validators "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
@@ -9,11 +9,11 @@ import (
 var validateVMMock func(*ovirtsdk.Vm) []validators.ValidationFailure
 var validateNicsMock func([]*ovirtsdk.Nic) []validators.ValidationFailure
 var validateDiskAttachmentsMock func([]*ovirtsdk.DiskAttachment) []validators.ValidationFailure
-var validateNetworkMappingsMock func(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.NetworkResourceMappingItem, crNamespace string) []validators.ValidationFailure
+var validateNetworkMappingsMock func(nics []*ovirtsdk.Nic, mapping *[]v2vv1.NetworkResourceMappingItem, crNamespace string) []validators.ValidationFailure
 var validateStorageMappingMock func(
 	attachments []*ovirtsdk.DiskAttachment,
-	storageMapping *[]v2vv1alpha1.StorageResourceMappingItem,
-	diskMapping *[]v2vv1alpha1.StorageResourceMappingItem,
+	storageMapping *[]v2vv1.StorageResourceMappingItem,
+	diskMapping *[]v2vv1.StorageResourceMappingItem,
 ) []validators.ValidationFailure
 
 type mockValidator struct{}
@@ -30,7 +30,7 @@ func (v *mockValidator) ValidateNics(nics []*ovirtsdk.Nic) []validators.Validati
 	return validateNicsMock(nics)
 }
 
-func (v *mockValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1alpha1.NetworkResourceMappingItem, crNamespace string) []validators.ValidationFailure {
+func (v *mockValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, mapping *[]v2vv1.NetworkResourceMappingItem, crNamespace string) []validators.ValidationFailure {
 	return validateNetworkMappingsMock(nics, mapping, crNamespace)
 }
 
@@ -40,8 +40,8 @@ func (v *mockValidator) ValidateDiskStatus(diskAttachment ovirtsdk.DiskAttachmen
 
 func (v *mockValidator) ValidateStorageMapping(
 	attachments []*ovirtsdk.DiskAttachment,
-	storageMapping *[]v2vv1alpha1.StorageResourceMappingItem,
-	diskMapping *[]v2vv1alpha1.StorageResourceMappingItem,
+	storageMapping *[]v2vv1.StorageResourceMappingItem,
+	diskMapping *[]v2vv1.StorageResourceMappingItem,
 ) []validators.ValidationFailure {
 	return validateStorageMappingMock(attachments, storageMapping, diskMapping)
 }

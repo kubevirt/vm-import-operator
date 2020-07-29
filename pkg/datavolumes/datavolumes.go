@@ -3,7 +3,7 @@ package datavolumes
 import (
 	"context"
 
-	v2vv1alpha1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1alpha1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -23,7 +23,7 @@ func NewManager(client client.Client) Manager {
 
 // FindFor return list od datavolumes for the VM import object
 func (m *Manager) FindFor(vmiCrName types.NamespacedName) ([]*cdiv1.DataVolume, error) {
-	instance := &v2vv1alpha1.VirtualMachineImport{}
+	instance := &v2vv1.VirtualMachineImport{}
 	if err := m.client.Get(context.TODO(), vmiCrName, instance); err != nil {
 		return nil, err
 	}
