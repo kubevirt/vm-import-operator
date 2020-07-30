@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
+
 	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 
 	"github.com/kubevirt/vm-import-operator/pkg/metrics"
@@ -93,12 +95,12 @@ var (
 
 // Add creates a new VirtualMachineImport Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, configProvider kvConfig.KubeVirtConfigProvider) error {
-	return add(mgr, newReconciler(mgr, configProvider))
+func Add(mgr manager.Manager, kvConfigProvider kvConfig.KubeVirtConfigProvider, ctrlConfigProvider ctrlConfig.ControllerConfigProvider) error {
+	return add(mgr, newReconciler(mgr, kvConfigProvider, ctrlConfigProvider))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, kvConfigProvider kvConfig.KubeVirtConfigProvider) *ReconcileVirtualMachineImport {
+func newReconciler(mgr manager.Manager, kvConfigProvider kvConfig.KubeVirtConfigProvider, ctrlConfigProvider ctrlConfig.ControllerConfigProvider) *ReconcileVirtualMachineImport {
 	tempClient, err := templatev1.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		log.Error(err, "Unable to get OC client")
@@ -117,6 +119,7 @@ func newReconciler(mgr manager.Manager, kvConfigProvider kvConfig.KubeVirtConfig
 		ownerreferencesmgr:     ownerreferencesmgr,
 		factory:                factory,
 		kvConfigProvider:       kvConfigProvider,
+		ctrlConfigProvider:     ctrlConfigProvider,
 		recorder:               mgr.GetEventRecorderFor("virtualmachineimport-controller"),
 	}
 }
@@ -180,6 +183,7 @@ type ReconcileVirtualMachineImport struct {
 	ownerreferencesmgr     ownerreferences.OwnerReferenceManager
 	factory                pclient.Factory
 	kvConfigProvider       kvConfig.KubeVirtConfigProvider
+	ctrlConfigProvider     ctrlConfig.ControllerConfigProvider
 	recorder               record.EventRecorder
 	controller             controller.Controller
 	apiReader              client.Reader

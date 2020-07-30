@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
+
 	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
@@ -53,7 +55,8 @@ var (
 	getVM              func(id *string, name *string, cluster *string, clusterID *string) (interface{}, error)
 	stopVM             func(id string) error
 	list               func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error
-	getConfig          func() kvConfig.KubeVirtConfig
+	getKvConfig        func() kvConfig.KubeVirtConfig
+	getCtrlConfig      func() ctrlConfig.ControllerConfig
 )
 var _ = Describe("Reconcile steps", func() {
 	var (
@@ -107,8 +110,11 @@ var _ = Describe("Reconcile steps", func() {
 		cleanUp = func() error {
 			return nil
 		}
-		getConfig = func() kvConfig.KubeVirtConfig {
+		getKvConfig = func() kvConfig.KubeVirtConfig {
 			return kvConfig.KubeVirtConfig{FeatureGates: "ImportWithoutTemplate"}
+		}
+		getCtrlConfig = func() ctrlConfig.ControllerConfig {
+			return ctrlConfig.ControllerConfig{}
 		}
 		update = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return nil
@@ -387,7 +393,7 @@ var _ = Describe("Reconcile steps", func() {
 			findTemplate = func() (*oapiv1.Template, error) {
 				return nil, templateError
 			}
-			getConfig = func() kvConfig.KubeVirtConfig {
+			getKvConfig = func() kvConfig.KubeVirtConfig {
 				// Feature flag is not present
 				return kvConfig.KubeVirtConfig{}
 			}
@@ -412,7 +418,7 @@ var _ = Describe("Reconcile steps", func() {
 			processTemplate = func(template *oapiv1.Template, name *string, namespace string) (*kubevirtv1.VirtualMachine, error) {
 				return nil, templateProcessingError
 			}
-			getConfig = func() kvConfig.KubeVirtConfig {
+			getKvConfig = func() kvConfig.KubeVirtConfig {
 				// Feature flag is not present
 				return kvConfig.KubeVirtConfig{}
 			}
@@ -1502,6 +1508,8 @@ type mockController struct{}
 
 type mockKubeVirtConfigProvider struct{}
 
+type mockControllerConfigProvider struct{}
+
 type mockOvirtClient struct{}
 
 type mockVmwareClient struct{}
@@ -1715,7 +1723,11 @@ func (c *mockVmwareClient) TestConnection() error {
 }
 
 func (c *mockKubeVirtConfigProvider) GetConfig() (kvConfig.KubeVirtConfig, error) {
-	return getConfig(), nil
+	return getKvConfig(), nil
+}
+
+func (c *mockControllerConfigProvider) GetConfig() (ctrlConfig.ControllerConfig, error) {
+	return getCtrlConfig(), nil
 }
 
 func getSecret() []byte {
