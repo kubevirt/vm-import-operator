@@ -7,9 +7,9 @@ import (
 	"os"
 	"runtime"
 
-	"k8s.io/client-go/kubernetes"
+	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 
-	controllercfg "github.com/kubevirt/vm-import-operator/pkg/config"
+	"k8s.io/client-go/kubernetes"
 
 	clientutil "kubevirt.io/client-go/util"
 
@@ -138,7 +138,7 @@ func main() {
 	k8sClient := kubernetes.NewForConfigOrDie(mgr.GetConfig())
 	stop := make(chan struct{})
 	defer close(stop)
-	kvConfigProvider := controllercfg.NewKubeVirtConfigProvider(stop, k8sClient, kubevirtNamespace)
+	kvConfigProvider := kvConfig.NewKubeVirtConfigProvider(stop, k8sClient, kubevirtNamespace)
 
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr, &kvConfigProvider); err != nil {

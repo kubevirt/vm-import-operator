@@ -3,7 +3,7 @@ package validators
 import (
 	"fmt"
 
-	"github.com/kubevirt/vm-import-operator/pkg/config"
+	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 
@@ -13,7 +13,7 @@ import (
 )
 
 // ValidateVM validates given VM
-func ValidateVM(vm *ovirtsdk.Vm, config config.KubeVirtConfig) []ValidationFailure {
+func ValidateVM(vm *ovirtsdk.Vm, config kvConfig.KubeVirtConfig) []ValidationFailure {
 	var results = isValidBios(vm)
 	if failure, valid := isValidStatus(vm); !valid {
 		results = append(results, failure)

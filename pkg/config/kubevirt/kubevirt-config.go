@@ -1,7 +1,9 @@
-package config
+package kubevirt
 
 import (
 	"strings"
+
+	"github.com/kubevirt/vm-import-operator/pkg/config"
 
 	v1 "k8s.io/api/core/v1"
 )
@@ -16,24 +18,24 @@ const (
 
 // NewKubeVirtConfig creates new KubeVirt and initializes it with given configMap
 func NewKubeVirtConfig(configMap v1.ConfigMap) KubeVirtConfig {
-	config := KubeVirtConfig{
-		configMap: configMap,
+	return NewKubeVirtConfigFrom(config.Config{ConfigMap: configMap})
+}
+
+// NewKubeVirtConfigFrom creates new KubeVirt and initializes it with given Config
+func NewKubeVirtConfigFrom(config config.Config) KubeVirtConfig {
+	kubeVirtConfig := KubeVirtConfig{
+		Config: config,
 	}
-	if featureGates := strings.TrimSpace(configMap.Data[featureGatesKey]); featureGates != "" {
-		config.FeatureGates = featureGates
+	if featureGates := strings.TrimSpace(config.ConfigMap.Data[featureGatesKey]); featureGates != "" {
+		kubeVirtConfig.FeatureGates = featureGates
 	}
-	return config
+	return kubeVirtConfig
 }
 
 // KubeVirtConfig stores KubeVirt runtime configuration
 type KubeVirtConfig struct {
+	config.Config
 	FeatureGates string
-	configMap    v1.ConfigMap
-}
-
-// ConfigMap returns plain KubeVirt config map
-func (c *KubeVirtConfig) ConfigMap() v1.ConfigMap {
-	return c.configMap
 }
 
 // LiveMigrationEnabled returns true if LiveMigration KubeVirt feature gate is enabled
@@ -44,11 +46,6 @@ func (c *KubeVirtConfig) LiveMigrationEnabled() bool {
 // ImportWithoutTemplateEnabled returns true if ImportWithoutTemplate KubeVirt feature gate is enabled
 func (c *KubeVirtConfig) ImportWithoutTemplateEnabled() bool {
 	return c.isFeatureGateEnabled(importWithoutTemplateGate)
-}
-
-// String returns string representation of the config
-func (c *KubeVirtConfig) String() string {
-	return c.configMap.String()
 }
 
 func (c *KubeVirtConfig) isFeatureGateEnabled(featureGate string) bool {

@@ -3,7 +3,8 @@ package validators_test
 import (
 	"fmt"
 
-	"github.com/kubevirt/vm-import-operator/pkg/config"
+	config "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
+	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	. "github.com/onsi/ginkgo"
@@ -13,7 +14,7 @@ import (
 )
 
 var _ = Describe("Validating VM", func() {
-	kvConfig := config.KubeVirtConfig{}
+	kvConfig := kvConfig.KubeVirtConfig{}
 	It("should accept vm ", func() {
 		var vm = newVM()
 

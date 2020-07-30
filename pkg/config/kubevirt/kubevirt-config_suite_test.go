@@ -1,4 +1,4 @@
-package config
+package kubevirt
 
 import (
 	"testing"
