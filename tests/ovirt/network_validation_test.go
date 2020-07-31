@@ -42,19 +42,18 @@ var _ = Describe("VM network validation ", func() {
 
 		Expect(created).To(HaveMappingRulesVerificationFailure(f))
 	},
-		table.Entry("pci_passthrough", "pci_passthrough"),
 		table.Entry("rtl8139_virtio", "rtl8139_virtio"),
 		table.Entry("spapr_vlan", "spapr_vlan"),
 	)
 
-	It("should block VM with pass-through enabled in the vnic profile", func() {
+	It("should not block VM with pass-through enabled in the vnic profile", func() {
 		vmID := vms.NicPassthroughVmID
 		nicsXml := f.LoadFile("nics/one.xml")
-		vnicProfileXml := f.LoadFile("invalid/vnic-profiles/pass-through.xml")
+		vnicProfileXml := f.LoadFile("vnic-profiles/pass-through.xml")
 		test.stub(vmID, &nicsXml, &vnicProfileXml)
 		created := test.prepareImport(vmID, secretName)
 
-		Expect(created).To(HaveMappingRulesVerificationFailure(f))
+		Expect(created).To(HaveMappingRulesVerified(f))
 	})
 })
 

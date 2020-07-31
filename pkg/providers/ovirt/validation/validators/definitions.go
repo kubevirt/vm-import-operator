@@ -9,8 +9,6 @@ const (
 	NicPluggedID = CheckID("nic.plugged")
 	// NicVNicPortMirroringID defines an ID of a vnic_profile.port_mirroring == true check
 	NicVNicPortMirroringID = CheckID("nic.vnic_profile.port_mirroring")
-	// NicVNicPassThroughID defines an ID of a vnic_profile.pass_through == 'enabled' check
-	NicVNicPassThroughID = CheckID("nic.vnic_profile.pass_through")
 	// NicVNicCustomPropertiesID defines an ID of a vnic_profile.custom_properties presence check
 	NicVNicCustomPropertiesID = CheckID("nic.vnic_profile.custom_properties")
 	// NicVNicNetworkFilterID defines an ID of a vnic_profile.networ_filter presence check
@@ -121,6 +119,8 @@ const (
 	NetworkTypeID = CheckID("network.type")
 	// NetworkTargetID defines an ID of a check verifying existence of target network
 	NetworkTargetID = CheckID("network.target")
+	// NetworkConfig defines an ID of a check verifying correcness of target network config
+	NetworkConfig = CheckID("network.config")
 	// NetworkMultiplePodTargetsID defines an ID of a check verifying that there is not more than one network mapped to a pod network
 	NetworkMultiplePodTargetsID = CheckID("network.pod.multiple")
 	// StorageTargetID defines an ID of a check verifying existence of target storage class

@@ -214,7 +214,6 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		Expect(*condition.Reason).To(Equal(errorReason))
 	},
 		table.Entry("Interface model", validators.NicInterfaceCheckID),
-		table.Entry("Pass-through", validators.NicVNicPassThroughID),
 	)
 	table.DescribeTable("should accept VirtualMachineImport spec with storage log for ", func(checkId validators.CheckID) {
 		message := "Some log"
@@ -319,13 +318,9 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 			ID:      validators.NicInterfaceCheckID,
 			Message: "Interface model",
 		}
-		nicFailure2 := validators.ValidationFailure{
-			ID:      validators.NicVNicPassThroughID,
-			Message: "Pass-through",
-		}
 		validateNicsMock = func(_ []*ovirtsdk.Nic) []validators.ValidationFailure {
 			return []validators.ValidationFailure{
-				nicFailure1, nicFailure2,
+				nicFailure1,
 			}
 		}
 
@@ -337,7 +332,6 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		Expect(*condition.Message).To(ContainSubstring(storageFailure1.Message))
 		Expect(*condition.Message).To(ContainSubstring(storageFailure2.Message))
 		Expect(*condition.Message).To(ContainSubstring(nicFailure1.Message))
-		Expect(*condition.Message).To(ContainSubstring(nicFailure2.Message))
 		Expect(*condition.Message).To(ContainSubstring(vmFailure1.Message))
 		Expect(*condition.Message).To(ContainSubstring(vmFailure2.Message))
 		Expect(*condition.Reason).To(Equal(errorReason))

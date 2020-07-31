@@ -262,6 +262,43 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(networks[1].Name).To(Equal(nic2.MustName()))
 		Expect(networks[1].Pod).To(Not(BeNil()))
 	})
+
+	It("should map sriov nic", func() {
+		vm = createVM()
+		slice := new(ovirtsdk.NicSlice)
+		nics := []*ovirtsdk.Nic{
+			ovirtsdk.NewNicBuilder().
+				Name("nic1").
+				Interface("pci_passthrough").
+				VnicProfile(
+					ovirtsdk.NewVnicProfileBuilder().
+						Name("profile1").
+						PassThrough(
+							ovirtsdk.NewVnicPassThroughBuilder().Mode(
+								ovirtsdk.VNICPASSTHROUGHMODE_ENABLED).
+								MustBuild()).
+						Network(
+							ovirtsdk.NewNetworkBuilder().
+								Name("network1").MustBuild()).
+						MustBuild()).
+				MustBuild(),
+		}
+		slice.SetSlice(nics)
+		vm.SetNics(slice)
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
+		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+
+		interfaces := vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces
+		networks := vmSpec.Spec.Template.Spec.Networks
+		networkMapping := *mappings.NetworkMappings
+
+		Expect(interfaces[0].Name).To(Equal(nics[0].MustName()))
+		Expect(interfaces[0].SRIOV).To(Not(BeNil()))
+		Expect(interfaces[0].Bridge).To(BeNil())
+		Expect(interfaces[0].Masquerade).To(BeNil())
+
+		Expect(networks[0].Multus.NetworkName).To(Equal(vmSpec.Namespace + "/" + networkMapping[0].Target.Name))
+	})
 })
 
 var _ = Describe("Test pvc accessmodes", func() {

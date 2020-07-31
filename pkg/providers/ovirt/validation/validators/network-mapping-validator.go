@@ -1,6 +1,7 @@
 package validators
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -93,7 +94,80 @@ func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, m
 			failures = append(failures, failure)
 		}
 	}
+
+	// Validate that source and target are sroiv when used
+	if fls, valid := v.validateSRIOV(nics, mapping, crNamespace); !valid {
+		failures = append(failures, fls...)
+	}
 	return failures
+}
+
+func (v *NetworkMappingValidator) validateSRIOV(nics []*ovirtsdk.Nic, mapping *[]v2vv1.NetworkResourceMappingItem, crNamespace string) ([]ValidationFailure, bool) {
+	var failures []ValidationFailure
+	valid := true
+	for _, nic := range nics {
+		if vnicProfile, ok := nic.VnicProfile(); ok {
+			if outils.IsSRIOV(vnicProfile) {
+				name, ns := getSROIVNetworkNameForNic(vnicProfile, mapping, crNamespace)
+				network, err := v.provider.Find(name, ns)
+				if err != nil {
+					failures = append(failures, ValidationFailure{
+						ID:      NetworkTargetID,
+						Message: fmt.Sprintf("Network Attachment Defintion %s has not been found. Error: %v", utils.ToLoggableResourceName(name, &ns), err),
+					})
+					valid = false
+					continue
+				}
+				var cnf map[string]interface{}
+				err = json.Unmarshal([]byte(network.Spec.Config), &cnf)
+				if err != nil {
+					failures = append(failures, ValidationFailure{
+						ID:      NetworkConfig,
+						Message: fmt.Sprintf("Network Attachment Defintion %s has not correct config. Error: %v", utils.ToLoggableResourceName(name, &ns), err),
+					})
+					valid = false
+					continue
+				}
+				if cnf["type"].(string) != "sriov" {
+					failures = append(failures, ValidationFailure{
+						ID:      NetworkTypeID,
+						Message: fmt.Sprintf("Network Attachment Defintion %s is not SRIOV network. Error: %v", utils.ToLoggableResourceName(name, &ns), err),
+					})
+					valid = false
+					continue
+				}
+			}
+		}
+	}
+	return failures, valid
+}
+
+func getSROIVNetworkNameForNic(vnicProfile *ovirtsdk.VnicProfile, mappings *[]v2vv1.NetworkResourceMappingItem, crNamespace string) (string, string) {
+	network, _ := vnicProfile.Network()
+	nicNetworkName, _ := network.Name()
+	vnicProfileName, _ := vnicProfile.Name()
+
+	nicMappingName := outils.GetNetworkMappingName(nicNetworkName, vnicProfileName)
+	for _, mapping := range *mappings {
+		if mapping.Source.Name != nil && nicMappingName == *mapping.Source.Name {
+			return mapNetworkType(mapping, crNamespace)
+		}
+		if mapping.Source.ID != nil {
+			if vnicProfileID, _ := vnicProfile.Id(); vnicProfileID == *mapping.Source.ID {
+				return mapNetworkType(mapping, crNamespace)
+			}
+		}
+	}
+	return "", ""
+}
+
+func mapNetworkType(mapping v2vv1.NetworkResourceMappingItem, crNamespace string) (string, string) {
+	namespace := crNamespace
+	if mapping.Target.Namespace != nil {
+		namespace = *mapping.Target.Namespace
+	}
+	name := mapping.Target.Name
+	return name, namespace
 }
 
 func (v *NetworkMappingValidator) getPodNetworks(nics []*ovirtsdk.Nic, mapByID map[string]v2vv1.NetworkResourceMappingItem, mapByName map[string]v2vv1.NetworkResourceMappingItem) []string {

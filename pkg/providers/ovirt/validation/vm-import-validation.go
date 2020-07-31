@@ -39,7 +39,6 @@ var checkToAction = map[validators.CheckID]action{
 	validators.NicInterfaceCheckID:       block,
 	validators.NicOnBootID:               log,
 	validators.NicPluggedID:              warn,
-	validators.NicVNicPassThroughID:      block,
 	validators.NicVNicPortMirroringID:    warn,
 	validators.NicVNicCustomPropertiesID: warn,
 	validators.NicVNicNetworkFilterID:    warn,
@@ -96,6 +95,7 @@ var checkToAction = map[validators.CheckID]action{
 	validators.VMFloppiesID:                      log,
 	validators.VMTimezoneID:                      block,
 	// Network mapping validation
+	validators.NetworkConfig:               block,
 	validators.NetworkTargetID:             block,
 	validators.NetworkMappingID:            block,
 	validators.NetworkMultiplePodTargetsID: block,
