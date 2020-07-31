@@ -36,6 +36,10 @@ const (
 	storageDomainSourceType = sourceType("storage domain")
 )
 
+var (
+	defaultStorageClassTarget = v2vv1.ObjectIdentifier{Name: mapper.DefaultStorageClassTargetName}
+)
+
 type mappingSource struct {
 	ID   *string
 	Name *string
@@ -48,10 +52,6 @@ func (v *StorageMappingValidator) ValidateStorageMapping(
 	storageMapping *[]v2vv1.StorageResourceMappingItem,
 	diskMapping *[]v2vv1.StorageResourceMappingItem,
 ) []ValidationFailure {
-	// Don't validate lack of mapping
-	if isNilOrEmpty(storageMapping) && isNilOrEmpty(diskMapping) && len(attachments) > 0 {
-		return []ValidationFailure{}
-	}
 	if storageMapping == nil {
 		storageMapping = &[]v2vv1.StorageResourceMappingItem{}
 	}
@@ -100,9 +100,12 @@ func (v *StorageMappingValidator) getRequiredStorageClasses(
 				if mapping, ok := mapDomainByName[name]; ok {
 					source := mappingSource{ID: mapping.Source.ID, Name: mapping.Source.Name, Type: storageDomainSourceType}
 					storageMappingTargetSet[mapping.Target] = append(storageMappingTargetSet[mapping.Target], source)
+					continue
 				}
 			}
-			// Ignore lack of mapping
+			// Add default storage class target
+			source := mappingSource{ID: &diskID, Name: &diskName, Type: diskSourceType}
+			storageMappingTargetSet[defaultStorageClassTarget] = append(storageMappingTargetSet[defaultStorageClassTarget], source)
 		}
 	}
 	return storageMappingTargetSet
@@ -112,6 +115,13 @@ func (v *StorageMappingValidator) validateStorageClasses(requiredTargetsSet map[
 	var failures []ValidationFailure
 	for className, sources := range requiredTargetsSet {
 		if className.Name == mapper.DefaultStorageClassTargetName {
+			for _, source := range sources {
+				resourceName := utils.ToLoggableID(source.ID, source.Name)
+				failures = append(failures, ValidationFailure{
+					ID:      StorageTargetDefaultClass,
+					Message: fmt.Sprintf("Default storage class will be used for %s disk ", resourceName),
+				})
+			}
 			// allow for forcing default storage class later on
 			continue
 		}
@@ -138,8 +148,4 @@ func getCheckID(source mappingSource) CheckID {
 	default:
 		return StorageTargetID
 	}
-}
-
-func isNilOrEmpty(mapping *[]v2vv1.StorageResourceMappingItem) bool {
-	return mapping == nil || len(*mapping) == 0
 }

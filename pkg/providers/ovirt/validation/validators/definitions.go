@@ -127,6 +127,8 @@ const (
 	StorageTargetID = CheckID("storage.target")
 	// DiskTargetID defines an ID of a check verifying existence of target storage class
 	DiskTargetID = CheckID("disk.target")
+	// StorageTargetDefaultClass defines an ID of a check verifying whether the default storage class is used in mapping
+	StorageTargetDefaultClass = CheckID("storage.target.default")
 )
 
 // CheckID identifies validation check for Virtual Machine Import

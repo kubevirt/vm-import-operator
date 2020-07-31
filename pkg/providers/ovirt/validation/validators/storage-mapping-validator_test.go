@@ -40,7 +40,7 @@ var _ = Describe("Validating Storage mapping", func() {
 			return &sc, nil
 		}
 	})
-	table.DescribeTable("should ignore missing mapping for: ", func(sd *ovirtsdk.StorageDomain, domainName *string, domainID *string) {
+	table.DescribeTable("should ignore missing mapping (with warning) for: ", func(sd *ovirtsdk.StorageDomain, domainName *string, domainID *string) {
 		da := createDiskAttachment(sd)
 		das := []*ovirtsdk.DiskAttachment{
 			da,
@@ -60,7 +60,8 @@ var _ = Describe("Validating Storage mapping", func() {
 
 		failures := validator.ValidateStorageMapping(das, &mapping, nil)
 
-		Expect(failures).To(BeEmpty())
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.StorageTargetDefaultClass))
 	},
 		table.Entry("No mapping", createDomain(&domainName, &domainID), nil, nil),
 		table.Entry("ID mismatch", createDomain(&domainName, &domainID), nil, &wrongDomainID),
@@ -113,7 +114,8 @@ var _ = Describe("Validating Storage mapping", func() {
 
 		failures := validator.ValidateStorageMapping(das, &mapping, nil)
 
-		Expect(failures).To(BeEmpty())
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.StorageTargetDefaultClass))
 	})
 	It("should reject mapping for storage class retrieval error", func() {
 		sd := createDomain(&domainName, &domainID)
@@ -186,7 +188,7 @@ var _ = Describe("Validating Storage mapping", func() {
 		Expect(failures[1].Message).To(ContainSubstring(otherDomainID))
 		Expect(failures[1].Message).To(ContainSubstring(otherDomainName))
 	})
-	It("should accept nil mapping", func() {
+	It("should accept nil mapping (with warning)", func() {
 		sd := createDomain(&domainName, &domainID)
 		da := createDiskAttachment(sd)
 		das := []*ovirtsdk.DiskAttachment{
@@ -195,7 +197,8 @@ var _ = Describe("Validating Storage mapping", func() {
 
 		failures := validator.ValidateStorageMapping(das, nil, nil)
 
-		Expect(failures).To(BeEmpty())
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.StorageTargetDefaultClass))
 	})
 })
 
@@ -211,7 +214,7 @@ var _ = Describe("Validating Disk mapping", func() {
 			return &sc, nil
 		}
 	})
-	table.DescribeTable("should accept missing mapping for: ", func(diskName *string, diskID *string) {
+	table.DescribeTable("should accept missing mapping (with warning) for: ", func(diskName *string, diskID *string) {
 		da := createDiskAttachment(createDomain(&domainName, &domainID))
 		das := []*ovirtsdk.DiskAttachment{
 			da,
@@ -231,7 +234,8 @@ var _ = Describe("Validating Disk mapping", func() {
 
 		failures := validator.ValidateStorageMapping(das, nil, &diskMapping)
 
-		Expect(failures).To(BeEmpty())
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.StorageTargetDefaultClass))
 	},
 		table.Entry("No mapping", nil, nil),
 		table.Entry("ID mismatch", nil, &wrongDiskID),
@@ -284,7 +288,8 @@ var _ = Describe("Validating Disk mapping", func() {
 
 		failures := validator.ValidateStorageMapping(das, nil, &diskMapping)
 
-		Expect(failures).To(BeEmpty())
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.StorageTargetDefaultClass))
 	})
 	It("should reject disk mapping for storage class retrieval error", func() {
 		da := createDiskAttachment(createDomain(&domainName, &domainID))
@@ -355,7 +360,7 @@ var _ = Describe("Validating Disk mapping", func() {
 		Expect(failures[1].Message).To(ContainSubstring(otherDiskID))
 		Expect(failures[1].Message).To(ContainSubstring(otherDiskName))
 	})
-	It("should accept nil mapping", func() {
+	It("should accept nil mapping (with warning)", func() {
 		da := createDiskAttachment(createDomain(&domainName, &domainID))
 		das := []*ovirtsdk.DiskAttachment{
 			da,
@@ -363,7 +368,8 @@ var _ = Describe("Validating Disk mapping", func() {
 
 		failures := validator.ValidateStorageMapping(das, &[]v2vv1.StorageResourceMappingItem{}, nil)
 
-		Expect(failures).To(BeEmpty())
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.StorageTargetDefaultClass))
 	})
 	It("should accept mapping for storage class and disk mapping", func() {
 		sd := createDomain(&domainName, &domainID)

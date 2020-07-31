@@ -163,6 +163,9 @@ const (
 
 	// IncompleteMappingRules represents the inability to prepare the mapping rules
 	IncompleteMappingRules ValidConditionReason = "IncompleteMappingRules"
+
+	// ValidationReportedWarnings represents the existence of warnings related to resource mapping validation
+	ValidationReportedWarnings ValidConditionReason = "ValidationReportedWarnings"
 )
 
 // MappingRulesVerifiedReason defines the reasons for the MappingRulesVerified condition of VM import
