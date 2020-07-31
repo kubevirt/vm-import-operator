@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
+
 	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 
 	"github.com/kubevirt/vm-import-operator/pkg/ownerreferences"
@@ -102,14 +104,14 @@ type OvirtProvider struct {
 }
 
 // NewOvirtProvider creates new OvirtProvider configured with dependencies
-func NewOvirtProvider(vmiObjectMeta metav1.ObjectMeta, vmiTypeMeta metav1.TypeMeta, client client.Client, tempClient *tempclient.TemplateV1Client, factory pclient.Factory, kvConfigProvider kvConfig.KubeVirtConfigProvider) OvirtProvider {
+func NewOvirtProvider(vmiObjectMeta metav1.ObjectMeta, vmiTypeMeta metav1.TypeMeta, client client.Client, tempClient *tempclient.TemplateV1Client, factory pclient.Factory, kvConfigProvider kvConfig.KubeVirtConfigProvider, ctrlConfig ctrlConfig.ControllerConfig) OvirtProvider {
 	validator := validators.NewValidatorWrapper(client, kvConfigProvider)
 	secretsManager := secrets.NewManager(client)
 	configMapsManager := configmaps.NewManager(client)
 	datavolumesManager := datavolumes.NewManager(client)
 	virtualMachineManager := virtualmachines.NewManager(client)
 	templateProvider := templates.NewTemplateProvider(tempClient)
-	osFinder := oos.OVirtOSFinder{OsMapProvider: os.NewOSMapProvider(client)}
+	osFinder := oos.OVirtOSFinder{OsMapProvider: os.NewOSMapProvider(client, ctrlConfig.OsConfigMapName(), ctrlConfig.OsConfigMapNamespace())}
 	return OvirtProvider{
 		vmiObjectMeta:         vmiObjectMeta,
 		vmiTypeMeta:           vmiTypeMeta,

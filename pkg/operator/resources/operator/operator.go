@@ -9,7 +9,6 @@ import (
 	"github.com/blang/semver"
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	vmimportmetrics "github.com/kubevirt/vm-import-operator/pkg/metrics"
-	osmap "github.com/kubevirt/vm-import-operator/pkg/os"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	csvv1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/version"
@@ -333,7 +332,7 @@ func getOperatorPolicyRules() []rbacv1.PolicyRule {
 }
 
 // CreateControllerDeployment returns vmimport controller deployment
-func CreateControllerDeployment(name, namespace, image, pullPolicy, osMapName, osMapNamespace string, numReplicas int32) *appsv1.Deployment {
+func CreateControllerDeployment(name, namespace, image, pullPolicy string, numReplicas int32) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -343,12 +342,12 @@ func CreateControllerDeployment(name, namespace, image, pullPolicy, osMapName, o
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: *createControllerDeploymentSpec(image, pullPolicy, "v2v.kubevirt.io", ControllerName, numReplicas, osMapName, osMapNamespace),
+		Spec: *createControllerDeploymentSpec(image, pullPolicy, "v2v.kubevirt.io", ControllerName, numReplicas),
 	}
 	return deployment
 }
 
-func createControllerDeploymentSpec(image string, pullPolicy string, matchKey string, matchValue string, numReplicas int32, osMapName string, osMapNamespace string) *appsv1.DeploymentSpec {
+func createControllerDeploymentSpec(image string, pullPolicy string, matchKey string, matchValue string, numReplicas int32) *appsv1.DeploymentSpec {
 	matchMap := map[string]string{matchKey: matchValue}
 	return &appsv1.DeploymentSpec{
 		Replicas: &numReplicas,
@@ -361,13 +360,13 @@ func createControllerDeploymentSpec(image string, pullPolicy string, matchKey st
 			},
 			Spec: corev1.PodSpec{
 				ServiceAccountName: ControllerName,
-				Containers:         createControllerContainers(image, pullPolicy, osMapName, osMapNamespace),
+				Containers:         createControllerContainers(image, pullPolicy),
 			},
 		},
 	}
 }
 
-func createControllerContainers(image string, pullPolicy string, osMapName string, osMapNamespace string) []corev1.Container {
+func createControllerContainers(image string, pullPolicy string) []v1.Container {
 	return []corev1.Container{
 		{
 			Name:  ControllerName,
@@ -376,12 +375,12 @@ func createControllerContainers(image string, pullPolicy string, osMapName strin
 				ControllerName,
 			},
 			ImagePullPolicy: corev1.PullPolicy(pullPolicy),
-			Env:             createControllerEnv(pullPolicy, osMapName, osMapNamespace),
+			Env:             createControllerEnv(pullPolicy),
 		},
 	}
 }
 
-func createControllerEnv(pullPolicy string, osMapName string, osMapNamespace string) []corev1.EnvVar {
+func createControllerEnv(pullPolicy string) []v1.EnvVar {
 	return []corev1.EnvVar{
 		{
 			Name: "WATCH_NAMESPACE",
@@ -397,14 +396,6 @@ func createControllerEnv(pullPolicy string, osMapName string, osMapNamespace str
 		{
 			Name:  "OPERATOR_NAME",
 			Value: "vm-import-operator",
-		},
-		{
-			Name:  osmap.OsConfigMapName,
-			Value: osMapName,
-		},
-		{
-			Name:  osmap.OsConfigMapNamespace,
-			Value: osMapNamespace,
 		},
 		{
 			Name:  "IMPORT_POD_RESTART_TOLERANCE",
@@ -1458,12 +1449,6 @@ func createOperatorEnvVar(operatorVersion, deployClusterResources, controllerIma
 		{
 			Name:  "PULL_POLICY",
 			Value: pullPolicy,
-		},
-		{
-			Name: osmap.OsConfigMapName,
-		},
-		{
-			Name: osmap.OsConfigMapNamespace,
 		},
 		{
 			Name: "WATCH_NAMESPACE",

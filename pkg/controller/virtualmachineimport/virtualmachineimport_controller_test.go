@@ -74,6 +74,7 @@ var _ = Describe("Reconcile steps", func() {
 		factory := &mockFactory{}
 		controller := &mockController{}
 		kvConfigProviderMock := &mockKubeVirtConfigProvider{}
+		ctrlConfigProviderMock := &mockControllerConfigProvider{}
 		scheme.AddKnownTypes(v2vv1.SchemeGroupVersion,
 			&v2vv1.VirtualMachineImport{},
 		)
@@ -122,7 +123,7 @@ var _ = Describe("Reconcile steps", func() {
 		vmName = types.NamespacedName{Name: "test", Namespace: "default"}
 		rec := record.NewFakeRecorder(2)
 
-		reconciler = NewReconciler(mockClient, finder, scheme, ownerreferences.NewOwnerReferenceManager(mockClient), factory, kvConfigProviderMock, rec, controller)
+		reconciler = NewReconciler(mockClient, finder, scheme, ownerreferences.NewOwnerReferenceManager(mockClient), factory, kvConfigProviderMock, rec, controller, ctrlConfigProviderMock)
 	})
 
 	AfterEach(func() {
@@ -1486,7 +1487,7 @@ var _ = Describe("Disks import progress", func() {
 	)
 })
 
-func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory pclient.Factory, kvConfigProvider kvConfig.KubeVirtConfigProvider, recorder record.EventRecorder, controller controller.Controller) *ReconcileVirtualMachineImport {
+func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory pclient.Factory, kvConfigProvider kvConfig.KubeVirtConfigProvider, recorder record.EventRecorder, controller controller.Controller, ctrlConfigProvider ctrlConfig.ControllerConfigProvider) *ReconcileVirtualMachineImport {
 	return &ReconcileVirtualMachineImport{
 		client:                 client,
 		apiReader:              client,
@@ -1497,6 +1498,7 @@ func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme 
 		kvConfigProvider:       kvConfigProvider,
 		recorder:               recorder,
 		controller:             controller,
+		ctrlConfigProvider:     ctrlConfigProvider,
 	}
 }
 
