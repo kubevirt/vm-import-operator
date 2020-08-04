@@ -803,6 +803,164 @@ func CreateVMImport() *extv1.CustomResourceDefinition {
 													},
 													Required: []string{"vm"},
 												},
+												"vmware": {
+													Type:        "object",
+													Description: `VirtualMachineImportVmwareSourceSpec defines the mapping resources and the VM identity for vmware source provider`,
+													Properties: map[string]extv1.JSONSchemaProps{
+														"mappings": {
+															Type:        "object",
+															Description: "VmwareMappings defines the mappings of vmware resources to kubevirt",
+															Properties: map[string]extv1.JSONSchemaProps{
+																"networkMappings": {
+																	Type: "array",
+																	Description: `NetworkMappings defines the mapping of guest network interfaces to kubevirt networks
+NetworkMappings.Source.Name represents the network field of the GuestNicInfo in vCenter
+NetworkMappings.Source.ID represents the macAddress field of the network adapter`,
+																	Items: &extv1.JSONSchemaPropsOrArray{
+																		Schema: &extv1.JSONSchemaProps{
+																			Type:        "object",
+																			Description: `NetworkResourceMappingItem defines the mapping of a single resource from the provider to kubevirt`,
+																			Properties: map[string]extv1.JSONSchemaProps{
+																				"source": {
+																					Description: `Source defines how to identify a resource on the provider, either by ID or by name`,
+																					Type:        "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"id": {
+																							Type: "string",
+																						},
+																						"name": {
+																							Type: "string",
+																						},
+																					},
+																				},
+																				"target": {
+																					Description: `ObjectIdentifier defines how a resource should be identified on kubevirt`,
+																					Type:        "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"name": {
+																							Type: "string",
+																						},
+																						"namespace": {
+																							Type: "string",
+																						},
+																					},
+																					Required: []string{"name"},
+																				},
+																				"type": {
+																					Type: "string",
+																				},
+																			},
+																			Required: []string{"source"},
+																		},
+																	},
+																},
+																"storageMappings": {
+																	Type:        "array",
+																	Description: `StorageMappings defines the mapping of storage domains to storage classes.`,
+																	Items: &extv1.JSONSchemaPropsOrArray{
+																		Schema: &extv1.JSONSchemaProps{
+																			Type:        "object",
+																			Description: `StorageResourceMappingItem defines the mapping of a single resource from the provider to kubevirt`,
+																			Properties: map[string]extv1.JSONSchemaProps{
+																				"source": {
+																					Description: `Source defines how to identify a resource on the provider, either by ID or by name`,
+																					Type:        "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"id": {
+																							Type: "string",
+																						},
+																						"name": {
+																							Type: "string",
+																						},
+																					},
+																				},
+																				"target": {
+																					Description: `ObjectIdentifier defines how a resource should be identified on kubevirt`,
+																					Type:        "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"name": {
+																							Type: "string",
+																						},
+																						"namespace": {
+																							Type: "string",
+																						},
+																					},
+																					Required: []string{"name"},
+																				},
+																				"type": {
+																					Type: "string",
+																				},
+																				"volumeMode": {
+																					Type: "string",
+																				},
+																			},
+																			Required: []string{"source"},
+																		},
+																	},
+																},
+																"diskMappings": {
+																	Type: "array",
+																	Description: `DiskMappings defines the mapping of VirtualDisks to storage classes.
+DiskMappings.Source.Name represents the disk name in vCenter
+DiskMappings.Source.ID represents the DiskObjectId or vDiskID of the VirtualDisk in vCenter`,
+																	Items: &extv1.JSONSchemaPropsOrArray{
+																		Schema: &extv1.JSONSchemaProps{
+																			Type:        "object",
+																			Description: `StorageResourceMappingItem defines the mapping of a single resource from the provider to kubevirt`,
+																			Properties: map[string]extv1.JSONSchemaProps{
+																				"source": {
+																					Description: `Source defines how to identify a resource on the provider, either by ID or by name`,
+																					Type:        "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"id": {
+																							Type: "string",
+																						},
+																						"name": {
+																							Type: "string",
+																						},
+																					},
+																				},
+																				"target": {
+																					Description: `ObjectIdentifier defines how a resource should be identified on kubevirt`,
+																					Type:        "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"name": {
+																							Type: "string",
+																						},
+																						"namespace": {
+																							Type: "string",
+																						},
+																					},
+																					Required: []string{"name"},
+																				},
+																				"type": {
+																					Type: "string",
+																				},
+																				"volumeMode": {
+																					Type: "string",
+																				},
+																			},
+																			Required: []string{"source"},
+																		},
+																	},
+																},
+															},
+														},
+														"vm": {
+															Type:        "object",
+															Description: `VirtualMachineImportVmwareSourceVMSpec defines how to identify the VM in vCenter`,
+															Properties: map[string]extv1.JSONSchemaProps{
+																"id": {
+																	Type: "string",
+																},
+																"name": {
+																	Type: "string",
+																},
+															},
+														},
+													},
+													Required: []string{"vm"},
+												},
 											},
 										},
 										"startVm": {
@@ -1048,6 +1206,145 @@ func CreateResourceMapping() *extv1.CustomResourceDefinition {
 														Schema: &extv1.JSONSchemaProps{
 															Type:        "object",
 															Description: `NetworkResourceMappingItem defines the mapping of a single disk resource from the provider to kubevirt`,
+															Properties: map[string]extv1.JSONSchemaProps{
+																"source": {
+																	Description: `Source defines how to identify a resource on the provider, either by ID or by name`,
+																	Type:        "object",
+																	Properties: map[string]extv1.JSONSchemaProps{
+																		"id": {
+																			Type: "string",
+																		},
+																		"name": {
+																			Type: "string",
+																		},
+																	},
+																},
+																"target": {
+																	Description: `ObjectIdentifier defines how a resource should be identified on kubevirt`,
+																	Type:        "object",
+																	Properties: map[string]extv1.JSONSchemaProps{
+																		"name": {
+																			Type: "string",
+																		},
+																		"namespace": {
+																			Type: "string",
+																		},
+																	},
+																	Required: []string{"name"},
+																},
+																"type": {
+																	Type: "string",
+																},
+																"volumeMode": {
+																	Type: "string",
+																},
+															},
+															Required: []string{"source", "target"},
+														},
+													},
+												},
+											},
+										},
+										"vmware": {
+											Type:        "object",
+											Description: "VmwareMappings defines the mappings of vmware resources to kubevirt",
+											Properties: map[string]extv1.JSONSchemaProps{
+												"networkMappings": {
+													Type: "array",
+													Description: `NetworkMappings defines the mapping of guest network interfaces to kubevirt networks
+NetworkMappings.Source.Name represents the network field of the GuestNicInfo in vCenter
+NetworkMappings.Source.ID represents the macAddress field of the network adapter`,
+													Items: &extv1.JSONSchemaPropsOrArray{
+														Schema: &extv1.JSONSchemaProps{
+															Type:        "object",
+															Description: `NetworkResourceMappingItem defines the mapping of a single resource from the provider to kubevirt`,
+															Properties: map[string]extv1.JSONSchemaProps{
+																"source": {
+																	Description: `Source defines how to identify a resource on the provider, either by ID or by name`,
+																	Type:        "object",
+																	Properties: map[string]extv1.JSONSchemaProps{
+																		"id": {
+																			Type: "string",
+																		},
+																		"name": {
+																			Type: "string",
+																		},
+																	},
+																},
+																"target": {
+																	Description: `ObjectIdentifier defines how a resource should be identified on kubevirt`,
+																	Type:        "object",
+																	Properties: map[string]extv1.JSONSchemaProps{
+																		"name": {
+																			Type: "string",
+																		},
+																		"namespace": {
+																			Type: "string",
+																		},
+																	},
+																	Required: []string{"name"},
+																},
+																"type": {
+																	Type: "string",
+																},
+															},
+															Required: []string{"source", "target"},
+														},
+													},
+												},
+												"storageMappings": {
+													Type:        "array",
+													Description: `StorageMappings defines the mapping of storage domains to storage classes.`,
+													Items: &extv1.JSONSchemaPropsOrArray{
+														Schema: &extv1.JSONSchemaProps{
+															Type:        "object",
+															Description: `StorageResourceMappingItem defines the mapping of a single resource from the provider to kubevirt`,
+															Properties: map[string]extv1.JSONSchemaProps{
+																"source": {
+																	Description: `Source defines how to identify a resource on the provider, either by ID or by name`,
+																	Type:        "object",
+																	Properties: map[string]extv1.JSONSchemaProps{
+																		"id": {
+																			Type: "string",
+																		},
+																		"name": {
+																			Type: "string",
+																		},
+																	},
+																},
+																"target": {
+																	Description: `ObjectIdentifier defines how a resource should be identified on kubevirt`,
+																	Type:        "object",
+																	Properties: map[string]extv1.JSONSchemaProps{
+																		"name": {
+																			Type: "string",
+																		},
+																		"namespace": {
+																			Type: "string",
+																		},
+																	},
+																	Required: []string{"name"},
+																},
+																"type": {
+																	Type: "string",
+																},
+																"volumeMode": {
+																	Type: "string",
+																},
+															},
+															Required: []string{"source", "target"},
+														},
+													},
+												},
+												"diskMappings": {
+													Type: "array",
+													Description: `DiskMappings defines the mapping of VirtualDisks to storage classes.
+DiskMappings.Source.Name represents the disk name in vCenter
+DiskMappings.Source.ID represents the DiskObjectId or vDiskID of the VirtualDisk in vCenter`,
+													Items: &extv1.JSONSchemaPropsOrArray{
+														Schema: &extv1.JSONSchemaProps{
+															Type:        "object",
+															Description: `StorageResourceMappingItem defines the mapping of a single resource from the provider to kubevirt`,
 															Properties: map[string]extv1.JSONSchemaProps{
 																"source": {
 																	Description: `Source defines how to identify a resource on the provider, either by ID or by name`,

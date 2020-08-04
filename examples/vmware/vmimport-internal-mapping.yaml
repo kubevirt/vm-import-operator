@@ -1,0 +1,32 @@
+apiVersion: v2v.kubevirt.io/v1beta1
+kind: VirtualMachineImport
+metadata:
+  name: vmimport-example
+  namespace: default
+spec:
+  providerCredentialsSecret:
+    name: my-secret-with-vmware-credentials
+    namespace: default
+  targetVmName: examplevm
+  startVm: true
+  source:
+    vmware:
+      vm:
+        id: 42253ce0-5f76-918d-d85c-d7506f7cc056 # VirtualMachine UUID
+      mappings:
+        networkMappings:
+          - source:
+              name: VM Network
+            target:
+              name: pod
+            type: pod
+        storageMappings:
+          - source:
+              name: vmware_datastore_1
+            target:
+              name: storage_class_1
+        diskMappings: # specifies per-disk placement on storage class
+          - source:
+              id: 421-2000 # VirtualDisk DiskObjectId or vDiskID
+            target:
+              name: storage_class_1
