@@ -2,7 +2,7 @@ package validators
 
 import (
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
-	"github.com/kubevirt/vm-import-operator/pkg/config"
+	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -14,11 +14,11 @@ var logger = logf.Log.WithName("validators")
 type ValidatorWrapper struct {
 	networkMappingValidator NetworkMappingValidator
 	storageMappingValidator StorageMappingValidator
-	kvConfigProvider        config.KubeVirtConfigProvider
+	kvConfigProvider        kvConfig.KubeVirtConfigProvider
 }
 
 // NewValidatorWrapper creates new, configured ValidatorWrapper
-func NewValidatorWrapper(client client.Client, kvConfigProvider config.KubeVirtConfigProvider) *ValidatorWrapper {
+func NewValidatorWrapper(client client.Client, kvConfigProvider kvConfig.KubeVirtConfigProvider) *ValidatorWrapper {
 	netAttachDefProvider := NetworkAttachmentDefinitions{
 		Client: client,
 	}

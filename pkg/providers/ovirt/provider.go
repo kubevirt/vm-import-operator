@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
+
 	"github.com/kubevirt/vm-import-operator/pkg/ownerreferences"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,8 +14,6 @@ import (
 	"github.com/kubevirt/vm-import-operator/pkg/os"
 
 	oos "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/os"
-
-	"github.com/kubevirt/vm-import-operator/pkg/config"
 
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
@@ -102,7 +102,7 @@ type OvirtProvider struct {
 }
 
 // NewOvirtProvider creates new OvirtProvider configured with dependencies
-func NewOvirtProvider(vmiObjectMeta metav1.ObjectMeta, vmiTypeMeta metav1.TypeMeta, client client.Client, tempClient *tempclient.TemplateV1Client, factory pclient.Factory, kvConfigProvider config.KubeVirtConfigProvider) OvirtProvider {
+func NewOvirtProvider(vmiObjectMeta metav1.ObjectMeta, vmiTypeMeta metav1.TypeMeta, client client.Client, tempClient *tempclient.TemplateV1Client, factory pclient.Factory, kvConfigProvider kvConfig.KubeVirtConfigProvider) OvirtProvider {
 	validator := validators.NewValidatorWrapper(client, kvConfigProvider)
 	secretsManager := secrets.NewManager(client)
 	configMapsManager := configmaps.NewManager(client)

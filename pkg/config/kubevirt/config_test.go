@@ -1,7 +1,7 @@
-package config_test
+package kubevirt_test
 
 import (
-	"github.com/kubevirt/vm-import-operator/pkg/config"
+	"github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -10,7 +10,7 @@ import (
 
 var _ = Describe("Live migration in KubeVirt config ", func() {
 	table.DescribeTable("should be enabled for: ", func(featureGates string) {
-		cfg := config.KubeVirtConfig{
+		cfg := kubevirt.KubeVirtConfig{
 			FeatureGates: featureGates,
 		}
 
@@ -23,7 +23,7 @@ var _ = Describe("Live migration in KubeVirt config ", func() {
 	)
 
 	table.DescribeTable("should be disabled for: ", func(featureGates string) {
-		cfg := config.KubeVirtConfig{
+		cfg := kubevirt.KubeVirtConfig{
 			FeatureGates: featureGates,
 		}
 
@@ -40,17 +40,17 @@ var _ = Describe("Live migration in KubeVirt config ", func() {
 		configMap := corev1.ConfigMap{
 			Data: map[string]string{"feature-gates": featureGates},
 		}
-		cfg := config.NewKubeVirtConfig(configMap)
+		cfg := kubevirt.NewKubeVirtConfig(configMap)
 
 		Expect(cfg.FeatureGates).To(BeEquivalentTo(featureGates))
 		Expect(cfg.LiveMigrationEnabled()).To(BeTrue())
-		Expect(cfg.ConfigMap()).To(BeEquivalentTo(configMap))
+		Expect(cfg.ConfigMap).To(BeEquivalentTo(configMap))
 	})
 })
 
 var _ = Describe("Import without templates in KubeVirt config ", func() {
 	table.DescribeTable("should be enabled for: ", func(featureGates string) {
-		cfg := config.KubeVirtConfig{
+		cfg := kubevirt.KubeVirtConfig{
 			FeatureGates: featureGates,
 		}
 
@@ -63,7 +63,7 @@ var _ = Describe("Import without templates in KubeVirt config ", func() {
 	)
 
 	table.DescribeTable("should be disabled for: ", func(featureGates string) {
-		cfg := config.KubeVirtConfig{
+		cfg := kubevirt.KubeVirtConfig{
 			FeatureGates: featureGates,
 		}
 
@@ -81,10 +81,10 @@ var _ = Describe("KubeVirt config creator", func() {
 	configMap := corev1.ConfigMap{
 		Data: map[string]string{"feature-gates": featureGates},
 	}
-	cfg := config.NewKubeVirtConfig(configMap)
+	cfg := kubevirt.NewKubeVirtConfig(configMap)
 
 	It("should create config with given config map", func() {
-		Expect(cfg.ConfigMap()).To(BeEquivalentTo(configMap))
+		Expect(cfg.ConfigMap).To(BeEquivalentTo(configMap))
 	})
 
 	It("should create config with feature gates", func() {
