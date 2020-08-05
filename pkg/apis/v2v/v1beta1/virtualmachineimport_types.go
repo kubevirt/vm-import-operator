@@ -88,7 +88,6 @@ type VirtualMachineImportVmwareSourceVMSpec struct {
 	Name *string `json:"name,omitempty"`
 }
 
-
 // VirtualMachineImportOvirtSourceVMClusterSpec defines the source cluster's identity of the VM in oVirt
 // +k8s:openapi-gen=true
 // +optional
@@ -227,6 +226,9 @@ const (
 
 	// ProcessingFailed represents failed import processing
 	ProcessingFailed ProcessingConditionReason = "ProcessingFailed"
+
+	// Pending represents pending for PVC to bound
+	Pending ProcessingConditionReason = "Pending"
 )
 
 // VirtualMachineImportCondition defines the observed state of VirtualMachineImport conditions
