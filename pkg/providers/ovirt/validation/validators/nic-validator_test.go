@@ -22,7 +22,6 @@ var _ = Describe("Validating NIC", func() {
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.NicInterfaceCheckID))
 	},
-		table.Entry("pci_passthrough", "pci_passthrough"),
 		table.Entry("spapr_vlan", "spapr_vlan"),
 		table.Entry("rtl8139_virtio", "rtl8139_virtio"),
 		table.Entry("garbage", "lkfsldfksld3432432#$#@"),
@@ -41,6 +40,7 @@ var _ = Describe("Validating NIC", func() {
 		table.Entry("virtio", "virtio"),
 		table.Entry("e1000", "e1000"),
 		table.Entry("rtl8139", "rtl8139"),
+		table.Entry("pci_passthrough", "pci_passthrough"),
 	)
 	It("should flag nic without interface: ", func() {
 		nic := ovirtsdk.Nic{}
@@ -87,20 +87,6 @@ var _ = Describe("Validating NIC", func() {
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.NicVNicPortMirroringID))
-	})
-	It("should flag nic with pass-through == 'enabled': ", func() {
-		var nic = newNic()
-		passThrough := ovirtsdk.VnicPassThrough{}
-		passThrough.SetMode(ovirtsdk.VnicPassThroughMode("enabled"))
-		profile := nic.MustVnicProfile()
-		profile.SetPassThrough(&passThrough)
-
-		nics := []*ovirtsdk.Nic{nic}
-
-		failures := validators.ValidateNics(nics)
-
-		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(validators.NicVNicPassThroughID))
 	})
 	It("should flag nic with some custom_properties ", func() {
 		var nic = newNic()

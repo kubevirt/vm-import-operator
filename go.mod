@@ -11,6 +11,7 @@ require (
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/coreos/prometheus-operator v0.35.0
 	github.com/evanphx/json-patch v4.5.0+incompatible
+	github.com/fromanirh/pack8s v0.1.0 // indirect
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
@@ -28,6 +29,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.2.1
 	github.com/spf13/pflag v1.0.5
+	github.com/tj/go-spin v1.1.0 // indirect
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
 	github.com/vmware/govmomi v0.23.0
 	github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2 // indirect

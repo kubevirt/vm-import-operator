@@ -25,3 +25,14 @@ func IsCPUPinningExact(cpuTune *ovirtsdk.CpuTune) bool {
 	}
 	return false
 }
+
+// IsSRIOV checks whether specific network is an sriov network
+func IsSRIOV(vNicProfile *ovirtsdk.VnicProfile) bool {
+	if pt, ok := vNicProfile.PassThrough(); ok {
+		if ptm, ok := pt.Mode(); ok && ptm == ovirtsdk.VNICPASSTHROUGHMODE_ENABLED {
+			return true
+		}
+	}
+
+	return false
+}

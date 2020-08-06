@@ -31,6 +31,18 @@ func HaveMappingRulesVerificationFailure(testFramework *framework.Framework) typ
 	return &matcher
 }
 
+// HaveMappingRulesVerified creates the matcher checking whether Virtual Machine Import has succeeded mapping rules verification
+func HaveMappingRulesVerified(testFramework *framework.Framework) types.GomegaMatcher {
+	matcher := hasConditionInStatus{}
+	matcher.timeout = 1 * time.Minute
+	matcher.pollInterval = 1 * time.Second
+	matcher.testFramework = testFramework
+
+	matcher.conditionType = v2vv1.MappingRulesVerified
+	matcher.status = corev1.ConditionTrue
+	return &matcher
+}
+
 // HaveValidationFailure creates the matcher checking whether Virtual Machine Import has failed validation
 func HaveValidationFailure(testFramework *framework.Framework, reason string) types.GomegaMatcher {
 	matcher := hasConditionInStatus{}

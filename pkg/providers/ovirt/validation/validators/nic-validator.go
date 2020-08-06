@@ -10,7 +10,7 @@ import (
 // TODO: move to shared package with mapping definitions
 
 // InterfaceModelMapping defines mapping of NIC device models between oVirt and kubevirt domains
-var InterfaceModelMapping = map[string]string{"e1000": "e1000", "rtl8139": "rtl8139", "virtio": "virtio"}
+var InterfaceModelMapping = map[string]string{"e1000": "e1000", "rtl8139": "rtl8139", "virtio": "virtio", "pci_passthrough": "pci_passthrough"}
 
 // ValidateNics validates given slice of NICs
 func ValidateNics(nics []*ovirtsdk.Nic) []ValidationFailure {
@@ -40,9 +40,6 @@ func validateNic(nic *ovirtsdk.Nic) []ValidationFailure {
 
 	if vNicProfile, ok := nic.VnicProfile(); ok {
 		if failure, valid := isValidVnicPortMirroring(vNicProfile, nicID); !valid {
-			results = append(results, failure)
-		}
-		if failure, valid := isValidVnicProfilePassThrough(vNicProfile, nicID); !valid {
 			results = append(results, failure)
 		}
 		if failure, valid := isValidVnicProfileCustomProperties(vNicProfile, nicID); !valid {
@@ -97,18 +94,6 @@ func isValidVnicPortMirroring(vNicProfile *ovirtsdk.VnicProfile, nicID string) (
 			ID:      NicVNicPortMirroringID,
 			Message: fmt.Sprintf("interface %s uses profile with port mirroring.", nicID),
 		}, false
-	}
-	return ValidationFailure{}, true
-}
-
-func isValidVnicProfilePassThrough(vNicProfile *ovirtsdk.VnicProfile, nicID string) (ValidationFailure, bool) {
-	if pt, ok := vNicProfile.PassThrough(); ok {
-		if ptm, ok := pt.Mode(); ok && string(ptm) == "enabled" {
-			return ValidationFailure{
-				ID:      NicVNicPassThroughID,
-				Message: fmt.Sprintf("interface %s uses profile pass-through enabled.", nicID),
-			}, false
-		}
 	}
 	return ValidationFailure{}, true
 }

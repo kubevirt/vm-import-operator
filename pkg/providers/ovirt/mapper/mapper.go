@@ -311,8 +311,12 @@ func (o *OvirtMapper) mapNics(networkToType map[string]string) []kubevirtv1.Inte
 	var kubevirtNics []kubevirtv1.Interface
 	nics, _ := o.vm.Nics()
 	for _, nic := range nics.Slice() {
+		sriov := false
+
 		// This network interface doesn't have any vnic profile specified.
-		if _, ok := nic.VnicProfile(); !ok {
+		if vNicProfile, ok := nic.VnicProfile(); ok {
+			sriov = outils.IsSRIOV(vNicProfile)
+		} else {
 			continue
 		}
 
@@ -322,13 +326,17 @@ func (o *OvirtMapper) mapNics(networkToType map[string]string) []kubevirtv1.Inte
 		if nicMac, ok := nic.Mac(); ok {
 			kubevirtNic.MacAddress, _ = nicMac.Address()
 		}
-		if nicInterface, ok := nic.Interface(); ok {
+		if nicInterface, ok := nic.Interface(); ok && !sriov {
 			kubevirtNic.Model = string(nicInterface)
 		}
 
 		switch networkToType[kubevirtNic.Name] {
 		case networkTypeMultus:
-			kubevirtNic.Bridge = &kubevirtv1.InterfaceBridge{}
+			if sriov {
+				kubevirtNic.SRIOV = &kubevirtv1.InterfaceSRIOV{}
+			} else {
+				kubevirtNic.Bridge = &kubevirtv1.InterfaceBridge{}
+			}
 		case networkTypePod:
 			kubevirtNic.Masquerade = &kubevirtv1.InterfaceMasquerade{}
 		}
@@ -375,26 +383,37 @@ func (o *OvirtMapper) getNetworkForNic(vnicProfile *ovirtsdk.VnicProfile) kubevi
 	network, _ := vnicProfile.Network()
 	nicNetworkName, _ := network.Name()
 	vnicProfileName, _ := vnicProfile.Name()
+	sriov := outils.IsSRIOV(vnicProfile)
 	nicMappingName := outils.GetNetworkMappingName(nicNetworkName, vnicProfileName)
 	for _, mapping := range *o.mappings.NetworkMappings {
 		if mapping.Source.Name != nil && nicMappingName == *mapping.Source.Name {
-			o.mapNetworkType(mapping, &kubevirtNet)
+			o.mapNetworkType(mapping, &kubevirtNet, sriov)
 		}
 		if mapping.Source.ID != nil {
 			if vnicProfileID, _ := vnicProfile.Id(); vnicProfileID == *mapping.Source.ID {
-				o.mapNetworkType(mapping, &kubevirtNet)
+				o.mapNetworkType(mapping, &kubevirtNet, sriov)
 			}
 		}
 	}
 	return kubevirtNet
 }
 
-func (o *OvirtMapper) mapNetworkType(mapping v2vv1.NetworkResourceMappingItem, kubevirtNet *kubevirtv1.Network) {
+func (o *OvirtMapper) mapNetworkType(mapping v2vv1.NetworkResourceMappingItem, kubevirtNet *kubevirtv1.Network, sriov bool) {
 	if mapping.Type == nil || *mapping.Type == networkTypePod {
 		kubevirtNet.Pod = &kubevirtv1.PodNetwork{}
 	} else if *mapping.Type == networkTypeMultus {
+		var name string
+		if sriov {
+			namespace := o.namespace
+			if mapping.Target.Namespace != nil {
+				namespace = *mapping.Target.Namespace
+			}
+			name = namespace + "/" + mapping.Target.Name
+		} else {
+			name = mapping.Target.Name
+		}
 		kubevirtNet.Multus = &kubevirtv1.MultusNetwork{
-			NetworkName: mapping.Target.Name,
+			NetworkName: name,
 		}
 	}
 }
