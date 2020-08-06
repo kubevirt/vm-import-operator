@@ -1,0 +1,7 @@
+<ObjectContent>
+  <obj type="LocalizationManager">LocalizationManager</obj>
+  <propSet>
+    <name>catalog</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfLocalizationManagerMessageCatalog"></val>
+  </propSet>
+</ObjectContent>

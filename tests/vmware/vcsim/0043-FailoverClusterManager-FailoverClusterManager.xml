@@ -1,0 +1,7 @@
+<ObjectContent>
+  <obj type="FailoverClusterManager">FailoverClusterManager</obj>
+  <propSet>
+    <name>disabledClusterMethod</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfString"></val>
+  </propSet>
+</ObjectContent>

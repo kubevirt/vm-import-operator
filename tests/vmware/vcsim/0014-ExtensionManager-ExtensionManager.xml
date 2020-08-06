@@ -1,0 +1,7 @@
+<ObjectContent>
+  <obj type="ExtensionManager">ExtensionManager</obj>
+  <propSet>
+    <name>extensionList</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfExtension"></val>
+  </propSet>
+</ObjectContent>
