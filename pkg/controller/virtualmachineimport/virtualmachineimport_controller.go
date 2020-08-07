@@ -373,6 +373,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 				}
 			}
 		} else if err == nil {
+			instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 			// Set dataVolume as done, if it's in Succeeded state:
 			if foundDv.Status.Phase == cdiv1.Succeeded {
 				dvsDone[dvID] = true
@@ -380,7 +381,21 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 				if err = r.endImportAsFailed(provider, instance, foundDv, "dv is in Failed Phase"); err != nil {
 					return err
 				}
+			} else if foundDv.Status.Phase == cdiv1.Pending {
+				// Update condition to pending the PVC bound:
+				message := fmt.Sprintf("DataVolume %s is pending to bound", foundDv.Name)
+				processingCond := conditions.NewProcessingCondition(string(v2vv1.Pending), message, corev1.ConditionTrue)
+				if err := r.upsertStatusConditions(instanceNamespacedName, processingCond); err != nil {
+					return err
+				}
 			} else if foundDv.Status.Phase == cdiv1.ImportInProgress {
+				// Update condition to create copying disks:
+				processingCond := conditions.NewProcessingCondition(string(v2vv1.CopyingDisks), "Copying virtual machine disks", corev1.ConditionTrue)
+				err := r.upsertStatusConditions(instanceNamespacedName, processingCond)
+				if err != nil {
+					return err
+				}
+
 				// During ImportInProgress phase importer pod can be in crashloppbackoff, so we need
 				// to check the state of the pod and fail the import:
 				foundPod := &corev1.Pod{}
@@ -713,20 +728,13 @@ func (r *ReconcileVirtualMachineImport) manageDataVolumeState(instance *v2vv1.Vi
 }
 
 func (r *ReconcileVirtualMachineImport) createDataVolume(provider provider.Provider, mapper provider.Mapper, instance *v2vv1.VirtualMachineImport, dv cdiv1.DataVolume, vmName types.NamespacedName) error {
-	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
-	// Update condition to create VM:
-	processingCond := conditions.NewProcessingCondition(string(v2vv1.CopyingDisks), "Copying virtual machine disks", corev1.ConditionTrue)
-	err := r.upsertStatusConditions(instanceNamespacedName, processingCond)
-	if err != nil {
-		return err
-	}
 	// Update progress to copying disks:
-	if err = r.updateProgress(instance, progressCopyingDisks); err != nil {
+	if err := r.updateProgress(instance, progressCopyingDisks); err != nil {
 		return err
 	}
 	// Fetch VM:
 	vmDef := &kubevirtv1.VirtualMachine{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, vmDef)
+	err := r.client.Get(context.TODO(), types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, vmDef)
 
 	if err != nil {
 		return err
@@ -761,6 +769,7 @@ func (r *ReconcileVirtualMachineImport) createDataVolume(provider provider.Provi
 	)
 
 	// Update datavolume in VM import CR status:
+	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	if err = r.updateDVs(instanceNamespacedName, dv); err != nil {
 		return err
 	}

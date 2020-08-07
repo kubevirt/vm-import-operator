@@ -790,7 +790,7 @@ var _ = Describe("Reconcile steps", func() {
 
 		It("should fail to update data volumes: ", func() {
 			counter := 2
-			update = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
 				counter--
 				if counter == 0 {
 					return fmt.Errorf("Not modified")
@@ -1008,6 +1008,22 @@ var _ = Describe("Reconcile steps", func() {
 			err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(Not(BeNil()))
+		})
+
+		It("should not fail for pending state: ", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *cdiv1.DataVolume:
+					obj.(*cdiv1.DataVolume).Status = cdiv1.DataVolumeStatus{
+						Phase: cdiv1.Pending,
+					}
+				}
+				return nil
+			}
+
+			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+
+			Expect(err).To(BeNil())
 		})
 
 		It("should cleanup: ", func() {
@@ -1358,14 +1374,6 @@ var _ = Describe("Reconcile steps", func() {
 				}
 				return nil
 			}
-			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
-				switch obj.(type) {
-				case *kubevirtv1.VirtualMachine:
-					return fmt.Errorf("Not modified")
-				}
-
-				return nil
-			}
 
 			result, err := reconciler.Reconcile(request)
 
@@ -1373,8 +1381,6 @@ var _ = Describe("Reconcile steps", func() {
 			Expect(event).To(ContainSubstring("ImportScheduled"))
 			event = <-reconciler.recorder.(*record.FakeRecorder).Events
 			Expect(event).To(ContainSubstring("ImportInProgress"))
-			event = <-reconciler.recorder.(*record.FakeRecorder).Events
-			Expect(event).To(ContainSubstring("DVCreationFailed"))
 
 			Expect(err).To(BeNil())
 			Expect(result).To(Equal(reconcile.Result{}))
