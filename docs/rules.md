@@ -60,7 +60,7 @@ ID | Predicate | Action
 ID | Predicate | Action
 --- | --- | ---
 1 | VM.bios.boot_menu.enabled == true | Log
-2 | VM.bios.type not matching ClusterConfig.EmulatedMachines (i.e. i440fx_sea_bios by default) | Block
+2 | VM.bios.type not matching ClusterConfig.EmulatedMachines | Block
 3 | VM.bios.type == q35_secure_boot | Warn
 4 | VM.cpu.architecture == s390x (default) or anything that does not match ClusterConfig.EmulatedMachines | Block
 5 | VM.cpu.cpu_tune setting is other than 1 vCPU- 1 pCPU. Allowed config example: ```<cputune><vcpupin vcpu="0" cpuset="0"/><vcpupin vcpu="1" cpuset="1"/><vcpupin vcpu="2" cpuset="2"/><vcpupin vcpu="3" cpuset="3"/></cputune>``` | Warn
