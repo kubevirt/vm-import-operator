@@ -13,8 +13,7 @@ The description of the actions is following:
 
 ### Preconditions
 
-1. Network to be used by the imported virtual machine has been properly pre-configured in the target cluster by its administrator (host network configuration and network attachment definition).
-2. SR-IOV network interfaces are not supported at this stage.
+Network to be used by the imported virtual machine has been properly pre-configured in the target cluster by its administrator (host network configuration and network attachment definition).
 
 ### Rules
 
@@ -24,11 +23,10 @@ ID | Predicate | Action
 2 | VM.nics[].interface not in [e1000, rtl8139, virtio] | Block
 3 | Vm.nics[].on_boot == false | Log
 4 | Vm.nics[].plugged == false | Warn
-5 | VM.nics[].vnic_profile.pass_through.mode == enabled | Block
-6 | VM.nics[].vnic_profile.port_mirroring == true | Warn
-7 | VM.nics[].vnic_profile.custom_properties | Warn
-8 | VM.nics[].vnic_profile.network_filter | Warn
-9 | VM.nics[].vnic_profile.qos | Log
+5 | VM.nics[].vnic_profile.port_mirroring == true | Warn
+6 | VM.nics[].vnic_profile.custom_properties | Warn
+7 | VM.nics[].vnic_profile.network_filter | Warn
+8 | VM.nics[].vnic_profile.qos | Log
 
 ## Storage rules
 
