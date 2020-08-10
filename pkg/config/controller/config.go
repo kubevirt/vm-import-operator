@@ -3,8 +3,10 @@ package controller
 import "github.com/kubevirt/vm-import-operator/pkg/config"
 
 const (
+	// OsConfigMapNamespaceKey defines the configuration key for the OS mapping config map namespace
 	OsConfigMapNamespaceKey = "osConfigMap.namespace"
 
+	// OsConfigMapNameKey defines the configuration key for the OS mapping config map name
 	OsConfigMapNameKey = "osConfigMap.name"
 )
 

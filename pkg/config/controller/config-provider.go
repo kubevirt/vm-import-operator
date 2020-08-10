@@ -6,6 +6,7 @@ import (
 )
 
 const (
+	// ConfigMapName defines the name of the controller config map
 	ConfigMapName = "vm-import-controller-config"
 )
 
