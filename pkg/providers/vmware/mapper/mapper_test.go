@@ -29,6 +29,8 @@ var (
 
 	// networks
 	networkName = "VM Network"
+	networkMoRef = "network-7"
+	macAddress = "00:0c:29:5b:62:35"
 	networkNormalizedName, _ = utils.NormalizeName(networkName)
 	multusNetwork = "multus"
 	podNetwork = "pod"
@@ -145,8 +147,8 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(int32(*vmSpec.Spec.Template.Spec.Domain.Clock.UTC.OffsetSeconds)).To(Equal(gmtOffsetSeconds))
 	})
 
-	It("should map pod network", func() {
-		mappings := createPodNetworkMapping()
+	It("should map pod network by moref", func() {
+		mappings := createPodNetworkMapping(true)
 		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
 		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 		Expect(err).To(BeNil())
@@ -158,12 +160,31 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(interfaces[0].Name).To(Equal(networkNormalizedName))
 		Expect(interfaces[0].Bridge).To(BeNil())
 		Expect(interfaces[0].Masquerade).To(Not(BeNil()))
+		Expect(interfaces[0].MacAddress).To(Equal(macAddress))
 		Expect(networks[0].Name).To(Equal(networkNormalizedName))
 		Expect(networks[0].Pod).To(Not(BeNil()))
 	})
 
-	It("should map multus network", func() {
-		mappings := createMultusNetworkMapping()
+	It("should map pod network by name", func() {
+		mappings := createPodNetworkMapping(false)
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+		Expect(err).To(BeNil())
+
+		interfaces := vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces
+		networks := vmSpec.Spec.Template.Spec.Networks
+
+		// interface to be connected to a pod network
+		Expect(interfaces[0].Name).To(Equal(networkNormalizedName))
+		Expect(interfaces[0].Bridge).To(BeNil())
+		Expect(interfaces[0].Masquerade).To(Not(BeNil()))
+		Expect(interfaces[0].MacAddress).To(Equal(macAddress))
+		Expect(networks[0].Name).To(Equal(networkNormalizedName))
+		Expect(networks[0].Pod).To(Not(BeNil()))
+	})
+
+	It("should map multus network by network moref", func() {
+		mappings := createMultusNetworkMapping(true)
 		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
 		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 		Expect(err).To(BeNil())
@@ -172,10 +193,28 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		networks := vmSpec.Spec.Template.Spec.Networks
 		networkMapping := *mappings.NetworkMappings
 
+		// interface to be connected to a multus network
+		Expect(interfaces[0].Name).To(Equal(networkNormalizedName))
+		Expect(interfaces[0].Bridge).To(Not(BeNil()))
+		Expect(interfaces[0].MacAddress).To(Equal(macAddress))
+		Expect(networks[0].Name).To(Equal(networkNormalizedName))
+		Expect(networks[0].Multus.NetworkName).To(Equal(networkMapping[0].Target.Name))
+	})
+
+	It("should map multus network by name", func() {
+		mappings := createMultusNetworkMapping(false)
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+		Expect(err).To(BeNil())
+
+		interfaces := vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces
+		networks := vmSpec.Spec.Template.Spec.Networks
+		networkMapping := *mappings.NetworkMappings
 
 		// interface to be connected to a multus network
 		Expect(interfaces[0].Name).To(Equal(networkNormalizedName))
 		Expect(interfaces[0].Bridge).To(Not(BeNil()))
+		Expect(interfaces[0].MacAddress).To(Equal(macAddress))
 		Expect(networks[0].Name).To(Equal(networkNormalizedName))
 		Expect(networks[0].Multus.NetworkName).To(Equal(networkMapping[0].Target.Name))
 	})
@@ -216,13 +255,19 @@ func createMinimalMapping() *v1beta1.VmwareMappings {
 	}
 }
 
-func createMultusNetworkMapping() *v1beta1.VmwareMappings {
+func createMultusNetworkMapping(byMoRef bool) *v1beta1.VmwareMappings {
 	var networks []v1beta1.NetworkResourceMappingItem
+
+	source := v1beta1.Source{}
+	if byMoRef {
+		source.ID = &networkMoRef
+	} else {
+		source.Name = &networkName
+	}
+
 	networks = append(networks,
 		v1beta1.NetworkResourceMappingItem{
-			Source: v1beta1.Source{
-				Name: &networkName,
-			},
+			Source: source,
 			Target: v1beta1.ObjectIdentifier{
 				Name: "net-attach-def",
 			},
@@ -236,13 +281,18 @@ func createMultusNetworkMapping() *v1beta1.VmwareMappings {
 
 }
 
-func createPodNetworkMapping() *v1beta1.VmwareMappings {
+func createPodNetworkMapping(byMoRef bool) *v1beta1.VmwareMappings {
+	source := v1beta1.Source{}
+	if byMoRef {
+		source.ID = &networkMoRef
+	} else {
+		source.Name = &networkName
+	}
+
 	var networks []v1beta1.NetworkResourceMappingItem
 	networks = append(networks,
 		v1beta1.NetworkResourceMappingItem{
-			Source: v1beta1.Source{
-				Name: &networkName,
-			},
+			Source: source,
 			Type: &podNetwork,
 		})
 

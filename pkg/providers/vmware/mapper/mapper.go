@@ -29,8 +29,6 @@ const (
 
 // bus types
 const (
-	busTypeSata   = "sata"
-	busTypeSCSI   = "scsi"
 	busTypeUSB    = "usb"
 	busTypeVirtio = "virtio"
 )
@@ -66,9 +64,10 @@ type disk struct {
 	name            string
 }
 
-// network is an abstraction of a VMWare VirtualEthernetCard
-type network struct {
+// nic is an abstraction of a VMWare VirtualEthernetCard
+type nic struct {
 	name string
+	moRef string
 	mac string
 }
 
@@ -79,7 +78,7 @@ type VmwareMapper struct {
 	hostProperties *mo.HostSystem
 	mappings       *v1beta1.VmwareMappings
 	namespace      string
-	networks       *[]network
+	nics           *[]nic
 	osFinder       vos.OSFinder
 	vm             *object.VirtualMachine
 	vmProperties   *mo.VirtualMachine
@@ -102,12 +101,12 @@ func NewVmwareMapper(vm *object.VirtualMachine, vmProperties *mo.VirtualMachine,
 // buildDevices retrieves each of the VM's VirtualDisks and VirtualEthernetCards
 // and pulls out the values that are needed for import
 func (r *VmwareMapper) buildDevices() error {
-	if r.disks != nil && r.networks != nil {
+	if r.disks != nil && r.nics != nil {
 		return nil
 	}
 
 	disks := make([]disk, 0)
-	networks := make([]network, 0)
+	nics := make([]nic, 0)
 
 	devices := r.vmProperties.Config.Hardware.Device
 	for _, device := range devices {
@@ -165,16 +164,22 @@ func (r *VmwareMapper) buildDevices() error {
 			virtualNetwork = &v.VirtualEthernetCard
 		}
 		if virtualNetwork != nil {
-			network := network{
-				// Summary is the name of the network the device is attached to
-				name: virtualNetwork.DeviceInfo.GetDescription().Summary,
-				mac: virtualNetwork.MacAddress,
+			backing := virtualNetwork.Backing.(*types.VirtualEthernetCardNetworkBackingInfo)
+
+			var moRef string
+			if backing.Network != nil {
+				moRef = backing.Network.Value
 			}
-			networks = append(networks, network)
+			nic := nic{
+				name: backing.DeviceName,
+				mac: virtualNetwork.MacAddress,
+				moRef: moRef,
+			}
+			nics = append(nics, nic)
 		}
 	}
 	r.disks = &disks
-	r.networks = &networks
+	r.nics = &nics
 	return nil
 }
 
@@ -446,11 +451,13 @@ func (r *VmwareMapper) mapNetworks() ([]kubevirtv1.Network, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	var kubevirtNetworks []kubevirtv1.Network
-	for _, network := range *r.networks {
+	for _, nic := range *r.nics {
 		kubevirtNet := kubevirtv1.Network{}
 		for _, mapping := range *r.mappings.NetworkMappings {
-			if mapping.Source.Name != nil && network.name == *mapping.Source.Name {
+			if (mapping.Source.Name != nil && nic.name == *mapping.Source.Name) ||
+				(mapping.Source.ID != nil && nic.moRef == *mapping.Source.ID) {
 				if *mapping.Type == networkTypePod {
 					kubevirtNet.Pod = &kubevirtv1.PodNetwork{}
 				} else if *mapping.Type == networkTypeMultus {
@@ -460,7 +467,7 @@ func (r *VmwareMapper) mapNetworks() ([]kubevirtv1.Network, error) {
 				}
 			}
 		}
-		kubevirtNet.Name, _ = utils.NormalizeName(network.name)
+		kubevirtNet.Name, _ = utils.NormalizeName(nic.name)
 		kubevirtNetworks = append(kubevirtNetworks, kubevirtNet)
 	}
 
@@ -472,12 +479,12 @@ func (r *VmwareMapper) mapNetworkInterfaces(networkToType map[string]string) ([]
 	if err != nil {
 		return nil, err
 	}
-	var interfaces []kubevirtv1.Interface
 
-	for _, net := range *r.networks {
+	var interfaces []kubevirtv1.Interface
+	for _, nic := range *r.nics {
 		kubevirtInterface := kubevirtv1.Interface{}
-		kubevirtInterface.MacAddress = net.mac
-		kubevirtInterface.Name, _ = utils.NormalizeName(net.name)
+		kubevirtInterface.MacAddress = nic.mac
+		kubevirtInterface.Name, _ = utils.NormalizeName(nic.name)
 		switch networkToType[kubevirtInterface.Name] {
 		case networkTypeMultus:
 			kubevirtInterface.Bridge = &kubevirtv1.InterfaceBridge{}
