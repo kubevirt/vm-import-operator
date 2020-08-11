@@ -2,6 +2,7 @@ package templates
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/os"
@@ -58,6 +59,11 @@ func (f *TemplateFinder) getTemplate(os string, workload string) (*templatev1.Te
 	}
 	if len(templates.Items) == 0 {
 		return nil, fmt.Errorf("Template not found for %s OS and %s workload", os, workload)
+	}
+	if len(templates.Items) > 1 {
+		sort.Slice(templates.Items, func(i, j int) bool {
+			return templates.Items[j].CreationTimestamp.Before(&templates.Items[i].CreationTimestamp)
+		})
 	}
 	// Take first which matches label selector
 	return &templates.Items[0], nil
