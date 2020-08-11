@@ -80,7 +80,6 @@ var _ = Describe("VM validation ", func() {
 		table.Entry("unsupported timezone", vms.UnsupportedTimezoneVmID, "timezone-template.xml", map[string]string{"@TIMEZONE": "America/New_York"}),
 		table.Entry("unsupported s390x architecture", vms.UnsupportedArchitectureVmID, "architecture-template.xml", map[string]string{"@ARCH": "s390x"}),
 		table.Entry("USB enabled", vms.UsbEnabledVmID, "usb-template.xml", map[string]string{"@ENABLED": "true"}),
-		table.Entry("unsupported i440fx_sea_bios BIOS type", vms.UnsupportedBiosTypeVmID, "bios-type-template.xml", map[string]string{"@BIOSTYPE": "i440fx_sea_bios"}),
 		table.Entry("placement policy affinity set to 'migratable'", vms.MigratablePlacementPolicyAffinityVmID, "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "migratable"}),
 		table.Entry("kubevirt origin", vms.KubevirtOriginVmID, "origin-template.xml", map[string]string{"@ORIGIN": "kubevirt"}),
 		table.Entry("illegal images", vms.IlleagalImagesVmID, "has-illegal-images-template.xml", map[string]string{"@ILLEGALIMAGES": "true"}),

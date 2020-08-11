@@ -48,9 +48,10 @@ var (
 
 // BiosTypeMapping defines mapping of BIOS types between oVirt and kubevirt domains
 var BiosTypeMapping = map[string]*kubevirtv1.Bootloader{
-	"q35_sea_bios":    &kubevirtv1.Bootloader{BIOS: &kubevirtv1.BIOS{}},
-	"q35_secure_boot": &kubevirtv1.Bootloader{BIOS: &kubevirtv1.BIOS{}},
-	"q35_ovmf":        &kubevirtv1.Bootloader{EFI: &kubevirtv1.EFI{}},
+	"q35_sea_bios":    {BIOS: &kubevirtv1.BIOS{}},
+	"q35_secure_boot": {BIOS: &kubevirtv1.BIOS{}},
+	"q35_ovmf":        {EFI: &kubevirtv1.EFI{}},
+	"i440fx_sea_bios": {BIOS: &kubevirtv1.BIOS{}},
 }
 
 var archMapping = map[string]string{

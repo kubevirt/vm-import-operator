@@ -6,7 +6,6 @@ const (
 	InvalidDiskID                                = "invalid"
 	InvalidNicInterfaceVmIDPrefix                = "nic-interface-"
 	UnsupportedStatusVmIDPrefix                  = "unsupported-status-"
-	UnsupportedBiosTypeVmID                      = "unsupported-i440fx_sea_bios-bios-type"
 	UnsupportedArchitectureVmID                  = "unsupported-s390x-architecture"
 	NicPassthroughVmID                           = "nic-passthrough"
 	IlleagalImagesVmID                           = "illegal-images"

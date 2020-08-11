@@ -102,7 +102,8 @@ var _ = Describe("Import", func() {
 		},
 			table.Entry("q35_sea_bios", "q35_sea_bios", v1.Bootloader{BIOS: &v1.BIOS{}}),
 			table.Entry("q35_secure_boot", "q35_secure_boot", v1.Bootloader{BIOS: &v1.BIOS{}}),
-			table.Entry("q35_ovmf", "q35_ovmf", v1.Bootloader{EFI: &v1.EFI{}}))
+			table.Entry("q35_ovmf", "q35_ovmf", v1.Bootloader{EFI: &v1.EFI{}}),
+			table.Entry("i440fx_sea_bios", "i440fx_sea_bios", v1.Bootloader{BIOS: &v1.BIOS{}}))
 
 		table.DescribeTable("architecture", func(inArch string, targetArch string) {
 			vmID := vms.ArchitectureVmIDPrefix + inArch
