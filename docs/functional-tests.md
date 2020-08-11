@@ -137,6 +137,11 @@
 | Import of a Windows VM should detect and apply correct template to the target VM | &cross; |
 | Import of a Linux VM should detect and apply correct template to the target VM | &cross; |
 
+### OS Mapping migration
+| Test description | Implemented |
+| :---------------- | :---------: |
+| OS Mapping ConfigMap name and namespace should be copied from operator ENV to config map | &check; |
+
 ## Running tests
 
 ### With kubevirtci

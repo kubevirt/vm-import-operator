@@ -189,8 +189,6 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "vm-import-operator"
-            - name: OS_CONFIGMAP_NAME
-            - name: OS_CONFIGMAP_NAMESPACE
             - name: DEPLOY_CLUSTER_RESOURCES
               value: "true"
             - name: OPERATOR_VERSION

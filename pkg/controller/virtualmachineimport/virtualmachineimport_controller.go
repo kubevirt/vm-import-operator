@@ -823,7 +823,11 @@ func isIncomplete(condition *v2vv1.VirtualMachineImportCondition) bool {
 func (r *ReconcileVirtualMachineImport) createProvider(vmi *v2vv1.VirtualMachineImport) (provider.Provider, error) {
 	// The type of the provider is evaluated based on the source field from the CR
 	if vmi.Spec.Source.Ovirt != nil {
-		provider := ovirtprovider.NewOvirtProvider(vmi.ObjectMeta, vmi.TypeMeta, r.client, r.ocClient, r.factory, r.kvConfigProvider)
+		config, err := r.ctrlConfigProvider.GetConfig()
+		if err != nil {
+			log.Error(err, "Cannot get controller config.")
+		}
+		provider := ovirtprovider.NewOvirtProvider(vmi.ObjectMeta, vmi.TypeMeta, r.client, r.ocClient, r.factory, r.kvConfigProvider, config)
 		return &provider, nil
 	}
 

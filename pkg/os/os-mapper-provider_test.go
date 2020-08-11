@@ -3,7 +3,6 @@ package os_test
 import (
 	"context"
 	"fmt"
-	"os"
 
 	osmap "github.com/kubevirt/vm-import-operator/pkg/os"
 	corev1 "k8s.io/api/core/v1"
@@ -26,7 +25,7 @@ var _ = Describe("OS Map Provider ", func() {
 
 	BeforeEach(func() {
 		mClient = &mockClient{}
-		osMapper = osmap.NewOSMapProvider(mClient)
+		osMapper = osmap.NewOSMapProvider(mClient, "", "")
 	})
 
 	Describe("Core OS Map only", func() {
@@ -39,11 +38,7 @@ var _ = Describe("OS Map Provider ", func() {
 		})
 	})
 
-	Describe("User OS Map env vars set with empty value", func() {
-		BeforeEach(func() {
-			os.Setenv(osmap.OsConfigMapName, "")
-			os.Setenv(osmap.OsConfigMapNamespace, "")
-		})
+	Describe("User OS Map identifiers set with empty value", func() {
 
 		It("should load OS map", func() {
 			guestOsToCommon, osInfoToCommon, err := osMapper.GetOSMaps()
@@ -54,10 +49,9 @@ var _ = Describe("OS Map Provider ", func() {
 		})
 	})
 
-	Describe("User OS Map env vars set with non-empty value", func() {
+	Describe("User OS Map identifiers set with non-empty value", func() {
 		BeforeEach(func() {
-			os.Setenv(osmap.OsConfigMapName, "osmap-name")
-			os.Setenv(osmap.OsConfigMapNamespace, "osmap-namespace")
+			osMapper = osmap.NewOSMapProvider(mClient, "osmap-name", "osmap-namespace")
 		})
 
 		It("should fail when user OS map does not exist", func() {

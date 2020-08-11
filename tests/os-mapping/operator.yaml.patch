@@ -1,0 +1,4 @@
+            - name: OS_CONFIGMAP_NAME
+              value: vmimport-os-mapper
+            - name: OS_CONFIGMAP_NAMESPACE
+              value: os-mapping

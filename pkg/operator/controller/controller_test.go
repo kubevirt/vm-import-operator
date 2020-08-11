@@ -8,6 +8,8 @@ import (
 	"reflect"
 	"time"
 
+	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -134,6 +136,13 @@ var _ = Describe("Controller", func() {
 					_, err := getObject(args.client, r)
 					Expect(err).ToNot(HaveOccurred())
 				}
+
+				controllerConfigMap := corev1.ConfigMap{}
+				controllerConfigMap.Namespace = Namespace
+				controllerConfigMap.Name = ctrlConfig.ConfigMapName
+				retrieved, err := getObject(args.client, &controllerConfigMap)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(retrieved.(*corev1.ConfigMap).Data).To(BeEmpty())
 			})
 
 			It("can become become ready, un-ready, and ready again", func() {
@@ -243,13 +252,24 @@ var _ = Describe("Controller", func() {
 			doReconcile(args)
 			setDeploymentsReady(args)
 
+			// Update controller config map
+			controllerConfigMap := corev1.ConfigMap{}
+			controllerConfigMap.Namespace = Namespace
+			controllerConfigMap.Name = ctrlConfig.ConfigMapName
+			retrieved, err := getObject(args.client, &controllerConfigMap)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(retrieved.(*corev1.ConfigMap).Data).To(BeEmpty())
+			controllerConfigMap.Data = map[string]string{"foo": "bar"}
+			err = args.client.Update(context.TODO(), &controllerConfigMap)
+			Expect(err).ToNot(HaveOccurred())
+
 			Expect(args.config.Status.ObservedVersion).Should(Equal(newVersion))
 			Expect(args.config.Status.OperatorVersion).Should(Equal(newVersion))
 			Expect(args.config.Status.TargetVersion).Should(Equal(newVersion))
 			Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 
 			//Modify CRD to be of previousVersion
-			err := args.reconciler.crSetVersion(args.config, prevVersion)
+			err = args.reconciler.crSetVersion(args.config, prevVersion)
 			Expect(err).ToNot(HaveOccurred())
 
 			if shouldError {
@@ -292,6 +312,10 @@ var _ = Describe("Controller", func() {
 				Expect(args.config.Status.TargetVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.ObservedVersion).Should(Equal(prevVersion))
 			}
+			// Verify that during update the config map was not re-created
+			configAfterUpgrades, err := getObject(args.client, &controllerConfigMap)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(configAfterUpgrades.(*corev1.ConfigMap).Data["foo"]).To(BeEquivalentTo("bar"))
 		},
 			Entry("increasing semver ", "v0.0.1", "v0.0.2", true, false),
 			Entry("decreasing semver", "v0.0.2", "v0.0.1", false, true),
@@ -614,7 +638,7 @@ var _ = Describe("Controller", func() {
 	},
 		Entry("verify - unused deployment deleted",
 			func() (runtime.Object, error) {
-				deployment := resources.CreateControllerDeployment("fake-deployment", Namespace, "fake-vmimport", "Always", "", "", int32(1))
+				deployment := resources.CreateControllerDeployment("fake-deployment", Namespace, "fake-vmimport", "Always", int32(1))
 				return deployment, nil
 			}),
 

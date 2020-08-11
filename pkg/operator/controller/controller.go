@@ -9,6 +9,10 @@ import (
 	"strings"
 	"sync"
 
+	"k8s.io/client-go/tools/record"
+
+	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
+
 	jsondiff "github.com/appscode/jsonpatch"
 	"github.com/blang/semver"
 	jsonpatch "github.com/evanphx/json-patch"
@@ -16,7 +20,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	resources "github.com/kubevirt/vm-import-operator/pkg/operator/resources/operator"
-	osmap "github.com/kubevirt/vm-import-operator/pkg/os"
 	conditions "github.com/openshift/custom-resource-status/conditions/v1"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	appsv1 "k8s.io/api/apps/v1"
@@ -49,6 +52,12 @@ const (
 	updateVersionLabel          = "operator.v2v.kubevirt.io/updateVersion"
 	lastAppliedConfigAnnotation = "operator.v2v.kubevirt.io/lastAppliedConfiguration"
 	MonitoringNamespace         = "MONITORING_NAMESPACE"
+
+	// osConfigMapName represents the environment variable name that holds the OS config map name
+	osConfigMapName = "OS_CONFIGMAP_NAME"
+
+	// osConfigMapNamespace represents the environment variable name that holds the OS config map namespace
+	osConfigMapNamespace = "OS_CONFIGMAP_NAMESPACE"
 )
 
 var log = logf.Log.WithName("vmimport-operator")
@@ -70,8 +79,6 @@ type OperatorArgs struct {
 	DeployClusterResources string `required:"true" split_words:"true"`
 	PullPolicy             string `required:"true" split_words:"true"`
 	Namespace              string
-	OsConfigMapName        string
-	OsConfigMapNamespace   string
 	MonitoringNamespace    string
 }
 
@@ -106,6 +113,7 @@ func newReconciler(mgr manager.Manager) (*ReconcileVMImportConfig, error) {
 		scheme:         mgr.GetScheme(),
 		namespace:      namespace,
 		operatorArgs:   &operatorArgs,
+		recorder:       mgr.GetEventRecorderFor("virtualmachineimport-operator"),
 	}
 
 	return r, nil
@@ -127,6 +135,7 @@ type ReconcileVMImportConfig struct {
 
 	watching   bool
 	watchMutex sync.Mutex
+	recorder   record.EventRecorder
 }
 
 // Reconcile reads that state of the cluster for a VMImportConfig object and makes changes based on the state read
@@ -280,6 +289,12 @@ func newDefaultInstance(obj runtime.Object) runtime.Object {
 
 func (r *ReconcileVMImportConfig) reconcileUpdate(logger logr.Logger, cr *v2vv1.VMImportConfig) (reconcile.Result, error) {
 	if err := r.updateResourceForUpgrade(logger, cr); err != nil {
+		return reconcile.Result{}, err
+	}
+
+	err := r.customizeControllerConfiguration(r.namespace, cr)
+	if err != nil {
+		logger.Error(err, "Error while customizing controller configuration")
 		return reconcile.Result{}, err
 	}
 
@@ -762,19 +777,11 @@ func (r *ReconcileVMImportConfig) getOperatorArgs(cr *v2vv1.VMImportConfig) *Ope
 		}
 	}
 
-	// update operatorArgs with OS config map name and namespace if defined in vm-import-operator deployment
-	// TODO: Replace vm-import-operator deployment env vars with VMImportConfig attributes
 	operatorDeployment := &appsv1.Deployment{}
 	key := client.ObjectKey{Namespace: result.Namespace, Name: "vm-import-operator"}
 	if err := r.client.Get(context.TODO(), key, operatorDeployment); err == nil {
 		operatorEnv := operatorDeployment.Spec.Template.Spec.Containers[0].Env
 		for _, env := range operatorEnv {
-			if env.Name == osmap.OsConfigMapName {
-				result.OsConfigMapName = env.Value
-			}
-			if env.Name == osmap.OsConfigMapNamespace {
-				result.OsConfigMapNamespace = env.Value
-			}
 			if env.Name == MonitoringNamespace {
 				result.MonitoringNamespace = env.Value
 			}
@@ -803,15 +810,7 @@ func createControllerResources(args *OperatorArgs) []runtime.Object {
 		resources.CreateServiceAccount(args.Namespace),
 		resources.CreateControllerRole(),
 		resources.CreateControllerRoleBinding(args.Namespace),
-		resources.CreateControllerDeployment(
-			resources.ControllerName,
-			args.Namespace,
-			args.ControllerImage,
-			args.PullPolicy,
-			args.OsConfigMapName,
-			args.OsConfigMapNamespace,
-			int32(1),
-		),
+		resources.CreateControllerDeployment(resources.ControllerName, args.Namespace, args.ControllerImage, args.PullPolicy, int32(1)),
 	}
 	// Add metrics objects if servicemonitor is available:
 	if ok, err := hasServiceMonitor(); ok && err == nil {
@@ -933,4 +932,62 @@ func (r *ReconcileVMImportConfig) isMutable(obj runtime.Object) bool {
 		return true
 	}
 	return false
+}
+
+func (r *ReconcileVMImportConfig) customizeControllerConfiguration(namespace string, cr *v2vv1.VMImportConfig) error {
+	configMap := corev1.ConfigMap{}
+	configMapID := client.ObjectKey{Namespace: namespace, Name: ctrlConfig.ConfigMapName}
+	if err := r.client.Get(context.TODO(), configMapID, &configMap); err != nil {
+		if !errors.IsNotFound(err) {
+			return err
+		}
+		migratingFromEnv := false
+		if namespacedName := r.getOsMappingConfigMapName(namespace); namespacedName != nil {
+			configMap.Data = make(map[string]string)
+			configMap.Data[ctrlConfig.OsConfigMapNameKey] = namespacedName.Name
+			configMap.Data[ctrlConfig.OsConfigMapNamespaceKey] = namespacedName.Namespace
+			migratingFromEnv = true
+		}
+		configMap.Name = configMapID.Name
+		configMap.Namespace = configMapID.Namespace
+		if err = r.client.Create(context.TODO(), &configMap); err != nil {
+			return err
+		}
+		if migratingFromEnv {
+			r.recorder.Eventf(cr, corev1.EventTypeWarning, "OSConfigMapMigrated", "OS mapping config map configuration has been migrated from environment variables to the controller config map. %s and %s env variables can be removed from the vm-import-operator deployment", osConfigMapName, osConfigMapNamespace)
+		}
+	}
+	return nil
+}
+
+func (r *ReconcileVMImportConfig) getOsMappingConfigMapName(namespace string) *types.NamespacedName {
+	var configMapName, configMapNamespace string
+	operatorDeployment := &appsv1.Deployment{}
+	key := client.ObjectKey{Namespace: namespace, Name: "vm-import-operator"}
+	if err := r.client.Get(context.TODO(), key, operatorDeployment); err == nil {
+		operatorEnv := r.findVMImportOperatorContainer(*operatorDeployment).Env
+		for _, env := range operatorEnv {
+			if env.Name == osConfigMapName {
+				configMapName = env.Value
+			}
+			if env.Name == osConfigMapNamespace {
+				configMapNamespace = env.Value
+			}
+		}
+	}
+	if configMapName == "" && configMapNamespace == "" {
+		return nil
+	}
+	return &types.NamespacedName{Name: configMapName, Namespace: configMapNamespace}
+}
+
+func (r *ReconcileVMImportConfig) findVMImportOperatorContainer(operatorDeployment appsv1.Deployment) corev1.Container {
+	for _, container := range operatorDeployment.Spec.Template.Spec.Containers {
+		if container.Name == "vm-import-operator" {
+			return container
+		}
+	}
+
+	log.Info("vm-import-operator container not found", "deployment", operatorDeployment.Name)
+	return corev1.Container{}
 }

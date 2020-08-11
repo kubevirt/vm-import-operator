@@ -3,7 +3,8 @@ package os
 import (
 	"context"
 	"fmt"
-	"os"
+
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	yaml "gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
@@ -17,18 +18,16 @@ const (
 
 	// OsInfoToCommonKey represents the element key in OS map of OS type to common template mapping
 	OsInfoToCommonKey = "osinfo2common"
-
-	// OsConfigMapName represents the environment variable name that holds the OS config map name
-	OsConfigMapName = "OS_CONFIGMAP_NAME"
-
-	// OsConfigMapNamespace represents the environment variable name that holds the OS config map namespace
-	OsConfigMapNamespace = "OS_CONFIGMAP_NAMESPACE"
 )
+
+var log = logf.Log.WithName("os-map-provider")
 
 // OSMaps is responsible for getting the operating systems maps which contain mapping of GuestOS to common templates
 // and mapping of osinfo to common templates
 type OSMaps struct {
-	Client client.Client
+	client               client.Client
+	osConfigMapName      string
+	osConfigMapNamespace string
 }
 
 // OSMapProvider is responsible for getting the operating systems maps
@@ -37,9 +36,11 @@ type OSMapProvider interface {
 }
 
 // NewOSMapProvider creates new OSMapProvider
-func NewOSMapProvider(client client.Client) *OSMaps {
+func NewOSMapProvider(client client.Client, osConfigMapName string, osConfigMapNamespace string) *OSMaps {
 	return &OSMaps{
-		Client: client,
+		client:               client,
+		osConfigMapName:      osConfigMapName,
+		osConfigMapNamespace: osConfigMapNamespace,
 	}
 }
 
@@ -53,22 +54,20 @@ func (o *OSMaps) GetOSMaps() (map[string]string, map[string]string, error) {
 
 func (o *OSMaps) updateOsMapsByUserMaps(guestOsToCommon map[string]string, osInfoToCommon map[string]string) error {
 	osConfigMap := &corev1.ConfigMap{}
-	osConfigMapName := os.Getenv(OsConfigMapName)
-	osConfigMapNamespace := os.Getenv(OsConfigMapNamespace)
-	if osConfigMapName == "" && osConfigMapNamespace == "" {
+	if o.osConfigMapName == "" && o.osConfigMapNamespace == "" {
 		return nil
 	}
-
-	err := o.Client.Get(
+	log.Info("Using user-provided OS maps", "name", o.osConfigMapName, "namespace", o.osConfigMapNamespace)
+	err := o.client.Get(
 		context.TODO(),
-		types.NamespacedName{Name: osConfigMapName, Namespace: osConfigMapNamespace},
+		types.NamespacedName{Name: o.osConfigMapName, Namespace: o.osConfigMapNamespace},
 		osConfigMap,
 	)
 	if err != nil {
 		return fmt.Errorf(
 			"Failed to read user OS config-map [%s/%s] due to: [%v]",
-			osConfigMapNamespace,
-			osConfigMapName,
+			o.osConfigMapNamespace,
+			o.osConfigMapName,
 			err,
 		)
 	}
@@ -77,8 +76,8 @@ func (o *OSMaps) updateOsMapsByUserMaps(guestOsToCommon map[string]string, osInf
 	if err != nil {
 		return fmt.Errorf(
 			"Failed to parse user OS config-map [%s/%s] element %s due to: [%v]",
-			osConfigMapNamespace,
-			osConfigMapName,
+			o.osConfigMapNamespace,
+			o.osConfigMapName,
 			GuestOsToCommonKey,
 			err,
 		)
@@ -88,8 +87,8 @@ func (o *OSMaps) updateOsMapsByUserMaps(guestOsToCommon map[string]string, osInf
 	if err != nil {
 		return fmt.Errorf(
 			"Failed to parse user OS config-map [%s/%s] element %s due to: [%v]",
-			osConfigMapNamespace,
-			osConfigMapName,
+			o.osConfigMapNamespace,
+			o.osConfigMapName,
 			OsInfoToCommonKey,
 			err,
 		)

@@ -20,6 +20,8 @@ export VERSION=v0.0.0
 export VM_IMPORT_CONFIG_STATUS=${VM_IMPORT_CONFIG_STATUS:-''}
 
 # Create and wait for the operator
+cat tests/os-mapping/operator.yaml.patch >> _out/vm-import-operator/${VERSION}/operator.yaml
+
 ./cluster/kubectl.sh create -f _out/vm-import-operator/${VERSION}/operator.yaml
 ./cluster/kubectl.sh wait deploy/vm-import-operator -n kubevirt --for=condition=Available --timeout=600s
 

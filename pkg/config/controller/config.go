@@ -3,9 +3,11 @@ package controller
 import "github.com/kubevirt/vm-import-operator/pkg/config"
 
 const (
-	osConfigMapNamespaceKey = "osConfigMap.namespace"
+	// OsConfigMapNamespaceKey defines the configuration key for the OS mapping config map namespace
+	OsConfigMapNamespaceKey = "osConfigMap.namespace"
 
-	osConfigMapNameKey = "osConfigMap.name"
+	// OsConfigMapNameKey defines the configuration key for the OS mapping config map name
+	OsConfigMapNameKey = "osConfigMap.name"
 )
 
 // ControllerConfig stores controller runtime configuration
@@ -22,10 +24,10 @@ func NewControllerConfigFrom(config config.Config) ControllerConfig {
 
 // OsConfigMapNamespace provides namespace where the OS mapping ConfigMap resides. Empty string is returned when the namespace is not present.
 func (c ControllerConfig) OsConfigMapNamespace() string {
-	return c.ConfigMap.Data[osConfigMapNamespaceKey]
+	return c.ConfigMap.Data[OsConfigMapNamespaceKey]
 }
 
 // OsConfigMapName provides name of the the OS mapping ConfigMap. Empty string is returned when the name is not present.
 func (c ControllerConfig) OsConfigMapName() string {
-	return c.ConfigMap.Data[osConfigMapNameKey]
+	return c.ConfigMap.Data[OsConfigMapNameKey]
 }
