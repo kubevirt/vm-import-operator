@@ -79,6 +79,8 @@ const (
 	EventVMCreationFailed = "VMCreationFailed"
 	// EventDVCreationFailed is emitted when creation of datavolume fails
 	EventDVCreationFailed = "DVCreationFailed"
+	// EventPVCImportFailed is emitted when import of pvc fails
+	EventPVCImportFailed = "EventPVCImportFailed"
 )
 
 var (
@@ -401,6 +403,13 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 				foundPod := &corev1.Pod{}
 				err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: importerPodNameFromDv(dvID)}, foundPod)
 				if err == nil {
+					// Emit an event about why pod failed:
+					if foundPod.Status.ContainerStatuses != nil &&
+						foundPod.Status.ContainerStatuses[0].LastTerminationState.Terminated != nil &&
+						foundPod.Status.ContainerStatuses[0].LastTerminationState.Terminated.ExitCode > 0 {
+						r.recorder.Eventf(instance, corev1.EventTypeWarning, EventPVCImportFailed, foundPod.Status.ContainerStatuses[0].LastTerminationState.Terminated.Message)
+					}
+					// End the import in case the pod keeps crashing:
 					for _, cs := range foundPod.Status.ContainerStatuses {
 						if cs.State.Waiting != nil && cs.State.Waiting.Reason == podCrashLoopBackOff && cs.RestartCount > int32(importPodRestartTolerance) {
 							if err = r.endImportAsFailed(provider, instance, foundDv, "pod CrashLoopBackoff restart exceeded"); err != nil {
