@@ -2,6 +2,7 @@ package templates_test
 
 import (
 	"fmt"
+	"time"
 
 	otemplates "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/templates"
 	"github.com/kubevirt/vm-import-operator/pkg/templates"
@@ -62,6 +63,28 @@ var _ = Describe("Finding a Template", func() {
 
 		Expect(err).To(Not(BeNil()))
 		Expect(template).To(BeNil())
+	})
+	It("should find newer template:", func() {
+		now := metav1.Now()
+		newer := metav1.NewTime(now.Add(time.Duration(1 * time.Minute)))
+		findTemplatesMock = func(name *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error) {
+			template1 := createTemplate(name, os, workload, flavor)
+			template1.CreationTimestamp = now
+
+			template2 := createTemplate(name, os, workload, flavor)
+			template2.CreationTimestamp = newer
+
+			templateList := createTemplatesList(template1, template2)
+			return templateList, nil
+		}
+
+		vmOS := ovirtsdk.OperatingSystem{}
+		vmOS.SetType("rhel")
+		vm := ovirtsdk.NewVmBuilder().Os(&vmOS).MustBuild()
+		template, err := templateFinder.FindTemplate(vm)
+
+		Expect(err).To(BeNil())
+		Expect(template.CreationTimestamp).To(Equal(newer))
 	})
 })
 
