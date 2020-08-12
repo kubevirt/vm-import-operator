@@ -1,0 +1,7 @@
+---
+apiVersion: v2v.kubevirt.io/v1beta1
+kind: VMImportConfig
+metadata:
+  name: vm-import-operator-config
+spec:
+  imagePullPolicy: IfNotPresent
