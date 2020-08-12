@@ -38,7 +38,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
-	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -57,32 +56,6 @@ var (
 	}
 )
 
-// SecretsManager defines operations on secrets
-type SecretsManager interface {
-	FindFor(types.NamespacedName) (*corev1.Secret, error)
-	CreateFor(*corev1.Secret, types.NamespacedName) error
-	DeleteFor(types.NamespacedName) error
-}
-
-// ConfigMapsManager defines operations on config maps
-type ConfigMapsManager interface {
-	FindFor(types.NamespacedName) (*corev1.ConfigMap, error)
-	CreateFor(*corev1.ConfigMap, types.NamespacedName) error
-	DeleteFor(types.NamespacedName) error
-}
-
-// DataVolumesManager defines operations on datavolumes
-type DataVolumesManager interface {
-	FindFor(types.NamespacedName) ([]*cdiv1.DataVolume, error)
-	DeleteFor(types.NamespacedName) error
-}
-
-// VirtualMachineManager defines operations on datavolumes
-type VirtualMachineManager interface {
-	FindFor(types.NamespacedName) (*kubevirtv1.VirtualMachine, error)
-	DeleteFor(types.NamespacedName) error
-}
-
 // OvirtProvider is Ovirt implementation of the Provider interface to support importing VM from ovirt
 type OvirtProvider struct {
 	ovirtSecretDataMap    map[string]string
@@ -95,10 +68,10 @@ type OvirtProvider struct {
 	osFinder              oos.OSFinder
 	templateFinder        *otemplates.TemplateFinder
 	templateHandler       *templates.TemplateHandler
-	secretsManager        SecretsManager
-	configMapsManager     ConfigMapsManager
-	datavolumesManager    DataVolumesManager
-	virtualMachineManager VirtualMachineManager
+	secretsManager        provider.SecretsManager
+	configMapsManager     provider.ConfigMapsManager
+	datavolumesManager    provider.DataVolumesManager
+	virtualMachineManager provider.VirtualMachineManager
 	factory               pclient.Factory
 	instance              *v2vv1.VirtualMachineImport
 }
