@@ -4,6 +4,7 @@ RUN mkdir /disks && \
     yum -y update && \
     rm -rf /var/cache/yum && \
     yum install -y \
+        qemu-guest-agent \
         qemu-img \
         qemu-kvm \
         virt-v2v \
