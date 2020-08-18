@@ -13,6 +13,6 @@ RUN mkdir /disks && \
 
 ENV LIBGUESTFS_BACKEND=direct
 
-COPY entrypoint /usr/local/bin/entrypoint
+COPY bin/entrypoint /usr/bin/entrypoint
 
-ENTRYPOINT ["/usr/local/bin/entrypoint"]
+ENTRYPOINT ["/usr/bin/entrypoint"]
