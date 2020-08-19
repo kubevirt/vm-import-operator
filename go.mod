@@ -7,21 +7,19 @@ require (
 	github.com/RHsyseng/operator-utils v0.0.0-20190906175225-942a3f9c85a9
 	github.com/aktau/github-release v0.7.2
 	github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4
-	github.com/appscode/jsonpatch v0.0.0-20190108182946-7c0e3b262f30
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/coreos/prometheus-operator v0.35.0
-	github.com/evanphx/json-patch v4.5.0+incompatible
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
-	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20191119172530-79f836b90111
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/kubevirt/controller-lifecycle-operator-sdk v0.0.5
 	github.com/machacekondra/fakeovirt v0.0.0-20200617055337-1afdfa789aab
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
 	github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible
 	github.com/openshift/client-go v0.0.0
-	github.com/openshift/custom-resource-status v0.0.0-20190822192428-e62f2f3b79f3
+	github.com/openshift/custom-resource-status v0.0.0-20200602122900-c002fd1547ca
 	github.com/operator-framework/operator-lifecycle-manager v0.0.0-20191115003340-16619cd27fa5
 	github.com/operator-framework/operator-sdk v0.15.2
 	github.com/ovirt/go-ovirt v4.3.4+incompatible
@@ -31,11 +29,11 @@ require (
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
 	github.com/vmware/govmomi v0.23.0
 	github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2 // indirect
-	golang.org/x/tools v0.0.0-20200212150539-ea181f53ac56
+	golang.org/x/tools v0.0.0-20200616195046-dc31b401abb5
 	gopkg.in/yaml.v2 v2.3.0
-	k8s.io/api v0.17.8
-	k8s.io/apiextensions-apiserver v0.17.8
-	k8s.io/apimachinery v0.17.8
+	k8s.io/api v0.18.6
+	k8s.io/apiextensions-apiserver v0.18.6
+	k8s.io/apimachinery v0.18.6
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/code-generator v0.17.1
 	k8s.io/klog v1.0.0
@@ -43,7 +41,7 @@ require (
 	k8s.io/utils v0.0.0-20200619165400-6e3d28b6ed19
 	kubevirt.io/client-go v0.26.2
 	kubevirt.io/containerized-data-importer v1.15.0
-	sigs.k8s.io/controller-runtime v0.5.9
+	sigs.k8s.io/controller-runtime v0.6.2
 	sigs.k8s.io/yaml v1.2.0
 )
 
@@ -74,6 +72,8 @@ replace (
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.0.0-20191016112829-06bb3c9d77c9
 )
 
+replace sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.5.9
+
 replace github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20200116152001-92a2713fa240
 
 replace github.com/docker/docker => github.com/moby/moby v0.7.3-0.20190826074503-38ab9da00309 // Required by Helm
@@ -85,3 +85,5 @@ replace sigs.k8s.io/structured-merge-diff => sigs.k8s.io/structured-merge-diff v
 replace vbom.ml/util => github.com/fvbommel/util v0.0.0-20180919145318-efcd4e0f9787
 
 replace bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
+
+replace sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.2.4

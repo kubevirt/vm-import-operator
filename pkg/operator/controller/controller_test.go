@@ -8,6 +8,14 @@ import (
 	"reflect"
 	"time"
 
+	"k8s.io/client-go/tools/record"
+
+	"github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/callbacks"
+
+	sdkr "github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/reconciler"
+
+	sdkapi "github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/api"
+
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
 
 	. "github.com/onsi/ginkgo"
@@ -237,7 +245,7 @@ var _ = Describe("Controller", func() {
 
 				doReconcile(args)
 
-				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeleted))
+				Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseDeleted))
 
 				_, err = getObject(args.client, pod)
 				Expect(errors.IsNotFound(err)).To(BeTrue())
@@ -266,10 +274,10 @@ var _ = Describe("Controller", func() {
 			Expect(args.config.Status.ObservedVersion).Should(Equal(newVersion))
 			Expect(args.config.Status.OperatorVersion).Should(Equal(newVersion))
 			Expect(args.config.Status.TargetVersion).Should(Equal(newVersion))
-			Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
+			Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseDeployed))
 
 			//Modify CRD to be of previousVersion
-			err = args.reconciler.crSetVersion(args.config, prevVersion)
+			err = crSetVersion(args.reconciler.reconciler, args.config, prevVersion)
 			Expect(err).ToNot(HaveOccurred())
 
 			if shouldError {
@@ -285,13 +293,13 @@ var _ = Describe("Controller", func() {
 				Expect(args.config.Status.OperatorVersion).Should(Equal(newVersion))
 				Expect(args.config.Status.ObservedVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.TargetVersion).Should(Equal(newVersion))
-				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseUpgrading))
+				Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseUpgrading))
 			} else {
 				//verify upgraded hasn't started
 				Expect(args.config.Status.OperatorVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.ObservedVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.TargetVersion).Should(Equal(prevVersion))
-				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
+				Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseDeployed))
 			}
 
 			//change deployment to ready
@@ -301,13 +309,13 @@ var _ = Describe("Controller", func() {
 			//now should be upgraded
 			if shouldUpgrade {
 				//verify versions were updated
-				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
+				Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseDeployed))
 				Expect(args.config.Status.OperatorVersion).Should(Equal(newVersion))
 				Expect(args.config.Status.TargetVersion).Should(Equal(newVersion))
 				Expect(args.config.Status.ObservedVersion).Should(Equal(newVersion))
 			} else {
 				//verify versions remained unchaged
-				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
+				Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseDeployed))
 				Expect(args.config.Status.OperatorVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.TargetVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.ObservedVersion).Should(Equal(prevVersion))
@@ -337,10 +345,10 @@ var _ = Describe("Controller", func() {
 				Expect(isReady).Should(Equal(true))
 
 				//verify on int version is set
-				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
+				Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseDeployed))
 
 				//Modify CRD to be of previousVersion
-				args.reconciler.crSetVersion(args.config, prevVersion)
+				crSetVersion(args.reconciler.reconciler, args.config, prevVersion)
 				//mark CR for deltetion
 				args.config.SetDeletionTimestamp(&metav1.Time{Time: time.Now()})
 				err := args.client.Update(context.TODO(), args.config)
@@ -352,7 +360,7 @@ var _ = Describe("Controller", func() {
 				Expect(args.config.Status.OperatorVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.ObservedVersion).Should(Equal(prevVersion))
 				Expect(args.config.Status.TargetVersion).Should(Equal(prevVersion))
-				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeleted))
+				Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseDeleted))
 			})
 
 			It("should delete CR if it is marked for deletion during upgrade flow", func() {
@@ -365,10 +373,10 @@ var _ = Describe("Controller", func() {
 				setDeploymentsReady(args)
 
 				//verify on int version is set
-				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
+				Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseDeployed))
 
 				//Modify CRD to be of previousVersion
-				args.reconciler.crSetVersion(args.config, prevVersion)
+				crSetVersion(args.reconciler.reconciler, args.config, prevVersion)
 				err := args.client.Update(context.TODO(), args.config)
 				Expect(err).ToNot(HaveOccurred())
 				setDeploymentsDegraded(args)
@@ -389,7 +397,7 @@ var _ = Describe("Controller", func() {
 
 				doReconcile(args)
 				//verify the version cr is marked as deleted
-				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeleted))
+				Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseDeleted))
 			})
 		})
 	})
@@ -404,10 +412,10 @@ var _ = Describe("Controller", func() {
 		setDeploymentsReady(args)
 
 		//verify on int version is set
-		Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
+		Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseDeployed))
 
 		//Modify CRD to be of previousVersion
-		args.reconciler.crSetVersion(args.config, prevVersion)
+		crSetVersion(args.reconciler.reconciler, args.config, prevVersion)
 		err := args.client.Update(context.TODO(), args.config)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -430,14 +438,14 @@ var _ = Describe("Controller", func() {
 		doReconcile(args)
 
 		//verify upgraded has started
-		Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseUpgrading))
+		Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseUpgrading))
 
 		//change deployment to ready
 		isReady := setDeploymentsReady(args)
 		Expect(isReady).Should(Equal(true))
 
 		doReconcile(args)
-		Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
+		Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseDeployed))
 
 		//verify that stored object equals to object in getResources
 		storedObj, err = getObject(args.client, oModified)
@@ -596,10 +604,10 @@ var _ = Describe("Controller", func() {
 		setDeploymentsReady(args)
 
 		//verify on int version is set
-		Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
+		Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseDeployed))
 
 		//Modify CRD to be of previousVersion
-		args.reconciler.crSetVersion(args.config, prevVersion)
+		crSetVersion(args.reconciler.reconciler, args.config, prevVersion)
 		err := args.client.Update(context.TODO(), args.config)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -619,7 +627,7 @@ var _ = Describe("Controller", func() {
 		doReconcile(args)
 
 		//verify upgraded has started
-		Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseUpgrading))
+		Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseUpgrading))
 
 		//verify unused exists before upgrade is done
 		_, err = getObject(args.client, unusedObj)
@@ -630,7 +638,7 @@ var _ = Describe("Controller", func() {
 		Expect(isReady).Should(Equal(true))
 
 		doReconcile(args)
-		Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
+		Expect(args.config.Status.Phase).Should(Equal(sdkapi.PhaseDeployed))
 
 		//verify that object no longer exists after upgrade
 		_, err = getObject(args.client, unusedObj)
@@ -638,7 +646,7 @@ var _ = Describe("Controller", func() {
 	},
 		Entry("verify - unused deployment deleted",
 			func() (runtime.Object, error) {
-				deployment := resources.CreateControllerDeployment("fake-deployment", Namespace, "fake-vmimport", "Always", int32(1), &v2vv1.NodePlacement{})
+				deployment := resources.CreateControllerDeployment("fake-deployment", Namespace, "fake-vmimport", "Always", int32(1), &sdkapi.NodePlacement{})
 				return deployment, nil
 			}),
 
@@ -772,12 +780,22 @@ func createReconciler(client realClient.Client, version, namespace string) *Reco
 		namespace:    Namespace,
 		operatorArgs: operatorArgs,
 	}
+	recorder := record.NewFakeRecorder(250)
+	callbackDispatcher := callbacks.NewCallbackDispatcher(log, client, client, scheme.Scheme, namespace)
+	r.reconciler = sdkr.NewReconciler(r, log, client, callbackDispatcher, scheme.Scheme, createVersionLabel, updateVersionLabel, lastAppliedConfigAnnotation, 0, "vm-import-finalizer", recorder).
+		WithWatching(true)
+	r.registerHooks()
+	addReconcileCallbacks(r)
 
 	mgr, err := manager.New(cfg, manager.Options{})
 	Expect(err).ToNot(HaveOccurred())
 	r.add(mgr)
 
 	return r
+}
+
+func crSetVersion(r *sdkr.Reconciler, cr *v2vv1.VMImportConfig, version string) error {
+	return r.CrSetVersion(cr, version)
 }
 
 func reconcileRequest(name string) reconcile.Request {
