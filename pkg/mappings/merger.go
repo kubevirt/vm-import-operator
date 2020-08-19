@@ -5,6 +5,8 @@ import (
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 )
 
+// MergeNetworkMappings merges a primary list of NetworkResourceMappingItems with a supplemental secondary list.
+// Where the two lists conflict, the item from the primary mapping will be kept
 func MergeNetworkMappings(primaryMappings *[]v1beta1.NetworkResourceMappingItem, secondaryMappings *[]v1beta1.NetworkResourceMappingItem) *[]v1beta1.NetworkResourceMappingItem {
 	var mapping []v1beta1.NetworkResourceMappingItem
 
@@ -51,6 +53,8 @@ func MergeNetworkMappings(primaryMappings *[]v1beta1.NetworkResourceMappingItem,
 	return &mapping
 }
 
+// MergeStorageMappings merges a primary list of StorageResourceMappingItem with a supplemental secondary list.
+// Where the two lists conflict, the item from the primary mapping will be kept
 func MergeStorageMappings(primaryMappings *[]v1beta1.StorageResourceMappingItem, secondaryMappings *[]v1beta1.StorageResourceMappingItem) *[]v1beta1.StorageResourceMappingItem {
 	var mapping []v1beta1.StorageResourceMappingItem
 
