@@ -1,0 +1,11 @@
+<ObjectContent>
+  <obj type="OvfManager">OvfManager</obj>
+  <propSet>
+    <name>ovfImportOption</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfOvfOptionInfo"></val>
+  </propSet>
+  <propSet>
+    <name>ovfExportOption</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfOvfOptionInfo"></val>
+  </propSet>
+</ObjectContent>

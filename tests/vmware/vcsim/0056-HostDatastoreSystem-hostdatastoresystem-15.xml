@@ -1,0 +1,17 @@
+<ObjectContent>
+  <obj type="HostDatastoreSystem">hostdatastoresystem-15</obj>
+  <propSet>
+    <name>datastore</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfManagedObjectReference">
+      <ManagedObjectReference type="Datastore">/tmp/govcsim-DC0-LocalDS_0-024565671@folder-5</ManagedObjectReference>
+    </val>
+  </propSet>
+  <propSet>
+    <name>capabilities</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="HostDatastoreSystemCapabilities">
+      <nfsMountCreationRequired>false</nfsMountCreationRequired>
+      <nfsMountCreationSupported>false</nfsMountCreationSupported>
+      <localDatastoreSupported>false</localDatastoreSupported>
+    </val>
+  </propSet>
+</ObjectContent>

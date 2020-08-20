@@ -1,0 +1,147 @@
+<ObjectContent>
+  <obj type="DistributedVirtualPortgroup">dvportgroup-13</obj>
+  <propSet>
+    <name>value</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfCustomFieldValue"></val>
+  </propSet>
+  <propSet>
+    <name>availableField</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfCustomFieldDef"></val>
+  </propSet>
+  <propSet>
+    <name>parent</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ManagedObjectReference" type="Folder">folder-6</val>
+  </propSet>
+  <propSet>
+    <name>customValue</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfCustomFieldValue"></val>
+  </propSet>
+  <propSet>
+    <name>overallStatus</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ManagedEntityStatus">green</val>
+  </propSet>
+  <propSet>
+    <name>configStatus</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ManagedEntityStatus">green</val>
+  </propSet>
+  <propSet>
+    <name>configIssue</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfEvent"></val>
+  </propSet>
+  <propSet>
+    <name>effectiveRole</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfInt">
+      <int>-1</int>
+    </val>
+  </propSet>
+  <propSet>
+    <name>permission</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfPermission"></val>
+  </propSet>
+  <propSet>
+    <name>name</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="xsd:string">DC0_DVPG0</val>
+  </propSet>
+  <propSet>
+    <name>disabledMethod</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfString"></val>
+  </propSet>
+  <propSet>
+    <name>recentTask</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfManagedObjectReference"></val>
+  </propSet>
+  <propSet>
+    <name>declaredAlarmState</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfAlarmState"></val>
+  </propSet>
+  <propSet>
+    <name>triggeredAlarmState</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfAlarmState"></val>
+  </propSet>
+  <propSet>
+    <name>tag</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfTag"></val>
+  </propSet>
+  <propSet>
+    <name>summary</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="NetworkSummary">
+      <network type="DistributedVirtualPortgroup">dvportgroup-13</network>
+      <name>DC0_DVPG0</name>
+      <accessible>true</accessible>
+      <ipPoolName></ipPoolName>
+    </val>
+  </propSet>
+  <propSet>
+    <name>host</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfManagedObjectReference">
+      <ManagedObjectReference type="HostSystem">host-21</ManagedObjectReference>
+      <ManagedObjectReference type="HostSystem">host-34</ManagedObjectReference>
+      <ManagedObjectReference type="HostSystem">host-42</ManagedObjectReference>
+      <ManagedObjectReference type="HostSystem">host-50</ManagedObjectReference>
+    </val>
+  </propSet>
+  <propSet>
+    <name>vm</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfManagedObjectReference"></val>
+  </propSet>
+  <propSet>
+    <name>name</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="xsd:string">DC0_DVPG0</val>
+  </propSet>
+  <propSet>
+    <name>key</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="xsd:string">dvportgroup-13</val>
+  </propSet>
+  <propSet>
+    <name>config</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="DVPortgroupConfigInfo">
+      <key>dvportgroup-13</key>
+      <name>DC0_DVPG0</name>
+      <numPorts>0</numPorts>
+      <distributedVirtualSwitch type="DistributedVirtualSwitch">dvs-9</distributedVirtualSwitch>
+      <defaultPortConfig XMLSchema-instance:type="VMwareDVSPortSetting">
+        <vlan XMLSchema-instance:type="VmwareDistributedVirtualSwitchVlanIdSpec">
+          <inherited>false</inherited>
+          <vlanId>0</vlanId>
+        </vlan>
+        <uplinkTeamingPolicy>
+          <inherited>false</inherited>
+          <policy>
+            <inherited>false</inherited>
+            <value>loadbalance_srcid</value>
+          </policy>
+          <reversePolicy>
+            <inherited>false</inherited>
+            <value>true</value>
+          </reversePolicy>
+          <notifySwitches>
+            <inherited>false</inherited>
+            <value>true</value>
+          </notifySwitches>
+          <rollingOrder>
+            <inherited>false</inherited>
+            <value>true</value>
+          </rollingOrder>
+        </uplinkTeamingPolicy>
+      </defaultPortConfig>
+      <type></type>
+      <policy XMLSchema-instance:type="VMwareDVSPortgroupPolicy">
+        <blockOverrideAllowed>true</blockOverrideAllowed>
+        <shapingOverrideAllowed>false</shapingOverrideAllowed>
+        <vendorConfigOverrideAllowed>false</vendorConfigOverrideAllowed>
+        <livePortMovingAllowed>false</livePortMovingAllowed>
+        <portConfigResetAtDisconnect>true</portConfigResetAtDisconnect>
+        <networkResourcePoolOverrideAllowed>false</networkResourcePoolOverrideAllowed>
+        <trafficFilterOverrideAllowed>false</trafficFilterOverrideAllowed>
+        <vlanOverrideAllowed>false</vlanOverrideAllowed>
+        <uplinkTeamingOverrideAllowed>false</uplinkTeamingOverrideAllowed>
+        <securityPolicyOverrideAllowed>false</securityPolicyOverrideAllowed>
+        <ipfixOverrideAllowed>false</ipfixOverrideAllowed>
+      </policy>
+    </val>
+  </propSet>
+  <propSet>
+    <name>portKeys</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfString"></val>
+  </propSet>
+</ObjectContent>

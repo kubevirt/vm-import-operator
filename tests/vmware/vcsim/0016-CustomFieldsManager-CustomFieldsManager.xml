@@ -1,0 +1,7 @@
+<ObjectContent>
+  <obj type="CustomFieldsManager">CustomFieldsManager</obj>
+  <propSet>
+    <name>field</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfCustomFieldDef"></val>
+  </propSet>
+</ObjectContent>

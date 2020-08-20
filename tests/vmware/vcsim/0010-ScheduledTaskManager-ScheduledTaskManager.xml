@@ -1,0 +1,11 @@
+<ObjectContent>
+  <obj type="ScheduledTaskManager">ScheduledTaskManager</obj>
+  <propSet>
+    <name>scheduledTask</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfManagedObjectReference"></val>
+  </propSet>
+  <propSet>
+    <name>description</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ScheduledTaskDescription"></val>
+  </propSet>
+</ObjectContent>

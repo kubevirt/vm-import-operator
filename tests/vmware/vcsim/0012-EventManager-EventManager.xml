@@ -1,0 +1,382 @@
+<ObjectContent>
+  <obj type="EventManager">EventManager</obj>
+  <propSet>
+    <name>description</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="EventDescription">
+      <eventInfo>
+        <key>UserLoginSessionEvent</key>
+        <description>User login</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>User {{.UserName}}@{{.IpAddress}} logged in as {{.UserAgent}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>UserLogoutSessionEvent</key>
+        <description>User logout</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>User {{.UserName}}@{{.IpAddress}} logged out (login time: {{.LoginTime}}, number of API invocations: {{.CallCount}}, user agent: {{.UserAgent}})</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>DatacenterCreatedEvent</key>
+        <description>Datacenter created</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Created datacenter {{.Datacenter.Name}} in folder {{.Parent.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>DatastoreFileMovedEvent</key>
+        <description>File or directory moved to datastore</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Move of file or directory {{.SourceFile}} from {{.SourceDatastore.Name}} to {{.Datastore.Name}} as {{.TargetFile}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>DatastoreFileCopiedEvent</key>
+        <description>File or directory copied to datastore</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Copy of file or directory {{.SourceFile}} from {{.SourceDatastore.Name}} to {{.Datastore.Name}} as {{.TargetFile}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>DatastoreFileDeletedEvent</key>
+        <description>File or directory deleted</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Deletion of file or directory {{.TargetFile}} from {{.Datastore.Name}} was initiated</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>EnteringMaintenanceModeEvent</key>
+        <description>Entering maintenance mode</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Host {{.Host.Name}} in {{.Datacenter.Name}} has started to enter maintenance mode</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>EnteredMaintenanceModeEvent</key>
+        <description>Entered maintenance mode</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Host {{.Host.Name}} in {{.Datacenter.Name}} has entered maintenance mode</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>ExitMaintenanceModeEvent</key>
+        <description>Exit maintenance mode</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Host {{.Host.Name}} in {{.Datacenter.Name}} has exited maintenance mode</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>HostRemovedEvent</key>
+        <description>Host removed</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Removed host {{.Host.Name}} in {{.Datacenter.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmSuspendedEvent</key>
+        <description>VM suspended</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>{{.Vm.Name}} on {{.Host.Name}} in {{.Datacenter.Name}} is suspended</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmMigratedEvent</key>
+        <description>VM migrated</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Migration of virtual machine {{.Vm.Name}} from {{.SourceHost.Name}, {{.SourceDatastore.Name}} to {{.Host.Name}, {{.Ds.Name}} completed</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmBeingMigratedEvent</key>
+        <description>VM migrating</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Relocating {{.Vm.Name}} from {{.Host.Name}, {{.Ds.Name}} in {{.Datacenter.Name}} to {{.DestHost.Name}, {{.DestDatastore.Name}} in {{.DestDatacenter.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmMacAssignedEvent</key>
+        <description>VM MAC assigned</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>New MAC address ({{.Mac}}) assigned to adapter {{.Adapter}} for {{.Vm.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmRegisteredEvent</key>
+        <description>VM registered</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Registered {{.Vm.Name}} on {{.Host.Name}} in {{.Datacenter.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmReconfiguredEvent</key>
+        <description>VM reconfigured</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Reconfigured {{.Vm.Name}} on {{.Host.Name}} in {{.Datacenter.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmGuestRebootEvent</key>
+        <description>Guest reboot</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Guest OS reboot for {{.Vm.Name}} on {{.Host.Name}} in {{.Datacenter.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmBeingClonedEvent</key>
+        <description>VM being cloned</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Cloning {{.Vm.Name}} on host {{.Host.Name}} in {{.Datacenter.Name}} to {{.DestName}} on host {{.DestHost.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmClonedEvent</key>
+        <description>VM cloned</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Clone of {{.SourceVm.Name}} completed</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmBeingDeployedEvent</key>
+        <description>Deploying VM</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Deploying {{.Vm.Name}} on host {{.Host.Name}} in {{.Datacenter.Name}} from template {{.SrcTemplate.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmDeployedEvent</key>
+        <description>VM deployed</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Template {{.SrcTemplate.Name}} deployed on host {{.Host.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmInstanceUuidAssignedEvent</key>
+        <description>Assign a new instance UUID</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Assign a new instance UUID ({{.InstanceUuid}}) to {{.Vm.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmPoweredOnEvent</key>
+        <description>VM powered on</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>{{.Vm.Name}} on {{.Host.Name}} in {{.Datacenter.Name}} is powered on</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmStartingEvent</key>
+        <description>VM starting</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>{{.Vm.Name}} on host {{.Host.Name}} in {{.Datacenter.Name}} is starting</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmStoppingEvent</key>
+        <description>VM stopping</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>{{.Vm.Name}} on host {{.Host.Name}} in {{.Datacenter.Name}} is stopping</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmSuspendingEvent</key>
+        <description>VM being suspended</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>{{.Vm.Name}} on {{.Host.Name}} in {{.Datacenter.Name}} is being suspended</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmResumingEvent</key>
+        <description>VM resuming</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>{{.Vm.Name}} on {{.Host.Name}} in {{.Datacenter.Name}} is resumed</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmBeingCreatedEvent</key>
+        <description>Creating VM</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Creating {{.Vm.Name}} on host {{.Host.Name}} in {{.Datacenter.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmCreatedEvent</key>
+        <description>VM created</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Created virtual machine {{.Vm.Name}} on {{.Host.Name}} in {{.Datacenter.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmRemovedEvent</key>
+        <description>VM removed</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Removed {{.Vm.Name}} on {{.Host.Name}} from {{.Datacenter.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmResettingEvent</key>
+        <description>VM resetting</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>{{.Vm.Name}} on {{.Host.Name}} in {{.Datacenter.Name}} is reset</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmGuestShutdownEvent</key>
+        <description>Guest OS shut down</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Guest OS shut down for {{.Vm.Name}} on {{.Host.Name}} in {{.Datacenter.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmUuidAssignedEvent</key>
+        <description>VM UUID assigned</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Assigned new BIOS UUID ({{.Uuid}}) to {{.Vm.Name}} on {{.Host.Name}} in {{.Datacenter.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmPoweredOffEvent</key>
+        <description>VM powered off</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>{{.Vm.Name}} on {{.Host.Name}} in {{.Datacenter.Name}} is powered off</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>VmRelocatedEvent</key>
+        <description>VM relocated</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>Completed the relocation of the virtual machine</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>DrsVmMigratedEvent</key>
+        <description>DRS VM migrated</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>DRS migrated {{.Vm.Name}} from {{.SourceHost.Name}} to {{.Host.Name}} in cluster {{.ComputeResource.Name}} in {{.Datacenter.Name}}</fullFormat>
+      </eventInfo>
+      <eventInfo>
+        <key>DrsVmPoweredOnEvent</key>
+        <description>DRS VM powered on</description>
+        <category>info</category>
+        <formatOnDatacenter></formatOnDatacenter>
+        <formatOnComputeResource></formatOnComputeResource>
+        <formatOnHost></formatOnHost>
+        <formatOnVm></formatOnVm>
+        <fullFormat>DRS powered On {{.Vm.Name}} on {{.Host.Name}} in {{.Datacenter.Name}}</fullFormat>
+      </eventInfo>
+    </val>
+  </propSet>
+  <propSet>
+    <name>maxCollector</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="xsd:int">1000</val>
+  </propSet>
+</ObjectContent>
