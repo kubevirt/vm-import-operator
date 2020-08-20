@@ -426,9 +426,9 @@ func CreateVMImportConfig() *extv1.CustomResourceDefinition {
 			Scope: "Cluster",
 			Versions: []extv1.CustomResourceDefinitionVersion{
 				{
-					Name:    "v1beta1",
+					Name:    "v1alpha1",
 					Served:  true,
-					Storage: true,
+					Storage: false,
 					Subresources: &extv1.CustomResourceSubresources{
 						Status: &extv1.CustomResourceSubresourceStatus{},
 					},
@@ -515,6 +515,112 @@ func CreateVMImportConfig() *extv1.CustomResourceDefinition {
 										},
 										"operatorVersion": {
 											Description: "The version of the VMImportConfig resource as defined by the operator",
+											Type:        "string",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Name:    "v1beta1",
+					Served:  true,
+					Storage: true,
+					Subresources: &extv1.CustomResourceSubresources{
+						Status: &extv1.CustomResourceSubresourceStatus{},
+					},
+					Schema: &extv1.CustomResourceValidation{
+						OpenAPIV3Schema: &extv1.JSONSchemaProps{
+							Description: "VMImportConfig is the Schema for the vmimportconfigs API",
+							Type:        "object",
+							Properties: map[string]extv1.JSONSchemaProps{
+								"apiVersion": {
+									Description: "APIVersion defines the versioned schema of this representation of an object",
+									Type:        "string",
+								},
+								"kind": {
+									Description: "Kind is a string value representing the REST resource this object represents",
+									Type:        "string",
+								},
+								"metadata": {
+									Type: "object",
+								},
+								"spec": {
+									Description: "VMImportConfigSpec defines the desired state of VMImportConfig",
+									Type:        "object",
+									Properties: map[string]extv1.JSONSchemaProps{
+										"imagePullPolicy": {
+											Type: "string",
+											Enum: []extv1.JSON{
+												{
+													Raw: []byte(`"Always"`),
+												},
+												{
+													Raw: []byte(`"IfNotPresent"`),
+												},
+												{
+													Raw: []byte(`"Never"`),
+												},
+											},
+										},
+									},
+								},
+								"status": {
+									Description: "VMImportConfigStatus defines the observed state of VMImportConfig",
+									Type:        "object",
+									Properties: map[string]extv1.JSONSchemaProps{
+										"conditions": {
+											Description: "A list of current conditions of the VMImportConfig resource",
+											Type:        "array",
+											Items: &extv1.JSONSchemaPropsOrArray{
+												Schema: &extv1.JSONSchemaProps{
+													Type: "object",
+													Properties: map[string]extv1.JSONSchemaProps{
+														"lastHeartbeatTime": {
+															Description: "Last time the state of the condition was checked",
+															Type:        "string",
+															Format:      "date-time",
+														},
+														"lastTransitionTime": {
+															Description: "Last time the state of the condition changed",
+															Type:        "string",
+															Format:      "date-time",
+														},
+														"message": {
+															Description: "Message related to the last condition change",
+															Type:        "string",
+														},
+														"reason": {
+															Description: "Reason the last condition changed",
+															Type:        "string",
+														},
+														"status": {
+															Description: "Current status of the condition, True, False, Unknown",
+															Type:        "string",
+														},
+														"type": {
+															Description: "ConditionType is the state of the operator's reconciliation functionality.",
+															Type:        "string",
+														},
+													},
+												},
+											},
+										},
+										"targetVersion": {
+											Description: "The desired version of the VMImportConfig resource",
+											Type:        "string",
+										},
+										"observedVersion": {
+											Description: "The observed version of the VMImportConfig resource",
+											Type:        "string",
+										},
+										"operatorVersion": {
+											Description: "The version of the VMImportConfig resource as defined by the operator",
+											Type:        "string",
+										},
+										"phase": {
+											Description: "VMImportPhase is the current phase of the VMImport deployment",
 											Type:        "string",
 										},
 									},
@@ -1373,6 +1479,180 @@ func CreateResourceMapping() *extv1.CustomResourceDefinition {
 			Group: "v2v.kubevirt.io",
 			Scope: "Namespaced",
 			Versions: []extv1.CustomResourceDefinitionVersion{
+				{
+					Name:    "v1alpha1",
+					Served:  true,
+					Storage: false,
+					Subresources: &extv1.CustomResourceSubresources{
+						Status: &extv1.CustomResourceSubresourceStatus{},
+					},
+					Schema: &extv1.CustomResourceValidation{
+						OpenAPIV3Schema: &extv1.JSONSchemaProps{
+							Type: "object",
+							Properties: map[string]extv1.JSONSchemaProps{
+								"apiVersion": {
+									Type: "string",
+									Description: `APIVersion defines the versioned schema of this representation
+		of an object. Servers should convert recognized schemas to the latest
+		internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources`,
+								},
+								"kind": {
+									Type: "string",
+									Description: `Kind is a string value representing the REST resource this
+		object represents. Servers may infer this from the endpoint the client
+		submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds`,
+								},
+								"metadata": {
+									Type: "object",
+								},
+								"spec": {
+									Type:        "object",
+									Description: "ResourceMappingSpec defines the desired state of ResourceMapping",
+									Properties: map[string]extv1.JSONSchemaProps{
+										"ovirt": {
+											Type:        "object",
+											Description: "OvirtMappings defines the mappings of ovirt resources to kubevirt",
+											Properties: map[string]extv1.JSONSchemaProps{
+												"networkMappings": {
+													Type: "array",
+													Description: `NetworkMappings defines the mapping of vnic profile
+		to network attachment definition When providing source network by name, the format is 'network name/vnic profile name'.
+		When providing source network by ID, the ID represents the vnic profile ID. A logical network from ovirt can be mapped
+		to multiple network attachment definitions on kubevirt by using vnic profile to network attachment definition mapping.`,
+													Items: &extv1.JSONSchemaPropsOrArray{
+														Schema: &extv1.JSONSchemaProps{
+															Type:        "object",
+															Description: `ResourceMappingItem defines the mapping of a single resource from the provider to kubevirt`,
+															Properties: map[string]extv1.JSONSchemaProps{
+																"source": {
+																	Description: `Source defines how to identify a resource on the provider, either by ID or by name`,
+																	Type:        "object",
+																	Properties: map[string]extv1.JSONSchemaProps{
+																		"id": {
+																			Type: "string",
+																		},
+																		"name": {
+																			Type: "string",
+																		},
+																	},
+																},
+																"target": {
+																	Description: `ObjectIdentifier defines how a resource should be identified on kubevirt`,
+																	Type:        "object",
+																	Properties: map[string]extv1.JSONSchemaProps{
+																		"name": {
+																			Type: "string",
+																		},
+																		"namespace": {
+																			Type: "string",
+																		},
+																	},
+																	Required: []string{"name"},
+																},
+																"type": {
+																	Type: "string",
+																},
+															},
+															Required: []string{"source", "target"},
+														},
+													},
+												},
+												"storageMappings": {
+													Type:        "array",
+													Description: `StorageMappings defines the mapping of storage domains to storage classes.`,
+													Items: &extv1.JSONSchemaPropsOrArray{
+														Schema: &extv1.JSONSchemaProps{
+															Type:        "object",
+															Description: `StorageResourceMappingItem defines the mapping of a single storage resource from the provider to kubevirt`,
+															Properties: map[string]extv1.JSONSchemaProps{
+																"source": {
+																	Description: `Source defines how to identify a resource on the provider, either by ID or by name`,
+																	Type:        "object",
+																	Properties: map[string]extv1.JSONSchemaProps{
+																		"id": {
+																			Type: "string",
+																		},
+																		"name": {
+																			Type: "string",
+																		},
+																	},
+																},
+																"target": {
+																	Description: `ObjectIdentifier defines how a resource should be identified on kubevirt`,
+																	Type:        "object",
+																	Properties: map[string]extv1.JSONSchemaProps{
+																		"name": {
+																			Type: "string",
+																		},
+																		"namespace": {
+																			Type: "string",
+																		},
+																	},
+																	Required: []string{"name"},
+																},
+																"type": {
+																	Type: "string",
+																},
+															},
+															Required: []string{"source", "target"},
+														},
+													},
+												},
+												"diskMappings": {
+													Type: "array",
+													Description: `DiskMappings defines the mapping of disks to storage
+		classes DiskMappings.Source.ID represents the disk ID on ovirt (as opposed to disk-attachment ID) DiskMappings.Source.Name represents
+		the disk alias on ovirt DiskMappings is respected only when provided in context of a single VM import within VirtualMachineImport.`,
+													Items: &extv1.JSONSchemaPropsOrArray{
+														Schema: &extv1.JSONSchemaProps{
+															Type:        "object",
+															Description: `NetworkResourceMappingItem defines the mapping of a single disk resource from the provider to kubevirt`,
+															Properties: map[string]extv1.JSONSchemaProps{
+																"source": {
+																	Description: `Source defines how to identify a resource on the provider, either by ID or by name`,
+																	Type:        "object",
+																	Properties: map[string]extv1.JSONSchemaProps{
+																		"id": {
+																			Type: "string",
+																		},
+																		"name": {
+																			Type: "string",
+																		},
+																	},
+																},
+																"target": {
+																	Description: `ObjectIdentifier defines how a resource should be identified on kubevirt`,
+																	Type:        "object",
+																	Properties: map[string]extv1.JSONSchemaProps{
+																		"name": {
+																			Type: "string",
+																		},
+																		"namespace": {
+																			Type: "string",
+																		},
+																	},
+																	Required: []string{"name"},
+																},
+																"type": {
+																	Type: "string",
+																},
+															},
+															Required: []string{"source", "target"},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+								"status": {
+									Description: "ResourceMappingStatus defines the observed state of ResourceMapping",
+									Type:        "object",
+								},
+							},
+						},
+					},
+				},
 				{
 					Name:    "v1beta1",
 					Served:  true,
