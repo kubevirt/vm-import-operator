@@ -74,7 +74,7 @@ func createControllerResources(args *OperatorArgs) []runtime.Object {
 		resources.CreateServiceAccount(args.Namespace),
 		resources.CreateControllerRole(),
 		resources.CreateControllerRoleBinding(args.Namespace),
-		resources.CreateControllerDeployment(resources.ControllerName, args.Namespace, args.ControllerImage, args.PullPolicy, int32(1), args.InfraNodePlacement),
+		resources.CreateControllerDeployment(resources.ControllerName, args.Namespace, args.ControllerImage, args.Virtv2vImage, args.PullPolicy, int32(1), args.InfraNodePlacement),
 	}
 	// Add metrics objects if servicemonitor is available:
 	if ok, err := hasServiceMonitor(); ok && err == nil {

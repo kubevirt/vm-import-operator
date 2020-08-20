@@ -128,6 +128,9 @@ const (
 	// DataVolumeCreationFailed represents a failure to create data volumes based on source VM disks
 	DataVolumeCreationFailed SucceededConditionReason = "DataVolumeCreationFailed"
 
+	// GuestConversionFailed represents a failure to complete a virt-v2v conversion on the target VM.
+	GuestConversionFailed SucceededConditionReason = "GuestConversionFailed"
+
 	// VirtualMachineReady represents the completion of the vm import
 	VirtualMachineReady SucceededConditionReason = "VirtualMachineReady"
 
@@ -193,6 +196,9 @@ const (
 
 	// CopyingDisks represents the creation of data volumes based on source VM disks
 	CopyingDisks ProcessingConditionReason = "CopyingDisks"
+
+	// ConvertingGuest
+	ConvertingGuest ProcessingConditionReason = "ConvertingGuest"
 
 	// ProcessingCompleted represents the successful import processing
 	ProcessingCompleted ProcessingConditionReason = "ProcessingCompleted"

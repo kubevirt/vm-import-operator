@@ -148,6 +148,8 @@ spec:
                   value: v0.2.1
                 - name: CONTROLLER_IMAGE
                   value: quay.io/kubevirt/vm-import-controller:v0.2.1
+                - name: VIRTV2V_IMAGE
+                  value: quay.io/kubevirt/vm-import-virtv2v:v0.2.1
                 - name: PULL_POLICY
                   value: Always
                 - name: WATCH_NAMESPACE

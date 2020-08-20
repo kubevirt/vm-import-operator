@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	batchv1 "k8s.io/api/batch/v1"
+
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
 
 	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
@@ -866,37 +868,6 @@ var _ = Describe("Reconcile steps", func() {
 		})
 	})
 
-	Describe("manageDataVolumeState step", func() {
-		It("should do nothing: ", func() {
-			done := map[string]bool{}
-			number := len(done)
-			conditions := []v2vv1.VirtualMachineImportCondition{}
-			reason := string(v2vv1.VirtualMachineReady)
-			conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
-				Status: corev1.ConditionTrue,
-				Type:   v2vv1.Succeeded,
-				Reason: &reason,
-			})
-			instance.Status.Conditions = conditions
-
-			_, err := reconciler.manageDataVolumeState(instance, done, number)
-
-			Expect(err).To(BeNil())
-		})
-
-		It("should fail to update status condition: ", func() {
-			update = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-				return fmt.Errorf("Not modified")
-			}
-			done := map[string]bool{"test": true, "test2": true}
-			number := len(done)
-
-			_, err := reconciler.manageDataVolumeState(instance, done, number)
-
-			Expect(err).To(Not(BeNil()))
-		})
-	})
-
 	Describe("importDisks step", func() {
 		var (
 			mockMap *mockMapper
@@ -945,7 +916,7 @@ var _ = Describe("Reconcile steps", func() {
 				return map[string]cdiv1.DataVolume{}, nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(BeNil())
 		})
@@ -962,7 +933,7 @@ var _ = Describe("Reconcile steps", func() {
 				return fmt.Errorf("Not created")
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -984,7 +955,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(BeNil())
 		})
@@ -998,7 +969,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -1017,7 +988,7 @@ var _ = Describe("Reconcile steps", func() {
 				return fmt.Errorf("Not modified")
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -1033,7 +1004,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(BeNil())
 		})
@@ -1057,7 +1028,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(BeNil())
 		})
@@ -1076,9 +1047,195 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(BeNil())
+		})
+	})
+
+	Describe("convertGuest step", func() {
+		var (
+			vmName = types.NamespacedName{Name: "test", Namespace: "default"}
+		)
+
+		BeforeEach(func() {
+			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
+				switch list.(type) {
+				case *corev1.ConfigMapList:
+					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{{}}
+				case *batchv1.JobList:
+					list.(*batchv1.JobList).Items = []batchv1.Job{{}}
+				}
+				return nil
+			}
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{}
+					obj.(*v2vv1.VirtualMachineImport).Annotations = map[string]string{sourceVMInitialState: string(provider.VMStatusDown)}
+				case *kubevirtv1.VirtualMachine:
+					obj.(*kubevirtv1.VirtualMachine).Spec = kubevirtv1.VirtualMachineSpec{
+						Running:     nil,
+						RunStrategy: nil,
+						Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
+							ObjectMeta: v1.ObjectMeta{},
+							Spec: kubevirtv1.VirtualMachineInstanceSpec{
+								Domain: kubevirtv1.DomainSpec{
+									CPU: &kubevirtv1.CPU{},
+									Resources: kubevirtv1.ResourceRequirements{
+										Requests: corev1.ResourceList{},
+									},
+								},
+								Volumes: []kubevirtv1.Volume{},
+							},
+						},
+						DataVolumeTemplates: nil,
+					}
+				}
+				return nil
+			}
+		})
+
+		It("return true if the job succeeded: ", func() {
+			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
+				switch list.(type) {
+				case *corev1.ConfigMapList:
+					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{{}}
+				case *batchv1.JobList:
+					list.(*batchv1.JobList).Items = []batchv1.Job{{
+						Status: batchv1.JobStatus{
+							Active:    0,
+							Succeeded: 1,
+							Failed:    0,
+						},
+					}}
+				}
+				return nil
+			}
+			suceeded, err := reconciler.convertGuest(mock, instance, vmName)
+
+			Expect(suceeded).To(BeTrue())
+			Expect(err).To(BeNil())
+		})
+
+		It("return false with no error if the job failed: ", func() {
+			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
+				switch list.(type) {
+				case *corev1.ConfigMapList:
+					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{{}}
+				case *batchv1.JobList:
+					list.(*batchv1.JobList).Items = []batchv1.Job{{
+						Status: batchv1.JobStatus{
+							Active:    0,
+							Succeeded: 0,
+							Failed:    1,
+						},
+					}}
+				}
+				return nil
+			}
+
+			suceeded, err := reconciler.convertGuest(mock, instance, vmName)
+
+			Expect(suceeded).To(BeFalse())
+			Expect(err).To(BeNil())
+		})
+
+		It("return false with no error if the job is still active: ", func() {
+			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
+				switch list.(type) {
+				case *corev1.ConfigMapList:
+					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{{}}
+				case *batchv1.JobList:
+					list.(*batchv1.JobList).Items = []batchv1.Job{{
+						Status: batchv1.JobStatus{
+							Active:    1,
+							Succeeded: 0,
+							Failed:    0,
+						},
+					}}
+				}
+				return nil
+			}
+
+			suceeded, err := reconciler.convertGuest(mock, instance, vmName)
+
+			Expect(suceeded).To(BeFalse())
+			Expect(err).To(BeNil())
+		})
+
+		It("should create a job if it doesn't exist", func() {
+			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
+				switch list.(type) {
+				case *corev1.ConfigMapList:
+					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{{}}
+				case *batchv1.JobList:
+					list.(*batchv1.JobList).Items = []batchv1.Job{}
+				}
+				return nil
+			}
+
+			suceeded, err := reconciler.convertGuest(mock, instance, vmName)
+
+			Expect(suceeded).To(BeFalse())
+			Expect(err).To(BeNil())
+		})
+
+		It("should fail if creating a new job fails: ", func() {
+			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
+				switch list.(type) {
+				case *corev1.ConfigMapList:
+					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{{}}
+				case *batchv1.JobList:
+					list.(*batchv1.JobList).Items = []batchv1.Job{}
+				}
+				return nil
+			}
+
+			create = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+				return fmt.Errorf("Not created")
+			}
+
+			_, err := reconciler.convertGuest(mock, instance, vmName)
+
+			Expect(err.Error()).To(Equal("Not created"))
+		})
+
+		It("should create a libvirtxml configmap if it doesn't exist", func() {
+			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
+				switch list.(type) {
+				case *corev1.ConfigMapList:
+					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{}
+				case *batchv1.JobList:
+					list.(*batchv1.JobList).Items = []batchv1.Job{{}}
+				}
+				return nil
+			}
+
+			suceeded, err := reconciler.convertGuest(mock, instance, vmName)
+
+			Expect(suceeded).To(BeFalse())
+			Expect(err).To(BeNil())
+		})
+
+		It("should fail if creating a new libvirtxml configmap fails: ", func() {
+			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
+				switch list.(type) {
+				case *corev1.ConfigMapList:
+					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{}
+				case *batchv1.JobList:
+					list.(*batchv1.JobList).Items = []batchv1.Job{{}}
+				}
+				return nil
+			}
+
+			create = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+				return fmt.Errorf("Not created")
+			}
+
+			_, err := reconciler.convertGuest(mock, instance, vmName)
+
+			Expect(err.Error()).To(Equal("Not created"))
 		})
 	})
 
@@ -1436,7 +1593,6 @@ var _ = Describe("Reconcile steps", func() {
 			}
 
 			result, err := reconciler.Reconcile(request)
-
 			Expect(err).To(Not(BeNil()))
 			Expect(result).To(Equal(reconcile.Result{}))
 		})
@@ -1491,10 +1647,10 @@ var _ = Describe("Disks import progress", func() {
 		},
 		table.Entry("No progress", map[string]float64{"1": 0.0}, "10"),
 		table.Entry("Two disks no progress", map[string]float64{"1": 0.0, "2": 0.0}, "10"),
-		table.Entry("Two disks done progress", map[string]float64{"1": 100, "2": 100}, "85"),
-		table.Entry("Two disks half done", map[string]float64{"1": 50, "2": 50}, "47"),
-		table.Entry("Two disks one done", map[string]float64{"1": 50, "2": 100}, "66"),
-		table.Entry("Done progress", map[string]float64{"1": 100}, "85"),
+		table.Entry("Two disks done progress", map[string]float64{"1": 100, "2": 100}, "75"),
+		table.Entry("Two disks half done", map[string]float64{"1": 50, "2": 50}, "42"),
+		table.Entry("Two disks one done", map[string]float64{"1": 50, "2": 100}, "58"),
+		table.Entry("Done progress", map[string]float64{"1": 100}, "75"),
 	)
 })
 
