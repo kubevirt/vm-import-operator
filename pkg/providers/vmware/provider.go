@@ -277,7 +277,11 @@ func (r *VmwareProvider) CleanUp(failure bool, cr *v1beta1.VirtualMachineImport,
 
 // TestConnection tests the connection to the vCenter or ESXi host.
 func (r *VmwareProvider) TestConnection() error {
-	return r.vmwareClient.TestConnection()
+	vmwareClient, err := r.getClient()
+	if err != nil {
+		return err
+	}
+	return vmwareClient.TestConnection()
 }
 
 // Validate checks whether the source VM and resource mapping is valid.
