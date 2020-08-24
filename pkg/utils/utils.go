@@ -304,3 +304,14 @@ func RemoveFinalizer(cr *v2vv1.VirtualMachineImport, name string, client rclient
 	patch := rclient.MergeFrom(cr)
 	return client.Patch(context.TODO(), copy, patch)
 }
+
+// GetProviderName return name of the source provider
+func GetProviderName(cr *v2vv1.VirtualMachineImport) string {
+	if cr.Spec.Source.Ovirt != nil {
+		return "oVirt"
+	} else if cr.Spec.Source.Vmware != nil {
+		return "VMware"
+	} else {
+		return "Unknown"
+	}
+}

@@ -974,7 +974,8 @@ func (r *ReconcileVirtualMachineImport) updateProgress(instance *v2vv1.VirtualMa
 }
 
 func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName, p provider.Provider, instance *v2vv1.VirtualMachineImport) error {
-	metrics.ImportCounter.IncSuccessful()
+	providerName := utils.GetProviderName(instance)
+	metrics.ImportCounter.IncSuccessful(providerName)
 	vmiName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	var errs []error
 	err := p.CleanUp(false, instance, r.client)
@@ -995,7 +996,8 @@ func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName
 
 //TODO: use in proper places
 func (r *ReconcileVirtualMachineImport) afterFailure(p provider.Provider, instance *v2vv1.VirtualMachineImport) error {
-	metrics.ImportCounter.IncFailed()
+	providerName := utils.GetProviderName(instance)
+	metrics.ImportCounter.IncFailed(providerName)
 	vmiName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	var errs []error
 	err := p.CleanUp(true, instance, r.client)

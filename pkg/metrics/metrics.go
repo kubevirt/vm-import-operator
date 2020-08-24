@@ -37,11 +37,11 @@ type importCounter struct {
 }
 
 // IncFailed increment failed label
-func (ic *importCounter) IncFailed() {
-	ic.importCounterVec.With(prometheus.Labels{"result": "failed"}).Inc()
+func (ic *importCounter) IncFailed(providerName string) {
+	ic.importCounterVec.With(prometheus.Labels{"result": "failed", "provider": providerName}).Inc()
 }
 
 // IncSuccessful increment successfull label
-func (ic *importCounter) IncSuccessful() {
-	ic.importCounterVec.With(prometheus.Labels{"result": "successful"}).Inc()
+func (ic *importCounter) IncSuccessful(providerName string) {
+	ic.importCounterVec.With(prometheus.Labels{"result": "successful", "provider": providerName}).Inc()
 }
