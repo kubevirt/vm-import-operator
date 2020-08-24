@@ -7,10 +7,10 @@ virt-v2v -v -x -i libvirtxml -o null --debug-overlays --no-copy /mnt/v2v/input.x
 [ $? != 0 ] && exit 1
 
 echo "Conversion successful. Committing all overlays to local disks."
-find /var/tmp -name 'v2v-*.qcow2' -exec qemu-img commit -p {} \;
+find /var/tmp -name '*.qcow2' -exec qemu-img commit -p {} \;
 [ $? != 0 ] && exit 1
 
 echo "Commit successful. Cleaning up."
-find /var/tmp -name 'v2v-*.qcow2' -exec rm -f {} \;
+find /var/tmp -name '*.qcow2' -exec rm -f {} \;
 
 exit 0
