@@ -274,6 +274,8 @@ func getOperatorPolicyRules() []rbacv1.PolicyRule {
 				"configmaps",
 				"secrets",
 				"serviceaccounts",
+				"services",
+				"services/finalizers",
 			},
 			Verbs: []string{
 				"*",
