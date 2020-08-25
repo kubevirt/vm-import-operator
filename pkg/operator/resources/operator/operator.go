@@ -329,6 +329,18 @@ func getOperatorPolicyRules() []rbacv1.PolicyRule {
 				"*",
 			},
 		},
+		{
+			APIGroups: []string{
+				"monitoring.coreos.com",
+			},
+			Resources: []string{
+				"servicemonitors",
+			},
+			Verbs: []string{
+				"get",
+				"list",
+			},
+		},
 	}
 	return rules
 }
