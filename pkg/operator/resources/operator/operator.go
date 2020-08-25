@@ -2062,6 +2062,10 @@ func createOperatorEnvVar(operatorVersion, deployClusterResources, controllerIma
 				},
 			},
 		},
+		{
+			Name:  "MONITORING_NAMESPACE",
+			Value: "openshift-monitoring",
+		},
 	}
 }
 
