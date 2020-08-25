@@ -337,8 +337,7 @@ func getOperatorPolicyRules() []rbacv1.PolicyRule {
 				"servicemonitors",
 			},
 			Verbs: []string{
-				"get",
-				"list",
+				"*",
 			},
 		},
 	}
