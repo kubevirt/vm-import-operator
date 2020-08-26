@@ -515,6 +515,10 @@ func CreateVMImportConfig() *extv1.CustomResourceDefinition {
 															Description: "Current status of the condition, True, False, Unknown",
 															Type:        "string",
 														},
+														"type": {
+															Description: "ConditionType is the state of the operator's reconciliation functionality.",
+															Type:        "string",
+														},
 													},
 												},
 											},
@@ -529,6 +533,10 @@ func CreateVMImportConfig() *extv1.CustomResourceDefinition {
 										},
 										"operatorVersion": {
 											Description: "The version of the VMImportConfig resource as defined by the operator",
+											Type:        "string",
+										},
+										"phase": {
+											Description: "VMImportPhase is the current phase of the VMImport deployment",
 											Type:        "string",
 										},
 									},
