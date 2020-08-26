@@ -47,7 +47,6 @@ var biosTypeMapping = map[string]*kubevirtv1.Bootloader{
 // disk is an abstraction of a VMWare VirtualDisk
 type disk struct {
 	backingFileName string
-	bus             string
 	capacity        resource.Quantity
 	datastore       string
 	id              string
@@ -75,7 +74,6 @@ type DataVolumeCredentials struct {
 type VmwareMapper struct {
 	credentials    *DataVolumeCredentials
 	disks          *[]disk
-	disksByDVName  map[string]disk
 	hostProperties *mo.HostSystem
 	mappings       *v1beta1.VmwareMappings
 	namespace      string
@@ -89,7 +87,6 @@ type VmwareMapper struct {
 func NewVmwareMapper(vm *object.VirtualMachine, vmProperties *mo.VirtualMachine, hostProperties *mo.HostSystem, credentials *DataVolumeCredentials, mappings *v1beta1.VmwareMappings, namespace string, osFinder vos.OSFinder) *VmwareMapper {
 	return &VmwareMapper{
 		credentials:    credentials,
-		disksByDVName:  make(map[string]disk),
 		hostProperties: hostProperties,
 		mappings:       mappings,
 		namespace:      namespace,
@@ -99,15 +96,59 @@ func NewVmwareMapper(vm *object.VirtualMachine, vmProperties *mo.VirtualMachine,
 	}
 }
 
-// buildDevices retrieves each of the VM's VirtualDisks and VirtualEthernetCards
+
+// buildNics retrieves each of the VM's VirtualEthernetCards
 // and pulls out the values that are needed for import
-func (r *VmwareMapper) buildDevices() error {
-	if r.disks != nil && r.nics != nil {
+func (r *VmwareMapper) buildNics() {
+	if r.nics != nil {
+		return
+	}
+
+	nics := make([]nic, 0)
+
+	devices := r.vmProperties.Config.Hardware.Device
+	for _, device := range devices {
+	// is this device a VirtualEthernetCard?
+		var virtualNetwork *types.VirtualEthernetCard
+		switch v := device.(type) {
+		case *types.VirtualE1000:
+			virtualNetwork = &v.VirtualEthernetCard
+		case *types.VirtualE1000e:
+			virtualNetwork = &v.VirtualEthernetCard
+		case *types.VirtualVmxnet:
+			virtualNetwork = &v.VirtualEthernetCard
+		case *types.VirtualVmxnet2:
+			virtualNetwork = &v.VirtualEthernetCard
+		case *types.VirtualVmxnet3:
+			virtualNetwork = &v.VirtualEthernetCard
+		}
+		if virtualNetwork != nil {
+			backing := virtualNetwork.Backing.(*types.VirtualEthernetCardNetworkBackingInfo)
+
+			var moRef string
+			if backing.Network != nil {
+				moRef = backing.Network.Value
+			}
+			nic := nic{
+				name:  backing.DeviceName,
+				mac:   virtualNetwork.MacAddress,
+				moRef: moRef,
+			}
+			nics = append(nics, nic)
+		}
+	}
+
+	r.nics = &nics
+}
+
+// buildDisks retrieves each of the VM's VirtualDisks
+// and pulls out the values that are needed for import
+func (r *VmwareMapper) buildDisks() error {
+	if r.disks != nil {
 		return nil
 	}
 
 	disks := make([]disk, 0)
-	nics := make([]nic, 0)
 
 	devices := r.vmProperties.Config.Hardware.Device
 	for _, device := range devices {
@@ -137,7 +178,6 @@ func (r *VmwareMapper) buildDevices() error {
 
 			disk := disk{
 				backingFileName: backingFileName,
-				bus:             busTypeVirtio,
 				capacity:        capacity,
 				datastore:       datastore,
 				id:              diskId,
@@ -148,37 +188,10 @@ func (r *VmwareMapper) buildDevices() error {
 			continue
 		}
 
-		// is this device a VirtualEthernetCard?
-		var virtualNetwork *types.VirtualEthernetCard
-		switch v := device.(type) {
-		case *types.VirtualE1000:
-			virtualNetwork = &v.VirtualEthernetCard
-		case *types.VirtualE1000e:
-			virtualNetwork = &v.VirtualEthernetCard
-		case *types.VirtualVmxnet:
-			virtualNetwork = &v.VirtualEthernetCard
-		case *types.VirtualVmxnet2:
-			virtualNetwork = &v.VirtualEthernetCard
-		case *types.VirtualVmxnet3:
-			virtualNetwork = &v.VirtualEthernetCard
-		}
-		if virtualNetwork != nil {
-			backing := virtualNetwork.Backing.(*types.VirtualEthernetCardNetworkBackingInfo)
 
-			var moRef string
-			if backing.Network != nil {
-				moRef = backing.Network.Value
-			}
-			nic := nic{
-				name:  backing.DeviceName,
-				mac:   virtualNetwork.MacAddress,
-				moRef: moRef,
-			}
-			nics = append(nics, nic)
-		}
 	}
+
 	r.disks = &disks
-	r.nics = &nics
 	return nil
 }
 
@@ -219,7 +232,7 @@ func (r *VmwareMapper) getStorageClassForDisk(disk *disk) *string {
 
 // MapDataVolumes maps the VMware disks to CDI DataVolumes
 func (r *VmwareMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.DataVolume, error) {
-	err := r.buildDevices()
+	err := r.buildDisks()
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +271,6 @@ func (r *VmwareMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.Da
 		if sdClass != nil {
 			dvs[dvName].Spec.PVC.StorageClassName = sdClass
 		}
-		r.disksByDVName[dvName] = disk
 	}
 	return dvs, nil
 }
@@ -276,12 +288,11 @@ func (r *VmwareMapper) MapDisk(vmSpec *kubevirtv1.VirtualMachine, dv cdiv1.DataV
 		},
 	}
 
-	disk := r.disksByDVName[dv.Name]
 	kubevirtDisk := kubevirtv1.Disk{
 		Name: name,
 		DiskDevice: kubevirtv1.DiskDevice{
 			Disk: &kubevirtv1.DiskTarget{
-				Bus: disk.bus,
+				Bus: busTypeVirtio,
 			},
 		},
 	}
@@ -382,16 +393,18 @@ func (r *VmwareMapper) MapVM(targetVmName *string, vmSpec *kubevirtv1.VirtualMac
 	// Map clock
 	vmSpec.Spec.Template.Spec.Domain.Clock = r.mapClock(r.hostProperties)
 
-	// Map networks
-	vmSpec.Spec.Template.Spec.Networks, err = r.mapNetworks()
-	if err != nil {
-		return nil, err
-	}
+	if r.mappings != nil && r.mappings.NetworkMappings != nil {
+		// Map networks
+		vmSpec.Spec.Template.Spec.Networks, err = r.mapNetworks()
+		if err != nil {
+			return nil, err
+		}
 
-	networkToType := r.mapNetworksToTypes(vmSpec.Spec.Template.Spec.Networks)
-	vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces, err = r.mapNetworkInterfaces(networkToType)
-	if err != nil {
-		return nil, err
+		networkToType := r.mapNetworksToTypes(vmSpec.Spec.Template.Spec.Networks)
+		vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces, err = r.mapNetworkInterfaces(networkToType)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	os, _ := r.osFinder.FindOperatingSystem(r.vmProperties)
@@ -463,10 +476,7 @@ func (r *VmwareMapper) mapInputDevice(os string) []kubevirtv1.Input {
 }
 
 func (r *VmwareMapper) mapNetworks() ([]kubevirtv1.Network, error) {
-	err := r.buildDevices()
-	if err != nil {
-		return nil, err
-	}
+	r.buildNics()
 
 	var kubevirtNetworks []kubevirtv1.Network
 	for _, nic := range *r.nics {
@@ -491,11 +501,7 @@ func (r *VmwareMapper) mapNetworks() ([]kubevirtv1.Network, error) {
 }
 
 func (r *VmwareMapper) mapNetworkInterfaces(networkToType map[string]string) ([]kubevirtv1.Interface, error) {
-	err := r.buildDevices()
-	if err != nil {
-		return nil, err
-	}
-
+	r.buildNics()
 	var interfaces []kubevirtv1.Interface
 	for _, nic := range *r.nics {
 		kubevirtInterface := kubevirtv1.Interface{}
