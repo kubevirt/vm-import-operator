@@ -88,6 +88,9 @@ func (r RichVmwareClient) getVMByUUID(id string) (*object.VirtualMachine, error)
 	if err != nil {
 		return nil, err
 	}
+	if vmRef == nil {
+		return nil, errors.New("not found")
+	}
 	vm := object.NewVirtualMachine(r.client, vmRef.Reference())
 	return vm, nil
 }
@@ -101,6 +104,9 @@ func (r RichVmwareClient) getVMByInventoryPath(vmPath string) (*object.VirtualMa
 	vm, err := finder.VirtualMachine(ctx, vmPath)
 	if err != nil {
 		return nil, err
+	}
+	if vm == nil {
+		return nil, errors.New("not found")
 	}
 	return vm, nil
 }
