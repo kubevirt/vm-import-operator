@@ -2,6 +2,7 @@ package mapper
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -296,7 +297,11 @@ func (r *VmwareMapper) MapDisk(vmSpec *kubevirtv1.VirtualMachine, dv cdiv1.DataV
 	}
 
 	vmSpec.Spec.Template.Spec.Volumes = append(vmSpec.Spec.Template.Spec.Volumes, volume)
-	vmSpec.Spec.Template.Spec.Domain.Devices.Disks = append(vmSpec.Spec.Template.Spec.Domain.Devices.Disks, kubevirtDisk)
+	disks := append(vmSpec.Spec.Template.Spec.Domain.Devices.Disks, kubevirtDisk)
+	sort.Slice(disks, func(i, j int) bool {
+		return disks[i].Name < disks[j].Name
+	})
+	vmSpec.Spec.Template.Spec.Domain.Devices.Disks = disks
 }
 
 // ResolveVMName resolves the target VM name
