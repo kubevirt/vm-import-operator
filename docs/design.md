@@ -140,7 +140,7 @@ spec:
       target: xyz
       type: multus
     - source:
-        id: 00:1B:44:11:3A:B7 # alternatively the network can be mapped by mac address
+        id: network-7 # alternatively the network can be mapped by managed object reference
       Target:
         name: pod
       type: pod

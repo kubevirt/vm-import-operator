@@ -1,0 +1,11 @@
+<ObjectContent>
+  <obj type="GuestOperationsManager">guestOperationsManager</obj>
+  <propSet>
+    <name>fileManager</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ManagedObjectReference" type="GuestFileManager">guestOperationsFileManager</val>
+  </propSet>
+  <propSet>
+    <name>processManager</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ManagedObjectReference" type="GuestProcessManager">guestOperationsProcessManager</val>
+  </propSet>
+</ObjectContent>

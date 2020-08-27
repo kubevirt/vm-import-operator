@@ -1,0 +1,40 @@
+<ObjectContent>
+  <obj type="CustomizationSpecManager">CustomizationSpecManager</obj>
+  <propSet>
+    <name>info</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfCustomizationSpecInfo">
+      <CustomizationSpecInfo>
+        <name>vcsim-linux</name>
+        <description></description>
+        <type>Linux</type>
+        <changeVersion>1569965707</changeVersion>
+        <lastUpdateTime>2020-08-06T14:37:18.856622734-04:00</lastUpdateTime>
+      </CustomizationSpecInfo>
+      <CustomizationSpecInfo>
+        <name>vcsim-linux-static</name>
+        <description></description>
+        <type>Linux</type>
+        <changeVersion>1569969598</changeVersion>
+        <lastUpdateTime>2020-08-06T14:37:18.856623224-04:00</lastUpdateTime>
+      </CustomizationSpecInfo>
+      <CustomizationSpecInfo>
+        <name>vcsim-windows-static</name>
+        <description></description>
+        <type>Windows</type>
+        <changeVersion>1569978029</changeVersion>
+        <lastUpdateTime>2020-08-06T14:37:18.85662343-04:00</lastUpdateTime>
+      </CustomizationSpecInfo>
+      <CustomizationSpecInfo>
+        <name>vcsim-windows-domain</name>
+        <description></description>
+        <type>Windows</type>
+        <changeVersion>1569970234</changeVersion>
+        <lastUpdateTime>2020-08-06T14:37:18.856623588-04:00</lastUpdateTime>
+      </CustomizationSpecInfo>
+    </val>
+  </propSet>
+  <propSet>
+    <name>encryptionKey</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfByte"></val>
+  </propSet>
+</ObjectContent>

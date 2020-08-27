@@ -1,0 +1,11 @@
+<ObjectContent>
+  <obj type="CryptoManagerKmip">CryptoManager</obj>
+  <propSet>
+    <name>enabled</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="xsd:boolean">false</val>
+  </propSet>
+  <propSet>
+    <name>kmipServers</name>
+    <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="ArrayOfKmipClusterInfo"></val>
+  </propSet>
+</ObjectContent>
