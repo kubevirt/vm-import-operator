@@ -267,7 +267,7 @@ func (o *OvirtProvider) Validate() ([]v2vv1.VirtualMachineImportCondition, error
 }
 
 // StopVM stop the source VM on ovirt
-func (o *OvirtProvider) StopVM(cr *v2vv1.VirtualMachineImport, rclient rclient.Client) error {
+func (o *OvirtProvider) StopVM() error {
 	vm, err := o.getVM()
 	if err != nil {
 		return err
@@ -282,10 +282,6 @@ func (o *OvirtProvider) StopVM(cr *v2vv1.VirtualMachineImport, rclient rclient.C
 		return err
 	}
 	err = client.StopVM(vmID)
-	if err != nil {
-		return err
-	}
-	err = utils.AddFinalizer(cr, utils.RestoreVMStateFinalizer, rclient)
 	if err != nil {
 		return err
 	}
@@ -315,28 +311,14 @@ func (o *OvirtProvider) ProcessTemplate(template *templatev1.Template, vmName *s
 	if err != nil {
 		return nil, err
 	}
-	updateLabels(vm, labels)
-	updateAnnotations(vm, annotations)
+	utils.UpdateLabels(vm, labels)
+	utils.UpdateAnnotations(vm, annotations)
 	return vm, nil
 }
 
 // GetVmiNamespacedName return the namespaced name of the VM import object
 func (o *OvirtProvider) GetVmiNamespacedName() types.NamespacedName {
 	return types.NamespacedName{Name: o.vmiObjectMeta.Name, Namespace: o.vmiObjectMeta.Namespace}
-}
-
-func updateLabels(vm *kubevirtv1.VirtualMachine, labels map[string]string) {
-	utils.AppendMap(vm.ObjectMeta.GetLabels(), labels)
-	utils.AppendMap(vm.Spec.Template.ObjectMeta.GetLabels(), labels)
-}
-
-func updateAnnotations(vm *kubevirtv1.VirtualMachine, annotationMap map[string]string) {
-	annotations := vm.ObjectMeta.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-		vm.ObjectMeta.SetAnnotations(annotations)
-	}
-	utils.AppendMap(annotations, annotationMap)
 }
 
 // CreateMapper create the mapper for ovirt provider
@@ -404,7 +386,7 @@ func (o *OvirtProvider) CleanUp(failure bool, cr *v2vv1.VirtualMachineImport, cl
 	}
 
 	if len(errs) > 0 {
-		return foldErrors(errs, vmiName)
+		return utils.FoldCleanUpErrors(errs, vmiName)
 	}
 	return nil
 }
@@ -493,12 +475,4 @@ func (o *OvirtProvider) createConfigMap(caCert string) (*corev1.ConfigMap, error
 		return nil, err
 	}
 	return &newConfigMap, nil
-}
-
-func foldErrors(errs []error, vmiName types.NamespacedName) error {
-	message := ""
-	for _, e := range errs {
-		message = utils.WithMessage(message, e.Error())
-	}
-	return fmt.Errorf("clean-up for %v failed: %s", utils.ToLoggableResourceName(vmiName.Name, &vmiName.Namespace), message)
 }

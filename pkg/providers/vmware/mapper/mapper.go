@@ -298,6 +298,11 @@ func (r *VmwareMapper) MapDisk(vmSpec *kubevirtv1.VirtualMachine, dv cdiv1.DataV
 
 	vmSpec.Spec.Template.Spec.Volumes = append(vmSpec.Spec.Template.Spec.Volumes, volume)
 	disks := append(vmSpec.Spec.Template.Spec.Domain.Devices.Disks, kubevirtDisk)
+
+	// Since the the import controller is iterating over a map of DVs,
+	// MapDisk gets called for each DV in a nondeterministic order which results
+	// in the disks being in an arbitrary order. This sort ensure the disks are
+	// attached in the same order as the devices on the source VM.
 	sort.Slice(disks, func(i, j int) bool {
 		return disks[i].Name < disks[j].Name
 	})

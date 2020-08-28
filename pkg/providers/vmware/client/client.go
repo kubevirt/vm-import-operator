@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"time"
 
@@ -89,7 +90,7 @@ func (r RichVmwareClient) getVMByUUID(id string) (*object.VirtualMachine, error)
 		return nil, err
 	}
 	if vmRef == nil {
-		return nil, errors.New("not found")
+		return nil, fmt.Errorf("vm '%s' not found", id)
 	}
 	vm := object.NewVirtualMachine(r.client, vmRef.Reference())
 	return vm, nil
@@ -104,9 +105,6 @@ func (r RichVmwareClient) getVMByInventoryPath(vmPath string) (*object.VirtualMa
 	vm, err := finder.VirtualMachine(ctx, vmPath)
 	if err != nil {
 		return nil, err
-	}
-	if vm == nil {
-		return nil, errors.New("not found")
 	}
 	return vm, nil
 }

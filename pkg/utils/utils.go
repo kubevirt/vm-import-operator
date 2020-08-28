@@ -3,6 +3,8 @@ package utils
 import (
 	"context"
 	"fmt"
+	k8stypes "k8s.io/apimachinery/pkg/types"
+	v1 "kubevirt.io/client-go/api/v1"
 	"regexp"
 	"strconv"
 	"strings"
@@ -287,4 +289,29 @@ func RemoveFinalizer(cr *v2vv1.VirtualMachineImport, name string, client rclient
 
 	patch := rclient.MergeFrom(cr)
 	return client.Patch(context.TODO(), copy, patch)
+}
+
+// FoldErrors combines clean up errors into one error
+func FoldCleanUpErrors(errs []error, vmiName k8stypes.NamespacedName) error {
+	message := ""
+	for _, e := range errs {
+		message = WithMessage(message, e.Error())
+	}
+	return fmt.Errorf("clean-up for %v failed: %s", ToLoggableResourceName(vmiName.Name, &vmiName.Namespace), message)
+}
+
+// UpdateLabels updates a VirtualMachine's labels with values from a provided map, overwriting any duplicates
+func UpdateLabels(vm *v1.VirtualMachine, labels map[string]string) {
+	AppendMap(vm.ObjectMeta.GetLabels(), labels)
+	AppendMap(vm.Spec.Template.ObjectMeta.GetLabels(), labels)
+}
+
+// UpdateAnnotations updates a VirtualMachine's annotations with values from a provided map, overwriting any duplicates
+func UpdateAnnotations(vm *v1.VirtualMachine, annotationMap map[string]string) {
+	annotations := vm.ObjectMeta.GetAnnotations()
+	if annotations == nil {
+		annotations = make(map[string]string)
+		vm.ObjectMeta.SetAnnotations(annotations)
+	}
+	AppendMap(annotations, annotationMap)
 }

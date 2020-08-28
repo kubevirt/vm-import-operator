@@ -19,7 +19,6 @@ import (
 	"github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
-	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 	"github.com/kubevirt/vm-import-operator/pkg/datavolumes"
 	"github.com/kubevirt/vm-import-operator/pkg/os"
 	"github.com/kubevirt/vm-import-operator/pkg/ownerreferences"
@@ -65,8 +64,7 @@ type VmwareProvider struct {
 }
 
 // NewVmwareProvider creates a new VmwareProvider
-func NewVmwareProvider(vmiObjectMeta metav1.ObjectMeta, vmiTypeMeta metav1.TypeMeta, client client.Client, tempClient *tempclient.TemplateV1Client, factory pclient.Factory,
-	_ kvConfig.KubeVirtConfigProvider, ctrlConfig ctrlConfig.ControllerConfig) VmwareProvider {
+func NewVmwareProvider(vmiObjectMeta metav1.ObjectMeta, vmiTypeMeta metav1.TypeMeta, client client.Client, tempClient *tempclient.TemplateV1Client, factory pclient.Factory, ctrlConfig ctrlConfig.ControllerConfig) VmwareProvider {
 	secretsManager := secrets.NewManager(client)
 	configMapsManager := configmaps.NewManager(client)
 	dataVolumesManager := datavolumes.NewManager(client)
@@ -93,6 +91,24 @@ func (r *VmwareProvider) Init(secret *corev1.Secret, instance *v1beta1.VirtualMa
 	err := yaml.Unmarshal(secret.Data[vmwareSecretKey], &r.vmwareSecretDataMap)
 	if err != nil {
 		return err
+	}
+	if _, ok := r.vmwareSecretDataMap["apiUrl"]; !ok {
+		return fmt.Errorf("vmware secret must contain apiUrl attribute")
+	}
+	if len(r.vmwareSecretDataMap["apiUrl"]) == 0 {
+		return fmt.Errorf("vmware secret apiUrl cannot be empty")
+	}
+	if _, ok := r.vmwareSecretDataMap["username"]; !ok {
+		return fmt.Errorf("vmware secret must contain username attribute")
+	}
+	if len(r.vmwareSecretDataMap["username"]) == 0 {
+		return fmt.Errorf("vmware secret username cannot be empty")
+	}
+	if _, ok := r.vmwareSecretDataMap["password"]; !ok {
+		return fmt.Errorf("vmware secret must contain password attribute")
+	}
+	if len(r.vmwareSecretDataMap["password"]) == 0 {
+		return fmt.Errorf("vmware secret password cannot be empty")
 	}
 	r.instance = instance
 	return nil
@@ -146,8 +162,8 @@ func (r *VmwareProvider) ProcessTemplate(template *oapiv1.Template, vmName *stri
 	if err != nil {
 		return nil, err
 	}
-	updateLabels(vm, labels)
-	updateAnnotations(vm, annotations)
+	utils.UpdateLabels(vm, labels)
+	utils.UpdateAnnotations(vm, annotations)
 	return vm, nil
 }
 
@@ -172,11 +188,11 @@ func (r *VmwareProvider) LoadVM(sourceSpec v1beta1.VirtualMachineImportSourceSpe
 
 // GetVMName gets the name of the source VM
 func (r *VmwareProvider) GetVMName() (string, error) {
-	vm, err := r.getVM()
+	vm, err := r.getVmProperties()
 	if err != nil {
 		return "", err
 	}
-	return vm.Name(), nil
+	return vm.Name, nil
 }
 
 // GetVMStatus gets the power status of the source VM
@@ -213,7 +229,7 @@ func (r *VmwareProvider) StartVM() error {
 }
 
 // StartVM powers off the source VM.
-func (r *VmwareProvider) StopVM(cr *v1beta1.VirtualMachineImport, client client.Client) error {
+func (r *VmwareProvider) StopVM() error {
 	vmwareClient, err := r.getClient()
 	if err != nil {
 		return err
@@ -234,10 +250,6 @@ func (r *VmwareProvider) StopVM(cr *v1beta1.VirtualMachineImport, client client.
 		}
 	}
 
-	err = utils.AddFinalizer(cr, utils.RestoreVMStateFinalizer, client)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -278,7 +290,7 @@ func (r *VmwareProvider) CleanUp(failure bool, cr *v1beta1.VirtualMachineImport,
 	}
 
 	if len(errs) > 0 {
-		return foldErrors(errs, vmiName)
+		return utils.FoldCleanUpErrors(errs, vmiName)
 	}
 	return nil
 }
@@ -297,6 +309,7 @@ func (r *VmwareProvider) Validate() ([]v1beta1.VirtualMachineImportCondition, er
 	// TODO: implement vmware rule validation
 	return []v1beta1.VirtualMachineImportCondition{
 		conditions.NewCondition(v1beta1.Valid, string(v1beta1.ValidationCompleted), "Validation completed successfully", corev1.ConditionTrue),
+		conditions.NewCondition(v1beta1.MappingRulesVerified, string(v1beta1.MappingRulesVerificationCompleted), "All mapping rules checks passed", corev1.ConditionTrue),
 	}, nil
 }
 
@@ -405,26 +418,4 @@ func (r *VmwareProvider) createSecret(username, password string) (*corev1.Secret
 		return nil, err
 	}
 	return &newSecret, nil
-}
-
-func foldErrors(errs []error, vmiName k8stypes.NamespacedName) error {
-	message := ""
-	for _, e := range errs {
-		message = utils.WithMessage(message, e.Error())
-	}
-	return fmt.Errorf("clean-up for %v failed: %s", utils.ToLoggableResourceName(vmiName.Name, &vmiName.Namespace), message)
-}
-
-func updateLabels(vm *v1.VirtualMachine, labels map[string]string) {
-	utils.AppendMap(vm.ObjectMeta.GetLabels(), labels)
-	utils.AppendMap(vm.Spec.Template.ObjectMeta.GetLabels(), labels)
-}
-
-func updateAnnotations(vm *v1.VirtualMachine, annotationMap map[string]string) {
-	annotations := vm.ObjectMeta.GetAnnotations()
-	if annotations == nil {
-		annotations = make(map[string]string)
-		vm.ObjectMeta.SetAnnotations(annotations)
-	}
-	utils.AppendMap(annotations, annotationMap)
 }
