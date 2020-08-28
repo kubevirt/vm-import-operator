@@ -222,10 +222,18 @@ func (r *VmwareProvider) StopVM(cr *v1beta1.VirtualMachineImport, client client.
 	if err != nil {
 		return err
 	}
-	err = vmwareClient.StopVM(vm.Reference().Value)
+	vmProperties, err := r.getVmProperties()
 	if err != nil {
 		return err
 	}
+
+	if vmProperties.Runtime.PowerState != types.VirtualMachinePowerStatePoweredOff {
+		err = vmwareClient.StopVM(vm.Reference().Value)
+		if err != nil {
+			return err
+		}
+	}
+
 	err = utils.AddFinalizer(cr, utils.RestoreVMStateFinalizer, client)
 	if err != nil {
 		return err
