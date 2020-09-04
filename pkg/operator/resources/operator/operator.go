@@ -8,6 +8,7 @@ import (
 
 	"github.com/blang/semver"
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
+	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	vmimportmetrics "github.com/kubevirt/vm-import-operator/pkg/metrics"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	csvv1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
@@ -345,7 +346,7 @@ func getOperatorPolicyRules() []rbacv1.PolicyRule {
 }
 
 // CreateControllerDeployment returns vmimport controller deployment
-func CreateControllerDeployment(name, namespace, image, pullPolicy string, numReplicas int32) *appsv1.Deployment {
+func CreateControllerDeployment(name, namespace, image, pullPolicy string, numReplicas int32, policy *v2vv1.NodePlacement) *appsv1.Deployment {
 	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -355,14 +356,14 @@ func CreateControllerDeployment(name, namespace, image, pullPolicy string, numRe
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: *createControllerDeploymentSpec(image, pullPolicy, "v2v.kubevirt.io", ControllerName, numReplicas),
+		Spec: *createControllerDeploymentSpec(image, pullPolicy, "v2v.kubevirt.io", ControllerName, numReplicas, policy),
 	}
 	return deployment
 }
 
-func createControllerDeploymentSpec(image string, pullPolicy string, matchKey string, matchValue string, numReplicas int32) *appsv1.DeploymentSpec {
+func createControllerDeploymentSpec(image string, pullPolicy string, matchKey string, matchValue string, numReplicas int32, policy *v2vv1.NodePlacement) *appsv1.DeploymentSpec {
 	matchMap := map[string]string{matchKey: matchValue}
-	return &appsv1.DeploymentSpec{
+	deployment := appsv1.DeploymentSpec{
 		Replicas: &numReplicas,
 		Selector: &metav1.LabelSelector{
 			MatchLabels: utils.WithLabels(matchMap, operatorLabels),
@@ -377,6 +378,13 @@ func createControllerDeploymentSpec(image string, pullPolicy string, matchKey st
 			},
 		},
 	}
+	if policy != nil {
+		deployment.Template.Spec.Affinity = &policy.Affinity
+		deployment.Template.Spec.NodeSelector = policy.NodeSelector
+		deployment.Template.Spec.Tolerations = policy.Tolerations
+	}
+
+	return &deployment
 }
 
 func createControllerContainers(image string, pullPolicy string) []v1.Container {
@@ -476,6 +484,421 @@ func CreateVMImportConfig() *extv1.CustomResourceDefinition {
 												},
 												{
 													Raw: []byte(`"Never"`),
+												},
+											},
+										},
+										"infra": {
+											Type:        "object",
+											Description: "Rules on which nodes vm import infrastructure pods will be scheduled",
+											Properties: map[string]extv1.JSONSchemaProps{
+												"nodeSelector": {
+													Type:        "object",
+													Description: "NodeSelector is the node selector applied to the relevant kind of pods It specifies a map of key-value pairs: for the pod to be eligible to run on a node, the node must have each of the indicated key-value pairs as labels (it can have additional labels as well). See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector",
+												},
+												"affinity": {
+													Type:        "object",
+													Description: "Affinity enables pod affinity/anti-affinity placement expanding the types of constraints that can be expressed with nodeSelector. affinity is going to be applied to the relevant kind of pods in parallel with nodeSelector See https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity",
+													Properties: map[string]extv1.JSONSchemaProps{
+														"nodeAffinity": {
+															Type:        "object",
+															Description: "Node affinity is a group of node affinity scheduling rules.",
+															Properties: map[string]extv1.JSONSchemaProps{
+																"preferredDuringSchedulingIgnoredDuringExecution": {
+																	Type: "array",
+																	Items: &extv1.JSONSchemaPropsOrArray{
+																		Schema: &extv1.JSONSchemaProps{
+																			Type: "object",
+																			Properties: map[string]extv1.JSONSchemaProps{
+																				"weight": {
+																					Type: "integer",
+																				},
+																				"preference": {
+																					Type: "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"matchExpressions": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "object",
+																									Properties: map[string]extv1.JSONSchemaProps{
+																										"key": {
+																											Type: "string",
+																										},
+																										"operator": {
+																											Type: "string",
+																										},
+																										"values": {
+																											Type: "array",
+																											Items: &extv1.JSONSchemaPropsOrArray{
+																												Schema: &extv1.JSONSchemaProps{
+																													Type: "string",
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																						"matchFields": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "object",
+																									Properties: map[string]extv1.JSONSchemaProps{
+																										"key": {
+																											Type: "string",
+																										},
+																										"operator": {
+																											Type: "string",
+																										},
+																										"values": {
+																											Type: "array",
+																											Items: &extv1.JSONSchemaPropsOrArray{
+																												Schema: &extv1.JSONSchemaProps{
+																													Type: "string",
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+																"requiredDuringSchedulingIgnoredDuringExecution": {
+																	Type: "object",
+																	Properties: map[string]extv1.JSONSchemaProps{
+																		"nodeSelectorTerms": {
+																			Type: "array",
+																			Items: &extv1.JSONSchemaPropsOrArray{
+																				Schema: &extv1.JSONSchemaProps{
+																					Type: "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"matchExpressions": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "object",
+																									Properties: map[string]extv1.JSONSchemaProps{
+																										"key": {
+																											Type: "string",
+																										},
+																										"operator": {
+																											Type: "string",
+																										},
+																										"values": {
+																											Type: "array",
+																											Items: &extv1.JSONSchemaPropsOrArray{
+																												Schema: &extv1.JSONSchemaProps{
+																													Type: "string",
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																						"matchFields": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "object",
+																									Properties: map[string]extv1.JSONSchemaProps{
+																										"key": {
+																											Type: "string",
+																										},
+																										"operator": {
+																											Type: "string",
+																										},
+																										"values": {
+																											Type: "array",
+																											Items: &extv1.JSONSchemaPropsOrArray{
+																												Schema: &extv1.JSONSchemaProps{
+																													Type: "string",
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+														"podAffinity": {
+															Type: "object",
+															Properties: map[string]extv1.JSONSchemaProps{
+																"preferredDuringSchedulingIgnoredDuringExecution": {
+																	Type: "array",
+																	Items: &extv1.JSONSchemaPropsOrArray{
+																		Schema: &extv1.JSONSchemaProps{
+																			Type: "object",
+																			Properties: map[string]extv1.JSONSchemaProps{
+																				"weight": {
+																					Type: "integer",
+																				},
+																				"podAffinityTerm": {
+																					Type: "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"labelSelector": {
+																							Type: "object",
+																							Properties: map[string]extv1.JSONSchemaProps{
+																								"matchLabels": {
+																									Type: "object",
+																								},
+																								"matchExpressions": {
+																									Type: "array",
+																									Items: &extv1.JSONSchemaPropsOrArray{
+																										Schema: &extv1.JSONSchemaProps{
+																											Type: "object",
+																											Properties: map[string]extv1.JSONSchemaProps{
+																												"key": {
+																													Type: "string",
+																												},
+																												"operator": {
+																													Type: "string",
+																												},
+																												"values": {
+																													Type: "array",
+																													Items: &extv1.JSONSchemaPropsOrArray{
+																														Schema: &extv1.JSONSchemaProps{
+																															Type: "string",
+																														},
+																													},
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																						"namespaces": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "string",
+																								},
+																							},
+																						},
+																						"topologyKey": {
+																							Type: "string",
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+																"requiredDuringSchedulingIgnoredDuringExecution": {
+																	Type: "array",
+																	Items: &extv1.JSONSchemaPropsOrArray{
+																		Schema: &extv1.JSONSchemaProps{
+																			Type: "object",
+																			Properties: map[string]extv1.JSONSchemaProps{
+																				"labelSelector": {
+																					Type: "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"matchLabels": {
+																							Type: "object",
+																						},
+																						"matchExpressions": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "object",
+																									Properties: map[string]extv1.JSONSchemaProps{
+																										"key": {
+																											Type: "string",
+																										},
+																										"operator": {
+																											Type: "string",
+																										},
+																										"values": {
+																											Type: "array",
+																											Items: &extv1.JSONSchemaPropsOrArray{
+																												Schema: &extv1.JSONSchemaProps{
+																													Type: "string",
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																					},
+																				},
+																				"namespaces": {
+																					Type: "array",
+																					Items: &extv1.JSONSchemaPropsOrArray{
+																						Schema: &extv1.JSONSchemaProps{
+																							Type: "string",
+																						},
+																					},
+																				},
+																				"topologyKey": {
+																					Type: "string",
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+														"podAntiAffinity": {
+															Type: "object",
+															Properties: map[string]extv1.JSONSchemaProps{
+																"requiredDuringSchedulingIgnoredDuringExecution": {
+																	Type: "array",
+																	Items: &extv1.JSONSchemaPropsOrArray{
+																		Schema: &extv1.JSONSchemaProps{
+																			Type: "object",
+																			Properties: map[string]extv1.JSONSchemaProps{
+																				"labelSelector": {
+																					Type: "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"matchLabels": {
+																							Type: "object",
+																						},
+																						"matchExpressions": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "object",
+																									Properties: map[string]extv1.JSONSchemaProps{
+																										"key": {
+																											Type: "string",
+																										},
+																										"operator": {
+																											Type: "string",
+																										},
+																										"values": {
+																											Type: "array",
+																											Items: &extv1.JSONSchemaPropsOrArray{
+																												Schema: &extv1.JSONSchemaProps{
+																													Type: "string",
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																					},
+																				},
+																				"namespaces": {
+																					Type: "array",
+																					Items: &extv1.JSONSchemaPropsOrArray{
+																						Schema: &extv1.JSONSchemaProps{
+																							Type: "string",
+																						},
+																					},
+																				},
+																				"topologyKey": {
+																					Type: "string",
+																				},
+																			},
+																		},
+																	},
+																},
+																"preferredDuringSchedulingIgnoredDuringExecution": {
+																	Type: "array",
+																	Items: &extv1.JSONSchemaPropsOrArray{
+																		Schema: &extv1.JSONSchemaProps{
+																			Type: "object",
+																			Properties: map[string]extv1.JSONSchemaProps{
+																				"weight": {
+																					Type: "integer",
+																				},
+																				"podAffinityTerm": {
+																					Type: "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"labelSelector": {
+																							Type: "object",
+																							Properties: map[string]extv1.JSONSchemaProps{
+																								"matchLabels": {
+																									Type: "object",
+																								},
+																								"matchExpressions": {
+																									Type: "array",
+																									Items: &extv1.JSONSchemaPropsOrArray{
+																										Schema: &extv1.JSONSchemaProps{
+																											Type: "object",
+																											Properties: map[string]extv1.JSONSchemaProps{
+																												"key": {
+																													Type: "string",
+																												},
+																												"operator": {
+																													Type: "string",
+																												},
+																												"values": {
+																													Type: "array",
+																													Items: &extv1.JSONSchemaPropsOrArray{
+																														Schema: &extv1.JSONSchemaProps{
+																															Type: "string",
+																														},
+																													},
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																						"namespaces": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "string",
+																								},
+																							},
+																						},
+																						"topologyKey": {
+																							Type: "string",
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+													},
+												},
+												"tolerations": {
+													Type:        "array",
+													Description: "Tolerations is a list of tolerations applied to the relevant kind of pods See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ for more info. These are additional tolerations other than default ones.",
+													Items: &extv1.JSONSchemaPropsOrArray{
+														Schema: &extv1.JSONSchemaProps{
+															Type: "object",
+															Properties: map[string]extv1.JSONSchemaProps{
+																"effect": {
+																	Type: "string",
+																},
+																"key": {
+																	Type: "string",
+																},
+																"operator": {
+																	Type: "string",
+																},
+																"tolerationSeconds": {
+																	Type: "integer",
+																},
+																"value": {
+																	Type: "string",
+																},
+															},
+														},
+													},
 												},
 											},
 										},
@@ -582,6 +1005,421 @@ func CreateVMImportConfig() *extv1.CustomResourceDefinition {
 												},
 												{
 													Raw: []byte(`"Never"`),
+												},
+											},
+										},
+										"infra": {
+											Type:        "object",
+											Description: "Rules on which nodes vm import infrastructure pods will be scheduled",
+											Properties: map[string]extv1.JSONSchemaProps{
+												"nodeSelector": {
+													Type:        "object",
+													Description: "NodeSelector is the node selector applied to the relevant kind of pods It specifies a map of key-value pairs: for the pod to be eligible to run on a node, the node must have each of the indicated key-value pairs as labels (it can have additional labels as well). See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector",
+												},
+												"affinity": {
+													Type:        "object",
+													Description: "Affinity enables pod affinity/anti-affinity placement expanding the types of constraints that can be expressed with nodeSelector. affinity is going to be applied to the relevant kind of pods in parallel with nodeSelector See https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity",
+													Properties: map[string]extv1.JSONSchemaProps{
+														"nodeAffinity": {
+															Type:        "object",
+															Description: "Node affinity is a group of node affinity scheduling rules.",
+															Properties: map[string]extv1.JSONSchemaProps{
+																"preferredDuringSchedulingIgnoredDuringExecution": {
+																	Type: "array",
+																	Items: &extv1.JSONSchemaPropsOrArray{
+																		Schema: &extv1.JSONSchemaProps{
+																			Type: "object",
+																			Properties: map[string]extv1.JSONSchemaProps{
+																				"weight": {
+																					Type: "integer",
+																				},
+																				"preference": {
+																					Type: "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"matchExpressions": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "object",
+																									Properties: map[string]extv1.JSONSchemaProps{
+																										"key": {
+																											Type: "string",
+																										},
+																										"operator": {
+																											Type: "string",
+																										},
+																										"values": {
+																											Type: "array",
+																											Items: &extv1.JSONSchemaPropsOrArray{
+																												Schema: &extv1.JSONSchemaProps{
+																													Type: "string",
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																						"matchFields": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "object",
+																									Properties: map[string]extv1.JSONSchemaProps{
+																										"key": {
+																											Type: "string",
+																										},
+																										"operator": {
+																											Type: "string",
+																										},
+																										"values": {
+																											Type: "array",
+																											Items: &extv1.JSONSchemaPropsOrArray{
+																												Schema: &extv1.JSONSchemaProps{
+																													Type: "string",
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+																"requiredDuringSchedulingIgnoredDuringExecution": {
+																	Type: "object",
+																	Properties: map[string]extv1.JSONSchemaProps{
+																		"nodeSelectorTerms": {
+																			Type: "array",
+																			Items: &extv1.JSONSchemaPropsOrArray{
+																				Schema: &extv1.JSONSchemaProps{
+																					Type: "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"matchExpressions": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "object",
+																									Properties: map[string]extv1.JSONSchemaProps{
+																										"key": {
+																											Type: "string",
+																										},
+																										"operator": {
+																											Type: "string",
+																										},
+																										"values": {
+																											Type: "array",
+																											Items: &extv1.JSONSchemaPropsOrArray{
+																												Schema: &extv1.JSONSchemaProps{
+																													Type: "string",
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																						"matchFields": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "object",
+																									Properties: map[string]extv1.JSONSchemaProps{
+																										"key": {
+																											Type: "string",
+																										},
+																										"operator": {
+																											Type: "string",
+																										},
+																										"values": {
+																											Type: "array",
+																											Items: &extv1.JSONSchemaPropsOrArray{
+																												Schema: &extv1.JSONSchemaProps{
+																													Type: "string",
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+														"podAffinity": {
+															Type: "object",
+															Properties: map[string]extv1.JSONSchemaProps{
+																"preferredDuringSchedulingIgnoredDuringExecution": {
+																	Type: "array",
+																	Items: &extv1.JSONSchemaPropsOrArray{
+																		Schema: &extv1.JSONSchemaProps{
+																			Type: "object",
+																			Properties: map[string]extv1.JSONSchemaProps{
+																				"weight": {
+																					Type: "integer",
+																				},
+																				"podAffinityTerm": {
+																					Type: "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"labelSelector": {
+																							Type: "object",
+																							Properties: map[string]extv1.JSONSchemaProps{
+																								"matchLabels": {
+																									Type: "object",
+																								},
+																								"matchExpressions": {
+																									Type: "array",
+																									Items: &extv1.JSONSchemaPropsOrArray{
+																										Schema: &extv1.JSONSchemaProps{
+																											Type: "object",
+																											Properties: map[string]extv1.JSONSchemaProps{
+																												"key": {
+																													Type: "string",
+																												},
+																												"operator": {
+																													Type: "string",
+																												},
+																												"values": {
+																													Type: "array",
+																													Items: &extv1.JSONSchemaPropsOrArray{
+																														Schema: &extv1.JSONSchemaProps{
+																															Type: "string",
+																														},
+																													},
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																						"namespaces": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "string",
+																								},
+																							},
+																						},
+																						"topologyKey": {
+																							Type: "string",
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+																"requiredDuringSchedulingIgnoredDuringExecution": {
+																	Type: "array",
+																	Items: &extv1.JSONSchemaPropsOrArray{
+																		Schema: &extv1.JSONSchemaProps{
+																			Type: "object",
+																			Properties: map[string]extv1.JSONSchemaProps{
+																				"labelSelector": {
+																					Type: "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"matchLabels": {
+																							Type: "object",
+																						},
+																						"matchExpressions": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "object",
+																									Properties: map[string]extv1.JSONSchemaProps{
+																										"key": {
+																											Type: "string",
+																										},
+																										"operator": {
+																											Type: "string",
+																										},
+																										"values": {
+																											Type: "array",
+																											Items: &extv1.JSONSchemaPropsOrArray{
+																												Schema: &extv1.JSONSchemaProps{
+																													Type: "string",
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																					},
+																				},
+																				"namespaces": {
+																					Type: "array",
+																					Items: &extv1.JSONSchemaPropsOrArray{
+																						Schema: &extv1.JSONSchemaProps{
+																							Type: "string",
+																						},
+																					},
+																				},
+																				"topologyKey": {
+																					Type: "string",
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+														"podAntiAffinity": {
+															Type: "object",
+															Properties: map[string]extv1.JSONSchemaProps{
+																"requiredDuringSchedulingIgnoredDuringExecution": {
+																	Type: "array",
+																	Items: &extv1.JSONSchemaPropsOrArray{
+																		Schema: &extv1.JSONSchemaProps{
+																			Type: "object",
+																			Properties: map[string]extv1.JSONSchemaProps{
+																				"labelSelector": {
+																					Type: "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"matchLabels": {
+																							Type: "object",
+																						},
+																						"matchExpressions": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "object",
+																									Properties: map[string]extv1.JSONSchemaProps{
+																										"key": {
+																											Type: "string",
+																										},
+																										"operator": {
+																											Type: "string",
+																										},
+																										"values": {
+																											Type: "array",
+																											Items: &extv1.JSONSchemaPropsOrArray{
+																												Schema: &extv1.JSONSchemaProps{
+																													Type: "string",
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																					},
+																				},
+																				"namespaces": {
+																					Type: "array",
+																					Items: &extv1.JSONSchemaPropsOrArray{
+																						Schema: &extv1.JSONSchemaProps{
+																							Type: "string",
+																						},
+																					},
+																				},
+																				"topologyKey": {
+																					Type: "string",
+																				},
+																			},
+																		},
+																	},
+																},
+																"preferredDuringSchedulingIgnoredDuringExecution": {
+																	Type: "array",
+																	Items: &extv1.JSONSchemaPropsOrArray{
+																		Schema: &extv1.JSONSchemaProps{
+																			Type: "object",
+																			Properties: map[string]extv1.JSONSchemaProps{
+																				"weight": {
+																					Type: "integer",
+																				},
+																				"podAffinityTerm": {
+																					Type: "object",
+																					Properties: map[string]extv1.JSONSchemaProps{
+																						"labelSelector": {
+																							Type: "object",
+																							Properties: map[string]extv1.JSONSchemaProps{
+																								"matchLabels": {
+																									Type: "object",
+																								},
+																								"matchExpressions": {
+																									Type: "array",
+																									Items: &extv1.JSONSchemaPropsOrArray{
+																										Schema: &extv1.JSONSchemaProps{
+																											Type: "object",
+																											Properties: map[string]extv1.JSONSchemaProps{
+																												"key": {
+																													Type: "string",
+																												},
+																												"operator": {
+																													Type: "string",
+																												},
+																												"values": {
+																													Type: "array",
+																													Items: &extv1.JSONSchemaPropsOrArray{
+																														Schema: &extv1.JSONSchemaProps{
+																															Type: "string",
+																														},
+																													},
+																												},
+																											},
+																										},
+																									},
+																								},
+																							},
+																						},
+																						"namespaces": {
+																							Type: "array",
+																							Items: &extv1.JSONSchemaPropsOrArray{
+																								Schema: &extv1.JSONSchemaProps{
+																									Type: "string",
+																								},
+																							},
+																						},
+																						"topologyKey": {
+																							Type: "string",
+																						},
+																					},
+																				},
+																			},
+																		},
+																	},
+																},
+															},
+														},
+													},
+												},
+												"tolerations": {
+													Type:        "array",
+													Description: "Tolerations is a list of tolerations applied to the relevant kind of pods See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ for more info. These are additional tolerations other than default ones.",
+													Items: &extv1.JSONSchemaPropsOrArray{
+														Schema: &extv1.JSONSchemaProps{
+															Type: "object",
+															Properties: map[string]extv1.JSONSchemaProps{
+																"effect": {
+																	Type: "string",
+																},
+																"key": {
+																	Type: "string",
+																},
+																"operator": {
+																	Type: "string",
+																},
+																"tolerationSeconds": {
+																	Type: "integer",
+																},
+																"value": {
+																	Type: "string",
+																},
+															},
+														},
+													},
 												},
 											},
 										},

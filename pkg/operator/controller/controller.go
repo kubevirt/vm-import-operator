@@ -80,6 +80,7 @@ type OperatorArgs struct {
 	PullPolicy             string `required:"true" split_words:"true"`
 	Namespace              string
 	MonitoringNamespace    string
+	InfraNodePlacement     *v2vv1.NodePlacement
 }
 
 // newReconciler returns a new reconcile.Reconciler
@@ -775,6 +776,9 @@ func (r *ReconcileVMImportConfig) getOperatorArgs(cr *v2vv1.VMImportConfig) *Ope
 		if cr.Spec.ImagePullPolicy != "" {
 			result.PullPolicy = string(cr.Spec.ImagePullPolicy)
 		}
+		if &cr.Spec.Infra != nil {
+			result.InfraNodePlacement = &cr.Spec.Infra
+		}
 	}
 
 	operatorDeployment := &appsv1.Deployment{}
@@ -810,7 +814,7 @@ func createControllerResources(args *OperatorArgs) []runtime.Object {
 		resources.CreateServiceAccount(args.Namespace),
 		resources.CreateControllerRole(),
 		resources.CreateControllerRoleBinding(args.Namespace),
-		resources.CreateControllerDeployment(resources.ControllerName, args.Namespace, args.ControllerImage, args.PullPolicy, int32(1)),
+		resources.CreateControllerDeployment(resources.ControllerName, args.Namespace, args.ControllerImage, args.PullPolicy, int32(1), args.InfraNodePlacement),
 	}
 	// Add metrics objects if servicemonitor is available:
 	if ok, err := hasServiceMonitor(); ok && err == nil {
