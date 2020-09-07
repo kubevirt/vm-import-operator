@@ -2,6 +2,7 @@ package os_test
 
 import (
 	"fmt"
+
 	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware/os"
 	"github.com/onsi/ginkgo/extensions/table"
 	"github.com/vmware/govmomi/simulator"

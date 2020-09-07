@@ -2,6 +2,7 @@ package mapper_test
 
 import (
 	"context"
+
 	"github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware/mapper"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware/os"

@@ -96,7 +96,6 @@ func NewVmwareMapper(vm *object.VirtualMachine, vmProperties *mo.VirtualMachine,
 	}
 }
 
-
 // buildNics retrieves each of the VM's VirtualEthernetCards
 // and pulls out the values that are needed for import
 func (r *VmwareMapper) buildNics() {
@@ -108,7 +107,7 @@ func (r *VmwareMapper) buildNics() {
 
 	devices := r.vmProperties.Config.Hardware.Device
 	for _, device := range devices {
-	// is this device a VirtualEthernetCard?
+		// is this device a VirtualEthernetCard?
 		var virtualNetwork *types.VirtualEthernetCard
 		switch v := device.(type) {
 		case *types.VirtualE1000:
@@ -187,7 +186,6 @@ func (r *VmwareMapper) buildDisks() error {
 			disks = append(disks, disk)
 			continue
 		}
-
 
 	}
 

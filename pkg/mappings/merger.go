@@ -100,5 +100,3 @@ func MergeStorageMappings(primaryMappings *[]v1beta1.StorageResourceMappingItem,
 
 	return &mapping
 }
-
-
