@@ -2,8 +2,9 @@ package templates_test
 
 import (
 	"fmt"
-	"github.com/vmware/govmomi/vim25/mo"
 	"time"
+
+	"github.com/vmware/govmomi/vim25/mo"
 
 	vtemplates "github.com/kubevirt/vm-import-operator/pkg/providers/vmware/templates"
 	"github.com/kubevirt/vm-import-operator/pkg/templates"

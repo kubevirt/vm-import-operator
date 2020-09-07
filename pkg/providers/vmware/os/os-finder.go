@@ -2,16 +2,16 @@ package os
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/kubevirt/vm-import-operator/pkg/os"
 	"github.com/vmware/govmomi/vim25/mo"
-	"strings"
 )
 
 const (
 	defaultLinux   = "rhel8"
 	defaultWindows = "windows"
 )
-
 
 // OSFinder defines operation of discovering OS name of a VM
 type OSFinder interface {
