@@ -231,7 +231,6 @@ const (
 	CSVReasonRequirementsMet                             ConditionReason = "AllRequirementsMet"
 	CSVReasonOwnerConflict                               ConditionReason = "OwnerConflict"
 	CSVReasonComponentFailed                             ConditionReason = "InstallComponentFailed"
-	CSVReasonComponentFailedNoRetry                      ConditionReason = "InstallComponentFailedNoRetry"
 	CSVReasonInvalidStrategy                             ConditionReason = "InvalidInstallStrategy"
 	CSVReasonWaiting                                     ConditionReason = "InstallWaiting"
 	CSVReasonInstallSuccessful                           ConditionReason = "InstallSucceeded"
@@ -252,7 +251,6 @@ const (
 	CSVReasonTooManyOperatorGroups                       ConditionReason = "TooManyOperatorGroups"
 	CSVReasonInterOperatorGroupOwnerConflict             ConditionReason = "InterOperatorGroupOwnerConflict"
 	CSVReasonCannotModifyStaticOperatorGroupProvidedAPIs ConditionReason = "CannotModifyStaticOperatorGroupProvidedAPIs"
-	CSVReasonDetectedClusterChange                       ConditionReason = "DetectedClusterChange"
 )
 
 // Conditions appear in the status as a record of state transitions on the ClusterServiceVersion
@@ -274,7 +272,7 @@ type ClusterServiceVersionCondition struct {
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
-// OwnsCRD determines whether the current CSV owns a particular CRD.
+// OwnsCRD determines whether the current CSV owns a paritcular CRD.
 func (csv ClusterServiceVersion) OwnsCRD(name string) bool {
 	for _, desc := range csv.Spec.CustomResourceDefinitions.Owned {
 		if desc.Name == name {
@@ -285,7 +283,7 @@ func (csv ClusterServiceVersion) OwnsCRD(name string) bool {
 	return false
 }
 
-// OwnsAPIService determines whether the current CSV owns a particular APIService.
+// OwnsAPIService determines whether the current CSV owns a paritcular APIService.
 func (csv ClusterServiceVersion) OwnsAPIService(name string) bool {
 	for _, desc := range csv.Spec.APIServiceDefinitions.Owned {
 		apiServiceName := fmt.Sprintf("%s.%s", desc.Version, desc.Group)

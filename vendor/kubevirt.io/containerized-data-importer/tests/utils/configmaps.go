@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"net/url"
 	"strings"
 
@@ -16,6 +17,15 @@ import (
 // CopyRegistryCertConfigMap copies the test registry configmap, it assumes the Registry host is in the CDI namespace
 func CopyRegistryCertConfigMap(client kubernetes.Interface, destNamespace, cdiNamespace string) (string, error) {
 	n, err := CopyConfigMap(client, cdiNamespace, RegistryCertConfigMap, destNamespace, "")
+	if err != nil {
+		return "", err
+	}
+	return n, nil
+}
+
+// CopyRegistryCertConfigMapDestName copies the test registry configmap, it assumes the Registry host is in the CDI namespace
+func CopyRegistryCertConfigMapDestName(client kubernetes.Interface, destNamespace, cdiNamespace, destName string) (string, error) {
+	n, err := CopyConfigMap(client, cdiNamespace, RegistryCertConfigMap, destNamespace, destName)
 	if err != nil {
 		return "", err
 	}
@@ -42,7 +52,7 @@ func CopyImageIOCertConfigMap(client kubernetes.Interface, destNamespace, cdiNam
 
 // CopyConfigMap copies a ConfigMap
 func CopyConfigMap(client kubernetes.Interface, srcNamespace, srcName, destNamespace, destName string) (string, error) {
-	src, err := client.CoreV1().ConfigMaps(srcNamespace).Get(srcName, metav1.GetOptions{})
+	src, err := client.CoreV1().ConfigMaps(srcNamespace).Get(context.TODO(), srcName, metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -58,12 +68,12 @@ func CopyConfigMap(client kubernetes.Interface, srcNamespace, srcName, destNames
 		Data: src.Data,
 	}
 
-	err = client.CoreV1().ConfigMaps(destNamespace).Delete(destName, nil)
+	err = client.CoreV1().ConfigMaps(destNamespace).Delete(context.TODO(), destName, metav1.DeleteOptions{})
 	if err != nil && !errors.IsNotFound(err) {
 		return "", err
 	}
 
-	_, err = client.CoreV1().ConfigMaps(destNamespace).Create(dst)
+	_, err = client.CoreV1().ConfigMaps(destNamespace).Create(context.TODO(), dst, metav1.CreateOptions{})
 	if err != nil {
 		return "", err
 	}
@@ -75,7 +85,7 @@ const insecureRegistryKey = "test-registry"
 
 // SetInsecureRegistry sets the configmap entry to mark the registry as okay to be insecure
 func SetInsecureRegistry(client kubernetes.Interface, cdiNamespace, registryURL string) error {
-	cm, err := client.CoreV1().ConfigMaps(cdiNamespace).Get(common.InsecureRegistryConfigMap, metav1.GetOptions{})
+	cm, err := client.CoreV1().ConfigMaps(cdiNamespace).Get(context.TODO(), common.InsecureRegistryConfigMap, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -91,7 +101,7 @@ func SetInsecureRegistry(client kubernetes.Interface, cdiNamespace, registryURL 
 
 	cm.Data[insecureRegistryKey] = parsedURL.Host
 
-	_, err = client.CoreV1().ConfigMaps(cdiNamespace).Update(cm)
+	_, err = client.CoreV1().ConfigMaps(cdiNamespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}
@@ -101,14 +111,14 @@ func SetInsecureRegistry(client kubernetes.Interface, cdiNamespace, registryURL 
 
 // ClearInsecureRegistry undoes whatever SetInsecureRegistry does
 func ClearInsecureRegistry(client kubernetes.Interface, cdiNamespace string) error {
-	cm, err := client.CoreV1().ConfigMaps(cdiNamespace).Get(common.InsecureRegistryConfigMap, metav1.GetOptions{})
+	cm, err := client.CoreV1().ConfigMaps(cdiNamespace).Get(context.TODO(), common.InsecureRegistryConfigMap, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
 	delete(cm.Data, insecureRegistryKey)
 
-	_, err = client.CoreV1().ConfigMaps(cdiNamespace).Update(cm)
+	_, err = client.CoreV1().ConfigMaps(cdiNamespace).Update(context.TODO(), cm, metav1.UpdateOptions{})
 	if err != nil {
 		return err
 	}

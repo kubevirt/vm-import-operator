@@ -40,8 +40,7 @@ type SubscriptionSpec struct {
 
 // SubscriptionConfig contains configuration specified for a subscription.
 type SubscriptionConfig struct {
-	// Selector is the label selector for pods to be configured.
-	// Existing ReplicaSets whose pods are
+	// Label selector for pods. Existing ReplicaSets whose pods are
 	// selected by this will be the ones affected by this deployment.
 	// It must match the pod template's labels.
 	Selector *metav1.LabelSelector `json:"selector,omitempty"`
@@ -52,38 +51,30 @@ type SubscriptionConfig struct {
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
-	// Tolerations are the pod's tolerations.
+	// If specified, the pod's tolerations.
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 
-	// Resources represents compute resources required by this container.
-	// Immutable.
+	// Compute Resources required by this container.
+	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/
 	// +optional
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
-	// EnvFrom is a list of sources to populate environment variables in the container.
+	// List of sources to populate environment variables in the container.
 	// The keys defined within a source must be a C_IDENTIFIER. All invalid keys
 	// will be reported as an event when the container is starting. When a key exists in multiple
 	// sources, the value associated with the last source will take precedence.
 	// Values defined by an Env with a duplicate key will take precedence.
-	// Immutable.
+	// Cannot be updated.
 	// +optional
 	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
-	// Env is a list of environment variables to set in the container.
+	// List of environment variables to set in the container.
 	// Cannot be updated.
+	// +optional
 	// +patchMergeKey=name
 	// +patchStrategy=merge
-	// +optional
-	Env []corev1.EnvVar `json:"env,omitempty" patchMergeKey:"name" patchStrategy:"merge"`
-	
-	// List of Volumes to set in the podSpec.
-	// +optional
-	Volumes []corev1.Volume `json:"volumes,omitempty"`
-
-	// List of VolumeMounts to set in the container.
-	// +optional
-	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
+	Env []corev1.EnvVar `json:"env,omitempty"`
 }
 
 // SubscriptionConditionType indicates an explicit state condition about a Subscription in "abnormal-true"

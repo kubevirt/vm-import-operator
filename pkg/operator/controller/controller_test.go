@@ -259,8 +259,8 @@ var _ = Describe("Controller", func() {
 			retrieved, err := getObject(args.client, &controllerConfigMap)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(retrieved.(*corev1.ConfigMap).Data).To(BeEmpty())
-			controllerConfigMap.Data = map[string]string{"foo": "bar"}
-			err = args.client.Update(context.TODO(), &controllerConfigMap)
+			retrieved.(*corev1.ConfigMap).Data = map[string]string{"foo": "bar"}
+			err = args.client.Update(context.TODO(), retrieved)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(args.config.Status.ObservedVersion).Should(Equal(newVersion))
@@ -340,10 +340,12 @@ var _ = Describe("Controller", func() {
 				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 
 				//Modify CRD to be of previousVersion
-				args.reconciler.crSetVersion(args.config, prevVersion)
+				_ = args.reconciler.crSetVersion(args.config, prevVersion)
 				//mark CR for deltetion
 				args.config.SetDeletionTimestamp(&metav1.Time{Time: time.Now()})
-				err := args.client.Update(context.TODO(), args.config)
+				err := args.client.Get(context.TODO(), client.ObjectKey{Namespace: args.config.Namespace, Name: args.config.Name}, args.config)
+				Expect(err).ToNot(HaveOccurred())
+				err = args.client.Update(context.TODO(), args.config)
 				Expect(err).ToNot(HaveOccurred())
 
 				doReconcile(args)
@@ -368,8 +370,7 @@ var _ = Describe("Controller", func() {
 				Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 
 				//Modify CRD to be of previousVersion
-				args.reconciler.crSetVersion(args.config, prevVersion)
-				err := args.client.Update(context.TODO(), args.config)
+				err := args.reconciler.crSetVersion(args.config, prevVersion)
 				Expect(err).ToNot(HaveOccurred())
 				setDeploymentsDegraded(args)
 
@@ -407,8 +408,7 @@ var _ = Describe("Controller", func() {
 		Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 
 		//Modify CRD to be of previousVersion
-		args.reconciler.crSetVersion(args.config, prevVersion)
-		err := args.client.Update(context.TODO(), args.config)
+		err := args.reconciler.crSetVersion(args.config, prevVersion)
 		Expect(err).ToNot(HaveOccurred())
 
 		setDeploymentsDegraded(args)
@@ -599,8 +599,7 @@ var _ = Describe("Controller", func() {
 		Expect(args.config.Status.Phase).Should(Equal(v2vv1.PhaseDeployed))
 
 		//Modify CRD to be of previousVersion
-		args.reconciler.crSetVersion(args.config, prevVersion)
-		err := args.client.Update(context.TODO(), args.config)
+		err := args.reconciler.crSetVersion(args.config, prevVersion)
 		Expect(err).ToNot(HaveOccurred())
 
 		setDeploymentsDegraded(args)

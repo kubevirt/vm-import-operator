@@ -22,6 +22,8 @@ const (
 
 	// PrometheusLabel provides the label to indicate prometheus metrics are available in the pods.
 	PrometheusLabel = "prometheus.cdi.kubevirt.io"
+	// PrometheusServiceName is the name of the prometheus service created by the operator.
+	PrometheusServiceName = "cdi-prometheus-metrics"
 
 	// ImporterVolumePath provides a constant for the directory where the PV is mounted.
 	ImporterVolumePath = "/data"
@@ -116,18 +118,18 @@ const (
 	// ScratchSpaceNeededExitCode is the exit code that indicates the importer pod requires scratch space to function properly.
 	ScratchSpaceNeededExitCode = 42
 
+	// ScratchNameSuffix (controller pkg only)
+	ScratchNameSuffix = "scratch"
+
 	// UploadTokenIssuer is the JWT issuer of upload tokens
 	UploadTokenIssuer = "cdi-apiserver"
 
 	// CloneTokenIssuer is the JWT issuer for clone tokens
 	CloneTokenIssuer = "cdi-apiserver"
 
-	// UploadPathSync is the path to POST CDI uploads
-	UploadPathSync = "/v1alpha1/upload"
-
-	// UploadPathAsync is the path to POST CDI uploads in async mode
-	UploadPathAsync = "/v1alpha1/upload-async"
-
 	// QemuSubGid is the gid used as the qemu group in fsGroup
 	QemuSubGid = int64(107)
+
+	// ControllerServiceAccountName is the name of the CDI controller service account
+	ControllerServiceAccountName = "cdi-sa"
 )
