@@ -638,7 +638,7 @@ var _ = Describe("Controller", func() {
 	},
 		Entry("verify - unused deployment deleted",
 			func() (runtime.Object, error) {
-				deployment := resources.CreateControllerDeployment("fake-deployment", Namespace, "fake-vmimport", "Always", int32(1))
+				deployment := resources.CreateControllerDeployment("fake-deployment", Namespace, "fake-vmimport", "Always", int32(1), &v2vv1.NodePlacement{})
 				return deployment, nil
 			}),
 
