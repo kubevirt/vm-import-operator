@@ -106,7 +106,7 @@ var _ = Describe("VM validation ", func() {
 
 func (t *vmValidationTest) prepareImport(vmID string, secretName string) *v2vv1.VirtualMachineImport {
 	namespace := t.framework.Namespace.Name
-	vmi := utils.VirtualMachineImportCr(vmID, namespace, secretName, t.framework.NsPrefix, true)
+	vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secretName, t.framework.NsPrefix, true)
 	created, err := t.framework.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 	if err != nil {
 		Fail(err.Error())

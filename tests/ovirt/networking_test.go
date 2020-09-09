@@ -62,7 +62,7 @@ var _ = Describe("Import of VM ", func() {
 			err := f.OvirtStubbingClient.Stub(stubbing)
 			Expect(err).To(BeNil())
 
-			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
 				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
 					{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.MultusType, Target: v2vv1.ObjectIdentifier{
@@ -117,7 +117,7 @@ var _ = Describe("Import of VM ", func() {
 			err := f.OvirtStubbingClient.Stub(stubbing)
 			Expect(err).To(BeNil())
 
-			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
 				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
 					{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.MultusType, Target: v2vv1.ObjectIdentifier{
@@ -203,7 +203,7 @@ var _ = Describe("Import of VM ", func() {
 			}
 			network2Name := nad2.Name
 
-			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
 				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
 					{

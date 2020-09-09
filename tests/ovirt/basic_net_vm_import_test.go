@@ -39,7 +39,7 @@ var _ = Describe("Networked VM import ", func() {
 
 	table.DescribeTable("should create started VM with pod network", func(networkType *string) {
 		vmID := vms.BasicVmID
-		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 		vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
 			NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
 				{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: networkType},
