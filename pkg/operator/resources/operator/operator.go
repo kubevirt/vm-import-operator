@@ -1,16 +1,20 @@
 package operator
 
+// TODO: split this file into separate ones for rbac, vmimportconfig crd, vmimport crds, operator deployment and controller deployment.
 import (
 	"encoding/json"
 	"fmt"
+
+	sdkapi "github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/api"
+
+	"github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/resources"
+	sdkopenapi "github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/resources/openapi"
 
 	"k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/blang/semver"
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
-	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	vmimportmetrics "github.com/kubevirt/vm-import-operator/pkg/metrics"
-	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	csvv1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/version"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
@@ -37,6 +41,8 @@ var commonLabels = map[string]string{
 var operatorLabels = map[string]string{
 	"operator.v2v.kubevirt.io": "",
 }
+
+var resourceBuilder = resources.NewResourceBuilder(commonLabels, operatorLabels)
 
 // ClusterServiceVersionData - Data arguments used to create vm import operator's CSV manifest
 type ClusterServiceVersionData struct {
@@ -65,42 +71,12 @@ type csvStrategySpec struct {
 
 // CreateControllerRole returns role for vm-controller-operator
 func CreateControllerRole() *rbacv1.ClusterRole {
-	return &rbacv1.ClusterRole{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "ClusterRole",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:   ControllerName,
-			Labels: map[string]string{},
-		},
-		Rules: getControllerPolicyRules(),
-	}
+	return resources.CreateClusterRole(ControllerName, getControllerPolicyRules(), map[string]string{})
 }
 
 // CreateControllerRoleBinding returns role binding for vm-import-operator
 func CreateControllerRoleBinding(namespace string) *rbacv1.ClusterRoleBinding {
-	return &rbacv1.ClusterRoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "ClusterRoleBinding",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: ControllerName,
-		},
-		RoleRef: rbacv1.RoleRef{
-			Kind:     "ClusterRole",
-			Name:     ControllerName,
-			APIGroup: "rbac.authorization.k8s.io",
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind:      "ServiceAccount",
-				Name:      ControllerName,
-				Namespace: namespace,
-			},
-		},
-	}
+	return resources.CreateClusterRoleBinding(ControllerName, ControllerName, ControllerName, namespace, nil)
 }
 
 func getControllerPolicyRules() []rbacv1.PolicyRule {
@@ -346,59 +322,19 @@ func getOperatorPolicyRules() []rbacv1.PolicyRule {
 }
 
 // CreateControllerDeployment returns vmimport controller deployment
-func CreateControllerDeployment(name, namespace, image, pullPolicy string, numReplicas int32, policy *v2vv1.NodePlacement) *appsv1.Deployment {
-	deployment := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: *createControllerDeploymentSpec(image, pullPolicy, "v2v.kubevirt.io", ControllerName, numReplicas, policy),
+func CreateControllerDeployment(name, namespace, image, pullPolicy string, numReplicas int32, policy *sdkapi.NodePlacement) *appsv1.Deployment {
+	podSpec := corev1.PodSpec{
+		ServiceAccountName: ControllerName,
+		Containers:         createControllerContainers(image, pullPolicy),
 	}
-	return deployment
+	return resourceBuilder.CreateDeployment(name, namespace, "v2v.kubevirt.io", ControllerName, "", numReplicas, podSpec, policy)
 }
 
-func createControllerDeploymentSpec(image string, pullPolicy string, matchKey string, matchValue string, numReplicas int32, policy *v2vv1.NodePlacement) *appsv1.DeploymentSpec {
-	matchMap := map[string]string{matchKey: matchValue}
-	deployment := appsv1.DeploymentSpec{
-		Replicas: &numReplicas,
-		Selector: &metav1.LabelSelector{
-			MatchLabels: utils.WithLabels(matchMap, operatorLabels),
-		},
-		Template: corev1.PodTemplateSpec{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels: utils.WithLabels(matchMap, operatorLabels),
-			},
-			Spec: corev1.PodSpec{
-				ServiceAccountName: ControllerName,
-				Containers:         createControllerContainers(image, pullPolicy),
-			},
-		},
-	}
-	if policy != nil {
-		deployment.Template.Spec.Affinity = &policy.Affinity
-		deployment.Template.Spec.NodeSelector = policy.NodeSelector
-		deployment.Template.Spec.Tolerations = policy.Tolerations
-	}
-
-	return &deployment
-}
-
-func createControllerContainers(image string, pullPolicy string) []v1.Container {
-	return []corev1.Container{
-		{
-			Name:  ControllerName,
-			Image: image,
-			Command: []string{
-				ControllerName,
-			},
-			ImagePullPolicy: corev1.PullPolicy(pullPolicy),
-			Env:             createControllerEnv(pullPolicy),
-		},
-	}
+func createControllerContainers(image, pullPolicy string) []v1.Container {
+	container := resourceBuilder.CreateContainer(ControllerName, image, pullPolicy)
+	container.Env = createControllerEnv(pullPolicy)
+	container.Command = []string{ControllerName}
+	return []corev1.Container{*container}
 }
 
 func createControllerEnv(pullPolicy string) []v1.EnvVar {
@@ -1425,65 +1361,7 @@ func CreateVMImportConfig() *extv1.CustomResourceDefinition {
 										},
 									},
 								},
-								"status": {
-									Description: "VMImportConfigStatus defines the observed state of VMImportConfig",
-									Type:        "object",
-									Properties: map[string]extv1.JSONSchemaProps{
-										"conditions": {
-											Description: "A list of current conditions of the VMImportConfig resource",
-											Type:        "array",
-											Items: &extv1.JSONSchemaPropsOrArray{
-												Schema: &extv1.JSONSchemaProps{
-													Type: "object",
-													Properties: map[string]extv1.JSONSchemaProps{
-														"lastHeartbeatTime": {
-															Description: "Last time the state of the condition was checked",
-															Type:        "string",
-															Format:      "date-time",
-														},
-														"lastTransitionTime": {
-															Description: "Last time the state of the condition changed",
-															Type:        "string",
-															Format:      "date-time",
-														},
-														"message": {
-															Description: "Message related to the last condition change",
-															Type:        "string",
-														},
-														"reason": {
-															Description: "Reason the last condition changed",
-															Type:        "string",
-														},
-														"status": {
-															Description: "Current status of the condition, True, False, Unknown",
-															Type:        "string",
-														},
-														"type": {
-															Description: "ConditionType is the state of the operator's reconciliation functionality.",
-															Type:        "string",
-														},
-													},
-												},
-											},
-										},
-										"targetVersion": {
-											Description: "The desired version of the VMImportConfig resource",
-											Type:        "string",
-										},
-										"observedVersion": {
-											Description: "The observed version of the VMImportConfig resource",
-											Type:        "string",
-										},
-										"operatorVersion": {
-											Description: "The version of the VMImportConfig resource as defined by the operator",
-											Type:        "string",
-										},
-										"phase": {
-											Description: "VMImportPhase is the current phase of the VMImport deployment",
-											Type:        "string",
-										},
-									},
-								},
+								"status": sdkopenapi.OperatorConfigStatus("VMImportConfig"),
 							},
 						},
 					},
@@ -2847,7 +2725,7 @@ DiskMappings.Source.ID represents the DiskObjectId or vDiskID of the VirtualDisk
 
 func createOperatorDeployment(operatorVersion, namespace, deployClusterResources, operatorImage, controllerImage, pullPolicy string) *appsv1.Deployment {
 	deployment := CreateOperatorDeployment(operatorName, namespace, "name", operatorName, serviceAccountName, int32(1))
-	container := CreateContainer(operatorName, operatorImage, corev1.PullPolicy(pullPolicy))
+	container := CreateContainer(operatorName, operatorImage, pullPolicy)
 	container.Env = createOperatorEnvVar(operatorVersion, deployClusterResources, controllerImage, pullPolicy)
 	deployment.Spec.Template.Spec.Containers = []corev1.Container{container}
 	return deployment
@@ -2855,27 +2733,18 @@ func createOperatorDeployment(operatorVersion, namespace, deployClusterResources
 
 // CreateOperatorDeployment creates deployment
 func CreateOperatorDeployment(name, namespace, matchKey, matchValue, serviceAccount string, numReplicas int32) *appsv1.Deployment {
-	deployment := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
+	podSpec := corev1.PodSpec{
+		SecurityContext: &corev1.PodSecurityContext{
+			RunAsNonRoot: &[]bool{true}[0],
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: *CreateOperatorDeploymentSpec(matchKey, matchValue, serviceAccount, numReplicas),
+		ServiceAccountName: serviceAccount,
 	}
-	return deployment
+	return resourceBuilder.CreateOperatorDeployment(name, namespace, matchKey, matchValue, serviceAccount, numReplicas, podSpec)
 }
 
 // CreateContainer creates container
-func CreateContainer(name, image string, pullPolicy corev1.PullPolicy) corev1.Container {
-	return corev1.Container{
-		Name:            name,
-		Image:           image,
-		ImagePullPolicy: pullPolicy,
-	}
+func CreateContainer(name, image string, pullPolicy string) corev1.Container {
+	return *resourceBuilder.CreateContainer(name, image, pullPolicy)
 }
 
 func createOperatorEnvVar(operatorVersion, deployClusterResources, controllerImage, pullPolicy string) []corev1.EnvVar {
@@ -2914,64 +2783,23 @@ func createOperatorEnvVar(operatorVersion, deployClusterResources, controllerIma
 	}
 }
 
-// CreateOperatorDeploymentSpec creates deployment
-func CreateOperatorDeploymentSpec(matchKey, matchValue, serviceAccount string, numReplicas int32) *appsv1.DeploymentSpec {
-	matchMap := map[string]string{matchKey: matchValue}
-	spec := &appsv1.DeploymentSpec{
-		Replicas: &numReplicas,
-		Selector: &metav1.LabelSelector{
-			MatchLabels: utils.WithLabels(matchMap, operatorLabels),
-		},
-		Template: corev1.PodTemplateSpec{
-			ObjectMeta: metav1.ObjectMeta{
-				Labels: utils.WithLabels(matchMap, operatorLabels),
-			},
-			Spec: corev1.PodSpec{
-				SecurityContext: &corev1.PodSecurityContext{
-					RunAsNonRoot: &[]bool{true}[0],
-				},
-				ServiceAccountName: serviceAccount,
-			},
-		},
-	}
-
-	return spec
-}
-
 // CreateServiceAccount creates service account
 func CreateServiceAccount(namespace string) *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "ServiceAccount",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ControllerName,
-			Labels:    utils.WithLabels(nil, commonLabels),
-			Namespace: namespace,
-		},
-	}
+	serviceAccount := resourceBuilder.CreateServiceAccount(ControllerName)
+	serviceAccount.Namespace = namespace
+	return serviceAccount
 }
 
 // CreateMetricsService create a Service resource for metrics
 func CreateMetricsService(namespace string) *v1.Service {
-	servicePorts := []v1.ServicePort{
+	serviceName := fmt.Sprintf("%s-metrics", operatorName)
+	service := resourceBuilder.CreateService(serviceName, "v2v.kubevirt.io", "vm-import-controller", map[string]string{"name": operatorName})
+	service.Spec.Ports = []v1.ServicePort{
 		{Port: vmimportmetrics.MetricsPort, Name: metrics.OperatorPortName, Protocol: v1.ProtocolTCP, TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: vmimportmetrics.MetricsPort}},
 		{Port: vmimportmetrics.OperatorMetricsPort, Name: metrics.CRPortName, Protocol: v1.ProtocolTCP, TargetPort: intstr.IntOrString{Type: intstr.Int, IntVal: vmimportmetrics.OperatorMetricsPort}},
 	}
-	labels := map[string]string{"name": operatorName}
-
-	return &v1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-metrics", operatorName),
-			Namespace: namespace,
-			Labels:    labels,
-		},
-		Spec: v1.ServiceSpec{
-			Ports:    servicePorts,
-			Selector: map[string]string{"v2v.kubevirt.io": "vm-import-controller"},
-		},
-	}
+	service.SetNamespace(namespace)
+	return service
 }
 
 // CreateServiceMonitor create a service monitor for vm-operator metrics

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/resources"
+
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
 
 	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
@@ -635,7 +637,7 @@ func setAnnotations(instance *v2vv1.VirtualMachineImport, vmSpec *kubevirtv1.Vir
 			reqLogger.Info("Failed while parsing annotations to propagate to virtual machine")
 			return
 		}
-		utils.WithLabels(annotations, prop)
+		resources.WithLabels(annotations, prop)
 	}
 }
 

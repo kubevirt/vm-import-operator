@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	sdkapi "github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/api"
 	conditions "github.com/openshift/custom-resource-status/conditions/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,31 +29,7 @@ type VMImportConfigSpec struct {
 
 	// Rules on which nodes controller pod(s) will be scheduled
 	// +optional
-	Infra NodePlacement `json:"infra,omitempty"`
-}
-
-// NodePlacement describes node scheduling configuration.
-type NodePlacement struct {
-	// nodeSelector is the node selector applied to the relevant kind of pods
-	// It specifies a map of key-value pairs: for the pod to be eligible to run on a node,
-	// the node must have each of the indicated key-value pairs as labels
-	// (it can have additional labels as well).
-	// See https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodeselector
-	// +optional
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
-
-	// affinity enables pod affinity/anti-affinity placement expanding the types of constraints
-	// that can be expressed with nodeSelector.
-	// affinity is going to be applied to the relevant kind of pods in parallel with nodeSelector
-	// See https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
-	// +optional
-	Affinity corev1.Affinity `json:"affinity,omitempty"`
-
-	// tolerations is a list of tolerations applied to the relevant kind of pods
-	// See https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/ for more info.
-	// These are additional tolerations other than default ones.
-	// +optional
-	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+	Infra sdkapi.NodePlacement `json:"infra,omitempty"`
 }
 
 // VMImportPhase is the current phase of the VMImport deployment
