@@ -1,26 +1,31 @@
-v0.2.0
+v0.2.1
 
-Release v0.2.0
+Release v0.2.1
 
 Features:
-* Allow to import vms using i440fx bios
-* Use controller config to configure custom os mapping
-* Add pending condition
-* Enable SROIV
-* Introducing Controller Config
-* Add Valid condition warning when default storage class is about to be used
-* Extract common parts from the KubeVirt config support
-* Bump API to version v1beta1
-* Move to v1 apiextension API
-* Using direct server API client to get data before updating slices in status
-* Add support for block volumes
-* API-level validation for spec.targetVmName - max length: 63
-* Failing import when there are any problems related to DV creation
-* Shortening target VM name to 63 characters
-* Add reason of timeout error to tests
-* Add metric kubevirt_vmimport
-* Add Vmware Client
-* Restore source vm status when import cancelled
+* Using controller-lifecycle-operator-sdk
+* Allow specifying nodeSelector, affinity and tolerations
+* Update formating and depts
+* Split buildDevices into buildDisks and buildNics
+* Fix search pattern for qcow2 overlays
+* Add Vmware VM mapper
+* Add comments to exported functions in pkg/mappings/merger.go
+* Add mapping merger for the VMWare provider
+* Move entrypoint into bin subfolder
+* Add qemu-guest-agent package
+* Add virt-v2v container image
+* Refactor shared *Manager interfaces into provider package
+* Add Vmware template finder
+* Add Vmware OSFinder and GuestOs identifier mappings
+* Select newest template
+* Add event on import pod failure
 
-Docs:
-* Update documentation to include VMware examples
+Bugs:
+* Added missing properties in the operator.yaml.in template
+* Update older version of VMImportConfig params
+* Add monitoring ns to operator env
+* Allow to watch and create servicemonitors
+* Missing permission
+* Update types
+* Permissions issue during HCO deployment
+* Restore v1alpha1 types
