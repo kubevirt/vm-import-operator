@@ -184,6 +184,7 @@ func getControllerPolicyRules() []rbacv1.PolicyRule {
 			},
 			Verbs: []string{
 				"get",
+				"list",
 			},
 		},
 		{
