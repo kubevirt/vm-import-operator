@@ -327,7 +327,8 @@ func CreateControllerDeployment(name, namespace, image, pullPolicy string, numRe
 		ServiceAccountName: ControllerName,
 		Containers:         createControllerContainers(image, pullPolicy),
 	}
-	return resourceBuilder.CreateDeployment(name, namespace, "v2v.kubevirt.io", ControllerName, "", numReplicas, podSpec, policy)
+	selectorMatchMap := resourceBuilder.WithOperatorLabels(map[string]string{"v2v.kubevirt.io": ControllerName})
+	return resources.CreateDeployment(name, namespace, selectorMatchMap, selectorMatchMap, numReplicas, podSpec, ControllerName, policy)
 }
 
 func createControllerContainers(image, pullPolicy string) []v1.Container {
