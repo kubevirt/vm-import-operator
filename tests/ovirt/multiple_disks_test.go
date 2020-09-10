@@ -20,7 +20,7 @@ type multipleDisksTest struct {
 
 var _ = Describe("VM import ", func() {
 	var (
-		f         = fwk.NewFrameworkOrDie("multiple-disks")
+		f         = fwk.NewFrameworkOrDie("multiple-disks", fwk.ProviderOvirt)
 		secret    corev1.Secret
 		namespace string
 		test      = multipleDisksTest{f}

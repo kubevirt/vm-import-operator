@@ -22,7 +22,7 @@ type networkedVMImportTest struct {
 
 var _ = Describe("Networked VM import ", func() {
 	var (
-		f         = fwk.NewFrameworkOrDie("networked-vm-import")
+		f         = fwk.NewFrameworkOrDie("networked-vm-import", fwk.ProviderOvirt)
 		secret    corev1.Secret
 		namespace string
 		test      = networkedVMImportTest{framework: f}

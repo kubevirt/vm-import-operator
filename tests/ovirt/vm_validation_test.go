@@ -19,7 +19,7 @@ type vmValidationTest struct {
 
 var _ = Describe("VM validation ", func() {
 	var (
-		f          = fwk.NewFrameworkOrDie("vm-validation")
+		f          = fwk.NewFrameworkOrDie("vm-validation", fwk.ProviderOvirt)
 		secretName string
 		test       = vmValidationTest{framework: f}
 	)

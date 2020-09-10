@@ -117,8 +117,8 @@ func init() {
 
 // NewFrameworkOrDie calls NewFramework and handles errors by calling Fail. Config is optional, but
 // if passed there can only be one.
-func NewFrameworkOrDie(prefix string) *Framework {
-	f, err := NewFramework(prefix)
+func NewFrameworkOrDie(prefix, provider string) *Framework {
+	f, err := NewFramework(prefix, provider)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s", err)
 		ginkgo.Fail(fmt.Sprintf("failed to create test framework: %v", err))
@@ -128,9 +128,10 @@ func NewFrameworkOrDie(prefix string) *Framework {
 
 // NewFramework makes a new framework and sets up the global BeforeEach/AfterEach's.
 // Test run-time flags are parsed and added to the Framework struct.
-func NewFramework(prefix string) (*Framework, error) {
+func NewFramework(prefix, provider string) (*Framework, error) {
 	f := &Framework{
 		NsPrefix: prefix,
+		Provider: provider,
 	}
 
 	// handle run-time flags
@@ -144,9 +145,8 @@ func NewFramework(prefix string) (*Framework, error) {
 	f.KubeVirtInstallNamespace = *kubeVirtInstallNamespace
 	f.DefaultStorageClass = *defaultStorageClass
 	f.NfsStorageClass = *nfsStorageClass
-	f.Provider = *provider
 
-	switch *provider {
+	switch provider {
 	case ProviderOvirt:
 		f.ImageioInstallNamespace = *imageioInstallNamespace
 		ovirtClient := sclient.NewInsecureFakeOvirtClient("https://localhost:12346")

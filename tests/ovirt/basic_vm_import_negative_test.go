@@ -33,7 +33,7 @@ type basicVMImportNegativeTest struct {
 var _ = Describe("VM import", func() {
 
 	var (
-		f         = fwk.NewFrameworkOrDie("basic-vm-import-negative")
+		f         = fwk.NewFrameworkOrDie("basic-vm-import-negative", fwk.ProviderOvirt)
 		secret    corev1.Secret
 		namespace string
 		test      = basicVMImportNegativeTest{f}

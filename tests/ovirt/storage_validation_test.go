@@ -19,7 +19,7 @@ type storageValidationTest struct {
 
 var _ = Describe("VM storage validation ", func() {
 	var (
-		f          = fwk.NewFrameworkOrDie("storage-validation")
+		f          = fwk.NewFrameworkOrDie("storage-validation", fwk.ProviderOvirt)
 		secretName string
 		test       = storageValidationTest{framework: f}
 	)

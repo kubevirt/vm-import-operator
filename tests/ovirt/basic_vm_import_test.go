@@ -27,7 +27,7 @@ type basicVmImportTest struct {
 var _ = Describe("Basic VM import ", func() {
 
 	var (
-		f               = fwk.NewFrameworkOrDie("basic-vm-import")
+		f               = fwk.NewFrameworkOrDie("basic-vm-import", fwk.ProviderOvirt)
 		test            = basicVmImportTest{framework: f}
 		secret          corev1.Secret
 		namespace       string

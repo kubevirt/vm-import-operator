@@ -23,7 +23,7 @@ type multipleVmsImportTest struct {
 
 var _ = Describe("Multiple VMs import ", func() {
 	var (
-		f         = fwk.NewFrameworkOrDie("multiple-vms-import")
+		f         = fwk.NewFrameworkOrDie("multiple-vms-import", fwk.ProviderOvirt)
 		namespace string
 		test      = multipleVmsImportTest{framework: f}
 	)

@@ -21,7 +21,7 @@ type resourceMappingValidationTest struct {
 var _ = Describe("VM import ", func() {
 
 	var (
-		f         = fwk.NewFrameworkOrDie("resource-mapping-validation")
+		f         = fwk.NewFrameworkOrDie("resource-mapping-validation", fwk.ProviderOvirt)
 		secret    corev1.Secret
 		namespace string
 		test      = resourceMappingValidationTest{f}

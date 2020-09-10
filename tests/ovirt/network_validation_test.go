@@ -19,7 +19,7 @@ type networkValidationTest struct {
 
 var _ = Describe("VM network validation ", func() {
 	var (
-		f          = fwk.NewFrameworkOrDie("network-validation")
+		f          = fwk.NewFrameworkOrDie("network-validation", fwk.ProviderOvirt)
 		secretName string
 		test       = networkValidationTest{framework: f}
 	)

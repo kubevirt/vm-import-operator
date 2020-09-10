@@ -29,7 +29,7 @@ type variousVMConfigurationsTest struct {
 var _ = Describe("Import", func() {
 
 	var (
-		f    = fwk.NewFrameworkOrDie("various-vm-configurations")
+		f    = fwk.NewFrameworkOrDie("various-vm-configurations", fwk.ProviderOvirt)
 		test = variousVMConfigurationsTest{framework: f}
 	)
 
@@ -67,7 +67,7 @@ var _ = Describe("Import", func() {
 var _ = Describe("Import", func() {
 
 	var (
-		f    = fwk.NewFrameworkOrDie("various-vm-configurations")
+		f    = fwk.NewFrameworkOrDie("various-vm-configurations", fwk.ProviderOvirt)
 		test = variousVMConfigurationsTest{framework: f}
 	)
 

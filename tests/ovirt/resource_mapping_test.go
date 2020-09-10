@@ -23,7 +23,7 @@ type resourceMappingTest struct {
 var _ = Describe("VM import ", func() {
 
 	var (
-		f         = fwk.NewFrameworkOrDie("resource-mapping")
+		f         = fwk.NewFrameworkOrDie("resource-mapping", fwk.ProviderOvirt)
 		secret    corev1.Secret
 		namespace string
 		test      = resourceMappingTest{f}

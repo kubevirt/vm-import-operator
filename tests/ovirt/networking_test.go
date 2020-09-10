@@ -21,7 +21,7 @@ type networkingTest struct {
 
 var _ = Describe("Import of VM ", func() {
 	var (
-		f           = fwk.NewFrameworkOrDie("networking")
+		f           = fwk.NewFrameworkOrDie("networking", fwk.ProviderOvirt)
 		test        = networkingTest{f}
 		secret      corev1.Secret
 		namespace   string

@@ -36,5 +36,4 @@ $KUBECTL -n "$IMAGEIO_NAMESPACE" exec deploy/imageio-deployment -c imageiotest -
 
 $KUBECTL apply -f tests/os-mapping/os-mapping.yaml
 
-go test ./tests/ovirt --v -timeout 120m -provider ovirt -kubeconfig "$KUBECONFIG" -ovirt-ca "$FAKEOVIRT_CA_PATH" -imageio-namespace "$IMAGEIO_NAMESPACE" -kubevirt-namespace "$KUBEVIRT_NAMESPACE" -default-sc "$DEFAULT_SC" -nfs-sc "$NFS_SC"
-go test ./tests/vmware --v -timeout 120m -provider vmware -kubeconfig "$KUBECONFIG" -kubevirt-namespace "$KUBEVIRT_NAMESPACE" -default-sc "$DEFAULT_SC" -nfs-sc "$NFS_SC"
+go test ./tests/ovirt ./tests/vmware --v -timeout 120m -kubeconfig "$KUBECONFIG" -ovirt-ca "$FAKEOVIRT_CA_PATH" -imageio-namespace "$IMAGEIO_NAMESPACE" -kubevirt-namespace "$KUBEVIRT_NAMESPACE" -default-sc "$DEFAULT_SC" -nfs-sc "$NFS_SC"
