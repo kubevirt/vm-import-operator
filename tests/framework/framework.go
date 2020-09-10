@@ -32,7 +32,7 @@ import (
 
 const (
 	nsCreateTime = 60 * time.Second
-	nsDeleteTime = 5 * time.Minute
+	nsDeleteTime = 10 * time.Minute
 	//NsPrefixLabel provides a virtual machine import prefix label to identify the test namespace
 	NsPrefixLabel = "vm-import-e2e"
 	ProviderOvirt = "ovirt"
