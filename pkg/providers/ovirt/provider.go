@@ -267,7 +267,7 @@ func (o *OvirtProvider) Validate() ([]v2vv1.VirtualMachineImportCondition, error
 }
 
 // StopVM stop the source VM on ovirt
-func (o *OvirtProvider) StopVM() error {
+func (o *OvirtProvider) StopVM(instance *v2vv1.VirtualMachineImport, rclient rclient.Client) error {
 	vm, err := o.getVM()
 	if err != nil {
 		return err
@@ -282,6 +282,10 @@ func (o *OvirtProvider) StopVM() error {
 		return err
 	}
 	err = client.StopVM(vmID)
+	if err != nil {
+		return err
+	}
+	err = utils.AddFinalizer(instance, utils.RestoreVMStateFinalizer, rclient)
 	if err != nil {
 		return err
 	}

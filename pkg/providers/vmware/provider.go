@@ -229,7 +229,7 @@ func (r *VmwareProvider) StartVM() error {
 }
 
 // StartVM powers off the source VM.
-func (r *VmwareProvider) StopVM() error {
+func (r *VmwareProvider) StopVM(instance *v1beta1.VirtualMachineImport, client client.Client) error {
 	vmwareClient, err := r.getClient()
 	if err != nil {
 		return err
@@ -248,6 +248,11 @@ func (r *VmwareProvider) StopVM() error {
 		if err != nil {
 			return err
 		}
+		err = utils.AddFinalizer(instance, utils.RestoreVMStateFinalizer, client)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 
 	return nil

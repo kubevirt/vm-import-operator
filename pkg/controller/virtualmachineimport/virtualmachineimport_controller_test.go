@@ -1611,7 +1611,7 @@ func (p *mockProvider) Validate() ([]v2vv1.VirtualMachineImportCondition, error)
 }
 
 // StopVM implements Provider.StopVM
-func (p *mockProvider) StopVM() error {
+func (p *mockProvider) StopVM(cr *v2vv1.VirtualMachineImport, client rclient.Client) error {
 	return nil
 }
 

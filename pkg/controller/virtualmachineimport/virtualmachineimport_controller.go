@@ -268,11 +268,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	// Stop the VM
-	if err = provider.StopVM(); err != nil {
-		return reconcile.Result{}, err
-	}
-	err = utils.AddFinalizer(instance, utils.RestoreVMStateFinalizer, r.client)
-	if err != nil {
+	if err = provider.StopVM(instance, r.client); err != nil {
 		return reconcile.Result{}, err
 	}
 

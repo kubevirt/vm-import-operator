@@ -20,6 +20,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 )
@@ -352,6 +353,7 @@ var _ = Describe("StartVM and StopVM", func() {
 	var provider VmwareProvider
 	var model *simulator.Model
 	var server *simulator.Server
+	mockClient := &mockClient{}
 
 	BeforeEach(func() {
 		model = simulator.VPX()
@@ -409,7 +411,7 @@ var _ = Describe("StartVM and StopVM", func() {
 		Expect(err).To(BeNil())
 		Expect(powerState).To(Equal(providers.VMStatusUp))
 
-		err = provider.StopVM()
+		err = provider.StopVM(provider.instance, mockClient)
 		Expect(err).To(BeNil())
 
 		provider.vmProperties = nil
@@ -424,7 +426,7 @@ var _ = Describe("StartVM and StopVM", func() {
 		Expect(err).To(BeNil())
 		Expect(powerState).To(Equal(providers.VMStatusDown))
 
-		err = provider.StopVM()
+		err = provider.StopVM(provider.instance, mockClient)
 		Expect(err).To(BeNil())
 
 		provider.vmProperties = nil
@@ -575,4 +577,46 @@ func (t *mockTemplateProvider) Process(_ string, _ *string, _ *templatev1.Templa
 		},
 	}
 	return tmpl, nil
+}
+
+type mockClient struct{}
+
+// Create implements client.Client
+func (c *mockClient) Create(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
+	return nil
+}
+
+// Update implements client.Client
+func (c *mockClient) Update(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
+	return nil
+}
+
+// Delete implements client.Client
+func (c *mockClient) Delete(ctx context.Context, obj runtime.Object, opts ...client.DeleteOption) error {
+	return nil
+}
+
+// DeleteAllOf implements client.Client
+func (c *mockClient) DeleteAllOf(ctx context.Context, obj runtime.Object, opts ...client.DeleteAllOfOption) error {
+	return nil
+}
+
+// Patch implements client.Client
+func (c *mockClient) Patch(ctx context.Context, obj runtime.Object, patch client.Patch, opts ...client.PatchOption) error {
+	return nil
+}
+
+// Get implements client.Client
+func (c mockClient) Get(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+	return nil
+}
+
+// List implements client.Client
+func (c *mockClient) List(ctx context.Context, objectList runtime.Object, opts ...client.ListOption) error {
+	return nil
+}
+
+// Status implements client.StatusClient
+func (c *mockClient) Status() client.StatusWriter {
+	return c
 }
