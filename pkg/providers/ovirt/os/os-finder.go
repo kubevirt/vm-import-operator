@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	defaultLinux   = "rhel8"
-	defaultWindows = "windows"
+	defaultLinux   = "rhel8.2"
+	defaultWindows = "win10"
 )
 
 // OSFinder defines operation of discovering OS name of a VM

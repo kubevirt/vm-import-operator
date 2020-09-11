@@ -65,11 +65,11 @@ var _ = Describe("OS finder ", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Expect(os).To(BeEquivalentTo(expectedOs))
 	},
-		table.Entry("for generic Linux", "linux X", "rhel8"),
-		table.Entry("for RHEL", "rhel X", "rhel8"),
+		table.Entry("for generic Linux", "linux X", "rhel8.2"),
+		table.Entry("for RHEL", "rhel X", "rhel8.2"),
 
-		table.Entry("for generic Windows", "windows", "windows"),
-		table.Entry("for windows_7", "windows_7", "windows"),
+		table.Entry("for generic Windows", "windows", "win10"),
+		table.Entry("for windows_7", "windows_7", "win10"),
 	)
 
 	It("should return error for os map provider error", func() {

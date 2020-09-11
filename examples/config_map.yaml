@@ -6,6 +6,7 @@ metadata:
 data:
   guestos2common: |
     "Red Hat Enterprise Linux Server": "rhel"
+    "Red Hat Enterprise Linux": "rhel"
     "CentOS Linux": "centos"
     "Fedora": "fedora"
     "Ubuntu": "ubuntu"
