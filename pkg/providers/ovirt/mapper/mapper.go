@@ -524,9 +524,7 @@ func (o *OvirtMapper) mapFirmware() *kubevirtv1.Firmware {
 	firmware := &kubevirtv1.Firmware{}
 
 	// Map bootloader
-	bios, _ := o.vm.Bios()
-	biosType, _ := bios.Type()
-	firmware.Bootloader = BiosTypeMapping[string(biosType)]
+	firmware.Bootloader = BiosTypeMapping[getBiosType(o.vm)]
 
 	// Map serial number
 	serial := o.mapSerialNumber()
@@ -535,6 +533,19 @@ func (o *OvirtMapper) mapFirmware() *kubevirtv1.Firmware {
 	}
 
 	return firmware
+}
+
+func getBiosType(vm *ovirtsdk.Vm) string {
+	bios, _ := vm.Bios()
+	biosType, _ := bios.Type()
+	if biosType == ovirtsdk.BIOSTYPE_CLUSTER_DEFAULT {
+		if cluster, ok := vm.Cluster(); ok {
+			if clusterDefaultBiosType, ok := cluster.BiosType(); ok {
+				biosType = clusterDefaultBiosType
+			}
+		}
+	}
+	return string(biosType)
 }
 
 func (o *OvirtMapper) mapSerialNumber() *string {
@@ -761,9 +772,7 @@ func (o *OvirtMapper) mapPlacementPolicy() *kubevirtv1.EvictionStrategy {
 func (o *OvirtMapper) mapFeatures() *kubevirtv1.Features {
 	features := &kubevirtv1.Features{}
 
-	bios, _ := o.vm.Bios()
-	biosType, _ := bios.Type()
-	bootloader := BiosTypeMapping[string(biosType)]
+	bootloader := BiosTypeMapping[getBiosType(o.vm)]
 
 	// Enabling EFI will also enable Secure Boot, which requires SMM to be enabled.
 	if bootloader.EFI != nil {

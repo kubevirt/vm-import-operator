@@ -197,6 +197,35 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(clock.UTC.OffsetSeconds).To(BeNil())
 	})
 
+	It("should handle cluster default bios type", func() {
+		vm = createVM()
+		vm.SetBios(
+			ovirtsdk.NewBiosBuilder().
+				Type(ovirtsdk.BIOSTYPE_CLUSTER_DEFAULT).MustBuild())
+		vm.SetCluster(
+			ovirtsdk.NewClusterBuilder().BiosType(ovirtsdk.BIOSTYPE_Q35_SEA_BIOS).MustBuild())
+
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
+		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+
+		Expect(vmSpec.Spec.Template.Spec.Domain.Firmware.Bootloader.BIOS).To(Equal(&kubevirtv1.BIOS{}))
+	})
+
+	It("should enable secure boot", func() {
+		_true := true
+		vm = createVM()
+		vm.SetBios(
+			ovirtsdk.NewBiosBuilder().
+				Type(ovirtsdk.BIOSTYPE_CLUSTER_DEFAULT).MustBuild())
+		vm.SetCluster(
+			ovirtsdk.NewClusterBuilder().BiosType(ovirtsdk.BIOSTYPE_Q35_OVMF).MustBuild())
+
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
+		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+
+		Expect(vmSpec.Spec.Template.Spec.Domain.Features.SMM.Enabled).To(Equal(&_true))
+	})
+
 	It("should create UTC clock without offset for offset parsing problem", func() {
 		vm = createVM()
 		vm.SetTimeZone(ovirtsdk.NewTimeZoneBuilder().
