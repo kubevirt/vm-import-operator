@@ -35,5 +35,6 @@ FAKEOVIRT_CA_PATH=${FAKEOVIRT_CA_PATH:-$(pwd)/_out/fakeovirt-ca.pem}
 $KUBECTL -n "$IMAGEIO_NAMESPACE" exec deploy/imageio-deployment -c imageiotest -- cat /tmp/certs/ca.pem > "$FAKEOVIRT_CA_PATH"
 
 $KUBECTL apply -f tests/os-mapping/os-mapping.yaml
+$KUBECTL apply -f cluster/manifests/v2v-vmware.yaml
 
 go test ./tests/ovirt ./tests/vmware --v -timeout 120m -kubeconfig "$KUBECONFIG" -ovirt-ca "$FAKEOVIRT_CA_PATH" -imageio-namespace "$IMAGEIO_NAMESPACE" -kubevirt-namespace "$KUBEVIRT_NAMESPACE" -default-sc "$DEFAULT_SC" -nfs-sc "$NFS_SC"

@@ -398,6 +398,7 @@ func (r *VmwareMapper) MapVM(targetVmName *string, vmSpec *kubevirtv1.VirtualMac
 
 	vmSpec.Spec.Template.Spec.Domain.CPU = r.mapCPUTopology()
 	vmSpec.Spec.Template.Spec.Domain.Firmware = r.mapFirmware()
+	vmSpec.Spec.Template.Spec.Domain.Features = r.mapFeatures()
 	reservations, err := r.mapResourceReservations()
 	if err != nil {
 		return nil, err
@@ -468,9 +469,26 @@ func (r *VmwareMapper) mapCPUTopology() *kubevirtv1.CPU {
 	return cpu
 }
 
+func (r *VmwareMapper) mapFeatures() *kubevirtv1.Features {
+	features := &kubevirtv1.Features{}
+	bootloader := biosTypeMapping[r.vmProperties.Config.Firmware]
+	if bootloader != nil && bootloader.EFI != nil {
+		// Enabling EFI will also enable Secure Boot, which requires SMM to be enabled.
+		smmEnabled := true
+		features.SMM = &kubevirtv1.FeatureState{
+			Enabled: &smmEnabled,
+		}
+	}
+
+	return features
+}
+
 func (r *VmwareMapper) mapFirmware() *kubevirtv1.Firmware {
 	firmwareSpec := &kubevirtv1.Firmware{}
 	firmwareSpec.Bootloader = biosTypeMapping[r.vmProperties.Config.Firmware]
+	if firmwareSpec.Bootloader == nil {
+		firmwareSpec.Bootloader = biosTypeMapping["bios"]
+	}
 	firmwareSpec.Serial = r.vmProperties.Config.InstanceUuid
 	return firmwareSpec
 }
@@ -498,7 +516,7 @@ func (r *VmwareMapper) mapNetworks() ([]kubevirtv1.Network, error) {
 		for _, mapping := range *r.mappings.NetworkMappings {
 			if (mapping.Source.Name != nil && nic.name == *mapping.Source.Name) ||
 				(mapping.Source.ID != nil && nic.moRef == *mapping.Source.ID) {
-				if *mapping.Type == networkTypePod {
+				if mapping.Type == nil || *mapping.Type == networkTypePod {
 					kubevirtNet.Pod = &kubevirtv1.PodNetwork{}
 				} else if *mapping.Type == networkTypeMultus {
 					kubevirtNet.Multus = &kubevirtv1.MultusNetwork{
@@ -521,6 +539,7 @@ func (r *VmwareMapper) mapNetworkInterfaces(networkToType map[string]string) ([]
 		kubevirtInterface := kubevirtv1.Interface{}
 		kubevirtInterface.MacAddress = nic.mac
 		kubevirtInterface.Name, _ = utils.NormalizeName(nic.name)
+		kubevirtInterface.Model = "virtio"
 		switch networkToType[kubevirtInterface.Name] {
 		case networkTypeMultus:
 			kubevirtInterface.Bridge = &kubevirtv1.InterfaceBridge{}
