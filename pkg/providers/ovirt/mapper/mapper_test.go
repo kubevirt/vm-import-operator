@@ -9,6 +9,7 @@ import (
 
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
+	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -112,6 +113,18 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(vmSpecCPU.DedicatedCPUPlacement).To(BeTrue())
 		Expect(vmSpec.Spec.Template.Spec.Domain.Resources.Requests.Memory().Value()).To(BeEquivalentTo(vmSpec.Spec.Template.Spec.Domain.Resources.Limits.Memory().Value()))
 		Expect(vmSpec.Spec.Template.Spec.Domain.Resources.Requests.Memory().Value()).To(BeEquivalentTo(maxMemoryGI))
+	})
+
+	It("should normalize hostname", func() {
+		fqdn := "rhev-orange-03.rdu2.scalelab.redhat.com"
+		norm, _ := utils.NormalizeName(fqdn)
+		vm = createVM()
+		vm.SetFqdn(fqdn)
+
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
+		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+
+		Expect(vmSpec.Spec.Template.Spec.Hostname).To(Equal(norm))
 	})
 
 	It("should map BIOS", func() {

@@ -128,13 +128,14 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 		vmSpec.ObjectMeta.Name = *targetVMName
 	}
 
-	// Map hostname
-	if fqdn, ok := o.vm.Fqdn(); ok {
-		vmSpec.Spec.Template.Spec.Hostname = fqdn
-	}
-
 	if vmSpec.Spec.Template == nil {
 		vmSpec.Spec.Template = &kubevirtv1.VirtualMachineInstanceTemplateSpec{}
+	}
+
+	// Map hostname
+	if fqdn, ok := o.vm.Fqdn(); ok {
+		name, _ := utils.NormalizeName(fqdn)
+		vmSpec.Spec.Template.Spec.Hostname = name
 	}
 
 	// Map CPU
