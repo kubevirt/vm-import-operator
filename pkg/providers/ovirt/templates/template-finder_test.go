@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	oos "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/os"
 	otemplates "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/templates"
 	"github.com/kubevirt/vm-import-operator/pkg/templates"
 	templatev1 "github.com/openshift/api/template/v1"
@@ -35,6 +36,32 @@ var _ = Describe("Finding a Template", func() {
 		vmOS := ovirtsdk.OperatingSystem{}
 		vmOS.SetType("rhel")
 		vm := ovirtsdk.NewVmBuilder().Os(&vmOS).MustBuild()
+		template, err := templateFinder.FindTemplate(vm)
+
+		Expect(err).To(BeNil())
+		Expect(template).To(Not(BeNil()))
+	})
+	It("should fina a template for guest OS: ", func() {
+		findTemplatesMock = func(name *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error) {
+			if *os != "rhel8.0" {
+				return &templatev1.TemplateList{}, fmt.Errorf("template not found")
+			}
+			template := createTemplate(name, os, workload, flavor)
+			templateList := createTemplatesList(template)
+			return templateList, nil
+		}
+		osFinder := oos.OVirtOSFinder{OsMapProvider: &mockOSMapProvider{}}
+		templateFinder := otemplates.NewTemplateFinder(&mockTemplateProvider{}, &osFinder)
+
+		vmOS := ovirtsdk.OperatingSystem{}
+		vmOS.SetType("other_linux")
+
+		vm := ovirtsdk.NewVmBuilder().GuestOperatingSystem(
+			ovirtsdk.NewGuestOperatingSystemBuilder().
+				Distribution("Red Hat Enterprise Linux").Version(
+				ovirtsdk.NewVersionBuilder().FullVersion("8.0").MustBuild()).MustBuild()).
+			Os(&vmOS).MustBuild()
+
 		template, err := templateFinder.FindTemplate(vm)
 
 		Expect(err).To(BeNil())
@@ -131,4 +158,15 @@ type mockOsFinder struct{}
 
 func (o *mockOsFinder) FindOperatingSystem(vm *ovirtsdk.Vm) (string, error) {
 	return findOs(vm)
+}
+
+type mockOSMapProvider struct{}
+
+func (o *mockOSMapProvider) GetOSMaps() (map[string]string, map[string]string, error) {
+	guestOsToCommon := map[string]string{
+		"Red Hat Enterprise Linux Server": "rhel",
+		"Red Hat Enterprise Linux":        "rhel",
+	}
+	osInfoToCommon := map[string]string{}
+	return guestOsToCommon, osInfoToCommon, nil
 }

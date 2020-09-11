@@ -100,6 +100,7 @@ func (o *OSMaps) updateOsMapsByUserMaps(guestOsToCommon map[string]string, osInf
 func initGuestOsToCommon() map[string]string {
 	return map[string]string{
 		"Red Hat Enterprise Linux Server": "rhel",
+		"Red Hat Enterprise Linux":        "rhel",
 		"CentOS Linux":                    "centos",
 		"Fedora":                          "fedora",
 		"Ubuntu":                          "ubuntu",
