@@ -2,6 +2,7 @@ package vmware
 
 import (
 	"fmt"
+
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	"github.com/kubevirt/vm-import-operator/pkg/configmaps"
 	oapiv1 "github.com/openshift/api/template/v1"
@@ -44,6 +45,7 @@ const (
 	vmwareSecretKey = "vmware"
 )
 
+// VmwareProvider is VMware implementation of the Provider interface to support importing VMs from VMware
 type VmwareProvider struct {
 	dataVolumesManager    provider.DataVolumesManager
 	factory               pclient.Factory
@@ -228,7 +230,7 @@ func (r *VmwareProvider) StartVM() error {
 	return vmwareClient.StartVM(vm.Reference().Value)
 }
 
-// StartVM powers off the source VM.
+// StopVM powers off the source VM.
 func (r *VmwareProvider) StopVM(instance *v1beta1.VirtualMachineImport, client client.Client) error {
 	vmwareClient, err := r.getClient()
 	if err != nil {

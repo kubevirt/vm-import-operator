@@ -2,6 +2,7 @@ package virtualmachines
 
 import (
 	"context"
+
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 

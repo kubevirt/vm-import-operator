@@ -3,15 +3,14 @@ package utils
 import (
 	"context"
 	"fmt"
-	k8stypes "k8s.io/apimachinery/pkg/types"
-	v1 "kubevirt.io/client-go/api/v1"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	k8stypes "k8s.io/apimachinery/pkg/types"
+	v1 "kubevirt.io/client-go/api/v1"
 
 	"github.com/alecthomas/units"
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
@@ -25,7 +24,6 @@ const (
 )
 
 var (
-	log = logf.Log.WithName("utils")
 	// windowsUtcCompatibleTimeZones defines Windows-specific UTC-compatible timezones
 	windowsUtcCompatibleTimeZones = map[string]bool{
 		"GMT Standard Time":       true,
@@ -67,7 +65,7 @@ func ToLoggableID(id *string, name *string) string {
 	return identifier
 }
 
-// IndexByIDAndName indexes mapping array by ID and by Name
+// IndexStorageItemByIDAndName indexes mapping array by ID and by Name
 func IndexStorageItemByIDAndName(mapping *[]v2vv1.StorageResourceMappingItem) (mapByID map[string]v2vv1.StorageResourceMappingItem, mapByName map[string]v2vv1.StorageResourceMappingItem) {
 	mapByID = make(map[string]v2vv1.StorageResourceMappingItem)
 	mapByName = make(map[string]v2vv1.StorageResourceMappingItem)
@@ -291,7 +289,7 @@ func RemoveFinalizer(cr *v2vv1.VirtualMachineImport, name string, client rclient
 	return client.Patch(context.TODO(), copy, patch)
 }
 
-// FoldErrors combines clean up errors into one error
+// FoldCleanUpErrors combines clean up errors into one error
 func FoldCleanUpErrors(errs []error, vmiName k8stypes.NamespacedName) error {
 	message := ""
 	for _, e := range errs {

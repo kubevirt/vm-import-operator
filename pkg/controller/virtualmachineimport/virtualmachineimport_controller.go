@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	liberrors "errors"
 	"fmt"
-	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware"
 
 	"github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/resources"
 

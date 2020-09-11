@@ -3,6 +3,7 @@ package vmware
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/ghodss/yaml"
 	"github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	providers "github.com/kubevirt/vm-import-operator/pkg/providers"
@@ -27,10 +28,10 @@ import (
 
 var (
 	poweredOffUUID = "265104de-1472-547c-b873-6dc7883fb6cb"
-	poweredOnUUID = "39365506-5a0a-5fd0-be10-9586ad53aaad"
+	poweredOnUUID  = "39365506-5a0a-5fd0-be10-9586ad53aaad"
 )
 
-func makeProvider() (*simulator.Model, *simulator.Server, *VmwareProvider){
+func makeProvider() (*simulator.Model, *simulator.Server, *VmwareProvider) {
 	model := simulator.VPX()
 	_ = model.Create()
 	server := model.Service.NewServer()
