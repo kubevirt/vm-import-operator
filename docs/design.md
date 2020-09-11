@@ -73,7 +73,7 @@ status:
    - name: 8877699c-5c62-4b55-969b-45f8e07c25e9
 ```
 
-The “source” element can be extended to represent additional source types for the VM import resource, such as VMWare and OVA, to which a tailored resource mapping will be required.
+The “source” element can be extended to represent additional source types for the VM import resource, such as VMWare and OVA, to which a tailored resource mapping will be required. Only one source type may be included in each VirtualMachineImport.
 
 ### Progress monitoring
 

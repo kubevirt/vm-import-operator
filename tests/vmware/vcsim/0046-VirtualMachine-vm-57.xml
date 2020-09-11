@@ -407,7 +407,7 @@
     <val xmlns:XMLSchema-instance="http://www.w3.org/2001/XMLSchema-instance" XMLSchema-instance:type="VirtualMachineRuntimeInfo">
       <host type="HostSystem">host-21</host>
       <connectionState>connected</connectionState>
-      <powerState>poweredOn</powerState>
+      <powerState>poweredOff</powerState>
       <toolsInstallerMounted>false</toolsInstallerMounted>
       <numMksConnections>0</numMksConnections>
     </val>

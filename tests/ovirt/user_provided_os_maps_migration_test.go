@@ -10,7 +10,7 @@ import (
 
 var _ = Describe("OS Mapping ConfigMap name and namespace", func() {
 
-	var f = fwk.NewFrameworkOrDie("os-maps-migration")
+	var f = fwk.NewFrameworkOrDie("os-maps-migration", fwk.ProviderOvirt)
 
 	It("should be copied from operator ENV to config map", func() {
 		controllerConfigMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get(ctrlConfig.ConfigMapName, metav1.GetOptions{})

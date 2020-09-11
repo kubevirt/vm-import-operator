@@ -1,0 +1,37 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vcsim-deployment
+  namespace: @VCSIM_NAMESPACE
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vcsim
+  template:
+    metadata:
+      labels:
+        app: vcsim
+    spec:
+      serviceAccountName: cdi-sa
+      containers:
+      - name: vcsim
+        image: mansam/vcsim:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8989
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vcsim
+  namespace: @VCSIM_NAMESPACE
+spec:
+  selector:
+    app: vcsim
+  type: NodePort
+  ports:
+  - name: vcsim
+    port: 8989
+    targetPort: 8989

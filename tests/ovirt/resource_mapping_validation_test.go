@@ -21,7 +21,7 @@ type resourceMappingValidationTest struct {
 var _ = Describe("VM import ", func() {
 
 	var (
-		f         = fwk.NewFrameworkOrDie("resource-mapping-validation")
+		f         = fwk.NewFrameworkOrDie("resource-mapping-validation", fwk.ProviderOvirt)
 		secret    corev1.Secret
 		namespace string
 		test      = resourceMappingValidationTest{f}
@@ -39,7 +39,7 @@ var _ = Describe("VM import ", func() {
 	table.DescribeTable("should block VM import with", func(networkMappings *[]v2vv1.NetworkResourceMappingItem, storageMappings *[]v2vv1.StorageResourceMappingItem, diskMapping *[]v2vv1.StorageResourceMappingItem) {
 		vmID := vms.BasicNetworkVmID
 		test.stub(vmID)
-		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 		vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
 			NetworkMappings: networkMappings,
 			StorageMappings: storageMappings,
@@ -91,7 +91,7 @@ var _ = Describe("VM import ", func() {
 		err := f.OvirtStubbingClient.Stub(stubbing)
 		Expect(err).To(BeNil())
 
-		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 		vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
 			NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
 				{

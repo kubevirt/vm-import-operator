@@ -27,7 +27,7 @@ type basicVmImportTest struct {
 var _ = Describe("Basic VM import ", func() {
 
 	var (
-		f               = fwk.NewFrameworkOrDie("basic-vm-import")
+		f               = fwk.NewFrameworkOrDie("basic-vm-import", fwk.ProviderOvirt)
 		test            = basicVmImportTest{framework: f}
 		secret          corev1.Secret
 		namespace       string
@@ -47,7 +47,7 @@ var _ = Describe("Basic VM import ", func() {
 
 	Context(" without resource mapping", func() {
 		It("should create stopped VM", func() {
-			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, false)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, false)
 
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
@@ -69,7 +69,7 @@ var _ = Describe("Basic VM import ", func() {
 		})
 
 		It("should create started VM", func() {
-			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
@@ -94,7 +94,7 @@ var _ = Describe("Basic VM import ", func() {
 	Context(" with in-CR resource mapping", func() {
 		table.DescribeTable("should create running VM", func(mappings v2vv1.OvirtMappings, storageClass string) {
 
-			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Ovirt.Mappings = &mappings
 
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
@@ -131,7 +131,7 @@ var _ = Describe("Basic VM import ", func() {
 	Context("when it's successful and the import CR is removed", func() {
 		It("should not affect imported VM or VMI", func() {
 			By("Creating Virtual Machine Import")
-			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmImports := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace)
 
 			created, err := vmImports.Create(&vmi)

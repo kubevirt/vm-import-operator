@@ -29,7 +29,7 @@ type variousVMConfigurationsTest struct {
 var _ = Describe("Import", func() {
 
 	var (
-		f    = fwk.NewFrameworkOrDie("various-vm-configurations")
+		f    = fwk.NewFrameworkOrDie("various-vm-configurations", fwk.ProviderOvirt)
 		test = variousVMConfigurationsTest{framework: f}
 	)
 
@@ -67,7 +67,7 @@ var _ = Describe("Import", func() {
 var _ = Describe("Import", func() {
 
 	var (
-		f    = fwk.NewFrameworkOrDie("various-vm-configurations")
+		f    = fwk.NewFrameworkOrDie("various-vm-configurations", fwk.ProviderOvirt)
 		test = variousVMConfigurationsTest{framework: f}
 	)
 
@@ -232,7 +232,7 @@ func (t *variousVMConfigurationsTest) ensureVMIsRunningOnStorage(vmID string, st
 func (t *variousVMConfigurationsTest) ensureVMIsRunningOnStorageWithVMName(vmID string, storageMappings *[]v2vv1.StorageResourceMappingItem, targetVMName string) *v1.VirtualMachine {
 	f := t.framework
 	namespace := t.framework.Namespace.Name
-	vmi := utils.VirtualMachineImportCrWithName(vmID, namespace, t.secret.Name, f.NsPrefix, true, targetVMName)
+	vmi := utils.VirtualMachineImportCrWithName(fwk.ProviderOvirt, vmID, namespace, t.secret.Name, f.NsPrefix, true, targetVMName)
 	vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
 		NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
 			{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},

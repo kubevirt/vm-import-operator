@@ -147,7 +147,18 @@ var _ = Describe("Reconcile steps", func() {
 
 			Expect(provider).To(BeNil())
 			Expect(err).To(Not(BeNil()))
-			Expect(err.Error()).To(Equal("Invalid source type. only Ovirt type is supported"))
+			Expect(err.Error()).To(Equal("Invalid source type. Only Ovirt and Vmware type is supported"))
+		})
+
+		It("should fail to create provider if more than one source is provided: ", func() {
+			instance.Spec.Source.Ovirt = &v2vv1.VirtualMachineImportOvirtSourceSpec{}
+			instance.Spec.Source.Vmware = &v2vv1.VirtualMachineImportVmwareSourceSpec{}
+
+			provider, err := reconciler.createProvider(instance)
+
+			Expect(provider).To(BeNil())
+			Expect(err).To(Not(BeNil()))
+			Expect(err.Error()).To(Equal("Invalid source. Must only include one source type."))
 		})
 
 		It("should create provider: ", func() {

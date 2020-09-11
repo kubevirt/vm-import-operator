@@ -23,10 +23,12 @@ echo "Using: "
 echo "  KUBECTL: $KUBECTL"
 echo "  KUBECONFIG: $KUBECONFIG"
 echo "  IMAGEIO_NAMESPACE: $IMAGEIO_NAMESPACE"
+echo "  VCSIM_NAMESPACE: $VCSIM_NAMESPACE"
 echo "  DEFAULT_SC: $DEFAULT_SC"
 echo "  NFS_SC: $NFS_SC"
 
 ./cluster/imageio-install.sh "$IMAGEIO_NAMESPACE"
+./cluster/vcsim-install.sh "$VCSIM_NAMESPACE"
 
 FAKEOVIRT_CA_PATH=${FAKEOVIRT_CA_PATH:-$(pwd)/_out/fakeovirt-ca.pem}
 
@@ -34,4 +36,4 @@ $KUBECTL -n "$IMAGEIO_NAMESPACE" exec deploy/imageio-deployment -c imageiotest -
 
 $KUBECTL apply -f tests/os-mapping/os-mapping.yaml
 
-go test ./tests/ovirt --v -timeout 120m -kubeconfig "$KUBECONFIG" -ovirt-ca "$FAKEOVIRT_CA_PATH" -imageio-namespace "$IMAGEIO_NAMESPACE" -kubevirt-namespace "$KUBEVIRT_NAMESPACE" -default-sc "$DEFAULT_SC" -nfs-sc "$NFS_SC"
+go test ./tests/ovirt ./tests/vmware --v -timeout 120m -kubeconfig "$KUBECONFIG" -ovirt-ca "$FAKEOVIRT_CA_PATH" -imageio-namespace "$IMAGEIO_NAMESPACE" -kubevirt-namespace "$KUBEVIRT_NAMESPACE" -default-sc "$DEFAULT_SC" -nfs-sc "$NFS_SC"

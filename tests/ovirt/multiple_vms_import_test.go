@@ -23,7 +23,7 @@ type multipleVmsImportTest struct {
 
 var _ = Describe("Multiple VMs import ", func() {
 	var (
-		f         = fwk.NewFrameworkOrDie("multiple-vms-import")
+		f         = fwk.NewFrameworkOrDie("multiple-vms-import", fwk.ProviderOvirt)
 		namespace string
 		test      = multipleVmsImportTest{framework: f}
 	)
@@ -185,7 +185,7 @@ func (t *multipleVmsImportTest) importVMWithSecretAndMakeSureItsRunning(vmID str
 }
 
 func (t *multipleVmsImportTest) triggerVMImport(vmID string, namespace string, vmName string, secretName string) (*v2vv1.VirtualMachineImport, error) {
-	vmi := utils.VirtualMachineImportCrWithName(vmID, namespace, secretName, t.framework.NsPrefix+"-"+vmID, true, vmName)
+	vmi := utils.VirtualMachineImportCrWithName(fwk.ProviderOvirt, vmID, namespace, secretName, t.framework.NsPrefix+"-"+vmID, true, vmName)
 	vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
 		NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
 			{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware"
+
 	"github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/resources"
 
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
@@ -832,17 +834,26 @@ func isIncomplete(condition *v2vv1.VirtualMachineImportCondition) bool {
 }
 
 func (r *ReconcileVirtualMachineImport) createProvider(vmi *v2vv1.VirtualMachineImport) (provider.Provider, error) {
+	config, err := r.ctrlConfigProvider.GetConfig()
+	if err != nil {
+		log.Error(err, "Cannot get controller config.")
+	}
+
+	if vmi.Spec.Source.Ovirt != nil && vmi.Spec.Source.Vmware != nil {
+		return nil, fmt.Errorf("Invalid source. Must only include one source type.")
+	}
+
 	// The type of the provider is evaluated based on the source field from the CR
 	if vmi.Spec.Source.Ovirt != nil {
-		config, err := r.ctrlConfigProvider.GetConfig()
-		if err != nil {
-			log.Error(err, "Cannot get controller config.")
-		}
 		provider := ovirtprovider.NewOvirtProvider(vmi.ObjectMeta, vmi.TypeMeta, r.client, r.ocClient, r.factory, r.kvConfigProvider, config)
 		return &provider, nil
 	}
+	if vmi.Spec.Source.Vmware != nil {
+		provider := vmware.NewVmwareProvider(vmi.ObjectMeta, vmi.TypeMeta, r.client, r.ocClient, r.factory, config)
+		return &provider, nil
+	}
 
-	return nil, fmt.Errorf("Invalid source type. only Ovirt type is supported")
+	return nil, fmt.Errorf("Invalid source type. Only Ovirt and Vmware type is supported")
 }
 
 func (r *ReconcileVirtualMachineImport) updateToRunning(vmName types.NamespacedName) error {

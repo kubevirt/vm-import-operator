@@ -33,7 +33,7 @@ type basicVMImportNegativeTest struct {
 var _ = Describe("VM import", func() {
 
 	var (
-		f         = fwk.NewFrameworkOrDie("basic-vm-import-negative")
+		f         = fwk.NewFrameworkOrDie("basic-vm-import-negative", fwk.ProviderOvirt)
 		secret    corev1.Secret
 		namespace string
 		test      = basicVMImportNegativeTest{f}
@@ -50,7 +50,7 @@ var _ = Describe("VM import", func() {
 
 	table.DescribeTable("should fail import with  ", func(diskSize string) {
 		vmID := vms.InvalidDiskID
-		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 		test.prepareInvalidVm(vmID, diskSize)
 
 		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
@@ -80,7 +80,7 @@ var _ = Describe("VM import", func() {
 
 	It("should fail for missing secret", func() {
 		vmID := vms.MissingOVirtSecretVmId
-		vmi := utils.VirtualMachineImportCr(vmID, namespace, "no-such-secret", f.NsPrefix, true)
+		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, "no-such-secret", f.NsPrefix, true)
 		test.prepareVm(vmID)
 
 		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
@@ -95,7 +95,7 @@ var _ = Describe("VM import", func() {
 	It("should fail for invalid secret", func() {
 		vmID := vms.InvalidOVirtSecretVmId
 		invalidSecret := test.createInvalidSecret()
-		vmi := utils.VirtualMachineImportCr(vmID, namespace, invalidSecret.Name, f.NsPrefix, true)
+		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, invalidSecret.Name, f.NsPrefix, true)
 		test.prepareVm(vmID)
 
 		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
@@ -112,7 +112,7 @@ var _ = Describe("VM import", func() {
 		if err != nil {
 			Fail(err.Error())
 		}
-		vmi := utils.VirtualMachineImportCr(vmID, namespace, invalidSecret.Name, f.NsPrefix, true)
+		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, invalidSecret.Name, f.NsPrefix, true)
 		test.prepareVm(vmID)
 
 		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
@@ -136,7 +136,7 @@ var _ = Describe("VM import", func() {
 		if err != nil {
 			Fail(err.Error())
 		}
-		vmi := utils.VirtualMachineImportCr(vmID, namespace, invalidSecret.Name, f.NsPrefix, true)
+		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, invalidSecret.Name, f.NsPrefix, true)
 		test.prepareVm(vmID)
 
 		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
@@ -150,7 +150,7 @@ var _ = Describe("VM import", func() {
 
 	It("should fail for non-existing VM ID", func() {
 		vmID := "does-not-exist"
-		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 
 		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
@@ -160,7 +160,7 @@ var _ = Describe("VM import", func() {
 
 	It("should fail for missing specified external mapping", func() {
 		vmID := vms.MissingExternalResourceMappingVmID
-		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 		vmi.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{Name: "does-not-exist", Namespace: &namespace}
 
 		test.prepareVm(vmID)
@@ -173,7 +173,7 @@ var _ = Describe("VM import", func() {
 
 	It("should be stuck when source VM does not shut down", func() {
 		vmID := vms.BasicVmID
-		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 
 		vmXML := f.LoadTemplate("vms/status-template.xml", map[string]string{"@VMID": vmID, "@VMSTATUS": "up"})
 		actionXML := "<action/>"
@@ -217,7 +217,7 @@ var _ = Describe("VM import", func() {
 		f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(configMap)
 		defer test.cleanUpConfigMap()
 
-		vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 		vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
 			NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
 				{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
@@ -233,7 +233,7 @@ var _ = Describe("VM import", func() {
 	It("should fail when targetVMName is too long", func() {
 		vmID := vms.BasicVmID
 		vmName := strings.Repeat("x", 64)
-		vmi := utils.VirtualMachineImportCrWithName(vmID, namespace, secret.Name, f.NsPrefix, true, vmName)
+		vmi := utils.VirtualMachineImportCrWithName(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true, vmName)
 		test.prepareVm(vmID)
 
 		_, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)

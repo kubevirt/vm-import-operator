@@ -23,7 +23,7 @@ type resourceMappingTest struct {
 var _ = Describe("VM import ", func() {
 
 	var (
-		f         = fwk.NewFrameworkOrDie("resource-mapping")
+		f         = fwk.NewFrameworkOrDie("resource-mapping", fwk.ProviderOvirt)
 		secret    corev1.Secret
 		namespace string
 		test      = resourceMappingTest{f}
@@ -52,7 +52,7 @@ var _ = Describe("VM import ", func() {
 			}
 			nicsXml := f.LoadFile("nics/one.xml")
 			test.stub(vmID, &nicsXml)
-			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
@@ -92,7 +92,7 @@ var _ = Describe("VM import ", func() {
 			}
 			nicsXml := f.LoadFile("nics/empty.xml")
 			test.stub(vmID, &nicsXml)
-			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
@@ -120,7 +120,7 @@ var _ = Describe("VM import ", func() {
 			}
 			nicsXml := f.LoadFile("nics/one.xml")
 			test.stub(vmID, &nicsXml)
-			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
 			vmi.Spec.Source.Ovirt.Mappings = &internalMapping
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)

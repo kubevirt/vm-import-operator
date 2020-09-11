@@ -11,6 +11,24 @@ import (
 
 var _ = Describe("Test VMware rich client", func() {
 
+	It("should fail to create a client if the scheme is invalid", func() {
+		_, err := client.NewRichVMWareClient("invalidUrl", "username", "password", "")
+		Expect(err).ToNot(BeNil())
+	})
+
+	It("should fail to create a client if it can't connect to the host", func() {
+		model := simulator.VPX()
+		_ = model.Create()
+		server := model.Service.NewServer()
+		unreachableApiUrl := server.URL.String()
+		username := server.URL.User.Username()
+		password, _ := server.URL.User.Password()
+		server.Close()
+		model.Remove()
+		_, err := client.NewRichVMWareClient(unreachableApiUrl, username, password, "")
+		Expect(err).ToNot(BeNil())
+	})
+
 	DescribeTable("should connect to the host", func(model *simulator.Model) {
 		_ = model.Create()
 		server := model.Service.NewServer()
@@ -45,6 +63,23 @@ var _ = Describe("Test VMware rich client", func() {
 		Entry("ESXi", simulator.ESX()),
 	)
 
+	DescribeTable("should return an error when a VM is not found by ID", func(model *simulator.Model) {
+		_ = model.Create()
+		server := model.Service.NewServer()
+		defer model.Remove()
+		defer server.Close()
+		richClient, err := createRichClient(server)
+		Expect(err).To(BeNil())
+		uuid := "invalidUuid"
+
+		_, err = richClient.GetVM(&uuid, nil, nil, nil)
+		Expect(err).ToNot(BeNil())
+		Expect(err.Error()).To(Equal("vm 'invalidUuid' not found"))
+	},
+		Entry("vCenter", simulator.VPX()),
+		Entry("ESXi", simulator.ESX()),
+	)
+
 	DescribeTable("should retrieve a VM by name", func(model *simulator.Model) {
 		_ = model.Create()
 		server := model.Service.NewServer()
@@ -65,6 +100,23 @@ var _ = Describe("Test VMware rich client", func() {
 		Entry("ESXi", simulator.ESX()),
 	)
 
+	DescribeTable("should return an error when a VM is not found by name", func(model *simulator.Model) {
+		_ = model.Create()
+		server := model.Service.NewServer()
+		defer model.Remove()
+		defer server.Close()
+		richClient, err := createRichClient(server)
+		Expect(err).To(BeNil())
+		name := "invalidName"
+
+		_, err = richClient.GetVM(nil, &name, nil, nil)
+		Expect(err).ToNot(BeNil())
+		Expect(err.Error()).To(Equal("vm 'invalidName' not found"))
+	},
+		Entry("vCenter", simulator.VPX()),
+		Entry("ESXi", simulator.ESX()),
+	)
+
 	DescribeTable("should power off and on a VM by ID", func(model *simulator.Model) {
 		_ = model.Create()
 		server := model.Service.NewServer()
@@ -72,12 +124,12 @@ var _ = Describe("Test VMware rich client", func() {
 		defer server.Close()
 		richClient, err := createRichClient(server)
 		Expect(err).To(BeNil())
-		_, uuid := getVMIdentifiers()
+		moRef, _ := getVMIdentifiers()
 
-		err = richClient.StopVM(uuid)
+		err = richClient.StopVM(moRef)
 		Expect(err).To(BeNil())
 
-		err = richClient.StartVM(uuid)
+		err = richClient.StartVM(moRef)
 		Expect(err).To(BeNil())
 	},
 		Entry("vCenter", simulator.VPX()),
@@ -91,12 +143,12 @@ var _ = Describe("Test VMware rich client", func() {
 		defer server.Close()
 		richClient, err := createRichClient(server)
 		Expect(err).To(BeNil())
-		_, uuid := getVMIdentifiers()
+		moRef, _ := getVMIdentifiers()
 
-		err = richClient.StopVM(uuid)
+		err = richClient.StopVM(moRef)
 		Expect(err).To(BeNil())
 
-		err = richClient.StopVM(uuid)
+		err = richClient.StopVM(moRef)
 		Expect(err).To(BeNil())
 	},
 		Entry("vCenter", simulator.VPX()),
@@ -110,12 +162,12 @@ var _ = Describe("Test VMware rich client", func() {
 		defer server.Close()
 		richClient, err := createRichClient(server)
 		Expect(err).To(BeNil())
-		_, uuid := getVMIdentifiers()
+		moRef, _ := getVMIdentifiers()
 
-		err = richClient.StartVM(uuid)
+		err = richClient.StartVM(moRef)
 		Expect(err).To(BeNil())
 
-		err = richClient.StartVM(uuid)
+		err = richClient.StartVM(moRef)
 		Expect(err).To(BeNil())
 	},
 		Entry("vCenter", simulator.VPX()),

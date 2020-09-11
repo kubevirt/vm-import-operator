@@ -19,7 +19,7 @@ type networkValidationTest struct {
 
 var _ = Describe("VM network validation ", func() {
 	var (
-		f          = fwk.NewFrameworkOrDie("network-validation")
+		f          = fwk.NewFrameworkOrDie("network-validation", fwk.ProviderOvirt)
 		secretName string
 		test       = networkValidationTest{framework: f}
 	)
@@ -59,7 +59,7 @@ var _ = Describe("VM network validation ", func() {
 
 func (t *networkValidationTest) prepareImport(vmID string, secretName string) *v2vv1.VirtualMachineImport {
 	namespace := t.framework.Namespace.Name
-	vmi := utils.VirtualMachineImportCr(vmID, namespace, secretName, t.framework.NsPrefix, true)
+	vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secretName, t.framework.NsPrefix, true)
 	vmi.Spec.Source.Ovirt.Mappings = &v2vv1.OvirtMappings{
 		NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
 			{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},

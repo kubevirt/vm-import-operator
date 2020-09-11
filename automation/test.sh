@@ -29,6 +29,7 @@ export PATH=$PATH:/usr/local/go/bin
 export KUBEVIRT_PROVIDER=$TARGET
 export KUBEVIRT_WITH_CNAO=true
 export IMAGEIO_NAMESPACE=${IMAGEIO_NAMESPACE:-'cdi'}
+export VCSIM_NAMESPACE=${VCSIM_NAMESPACE:-'cdi'}
 
 make cluster-down
 make cluster-up

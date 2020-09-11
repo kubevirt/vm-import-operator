@@ -1,7 +1,9 @@
 package framework
 
-import (
+import
+(
 	ovirtenv "github.com/kubevirt/vm-import-operator/tests/env/ovirt"
+	"github.com/kubevirt/vm-import-operator/tests/env/vmware"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,6 +46,35 @@ func (f *Framework) CreateOvirtSecretInNamespace(environment ovirtenv.Environmen
 	created, err := f.K8sClient.CoreV1().Secrets(namespace).Create(&secret)
 	if err != nil {
 		return corev1.Secret{}, err
+	}
+	return *created, nil
+}
+
+func (f *Framework) CreateVmwareSecretInNamespace(namespace string) (corev1.Secret, error) {
+	return f.CreateVmwareSecret(*vmware.NewVcsimEnvironment(f.VcsimInstallNamespace), namespace)
+}
+
+func (f *Framework) CreateVmwareSecret(env vmware.Environment, namespace string) (corev1.Secret, error) {
+	secretData := make(map[string]string)
+	secretData["apiUrl"] = env.ApiURL
+	secretData["username"] = env.Username
+	secretData["password"] = env.Password
+	secretData["thumbprint"] = env.Thumbprint
+
+	marshalled, err := yaml.Marshal(secretData)
+	if err != nil {
+		return corev1.Secret{}, err
+	}
+	secret := corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: f.NsPrefix,
+			Namespace:    namespace,
+		},
+		StringData: map[string]string{"vmware": string(marshalled)},
+	}
+	created, err := f.K8sClient.CoreV1().Secrets(namespace).Create(&secret)
+	if err != nil {
+		return corev1.Secret{}, nil
 	}
 	return *created, nil
 }

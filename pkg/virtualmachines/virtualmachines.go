@@ -2,7 +2,6 @@ package virtualmachines
 
 import (
 	"context"
-	"fmt"
 
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
@@ -34,7 +33,7 @@ func (m *Manager) FindFor(vmiCrName types.NamespacedName) (*kubevirtv1.VirtualMa
 	}
 
 	if instance.Status.TargetVMName == "" {
-		return nil, fmt.Errorf("Virtual machine can't be found because it wasn't created, yet")
+		return nil, nil
 	}
 
 	vm := &kubevirtv1.VirtualMachine{}
@@ -51,8 +50,10 @@ func (m *Manager) DeleteFor(vmiCrName types.NamespacedName) error {
 	if err != nil {
 		return err
 	}
-	if err := m.client.Delete(context.TODO(), vm); err != nil {
-		return err
+	if vm != nil {
+		if err := m.client.Delete(context.TODO(), vm); err != nil {
+			return err
+		}
 	}
 	return nil
 }

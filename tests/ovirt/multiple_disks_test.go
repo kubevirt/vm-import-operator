@@ -20,7 +20,7 @@ type multipleDisksTest struct {
 
 var _ = Describe("VM import ", func() {
 	var (
-		f         = fwk.NewFrameworkOrDie("multiple-disks")
+		f         = fwk.NewFrameworkOrDie("multiple-disks", fwk.ProviderOvirt)
 		secret    corev1.Secret
 		namespace string
 		test      = multipleDisksTest{f}
@@ -38,7 +38,7 @@ var _ = Describe("VM import ", func() {
 	Context("for VM with two disks", func() {
 		It("should create started VM", func() {
 			vmID := vms.TwoDisksVmID
-			vmi := utils.VirtualMachineImportCr(vmID, namespace, secret.Name, f.NsPrefix, tests.TrueVar)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, tests.TrueVar)
 			vmi.Spec.StartVM = &tests.TrueVar
 			test.stub(vmID)
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)

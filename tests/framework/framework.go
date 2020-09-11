@@ -32,13 +32,16 @@ import (
 
 const (
 	nsCreateTime = 60 * time.Second
-	nsDeleteTime = 5 * time.Minute
+	nsDeleteTime = 10 * time.Minute
 	//NsPrefixLabel provides a virtual machine import prefix label to identify the test namespace
 	NsPrefixLabel = "vm-import-e2e"
+	ProviderOvirt = "ovirt"
+	ProviderVmware = "vmware"
 )
 
 // run-time flags
 var (
+	provider                 *string
 	kubectlPath              *string
 	kubeConfig               *string
 	master                   *string
@@ -47,6 +50,7 @@ var (
 	defaultStorageClass      *string
 	nfsStorageClass          *string
 	imageioInstallNamespace  *string
+	vcsimInstallNamespace    *string
 )
 
 // This package is based on https://github.com/kubevirt/containerized-data-importer/blob/master/tests/framework/framework.go
@@ -88,12 +92,18 @@ type Framework struct {
 
 	// ImageioInstallNamespace namespace where ImageIO and FakeOvirt are installed
 	ImageioInstallNamespace string
+
+	// VcsimInstallNamespace namespace where the vcsim container is installed
+	VcsimInstallNamespace string
+
+	Provider string
 }
 
 // initialize run-time flags
 func init() {
 	// Make sure that go test flags are registered when the framework is created
 	testing.Init()
+	provider = flag.String("provider", "", "The provider to test (ovirt/vmware)")
 	kubectlPath = flag.String("kubectl-path", "kubectl", "The path to the kubectl binary")
 	kubeConfig = flag.String("kubeconfig", "/var/run/kubernetes/admin.kubeconfig", "The absolute path to the kubeconfig file")
 	master = flag.String("master", "", "master url:port")
@@ -102,12 +112,13 @@ func init() {
 	defaultStorageClass = flag.String("default-sc", "local", "Set the name of the default storage class")
 	nfsStorageClass = flag.String("nfs-sc", "nfs", "Set the name of a NFS-based storage class")
 	imageioInstallNamespace = flag.String("imageio-namespace", "cdi", "Set the namespace ImageIO and FakeOvirt are installed in")
+	vcsimInstallNamespace = flag.String("vcsim-namespace", "cdi", "Set the namespace the vcsim container is installed in")
 }
 
 // NewFrameworkOrDie calls NewFramework and handles errors by calling Fail. Config is optional, but
 // if passed there can only be one.
-func NewFrameworkOrDie(prefix string) *Framework {
-	f, err := NewFramework(prefix)
+func NewFrameworkOrDie(prefix, provider string) *Framework {
+	f, err := NewFramework(prefix, provider)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s", err)
 		ginkgo.Fail(fmt.Sprintf("failed to create test framework: %v", err))
@@ -117,9 +128,10 @@ func NewFrameworkOrDie(prefix string) *Framework {
 
 // NewFramework makes a new framework and sets up the global BeforeEach/AfterEach's.
 // Test run-time flags are parsed and added to the Framework struct.
-func NewFramework(prefix string) (*Framework, error) {
+func NewFramework(prefix, provider string) (*Framework, error) {
 	f := &Framework{
 		NsPrefix: prefix,
+		Provider: provider,
 	}
 
 	// handle run-time flags
@@ -133,14 +145,20 @@ func NewFramework(prefix string) (*Framework, error) {
 	f.KubeVirtInstallNamespace = *kubeVirtInstallNamespace
 	f.DefaultStorageClass = *defaultStorageClass
 	f.NfsStorageClass = *nfsStorageClass
-	f.ImageioInstallNamespace = *imageioInstallNamespace
-	ovirtClient := sclient.NewInsecureFakeOvirtClient("https://localhost:12346")
-	f.OvirtStubbingClient = &ovirtClient
-	content, err := ioutil.ReadFile(*ovirtCAPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "ERROR, cannot read oVirt CA file")
+
+	switch provider {
+	case ProviderOvirt:
+		f.ImageioInstallNamespace = *imageioInstallNamespace
+		ovirtClient := sclient.NewInsecureFakeOvirtClient("https://localhost:12346")
+		f.OvirtStubbingClient = &ovirtClient
+		content, err := ioutil.ReadFile(*ovirtCAPath)
+		if err != nil {
+			return nil, errors.Wrap(err, "ERROR, cannot read oVirt CA file")
+		}
+		f.OVirtCA = string(content)
+	case ProviderVmware:
+		f.VcsimInstallNamespace = *vcsimInstallNamespace
 	}
-	f.OVirtCA = string(content)
 
 	restConfig, err := f.LoadConfig()
 	if err != nil {
@@ -188,8 +206,10 @@ func (f *Framework) BeforeEach() {
 	f.Namespace = ns
 	f.AddNamespaceToDelete(ns)
 
-	err = f.OvirtStubbingClient.Reset("static-sso,static-namespace,static-transfers")
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	if f.Provider == ProviderOvirt {
+		err = f.OvirtStubbingClient.Reset("static-sso,static-namespace,static-transfers")
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	}
 }
 
 // AfterEach provides a set of operations to run after each test
