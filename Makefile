@@ -14,7 +14,8 @@ IMAGE_REGISTRY ?= quay.io/$(QUAY_USER)
 IMAGE_TAG ?= latest
 OPERATOR_IMAGE ?= vm-import-operator
 CONTROLLER_IMAGE ?= vm-import-controller
-IMAGEIO_INIT_TAG ?= v0.0.1
+VIRTV2V_IMAGE ?= vm-import-virtv2v
+IMAGEIO_INIT_IMAGE ?= imageio-init
 
 # Git parameters
 GITHUB_REPOSITORY ?= https://github.com/kubevirt/vm-import-operator
@@ -105,7 +106,10 @@ controller-build:
 operator-build:
 	docker build -f build/operator/Dockerfile -t $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE):$(IMAGE_TAG) .
 
-docker-build: controller-build operator-build
+virtv2v-build:
+	docker build -f build/virtv2v/Dockerfile -t $(IMAGE_REGISTRY)/$(VIRTV2V_IMAGE):$(IMAGE_TAG) .
+
+docker-build: controller-build operator-build virtv2v-build
 
 controller-push:
 	docker push $(IMAGE_REGISTRY)/$(CONTROLLER_IMAGE):$(IMAGE_TAG)
@@ -113,13 +117,16 @@ controller-push:
 operator-push:
 	docker push $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE):$(IMAGE_TAG)
 
-docker-push: controller-push operator-push
+virtv2v-push:
+	docker push ${IMAGE_REGISTRY}/$(VIRTV2V_IMAGE):$(IMAGE_TAG)
+
+docker-push: controller-push operator-push virtv2v-push
 
 imageio-init-build:
-	docker build -f build/imageio-init/Dockerfile -t $(IMAGE_REGISTRY)/imageio-init:$(IMAGEIO_INIT_TAG) .
+	docker build -f build/imageio-init/Dockerfile -t $(IMAGE_REGISTRY)/$(IMAGEIO_INIT_IMAGE):$(IMAGE_TAG) .
 
 imageio-init-push:
-	docker push $(IMAGE_REGISTRY)/imageio-init:$(IMAGEIO_INIT_TAG)
+	docker push $(IMAGE_REGISTRY)/$(IMAGEIO_INIT_IMAGE):$(IMAGE_TAG)
 
 cluster-up:
 	./cluster/up.sh
