@@ -9,6 +9,7 @@ IMAGE_PULL_POLICY="${IMAGE_PULL_POLICY:-Always}"
 KUBEVIRT_NAMESPACE="${REPLACE_KUBEVIRT_NAMESPACE:-kubevirt-hyperconverged}"
 OPERATOR_IMAGE="${OPERATOR_IMAGE:-vm-import-operator}"
 CONTROLLER_IMAGE="${CONTROLLER_IMAGE:-vm-import-controller}"
+VIRTV2V_IMAGE="${VIRTV2V_IMAGE:-vm-import-virtv2v}"
 CSV_VERSION_REPLACES=${VERSION_REPLACES//v}
 CSV_VERSION=${VERSION//v}
 
@@ -29,6 +30,7 @@ for template in $templates; do
 		-e "s/{{IMAGE_PULL_POLICY}}/$IMAGE_PULL_POLICY/g" \
         -e "s/{{OPERATOR_IMAGE}}/$OPERATOR_IMAGE/g" \
         -e "s/{{CONTROLLER_IMAGE}}/$CONTROLLER_IMAGE/g" \
+        -e "s/{{VIRTV2V_IMAGE}}/$VIRTV2V_IMAGE/g" \
 	$infile > $file
 done
 
@@ -42,6 +44,7 @@ rendered=$( \
 	--operator-version=${IMAGE_TAG} \
 	--operator-image="${CONTAINER_PREFIX}/${OPERATOR_IMAGE}:${IMAGE_TAG}" \
 	--controller-image="${CONTAINER_PREFIX}/${CONTROLLER_IMAGE}:${IMAGE_TAG}" \
+  --virtv2v-image="${CONTAINER_PREFIX}/${VIRTV2V_IMAGE}:${IMAGE_TAG}" \
 	--image-pull-policy=${IMAGE_PULL_POLICY} \
 )
 if [[ ! -z "$rendered" ]]; then

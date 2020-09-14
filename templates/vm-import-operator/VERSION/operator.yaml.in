@@ -201,6 +201,8 @@ spec:
               value: {{IMAGE_TAG}}
             - name: CONTROLLER_IMAGE
               value: {{CONTAINER_PREFIX}}/{{CONTROLLER_IMAGE}}:{{IMAGE_TAG}}
+            - name: VIRTV2V_IMAGE
+              value: {{CONTAINER_PREFIX}}/{{VIRTV2V_IMAGE}}:{{IMAGE_TAG}}
             - name: PULL_POLICY
               value: {{IMAGE_PULL_POLICY}}
             - name: MONITORING_NAMESPACE
