@@ -252,7 +252,13 @@ func (r *VmwareMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.Da
 			},
 			Spec: cdiv1.DataVolumeSpec{
 				Source: cdiv1.DataVolumeSource{
-					Blank: &cdiv1.DataVolumeBlankImage{},
+					VDDK: &cdiv1.DataVolumeSourceVDDK{
+						URL:         r.credentials.URL,
+						UUID:        r.vmProperties.Config.Uuid,
+						BackingFile: disk.backingFileName,
+						Thumbprint:  r.credentials.Thumbprint,
+						SecretRef:   r.credentials.SecretName,
+					},
 				},
 				PVC: &corev1.PersistentVolumeClaimSpec{
 					AccessModes: []corev1.PersistentVolumeAccessMode{
