@@ -310,7 +310,7 @@ github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8
 github.com/kelseyhightower/envconfig
 # github.com/konsorten/go-windows-terminal-sequences v1.0.2
 github.com/konsorten/go-windows-terminal-sequences
-# github.com/kubevirt/controller-lifecycle-operator-sdk v0.0.5
+# github.com/kubevirt/controller-lifecycle-operator-sdk v0.0.6
 github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk
 github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/api
 github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/callbacks
