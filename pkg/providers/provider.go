@@ -3,6 +3,7 @@ package provider
 import (
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	oapiv1 "github.com/openshift/api/template/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
@@ -71,5 +72,12 @@ type DataVolumesManager interface {
 // VirtualMachineManager defines operations on datavolumes
 type VirtualMachineManager interface {
 	FindFor(types.NamespacedName) (*kubevirtv1.VirtualMachine, error)
+	DeleteFor(types.NamespacedName) error
+}
+
+// JobsManager defines operations on Jobs
+type JobsManager interface {
+	FindFor(types.NamespacedName) (*batchv1.Job, error)
+	CreateFor(*batchv1.Job, types.NamespacedName) error
 	DeleteFor(types.NamespacedName) error
 }
