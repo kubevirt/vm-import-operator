@@ -127,7 +127,7 @@ func CreateDeployment(name string, namespace string, selectorMatchMap map[string
 	if infraNodePlacement != nil {
 		deployment.Spec.Template.Spec.NodeSelector = infraNodePlacement.NodeSelector
 		deployment.Spec.Template.Spec.Tolerations = infraNodePlacement.Tolerations
-		deployment.Spec.Template.Spec.Affinity = &infraNodePlacement.Affinity
+		deployment.Spec.Template.Spec.Affinity = infraNodePlacement.Affinity
 	}
 	if serviceAccount != "" {
 		deployment.Spec.Template.Spec.ServiceAccountName = serviceAccount
