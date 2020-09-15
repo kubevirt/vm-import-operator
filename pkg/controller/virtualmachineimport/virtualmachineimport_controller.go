@@ -3,7 +3,6 @@ package virtualmachineimport
 import (
 	"context"
 	"encoding/json"
-	"encoding/xml"
 	"errors"
 	"fmt"
 	"os"
@@ -19,13 +18,11 @@ import (
 
 	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 
-	"github.com/kubevirt/vm-import-operator/pkg/metrics"
-	libvirtxml "libvirt.org/libvirt-go-xml"
-
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	"github.com/kubevirt/vm-import-operator/pkg/mappings"
+	"github.com/kubevirt/vm-import-operator/pkg/metrics"
 	"github.com/kubevirt/vm-import-operator/pkg/ownerreferences"
 	provider "github.com/kubevirt/vm-import-operator/pkg/providers"
 	ovirtprovider "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt"
@@ -52,16 +49,14 @@ import (
 )
 
 const (
-	AnnAPIGroup          = "vmimport.v2v.kubevirt.io"
-	sourceVMInitialState = AnnAPIGroup + "/source-vm-initial-state"
+	annAPIGroup          = "vmimport.v2v.kubevirt.io"
+	sourceVMInitialState = annAPIGroup + "/source-vm-initial-state"
 	// AnnCurrentProgress is annotations storing current progress of the vm import
-	AnnCurrentProgress = AnnAPIGroup + "/progress"
+	AnnCurrentProgress = annAPIGroup + "/progress"
 	// AnnPropagate is annotation defining which values to propagate
-	AnnPropagate = AnnAPIGroup + "/propagate-annotations"
+	AnnPropagate = annAPIGroup + "/propagate-annotations"
 	// TrackingLabel is a label used to track related entities.
-	TrackingLabel = AnnAPIGroup + "/tracker"
-	// VMLabel is a label used to track resources created for a VM
-	VMLabel = AnnAPIGroup + "/vm"
+	TrackingLabel = annAPIGroup + "/tracker"
 	// constants
 	progressStart           = "0"
 	progressCreatingVM      = "5"
@@ -75,7 +70,6 @@ const (
 	requeueAfterValidationFailureTime = 5 * time.Second
 	podCrashLoopBackOff               = "CrashLoopBackOff"
 	importPodName                     = "importer"
-	virtV2vJobName                    = "virt-v2v"
 
 	// EventImportScheduled is emitted when import scheduled
 	EventImportScheduled = "ImportScheduled"
@@ -102,7 +96,6 @@ var (
 	// importPodRestartTolerance define how many restart of the import pod are tolerated before
 	// we end the import as failed, by default it's 3.
 	importPodRestartTolerance, _ = strconv.Atoi(os.Getenv("IMPORT_POD_RESTART_TOLERANCE"))
-	virtV2vImage                 = os.Getenv("VIRTV2V_IMAGE")
 )
 
 /**
@@ -322,7 +315,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		}
 	}
 
-	if shouldConvertGuest(instance) {
+	if shouldConvertGuest(provider, instance) {
 		done, err := r.convertGuest(provider, instance, vmName)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -408,35 +401,16 @@ func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider,
 		return false, err
 	}
 
-	configMap, err := r.findLibvirtDomainConfigMap(vmName)
+	job, err := provider.GetGuestConversionJob()
 	if err != nil {
 		return false, err
 	}
-	if configMap == nil {
-		configMap, err = r.makeLibvirtDomainConfigMap(instance, vmSpec)
-		if err != nil {
-			return false, err
-		}
-	}
-
-	job, err := r.findGuestConversionJob(vmName)
-	if err != nil {
-		return false, err
-	}
-	// the job doesn't exist, so create it
 	if job == nil {
-		job = r.makeGuestConversionJobSpec(vmSpec)
-		// Set VirtualMachineImport instance as the owner and controller so it'll be cleaned up
-		// when the instance is removed.
-		if err := controllerutil.SetControllerReference(instance, job, r.scheme); err != nil {
-			return false, err
-		}
-		err := r.client.Create(context.TODO(), job)
+		job, err = provider.LaunchGuestConversionJob(vmSpec)
 		if err != nil {
 			return false, err
 		}
-
-		processingCond := conditions.NewProcessingCondition(string(v2vv1.ConvertingGuest), "Running virt-v2v", corev1.ConditionTrue)
+		processingCond := conditions.NewProcessingCondition(string(v2vv1.ConvertingGuest), fmt.Sprintf("Running virt-v2v job %s", job.Name), corev1.ConditionTrue)
 		err = r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, processingCond)
 		if err != nil {
 			return false, err
@@ -453,7 +427,7 @@ func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider,
 	}
 
 	if job.Status.Failed > 0 {
-		err := r.endGuestConversionAsFailed(provider, instance, "virt-v2v job failed")
+		err := r.endGuestConversionAsFailed(provider, instance, fmt.Sprintf("virt-v2v job %s failed", job.Name))
 		if err != nil {
 			return false, err
 		}
@@ -461,211 +435,6 @@ func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider,
 	}
 
 	return job.Status.Succeeded > 0, nil
-}
-
-// findGuestConversionJob finds the guest conversion job for a given VM, returning nil if it can't be found.
-func (r *ReconcileVirtualMachineImport) findGuestConversionJob(vmName types.NamespacedName) (*batchv1.Job, error) {
-	jobList := &batchv1.JobList{}
-	matchingLabels := client.MatchingLabels(map[string]string{VMLabel: vmName.Name})
-	err := r.client.List(context.TODO(), jobList, matchingLabels)
-	if err != nil {
-		return nil, err
-	}
-	if len(jobList.Items) > 0 {
-		return &jobList.Items[0], nil
-	}
-	return nil, nil
-}
-
-func (r *ReconcileVirtualMachineImport) makeGuestConversionJobSpec(vmSpec *kubevirtv1.VirtualMachine) *batchv1.Job {
-	// Only ever run the guest conversion job once per VM
-	completions := int32(1)
-	parallelism := int32(1)
-	backoffLimit := int32(0)
-
-	volumes, volumeMounts := makeJobVolumeMounts(vmSpec)
-
-	return &batchv1.Job{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Job",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: virtV2vJobName + "-",
-			Namespace:    vmSpec.Namespace,
-			Labels: map[string]string{
-				VMLabel: vmSpec.Name,
-			},
-		},
-		Spec: batchv1.JobSpec{
-			Completions:  &completions,
-			Parallelism:  &parallelism,
-			BackoffLimit: &backoffLimit,
-			Template: v1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: virtV2vJobName + "-",
-					Namespace:    vmSpec.Namespace,
-				},
-				Spec: v1.PodSpec{
-					RestartPolicy: v1.RestartPolicyNever,
-					Containers: []v1.Container{
-						{
-							Name:            virtV2vJobName,
-							Image:           virtV2vImage,
-							ImagePullPolicy: v1.PullIfNotPresent,
-							VolumeMounts:    volumeMounts,
-						},
-					},
-					Volumes: volumes,
-				},
-			},
-		},
-		Status: batchv1.JobStatus{},
-	}
-}
-
-func makeJobVolumeMounts(vmSpec *kubevirtv1.VirtualMachine) ([]v1.Volume, []v1.VolumeMount) {
-	volumes := make([]v1.Volume, 0)
-	volumeMounts := make([]v1.VolumeMount, 0)
-	// add volumes and mounts for each of the VM's disks.
-	// the virt-v2v pod expects to see the disks mounted at /mnt/disks/diskX
-	for i, dataVolume := range vmSpec.Spec.Template.Spec.Volumes {
-		vol := v1.Volume{
-			Name: dataVolume.DataVolume.Name,
-			VolumeSource: v1.VolumeSource{
-				PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
-					ClaimName: dataVolume.DataVolume.Name,
-					ReadOnly:  false,
-				},
-			},
-		}
-		volumes = append(volumes, vol)
-
-		volMount := v1.VolumeMount{
-			Name:      dataVolume.DataVolume.Name,
-			MountPath: fmt.Sprintf("/mnt/disks/disk%v", i),
-		}
-		volumeMounts = append(volumeMounts, volMount)
-	}
-
-	// add volume and mount for the libvirt domain xml config map.
-	// the virt-v2v pod expects to see the libvirt xml at /mnt/v2v/input.xml
-	volumes = append(volumes, v1.Volume{
-		Name: vmSpec.Name,
-		VolumeSource: v1.VolumeSource{
-			ConfigMap: &v1.ConfigMapVolumeSource{
-				LocalObjectReference: v1.LocalObjectReference{
-					Name: vmSpec.Name,
-				},
-			},
-		},
-	})
-	volumeMounts = append(volumeMounts, v1.VolumeMount{
-		Name:      vmSpec.Name,
-		MountPath: "/mnt/v2v",
-	})
-	return volumes, volumeMounts
-}
-
-// findLibvirtDomainConfigMap finds the libvirt domain xml configmap for a given VM, returning nil if it can't be found.
-func (r *ReconcileVirtualMachineImport) findLibvirtDomainConfigMap(vmName types.NamespacedName) (*v1.ConfigMap, error) {
-	configMapList := &v1.ConfigMapList{}
-	matchingLabels := client.MatchingLabels(map[string]string{VMLabel: vmName.Name})
-	err := r.client.List(context.TODO(), configMapList, matchingLabels)
-	if err != nil {
-		return nil, err
-	}
-	if len(configMapList.Items) > 0 {
-		return &configMapList.Items[0], nil
-	}
-	return nil, nil
-}
-
-// makeLibvirtDomainConfigMap creates a libvirt domain xml configmap for a VM to be used during guest conversion
-func (r *ReconcileVirtualMachineImport) makeLibvirtDomainConfigMap(instance *v2vv1.VirtualMachineImport, vmSpec *kubevirtv1.VirtualMachine) (*v1.ConfigMap, error) {
-	domain := r.makeLibvirtDomain(vmSpec)
-	domxml, err := xml.Marshal(domain)
-	if err != nil {
-		return nil, err
-	}
-	domainXMLConfigMap := &v1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-libvirt-domain-", vmSpec.Name),
-			Namespace:    vmSpec.Namespace,
-			Labels: map[string]string{
-				VMLabel: vmSpec.Name,
-			},
-		},
-		BinaryData: map[string][]byte{
-			"input.xml": domxml,
-		},
-	}
-	err = controllerutil.SetOwnerReference(instance, domainXMLConfigMap, r.scheme)
-	if err != nil {
-		return nil, err
-	}
-	err = r.client.Create(context.TODO(), domainXMLConfigMap)
-	if err != nil {
-		return nil, err
-	}
-	return domainXMLConfigMap, nil
-}
-
-// makeLibvirtDomain makes a minimal libvirt domain for a VM to be used by the guest conversion job
-func (r *ReconcileVirtualMachineImport) makeLibvirtDomain(vmSpec *kubevirtv1.VirtualMachine) *libvirtxml.Domain {
-	// virt-v2v needs a very minimal libvirt domain XML file to be provided
-	// with the locations of each of the disks on the VM that is to be converted.
-	libvirtDisks := make([]libvirtxml.DomainDisk, 0)
-	for i := range vmSpec.Spec.Template.Spec.Volumes {
-		libvirtDisk := libvirtxml.DomainDisk{
-			Device: "disk",
-			Driver: &libvirtxml.DomainDiskDriver{
-				Name: "qemu",
-				Type: "raw",
-			},
-			Source: &libvirtxml.DomainDiskSource{
-				File: &libvirtxml.DomainDiskSourceFile{
-					// the location where the disk images will be found on
-					// the virt-v2v pod. See also makeJobVolumeMounts.
-					File: fmt.Sprintf("/mnt/disks/disk%v/disk.img", i),
-				},
-			},
-			Target: &libvirtxml.DomainDiskTarget{
-				Dev: "hd" + string(rune('a'+i)),
-				Bus: "virtio",
-			},
-		}
-		libvirtDisks = append(libvirtDisks, libvirtDisk)
-	}
-
-	// generate libvirt domain xml
-	domain := vmSpec.Spec.Template.Spec.Domain
-	return &libvirtxml.Domain{
-		Type: "kvm",
-		Name: vmSpec.Name,
-		Memory: &libvirtxml.DomainMemory{
-			Value: uint(domain.Resources.Requests.Memory().Value()),
-		},
-		CPU: &libvirtxml.DomainCPU{
-			Topology: &libvirtxml.DomainCPUTopology{
-				Sockets: int(domain.CPU.Sockets),
-				Cores:   int(domain.CPU.Cores),
-			},
-		},
-		OS: &libvirtxml.DomainOS{
-			Type: &libvirtxml.DomainOSType{
-				Type: "hvm",
-			},
-			BootDevices: []libvirtxml.DomainBootDevice{
-				{
-					Dev: "hd",
-				},
-			},
-		},
-		Devices: &libvirtxml.DomainDeviceList{
-			Disks: libvirtDisks,
-		},
-	}
 }
 
 func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, instance *v2vv1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName) (bool, error) {
@@ -1058,8 +827,8 @@ func shouldStartVM(instance *v2vv1.VirtualMachineImport) bool {
 	return instance.Spec.StartVM != nil && *instance.Spec.StartVM && conditions.HasSucceededConditionOfReason(instance.Status.Conditions, v2vv1.VirtualMachineReady)
 }
 
-func shouldConvertGuest(instance *v2vv1.VirtualMachineImport) bool {
-	return instance.Spec.Source.Vmware != nil && !conditions.HasSucceededConditionOfReason(instance.Status.Conditions, v2vv1.VirtualMachineReady, v2vv1.VirtualMachineRunning)
+func shouldConvertGuest(provider provider.Provider, instance *v2vv1.VirtualMachineImport) bool {
+	return provider.NeedsGuestConversion() && !conditions.HasSucceededConditionOfReason(instance.Status.Conditions, v2vv1.VirtualMachineReady, v2vv1.VirtualMachineRunning)
 }
 
 func shouldImportDisks(instance *v2vv1.VirtualMachineImport) bool {

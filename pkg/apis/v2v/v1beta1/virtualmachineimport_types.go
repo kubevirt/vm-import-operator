@@ -224,7 +224,7 @@ const (
 	// CopyingDisks represents the creation of data volumes based on source VM disks
 	CopyingDisks ProcessingConditionReason = "CopyingDisks"
 
-	// ConvertingGuest
+	// ConvertingGuest represents the guest conversion process
 	ConvertingGuest ProcessingConditionReason = "ConvertingGuest"
 
 	// ProcessingCompleted represents the successful import processing

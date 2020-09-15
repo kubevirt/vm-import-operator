@@ -3,7 +3,6 @@ package virtualmachineimport
 import (
 	"context"
 	"fmt"
-
 	batchv1 "k8s.io/api/batch/v1"
 
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
@@ -41,25 +40,29 @@ import (
 )
 
 var (
-	get                func(context.Context, client.ObjectKey, runtime.Object) error
-	pinit              func(*corev1.Secret, *v2vv1.VirtualMachineImport) error
-	loadVM             func(v2vv1.VirtualMachineImportSourceSpec) error
-	getResourceMapping func(types.NamespacedName) (*v2vv1.ResourceMapping, error)
-	validate           func() ([]v2vv1.VirtualMachineImportCondition, error)
-	statusPatch        func(ctx context.Context, obj runtime.Object, patch client.Patch) error
-	getVMStatus        func() (provider.VMStatus, error)
-	findTemplate       func() (*oapiv1.Template, error)
-	processTemplate    func(template *oapiv1.Template, name *string, namespace string) (*kubevirtv1.VirtualMachine, error)
-	create             func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error
-	cleanUp            func() error
-	update             func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error
-	mapDisks           func() (map[string]cdiv1.DataVolume, error)
-	getVM              func(id *string, name *string, cluster *string, clusterID *string) (interface{}, error)
-	stopVM             func(id string) error
-	list               func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error
-	getKvConfig        func() kvConfig.KubeVirtConfig
-	getCtrlConfig      func() ctrlConfig.ControllerConfig
+	get                      func(context.Context, client.ObjectKey, runtime.Object) error
+	pinit                    func(*corev1.Secret, *v2vv1.VirtualMachineImport) error
+	loadVM                   func(v2vv1.VirtualMachineImportSourceSpec) error
+	getResourceMapping       func(types.NamespacedName) (*v2vv1.ResourceMapping, error)
+	validate                 func() ([]v2vv1.VirtualMachineImportCondition, error)
+	statusPatch              func(ctx context.Context, obj runtime.Object, patch client.Patch) error
+	getVMStatus              func() (provider.VMStatus, error)
+	findTemplate             func() (*oapiv1.Template, error)
+	processTemplate          func(template *oapiv1.Template, name *string, namespace string) (*kubevirtv1.VirtualMachine, error)
+	create                   func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error
+	cleanUp                  func() error
+	update                   func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error
+	mapDisks                 func() (map[string]cdiv1.DataVolume, error)
+	getVM                    func(id *string, name *string, cluster *string, clusterID *string) (interface{}, error)
+	stopVM                   func(id string) error
+	list                     func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error
+	getKvConfig              func() kvConfig.KubeVirtConfig
+	getCtrlConfig            func() ctrlConfig.ControllerConfig
+	needsGuestConversion     func() bool
+	getGuestConversionJob    func() (*batchv1.Job, error)
+	launchGuestConversionJob func() (*batchv1.Job, error)
 )
+
 var _ = Describe("Reconcile steps", func() {
 	var (
 		reconciler *ReconcileVirtualMachineImport
@@ -121,6 +124,9 @@ var _ = Describe("Reconcile steps", func() {
 		}
 		update = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return nil
+		}
+		needsGuestConversion = func() bool {
+			return false
 		}
 		vmName = types.NamespacedName{Name: "test", Namespace: "default"}
 		rec := record.NewFakeRecorder(2)
@@ -1055,187 +1061,90 @@ var _ = Describe("Reconcile steps", func() {
 
 	Describe("convertGuest step", func() {
 		var (
-			vmName = types.NamespacedName{Name: "test", Namespace: "default"}
+			prov *mockProvider
+			vmName types.NamespacedName
+			job *batchv1.Job
 		)
 
 		BeforeEach(func() {
-			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
-				switch list.(type) {
-				case *corev1.ConfigMapList:
-					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{{}}
-				case *batchv1.JobList:
-					list.(*batchv1.JobList).Items = []batchv1.Job{{}}
-				}
-				return nil
+			prov = &mockProvider{}
+			vmName = types.NamespacedName{Name: "test", Namespace: "default"}
+
+			job = &batchv1.Job{
+				TypeMeta:   v1.TypeMeta{},
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test-job",
+				},
+				Spec:       batchv1.JobSpec{},
+				Status:     batchv1.JobStatus{
+					Conditions: []batchv1.JobCondition{},
+				},
 			}
+
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
-				case *v2vv1.VirtualMachineImport:
-					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{}
-					obj.(*v2vv1.VirtualMachineImport).Annotations = map[string]string{sourceVMInitialState: string(provider.VMStatusDown)}
 				case *kubevirtv1.VirtualMachine:
-					obj.(*kubevirtv1.VirtualMachine).Spec = kubevirtv1.VirtualMachineSpec{
-						Running:     nil,
-						RunStrategy: nil,
-						Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
-							ObjectMeta: v1.ObjectMeta{},
-							Spec: kubevirtv1.VirtualMachineInstanceSpec{
-								Domain: kubevirtv1.DomainSpec{
-									CPU: &kubevirtv1.CPU{},
-									Resources: kubevirtv1.ResourceRequirements{
-										Requests: corev1.ResourceList{},
-									},
-								},
-								Volumes: []kubevirtv1.Volume{},
+					volumes := []kubevirtv1.Volume{}
+					volumes = append(volumes, kubevirtv1.Volume{
+						Name: "test",
+						VolumeSource: kubevirtv1.VolumeSource{
+							DataVolume: &kubevirtv1.DataVolumeSource{
+								Name: "test",
 							},
 						},
-						DataVolumeTemplates: nil,
+					})
+					obj.(*kubevirtv1.VirtualMachine).Spec.Template = &kubevirtv1.VirtualMachineInstanceTemplateSpec{
+						Spec: kubevirtv1.VirtualMachineInstanceSpec{
+							Volumes: volumes,
+						},
 					}
+					refs := []v1.OwnerReference{}
+					isController := true
+					refs = append(refs, v1.OwnerReference{
+						Controller: &isController,
+					})
+					obj.(*kubevirtv1.VirtualMachine).ObjectMeta.OwnerReferences = refs
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{}
+					obj.(*v2vv1.VirtualMachineImport).Annotations = map[string]string{sourceVMInitialState: string(provider.VMStatusUp)}
+				case *batchv1.Job:
+					obj = job
 				}
 				return nil
+			}
+			needsGuestConversion = func() bool {
+				return true
+			}
+			getGuestConversionJob = func() (*batchv1.Job, error) {
+				return nil, nil
+			}
+			launchGuestConversionJob = func() (*batchv1.Job, error) {
+				return job, nil
 			}
 		})
 
-		It("return true if the job succeeded: ", func() {
-			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
-				switch list.(type) {
-				case *corev1.ConfigMapList:
-					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{{}}
-				case *batchv1.JobList:
-					list.(*batchv1.JobList).Items = []batchv1.Job{{
-						Status: batchv1.JobStatus{
-							Active:    0,
-							Succeeded: 1,
-							Failed:    0,
-						},
-					}}
-				}
-				return nil
-			}
-			suceeded, err := reconciler.convertGuest(mock, instance, vmName)
+		It("should return false with no error when the job is active", func() {
+			job.Status.Active = int32(1)
 
-			Expect(suceeded).To(BeTrue())
+			done, err := reconciler.convertGuest(prov, instance, vmName)
 			Expect(err).To(BeNil())
+			Expect(done).To(BeFalse())
 		})
 
-		It("return false with no error if the job failed: ", func() {
-			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
-				switch list.(type) {
-				case *corev1.ConfigMapList:
-					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{{}}
-				case *batchv1.JobList:
-					list.(*batchv1.JobList).Items = []batchv1.Job{{
-						Status: batchv1.JobStatus{
-							Active:    0,
-							Succeeded: 0,
-							Failed:    1,
-						},
-					}}
-				}
-				return nil
-			}
+		It("should return false with no error when the job is failed", func() {
+			job.Status.Failed = int32(1)
 
-			suceeded, err := reconciler.convertGuest(mock, instance, vmName)
-
-			Expect(suceeded).To(BeFalse())
+			done, err := reconciler.convertGuest(prov, instance, vmName)
 			Expect(err).To(BeNil())
+			Expect(done).To(BeFalse())
 		})
 
-		It("return false with no error if the job is still active: ", func() {
-			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
-				switch list.(type) {
-				case *corev1.ConfigMapList:
-					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{{}}
-				case *batchv1.JobList:
-					list.(*batchv1.JobList).Items = []batchv1.Job{{
-						Status: batchv1.JobStatus{
-							Active:    1,
-							Succeeded: 0,
-							Failed:    0,
-						},
-					}}
-				}
-				return nil
-			}
+		It("should return true with no error when the job is successful", func() {
+			job.Status.Succeeded = int32(1)
 
-			suceeded, err := reconciler.convertGuest(mock, instance, vmName)
-
-			Expect(suceeded).To(BeFalse())
+			done, err := reconciler.convertGuest(prov, instance, vmName)
 			Expect(err).To(BeNil())
-		})
-
-		It("should create a job if it doesn't exist", func() {
-			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
-				switch list.(type) {
-				case *corev1.ConfigMapList:
-					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{{}}
-				case *batchv1.JobList:
-					list.(*batchv1.JobList).Items = []batchv1.Job{}
-				}
-				return nil
-			}
-
-			suceeded, err := reconciler.convertGuest(mock, instance, vmName)
-
-			Expect(suceeded).To(BeFalse())
-			Expect(err).To(BeNil())
-		})
-
-		It("should fail if creating a new job fails: ", func() {
-			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
-				switch list.(type) {
-				case *corev1.ConfigMapList:
-					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{{}}
-				case *batchv1.JobList:
-					list.(*batchv1.JobList).Items = []batchv1.Job{}
-				}
-				return nil
-			}
-
-			create = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
-				return fmt.Errorf("Not created")
-			}
-
-			_, err := reconciler.convertGuest(mock, instance, vmName)
-
-			Expect(err.Error()).To(Equal("Not created"))
-		})
-
-		It("should create a libvirtxml configmap if it doesn't exist", func() {
-			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
-				switch list.(type) {
-				case *corev1.ConfigMapList:
-					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{}
-				case *batchv1.JobList:
-					list.(*batchv1.JobList).Items = []batchv1.Job{{}}
-				}
-				return nil
-			}
-
-			suceeded, err := reconciler.convertGuest(mock, instance, vmName)
-
-			Expect(suceeded).To(BeFalse())
-			Expect(err).To(BeNil())
-		})
-
-		It("should fail if creating a new libvirtxml configmap fails: ", func() {
-			list = func(ctx context.Context, list runtime.Object, opts ...rclient.ListOption) error {
-				switch list.(type) {
-				case *corev1.ConfigMapList:
-					list.(*corev1.ConfigMapList).Items = []corev1.ConfigMap{}
-				case *batchv1.JobList:
-					list.(*batchv1.JobList).Items = []batchv1.Job{{}}
-				}
-				return nil
-			}
-
-			create = func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error {
-				return fmt.Errorf("Not created")
-			}
-
-			_, err := reconciler.convertGuest(mock, instance, vmName)
-
-			Expect(err.Error()).To(Equal("Not created"))
+			Expect(done).To(BeTrue())
 		})
 	})
 
@@ -1809,6 +1718,18 @@ func (p *mockProvider) FindTemplate() (*oapiv1.Template, error) {
 // ProcessTemplate implements Provider.ProcessTemplate
 func (p *mockProvider) ProcessTemplate(template *oapiv1.Template, name *string, namespace string) (*kubevirtv1.VirtualMachine, error) {
 	return processTemplate(template, name, namespace)
+}
+
+func (p *mockProvider) NeedsGuestConversion() bool {
+	return needsGuestConversion()
+}
+
+func (p *mockProvider) GetGuestConversionJob() (*batchv1.Job, error) {
+	return getGuestConversionJob()
+}
+
+func (p *mockProvider) LaunchGuestConversionJob(_ *kubevirtv1.VirtualMachine) (*batchv1.Job, error) {
+	return launchGuestConversionJob()
 }
 
 // CreateEmptyVM implements Mapper.CreateEmptyVM

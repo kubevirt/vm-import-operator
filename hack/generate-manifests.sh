@@ -44,7 +44,7 @@ rendered=$( \
 	--operator-version=${IMAGE_TAG} \
 	--operator-image="${CONTAINER_PREFIX}/${OPERATOR_IMAGE}:${IMAGE_TAG}" \
 	--controller-image="${CONTAINER_PREFIX}/${CONTROLLER_IMAGE}:${IMAGE_TAG}" \
-  --virtv2v-image="${CONTAINER_PREFIX}/${VIRTV2V_IMAGE}:${IMAGE_TAG}" \
+	--virtv2v-image="${CONTAINER_PREFIX}/${VIRTV2V_IMAGE}:${IMAGE_TAG}" \
 	--image-pull-policy=${IMAGE_PULL_POLICY} \
 )
 if [[ ! -z "$rendered" ]]; then

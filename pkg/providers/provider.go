@@ -35,6 +35,9 @@ type Provider interface {
 	CleanUp(bool, *v2vv1.VirtualMachineImport, rclient.Client) error
 	FindTemplate() (*oapiv1.Template, error)
 	ProcessTemplate(*oapiv1.Template, *string, string) (*kubevirtv1.VirtualMachine, error)
+	NeedsGuestConversion() bool
+	GetGuestConversionJob() (*batchv1.Job, error)
+	LaunchGuestConversionJob(*kubevirtv1.VirtualMachine) (*batchv1.Job, error)
 }
 
 // Mapper is interface to be used for mapping external VM to kubevirt VM
