@@ -1206,7 +1206,8 @@ func (r *ReconcileVirtualMachineImport) validate(instance *v2vv1.VirtualMachineI
 }
 
 func (r *ReconcileVirtualMachineImport) templateMatchingFailed(errorMessage string, processingCond *v2vv1.VirtualMachineImportCondition, provider provider.Provider, instance *v2vv1.VirtualMachineImport) error {
-	succeededCond := conditions.NewSucceededCondition(string(v2vv1.VMTemplateMatchingFailed), "Couldn't find matching template", corev1.ConditionFalse)
+	message := "Couldn't find matching template. Either change the virtual machine OS type or add a custom template configMap for it, and a common template if there is none. Refer to documentation for more details."
+	succeededCond := conditions.NewSucceededCondition(string(v2vv1.VMTemplateMatchingFailed), message, corev1.ConditionFalse)
 
 	processingCond.Status = corev1.ConditionFalse
 	processingFailedReason := string(v2vv1.ProcessingFailed)
