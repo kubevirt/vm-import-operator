@@ -27,7 +27,7 @@ require (
 	github.com/prometheus/client_golang v1.2.1
 	github.com/spf13/pflag v1.0.5
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
-	github.com/vmware/govmomi v0.23.0
+	github.com/vmware/govmomi v0.23.1
 	github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2 // indirect
 	golang.org/x/tools v0.0.0-20200616195046-dc31b401abb5
 	gopkg.in/yaml.v2 v2.3.0
@@ -35,12 +35,12 @@ require (
 	k8s.io/apiextensions-apiserver v0.18.6
 	k8s.io/apimachinery v0.18.6
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/code-generator v0.17.1
+	k8s.io/code-generator v0.18.6
 	k8s.io/klog v1.0.0
-	k8s.io/kube-openapi v0.0.0-20191107075043-30be4d16710a
+	k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 	k8s.io/utils v0.0.0-20200619165400-6e3d28b6ed19
 	kubevirt.io/client-go v0.26.2
-	kubevirt.io/containerized-data-importer v1.15.0
+	kubevirt.io/containerized-data-importer v1.23.1
 	sigs.k8s.io/controller-runtime v0.6.2
 	sigs.k8s.io/yaml v1.2.0
 )

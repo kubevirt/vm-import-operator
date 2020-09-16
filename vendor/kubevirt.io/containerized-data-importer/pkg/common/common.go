@@ -22,6 +22,8 @@ const (
 
 	// PrometheusLabel provides the label to indicate prometheus metrics are available in the pods.
 	PrometheusLabel = "prometheus.cdi.kubevirt.io"
+	// PrometheusServiceName is the name of the prometheus service created by the operator.
+	PrometheusServiceName = "cdi-prometheus-metrics"
 
 	// ImporterVolumePath provides a constant for the directory where the PV is mounted.
 	ImporterVolumePath = "/data"
@@ -66,6 +68,12 @@ const (
 	InsecureTLSVar = "INSECURE_TLS"
 	// ImporterDiskID provides a constant to capture our env variable "IMPORTER_DISK_ID"
 	ImporterDiskID = "IMPORTER_DISK_ID"
+	// ImporterUUID provides a constant to capture our env variable "IMPORTER_UUID"
+	ImporterUUID = "IMPORTER_UUID"
+	// ImporterBackingFile provides a constant to capture our env variable "IMPORTER_BACKING_FILE"
+	ImporterBackingFile = "IMPORTER_BACKING_FILE"
+	// ImporterThumbprint provides a constant to capture our env variable "IMPORTER_THUMBPRINT"
+	ImporterThumbprint = "IMPORTER_THUMBPRINT"
 
 	// CloningLabelValue provides a constant to use as a label value for pod affinity (controller pkg only)
 	CloningLabelValue = "host-assisted-cloning"
@@ -116,18 +124,23 @@ const (
 	// ScratchSpaceNeededExitCode is the exit code that indicates the importer pod requires scratch space to function properly.
 	ScratchSpaceNeededExitCode = 42
 
+	// ScratchNameSuffix (controller pkg only)
+	ScratchNameSuffix = "scratch"
+
 	// UploadTokenIssuer is the JWT issuer of upload tokens
 	UploadTokenIssuer = "cdi-apiserver"
 
 	// CloneTokenIssuer is the JWT issuer for clone tokens
 	CloneTokenIssuer = "cdi-apiserver"
 
-	// UploadPathSync is the path to POST CDI uploads
-	UploadPathSync = "/v1alpha1/upload"
-
-	// UploadPathAsync is the path to POST CDI uploads in async mode
-	UploadPathAsync = "/v1alpha1/upload-async"
-
 	// QemuSubGid is the gid used as the qemu group in fsGroup
 	QemuSubGid = int64(107)
+
+	// ControllerServiceAccountName is the name of the CDI controller service account
+	ControllerServiceAccountName = "cdi-sa"
+
+	// VddkConfigMap is the name of the ConfigMap with a reference to the VDDK image
+	VddkConfigMap = "v2v-vmware"
+	// VddkConfigDataKey is the name of the ConfigMap key of the VDDK image reference
+	VddkConfigDataKey = "vddk-init-image"
 )

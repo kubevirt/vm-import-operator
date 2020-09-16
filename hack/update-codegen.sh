@@ -34,3 +34,10 @@ bash "${CODEGEN_PKG}"/generate-groups.sh "client" \
   --fake-clientset=false \
   --output-base "$SCRIPT_ROOT/../../../" \
   --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt
+
+bash "${CODEGEN_PKG}"/generate-groups.sh "client" \
+  github.com/kubevirt/vm-import-operator/pkg/generated/cdi kubevirt.io/containerized-data-importer/pkg/apis \
+  core:v1alpha1 \
+  --fake-clientset=false \
+  --output-base "$SCRIPT_ROOT/../../../" \
+  --go-header-file "${SCRIPT_ROOT}"/hack/boilerplate.go.txt

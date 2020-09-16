@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1beta1"
 	cdiclientset "kubevirt.io/containerized-data-importer/pkg/client/clientset/versioned"
 )
 
@@ -28,8 +29,12 @@ const (
 	TinyCoreIsoURL = "http://cdi-file-host.%s/tinyCore.iso"
 	//TinyCoreIsoRegistryURL provides a test url for the tinycore.qcow2 image wrapped in docker container
 	TinyCoreIsoRegistryURL = "docker://cdi-docker-registry-host.%s/tinycoreqcow2"
+	//TinyCoreIsoRegistryProxyURL provides a test url for the tinycore.qcow2 image wrapped in docker container available through rate-limiting proxy
+	TinyCoreIsoRegistryProxyURL = "docker://cdi-file-host.%s:83/tinycoreqcow2"
 	// HTTPSTinyCoreIsoURL provides a test (https) url for the tineyCore iso image
 	HTTPSTinyCoreIsoURL = "https://cdi-file-host.%s/tinyCore.iso"
+	// HTTPSTinyCoreQcow2URL provides a test (https) url for the tineyCore qcow2 image
+	HTTPSTinyCoreQcow2URL = "https://cdi-file-host.%s/tinyCore.qcow2"
 	// TinyCoreQcow2URLRateLimit provides a test url for the tineyCore iso image
 	TinyCoreQcow2URLRateLimit = "http://cdi-file-host.%s:82/tinyCore.qcow2"
 	// InvalidQcowImagesURL provides a test url for invalid qcow images
@@ -40,6 +45,8 @@ const (
 	CirrosURL = "http://cdi-file-host.%s/cirros-qcow2.img"
 	// ImageioURL provides URL of oVirt engine hosting imageio
 	ImageioURL = "https://imageio.%s:12346/ovirt-engine/api"
+	// VcenterURL provides URL of vCenter/ESX simulator
+	VcenterURL = "https://vcenter.%s:8989/sdk"
 )
 
 // CreateDataVolumeFromDefinition is used by tests to create a testable Data Volume
@@ -47,7 +54,7 @@ func CreateDataVolumeFromDefinition(clientSet *cdiclientset.Clientset, namespace
 	var dataVolume *cdiv1.DataVolume
 	err := wait.PollImmediate(dataVolumePollInterval, dataVolumeCreateTime, func() (bool, error) {
 		var err error
-		dataVolume, err = clientSet.CdiV1alpha1().DataVolumes(namespace).Create(def)
+		dataVolume, err = clientSet.CdiV1beta1().DataVolumes(namespace).Create(context.TODO(), def, metav1.CreateOptions{})
 		if err == nil || apierrs.IsAlreadyExists(err) {
 			return true, nil
 		}
@@ -62,7 +69,7 @@ func CreateDataVolumeFromDefinition(clientSet *cdiclientset.Clientset, namespace
 // DeleteDataVolume deletes the DataVolume with the given name
 func DeleteDataVolume(clientSet *cdiclientset.Clientset, namespace, name string) error {
 	return wait.PollImmediate(dataVolumePollInterval, dataVolumeDeleteTime, func() (bool, error) {
-		err := clientSet.CdiV1alpha1().DataVolumes(namespace).Delete(name, nil)
+		err := clientSet.CdiV1beta1().DataVolumes(namespace).Delete(context.TODO(), name, metav1.DeleteOptions{})
 		if err == nil || apierrs.IsNotFound(err) {
 			return true, nil
 		}
@@ -309,6 +316,34 @@ func NewDataVolumeWithRegistryImport(dataVolumeName string, size string, registr
 	}
 }
 
+// NewDataVolumeWithVddkImport initializes a DataVolume struct for importing disks from vCenter/ESX
+func NewDataVolumeWithVddkImport(dataVolumeName string, size string, backingFile string, secretRef string, thumbprint string, httpURL string, uuid string) *cdiv1.DataVolume {
+	return &cdiv1.DataVolume{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: dataVolumeName,
+		},
+		Spec: cdiv1.DataVolumeSpec{
+			Source: cdiv1.DataVolumeSource{
+				VDDK: &cdiv1.DataVolumeSourceVDDK{
+					BackingFile: backingFile,
+					SecretRef:   secretRef,
+					Thumbprint:  thumbprint,
+					URL:         httpURL,
+					UUID:        uuid,
+				},
+			},
+			PVC: &k8sv1.PersistentVolumeClaimSpec{
+				AccessModes: []k8sv1.PersistentVolumeAccessMode{k8sv1.ReadWriteOnce},
+				Resources: k8sv1.ResourceRequirements{
+					Requests: k8sv1.ResourceList{
+						k8sv1.ResourceName(k8sv1.ResourceStorage): resource.MustParse(size),
+					},
+				},
+			},
+		},
+	}
+}
+
 // WaitForDataVolumePhase waits for DV's phase to be in a particular phase (Pending, Bound, or Lost)
 func WaitForDataVolumePhase(clientSet *cdiclientset.Clientset, namespace string, phase cdiv1.DataVolumePhase, dataVolumeName string) error {
 	return WaitForDataVolumePhaseWithTimeout(clientSet, namespace, phase, dataVolumeName, dataVolumePhaseTime)
@@ -317,7 +352,7 @@ func WaitForDataVolumePhase(clientSet *cdiclientset.Clientset, namespace string,
 // WaitForDataVolumePhaseWithTimeout waits for DV's phase to be in a particular phase (Pending, Bound, or Lost) with a specified timeout
 func WaitForDataVolumePhaseWithTimeout(clientSet *cdiclientset.Clientset, namespace string, phase cdiv1.DataVolumePhase, dataVolumeName string, timeout time.Duration) error {
 	err := wait.PollImmediate(dataVolumePollInterval, timeout, func() (bool, error) {
-		dataVolume, err := clientSet.CdiV1alpha1().DataVolumes(namespace).Get(dataVolumeName, metav1.GetOptions{})
+		dataVolume, err := clientSet.CdiV1beta1().DataVolumes(namespace).Get(context.TODO(), dataVolumeName, metav1.GetOptions{})
 		if err != nil || dataVolume.Status.Phase != phase {
 			return false, err
 		}

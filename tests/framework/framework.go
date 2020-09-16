@@ -27,7 +27,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"kubevirt.io/client-go/kubecli"
-	cdi "kubevirt.io/containerized-data-importer/pkg/client/clientset/versioned"
+	cdi "github.com/kubevirt/vm-import-operator/pkg/generated/cdi/clientset/versioned"
 )
 
 const (
