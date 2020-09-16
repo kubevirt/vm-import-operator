@@ -61,14 +61,14 @@ func (m *Manager) CreateFor(job *batchv1.Job, vmiCrName types.NamespacedName) er
 	return m.client.Create(context.TODO(), job)
 }
 
-// DeleteFor removes config map created for vmiCrName
+// DeleteFor removes the Job created for vmiCrName
 func (m *Manager) DeleteFor(vmiCrName types.NamespacedName) error {
-	configMap, err := m.FindFor(vmiCrName)
+	job, err := m.FindFor(vmiCrName)
 	if err != nil {
 		return err
 	}
-	if configMap != nil {
-		return m.client.Delete(context.TODO(), configMap)
+	if job != nil {
+		return m.client.Delete(context.TODO(), job)
 	}
 	return nil
 }
