@@ -1,11 +1,11 @@
 package vmware
 
 import (
-	libOS "os"
 	"encoding/xml"
 	"fmt"
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	"github.com/kubevirt/vm-import-operator/pkg/configmaps"
+	"github.com/kubevirt/vm-import-operator/pkg/guestconversion"
 	"github.com/kubevirt/vm-import-operator/pkg/jobs"
 	oapiv1 "github.com/openshift/api/template/v1"
 	tempclient "github.com/openshift/client-go/template/clientset/versioned/typed/template/v1"
@@ -18,7 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	v1 "kubevirt.io/client-go/api/v1"
-	libvirtxml "libvirt.org/libvirt-go-xml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
@@ -47,11 +46,6 @@ const (
 	keySecretKey    = "secretKey"
 	thumbprintKey   = "thumbprint"
 	vmwareSecretKey = "vmware"
-)
-
-var (
-	virtV2vImage = libOS.Getenv("VIRTV2V_IMAGE")
-	imagePullPolicy = corev1.PullPolicy(libOS.Getenv("IMAGE_PULL_POLICY"))
 )
 
 // VmwareProvider is VMware implementation of the Provider interface to support importing VMs from VMware
@@ -480,7 +474,7 @@ func (r *VmwareProvider) ensureConfigMapIsPresent(vmSpec *v1.VirtualMachine) (*c
 
 func (r *VmwareProvider) createConfigMap(vmSpec *v1.VirtualMachine) (*corev1.ConfigMap, error) {
 	vmiName := r.getNamespacedName()
-	domain := makeLibvirtDomain(vmSpec)
+	domain := guestconversion.MakeLibvirtDomain(vmSpec)
 	domXML, err := xml.Marshal(domain)
 	if err != nil {
 		return nil, err
@@ -517,7 +511,7 @@ func (r *VmwareProvider) ensureGuestConversionJobIsPresent(vmSpec *v1.VirtualMac
 
 func (r *VmwareProvider) createGuestConversionJob(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) (*batchv1.Job, error) {
 	vmiName := r.getNamespacedName()
-	job := makeGuestConversionJobSpec(vmSpec, libvirtConfigMap)
+	job := guestconversion.MakeGuestConversionJobSpec(vmSpec, libvirtConfigMap)
 	job.OwnerReferences = []metav1.OwnerReference{
 		ownerreferences.NewVMImportOwnerReference(r.vmiTypeMeta, r.vmiObjectMeta),
 	}
@@ -526,138 +520,6 @@ func (r *VmwareProvider) createGuestConversionJob(vmSpec *v1.VirtualMachine, lib
 		return nil, err
 	}
 	return job, nil
-}
-
-func makeGuestConversionJobSpec(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) *batchv1.Job {
-	// Only ever run the guest conversion job once per VM
-	completions := int32(1)
-	parallelism := int32(1)
-	backoffLimit := int32(0)
-
-	volumes, volumeMounts := makeJobVolumeMounts(vmSpec, libvirtConfigMap)
-
-	return &batchv1.Job{
-		Spec: batchv1.JobSpec{
-			Completions:  &completions,
-			Parallelism:  &parallelism,
-			BackoffLimit: &backoffLimit,
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					RestartPolicy: corev1.RestartPolicyNever,
-					Containers: []corev1.Container{
-						{
-							Name:            "virt-v2v",
-							Image:           virtV2vImage,
-							VolumeMounts:    volumeMounts,
-							ImagePullPolicy: imagePullPolicy,
-						},
-					},
-					Volumes: volumes,
-				},
-			},
-		},
-		Status: batchv1.JobStatus{},
-	}
-}
-
-func makeJobVolumeMounts(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) ([]corev1.Volume, []corev1.VolumeMount) {
-	volumes := make([]corev1.Volume, 0)
-	volumeMounts := make([]corev1.VolumeMount, 0)
-	// add volumes and mounts for each of the VM's disks.
-	// the virt-v2v pod expects to see the disks mounted at /mnt/disks/diskX
-	for i, dataVolume := range vmSpec.Spec.Template.Spec.Volumes {
-		vol := corev1.Volume{
-			Name: dataVolume.DataVolume.Name,
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: dataVolume.DataVolume.Name,
-					ReadOnly:  false,
-				},
-			},
-		}
-		volumes = append(volumes, vol)
-
-		volMount := corev1.VolumeMount{
-			Name:      dataVolume.DataVolume.Name,
-			MountPath: fmt.Sprintf("/mnt/disks/disk%v", i),
-		}
-		volumeMounts = append(volumeMounts, volMount)
-	}
-
-	// add volume and mount for the libvirt domain xml config map.
-	// the virt-v2v pod expects to see the libvirt xml at /mnt/v2v/input.xml
-	volumes = append(volumes, corev1.Volume{
-		Name: vmSpec.Name,
-		VolumeSource: corev1.VolumeSource{
-			ConfigMap: &corev1.ConfigMapVolumeSource{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: libvirtConfigMap.Name,
-				},
-			},
-		},
-	})
-	volumeMounts = append(volumeMounts, corev1.VolumeMount{
-		Name:      vmSpec.Name,
-		MountPath: "/mnt/v2v",
-	})
-	return volumes, volumeMounts
-}
-
-// makeLibvirtDomain makes a minimal libvirt domain for a VM to be used by the guest conversion job
-func makeLibvirtDomain(vmSpec *v1.VirtualMachine) *libvirtxml.Domain {
-	// virt-v2v needs a very minimal libvirt domain XML file to be provided
-	// with the locations of each of the disks on the VM that is to be converted.
-	libvirtDisks := make([]libvirtxml.DomainDisk, 0)
-	for i := range vmSpec.Spec.Template.Spec.Volumes {
-		libvirtDisk := libvirtxml.DomainDisk{
-			Device: "disk",
-			Driver: &libvirtxml.DomainDiskDriver{
-				Name: "qemu",
-				Type: "raw",
-			},
-			Source: &libvirtxml.DomainDiskSource{
-				File: &libvirtxml.DomainDiskSourceFile{
-					// the location where the disk images will be found on
-					// the virt-v2v pod. See also makeJobVolumeMounts.
-					File: fmt.Sprintf("/mnt/disks/disk%v/disk.img", i),
-				},
-			},
-			Target: &libvirtxml.DomainDiskTarget{
-				Dev: "hd" + string(rune('a'+i)),
-				Bus: "virtio",
-			},
-		}
-		libvirtDisks = append(libvirtDisks, libvirtDisk)
-	}
-
-	// generate libvirt domain xml
-	domain := vmSpec.Spec.Template.Spec.Domain
-	return &libvirtxml.Domain{
-		Type: "kvm",
-		Name: vmSpec.Name,
-		Memory: &libvirtxml.DomainMemory{
-			Value: uint(domain.Resources.Requests.Memory().Value()),
-		},
-		CPU: &libvirtxml.DomainCPU{
-			Topology: &libvirtxml.DomainCPUTopology{
-				Sockets: int(domain.CPU.Sockets),
-				Cores:   int(domain.CPU.Cores),
-			},
-		},
-		OS: &libvirtxml.DomainOS{
-			Type: &libvirtxml.DomainOSType{
-				Type: "hvm",
-			},
-			BootDevices: []libvirtxml.DomainBootDevice{
-				{
-					Dev: "hd",
-				},
-			},
-		},
-		Devices: &libvirtxml.DomainDeviceList{
-			Disks: libvirtDisks,
-		},
-	}
 }
 
 func (r *VmwareProvider) getNamespacedName() k8stypes.NamespacedName {
