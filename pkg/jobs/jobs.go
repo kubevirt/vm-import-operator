@@ -15,12 +15,12 @@ const (
 	vmiNameLabel = prefix + "/vmi-name"
 )
 
-// Manager provides operations on config maps
+// Manager provides operations on batch Jobs
 type Manager struct {
 	client client.Client
 }
 
-// NewManager creates new config map manager
+// NewManager creates new Job manager
 func NewManager(client client.Client) Manager {
 	return Manager{client: client}
 }
