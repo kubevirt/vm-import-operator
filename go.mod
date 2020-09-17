@@ -87,3 +87,5 @@ replace vbom.ml/util => github.com/fvbommel/util v0.0.0-20180919145318-efcd4e0f9
 replace bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d
 
 replace sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.2.4
+
+replace kubevirt.io/qe-tools => kubevirt.io/qe-tools v0.1.6
