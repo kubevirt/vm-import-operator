@@ -3,11 +3,11 @@ package jobs
 import (
 	"context"
 	"fmt"
+
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	batchv1 "k8s.io/api/batch/v1"
-
 )
 
 const (
@@ -72,4 +72,3 @@ func (m *Manager) DeleteFor(vmiCrName types.NamespacedName) error {
 	}
 	return nil
 }
-

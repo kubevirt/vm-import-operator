@@ -3,8 +3,9 @@ package ovirtprovider
 import (
 	"errors"
 	"fmt"
-	batchv1 "k8s.io/api/batch/v1"
 	"strings"
+
+	batchv1 "k8s.io/api/batch/v1"
 
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
 

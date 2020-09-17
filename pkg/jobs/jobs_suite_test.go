@@ -1,10 +1,10 @@
 package jobs
 
 import (
-"testing"
+	"testing"
 
-. "github.com/onsi/ginkgo"
-. "github.com/onsi/gomega"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 func TestJobsManager(t *testing.T) {

@@ -12,11 +12,10 @@ import (
 
 const configMapVolumeName = "libvirt-domain-xml"
 
-
 var (
 	virtV2vImage    = os.Getenv("VIRTV2V_IMAGE")
 	imagePullPolicy = corev1.PullPolicy(os.Getenv("IMAGE_PULL_POLICY"))
-	)
+)
 
 // MakeGuestConversionJobSpec creates a job spec for a virt-v2v job,
 // containing a volume and a mount for each volume on the VM, as well

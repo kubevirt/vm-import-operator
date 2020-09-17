@@ -107,19 +107,19 @@ var _ = Describe("GuestConversion", func() {
 						Spec: kubevirtv1.VirtualMachineInstanceSpec{
 							Volumes: volumes,
 							Domain: kubevirtv1.DomainSpec{
-								Resources:       kubevirtv1.ResourceRequirements{
-									Requests:                v1.ResourceList{
+								Resources: kubevirtv1.ResourceRequirements{
+									Requests: v1.ResourceList{
 										v1.ResourceMemory: resource.Quantity{},
 									},
 									Limits:                  nil,
 									OvercommitGuestOverhead: false,
 								},
-								CPU:             &kubevirtv1.CPU{
+								CPU: &kubevirtv1.CPU{
 									Sockets: 2,
-									Cores: 4,
+									Cores:   4,
 								},
-								Machine:         kubevirtv1.Machine{},
-								Devices:         kubevirtv1.Devices{},
+								Machine: kubevirtv1.Machine{},
+								Devices: kubevirtv1.Devices{},
 							},
 						},
 					},

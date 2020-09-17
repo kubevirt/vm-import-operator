@@ -3,6 +3,7 @@ package virtualmachineimport
 import (
 	"context"
 	"fmt"
+
 	batchv1 "k8s.io/api/batch/v1"
 
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
@@ -1061,9 +1062,9 @@ var _ = Describe("Reconcile steps", func() {
 
 	Describe("convertGuest step", func() {
 		var (
-			prov *mockProvider
+			prov   *mockProvider
 			vmName types.NamespacedName
-			job *batchv1.Job
+			job    *batchv1.Job
 		)
 
 		BeforeEach(func() {
@@ -1071,12 +1072,12 @@ var _ = Describe("Reconcile steps", func() {
 			vmName = types.NamespacedName{Name: "test", Namespace: "default"}
 
 			job = &batchv1.Job{
-				TypeMeta:   v1.TypeMeta{},
+				TypeMeta: v1.TypeMeta{},
 				ObjectMeta: v1.ObjectMeta{
 					Name: "test-job",
 				},
-				Spec:       batchv1.JobSpec{},
-				Status:     batchv1.JobStatus{
+				Spec: batchv1.JobSpec{},
+				Status: batchv1.JobStatus{
 					Conditions: []batchv1.JobCondition{},
 				},
 			}
