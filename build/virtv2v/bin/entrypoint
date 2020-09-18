@@ -3,7 +3,7 @@
 echo "Run virt-v2v with the following input:"
 cat /mnt/v2v/input.xml
 
-virt-v2v -v -x -i libvirtxml -o null --debug-overlays --no-copy /mnt/v2v/input.xml
+virt-v2v -v -x -i libvirtxml -o null --debug-overlays --no-copy --root=first /mnt/v2v/input.xml
 [ $? != 0 ] && exit 1
 
 echo "Conversion successful. Committing all overlays to local disks."
