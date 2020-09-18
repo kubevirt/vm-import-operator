@@ -125,10 +125,24 @@ func newVMOwnerReference(vm *kubevirtv1.VirtualMachine) metav1.OwnerReference {
 	}
 }
 
-// NewVMImportOwnerReference create a new Ownerrefercen based on passed parameters
+// NewVMImportOwnerReference create a new OwnerReference based on passed parameters
 func NewVMImportOwnerReference(typeMeta metav1.TypeMeta, objectMeta metav1.ObjectMeta) metav1.OwnerReference {
 	blockOwnerDeletion := true
 	isController := false
+	return metav1.OwnerReference{
+		APIVersion:         typeMeta.APIVersion,
+		Kind:               typeMeta.GetObjectKind().GroupVersionKind().Kind,
+		Name:               objectMeta.GetName(),
+		UID:                objectMeta.GetUID(),
+		Controller:         &isController,
+		BlockOwnerDeletion: &blockOwnerDeletion,
+	}
+}
+
+// NewVMImportControllerReference create a new OwnerReference based on passed parameters
+func NewVMImportControllerReference(typeMeta metav1.TypeMeta, objectMeta metav1.ObjectMeta) metav1.OwnerReference {
+	blockOwnerDeletion := true
+	isController := true
 	return metav1.OwnerReference{
 		APIVersion:         typeMeta.APIVersion,
 		Kind:               typeMeta.GetObjectKind().GroupVersionKind().Kind,

@@ -3,7 +3,6 @@ package vmware
 import (
 	"encoding/xml"
 	"fmt"
-
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	"github.com/kubevirt/vm-import-operator/pkg/configmaps"
 	"github.com/kubevirt/vm-import-operator/pkg/guestconversion"
@@ -514,7 +513,7 @@ func (r *VmwareProvider) createGuestConversionJob(vmSpec *v1.VirtualMachine, lib
 	vmiName := r.getNamespacedName()
 	job := guestconversion.MakeGuestConversionJobSpec(vmSpec, libvirtConfigMap)
 	job.OwnerReferences = []metav1.OwnerReference{
-		ownerreferences.NewVMImportOwnerReference(r.vmiTypeMeta, r.vmiObjectMeta),
+		ownerreferences.NewVMImportControllerReference(r.vmiTypeMeta, r.vmiObjectMeta),
 	}
 	err := r.jobsManager.CreateFor(job, vmiName)
 	if err != nil {
