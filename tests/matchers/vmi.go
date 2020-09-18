@@ -22,7 +22,7 @@ type beRunningMatcher struct {
 // BeRunning creates the matcher
 func BeRunning(testFramework *framework.Framework) *beRunningMatcher {
 	matcher := beRunningMatcher{}
-	matcher.timeout = 5 * time.Minute
+	matcher.timeout = 15 * time.Minute
 	matcher.testFramework = testFramework
 	return &matcher
 }
