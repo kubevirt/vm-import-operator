@@ -1,6 +1,7 @@
 package validators
 
 import (
+	"encoding/json"
 	"fmt"
 
 	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
@@ -8,12 +9,14 @@ import (
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
+	otemplates "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/templates"
 	outils "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
+	kubevirtv1 "kubevirt.io/client-go/api/v1"
 )
 
 // ValidateVM validates given VM
-func ValidateVM(vm *ovirtsdk.Vm, config kvConfig.KubeVirtConfig) []ValidationFailure {
+func ValidateVM(vm *ovirtsdk.Vm, config kvConfig.KubeVirtConfig, finder *otemplates.TemplateFinder) []ValidationFailure {
 	var results = isValidBios(vm)
 	if failure, valid := isValidStatus(vm); !valid {
 		results = append(results, failure)
@@ -89,6 +92,9 @@ func ValidateVM(vm *ovirtsdk.Vm, config kvConfig.KubeVirtConfig) []ValidationFai
 	if failure, valid := isValidFloppies(vm); !valid {
 		results = append(results, failure)
 	}
+	if failure, valid := isMemoryAboveRequests(vm, finder); !valid {
+		results = append(results, failure)
+	}
 
 	return results
 }
@@ -111,6 +117,29 @@ func isValidBios(vm *ovirtsdk.Vm) []ValidationFailure {
 		}
 	}
 	return results
+}
+
+func isMemoryAboveRequests(vm *ovirtsdk.Vm, finder *otemplates.TemplateFinder) (ValidationFailure, bool) {
+	template, err := finder.FindTemplate(vm)
+	if err != nil {
+		// missing template is verified later
+		return ValidationFailure{}, true
+	}
+	tempVM := kubevirtv1.VirtualMachine{}
+	err = json.Unmarshal(template.Objects[0].Raw, &tempVM)
+	if err != nil {
+		// template processed later
+		return ValidationFailure{}, true
+	}
+	tempMem, tok := tempVM.Spec.Template.Spec.Domain.Resources.Requests.Memory().AsInt64()
+	sourceMem, sok := vm.Memory()
+	if tok && sok && tempMem > sourceMem {
+		return ValidationFailure{
+			ID:      VMMemoryTemplateLimitID,
+			Message: fmt.Sprintf("Source VM memory is lower than enforced by template."),
+		}, false
+	}
+	return ValidationFailure{}, true
 }
 
 func isValidStatus(vm *ovirtsdk.Vm) (ValidationFailure, bool) {

@@ -7,6 +7,7 @@ import (
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
+	otemplates "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/templates"
 	validators "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 
 	ovirtsdk "github.com/ovirt/go-ovirt"
@@ -75,6 +76,7 @@ var checkToAction = map[validators.CheckID]action{
 	validators.VMMemoryPolicyBallooningID:        log,
 	validators.VMMemoryPolicyOvercommitPercentID: log,
 	validators.VMMemoryPolicyGuaranteedID:        log,
+	validators.VMMemoryTemplateLimitID:           block,
 	validators.VMMigrationID:                     log,
 	validators.VMMigrationDowntimeID:             log,
 	validators.VMNumaTuneModeID:                  warn,
@@ -108,7 +110,7 @@ var checkToAction = map[validators.CheckID]action{
 
 // Validator validates different properties of a VM
 type Validator interface {
-	ValidateVM(vm *ovirtsdk.Vm) []validators.ValidationFailure
+	ValidateVM(vm *ovirtsdk.Vm, finder *otemplates.TemplateFinder) []validators.ValidationFailure
 	ValidateDiskStatus(diskAttachment ovirtsdk.DiskAttachment) bool
 	ValidateDiskAttachments(diskAttachments []*ovirtsdk.DiskAttachment) []validators.ValidationFailure
 	ValidateNics(nics []*ovirtsdk.Nic) []validators.ValidationFailure
@@ -133,12 +135,12 @@ func NewVirtualMachineImportValidator(validator Validator) VirtualMachineImportV
 }
 
 // Validate validates whether VM described in VirtualMachineImport can be imported
-func (validator *VirtualMachineImportValidator) Validate(vm *ovirtsdk.Vm, vmiCrName *types.NamespacedName, mappings *v2vv1.OvirtMappings) []v2vv1.VirtualMachineImportCondition {
+func (validator *VirtualMachineImportValidator) Validate(vm *ovirtsdk.Vm, vmiCrName *types.NamespacedName, mappings *v2vv1.OvirtMappings, finder *otemplates.TemplateFinder) []v2vv1.VirtualMachineImportCondition {
 	var validationResults []v2vv1.VirtualMachineImportCondition
 	mappingsCheckResult := validator.validateMappings(vm, mappings, vmiCrName)
 	validationResults = append(validationResults, mappingsCheckResult)
 
-	failures := validator.Validator.ValidateVM(vm)
+	failures := validator.Validator.ValidateVM(vm, finder)
 	if nics, ok := vm.Nics(); ok {
 
 		failures = append(failures, validator.Validator.ValidateNics(nics.Slice())...)

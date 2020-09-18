@@ -263,7 +263,7 @@ func (o *OvirtProvider) Validate() ([]v2vv1.VirtualMachineImportCondition, error
 		return []v2vv1.VirtualMachineImportCondition{}, errors.New("VM has not been loaded")
 	}
 	vmiName := o.GetVmiNamespacedName()
-	return o.validator.Validate(vm, &vmiName, o.resourceMapping), nil
+	return o.validator.Validate(vm, &vmiName, o.resourceMapping, o.templateFinder), nil
 }
 
 // StopVM stop the source VM on ovirt
