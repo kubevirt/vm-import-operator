@@ -29,6 +29,7 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/klog"
+
 	"kubevirt.io/containerized-data-importer/pkg/common"
 	"kubevirt.io/containerized-data-importer/pkg/system"
 	"kubevirt.io/containerized-data-importer/pkg/util"
@@ -113,7 +114,14 @@ func (o *qemuOperations) ConvertToRawStream(url *url.URL, dest string) error {
 		// File, instead of URL
 		return convertToRaw(url.String(), dest)
 	}
-	jsonArg := fmt.Sprintf("json: {\"file.driver\": \"%s\", \"file.url\": \"%s\", \"file.timeout\": %d}", url.Scheme, url, networkTimeoutSecs)
+
+	var jsonArg string
+	if url.Scheme == "nbd" && url.Path != "" {
+		// Convert from local Unix socket
+		jsonArg = fmt.Sprintf("json: {\"file.driver\": \"%s\", \"file.path\": \"%s\"}", url.Scheme, url.Path)
+	} else {
+		jsonArg = fmt.Sprintf("json: {\"file.driver\": \"%s\", \"file.url\": \"%s\", \"file.timeout\": %d}", url.Scheme, url, networkTimeoutSecs)
+	}
 
 	_, err := qemuExecFunction(nil, reportProgress, "qemu-img", "convert", "-t", "none", "-p", "-O", "raw", jsonArg, dest)
 	if err != nil {
@@ -148,14 +156,20 @@ func (o *qemuOperations) Info(url *url.URL) (*ImgInfo, error) {
 	var err error
 
 	if len(url.Scheme) > 0 {
-		// Image is a URL, make sure the timeout is long enough.
-		jsonArg := fmt.Sprintf("json: {\"file.driver\": \"%s\", \"file.url\": \"%s\", \"file.timeout\": %d}", url.Scheme, url, networkTimeoutSecs)
+		var jsonArg string
+		if url.Scheme == "nbd" && url.Path != "" {
+			// Get NBD info from local Unix socket
+			jsonArg = fmt.Sprintf("json: {\"file.driver\": \"%s\", \"file.path\": \"%s\"}", url.Scheme, url.Path)
+		} else {
+			// Image is a URL, make sure the timeout is long enough.
+			jsonArg = fmt.Sprintf("json: {\"file.driver\": \"%s\", \"file.url\": \"%s\", \"file.timeout\": %d}", url.Scheme, url, networkTimeoutSecs)
+		}
 		output, err = qemuExecFunction(qemuInfoLimits, nil, "qemu-img", "info", "--output=json", jsonArg)
 	} else {
 		output, err = qemuExecFunction(qemuInfoLimits, nil, "qemu-img", "info", "--output=json", url.String())
 	}
 	if err != nil {
-		return nil, errors.Wrapf(err, "Error getting info on image %s", url.String())
+		return nil, errors.Errorf("%s, %s", output, err.Error())
 	}
 	var info ImgInfo
 	err = json.Unmarshal(output, &info)
@@ -190,7 +204,7 @@ func (o *qemuOperations) Validate(url *url.URL, availableSize int64) error {
 	}
 
 	if availableSize < info.VirtualSize {
-		return errors.Errorf("Virtual image size %d is larger than available size %d, shrink not yet supported.", info.VirtualSize, availableSize)
+		return errors.Errorf("Virtual image size %d is larger than available size %d. A larger PVC is required.", info.VirtualSize, availableSize)
 	}
 	return nil
 }
@@ -234,5 +248,11 @@ func (o *qemuOperations) CreateBlankImage(dest string, size resource.Quantity) e
 		os.Remove(dest)
 		return errors.Wrap(err, fmt.Sprintf("could not create raw image with size %s in %s", size.String(), dest))
 	}
+	// Change permissions to 0660
+	err = os.Chmod(dest, 0660)
+	if err != nil {
+		err = errors.Wrap(err, "Unable to change permissions of target file")
+	}
+
 	return nil
 }

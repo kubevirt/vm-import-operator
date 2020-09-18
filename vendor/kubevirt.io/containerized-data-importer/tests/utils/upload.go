@@ -1,17 +1,22 @@
 package utils
 
 import (
+	"context"
+
 	k8sv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	cdiuploadv1alpha1 "kubevirt.io/containerized-data-importer/pkg/apis/upload/v1alpha1"
+	cdiuploadv1 "kubevirt.io/containerized-data-importer/pkg/apis/upload/v1beta1"
 	cdiClientset "kubevirt.io/containerized-data-importer/pkg/client/clientset/versioned"
+	"kubevirt.io/containerized-data-importer/pkg/util/naming"
 )
 
 const (
 	// UploadFile is the file to upload
 	UploadFile = "./images/tinyCore.iso"
+	// UploadFileLargeVirtualDisk is the file to upload
+	UploadFileLargeVirtualDisk = "./images/cirros-large-vdisk.qcow2"
 
 	// UploadFileSize is the size of UploadFile
 	UploadFileSize = 18874368
@@ -29,7 +34,7 @@ const (
 
 // UploadPodName returns the name of the upload server pod associated with a PVC
 func UploadPodName(pvc *k8sv1.PersistentVolumeClaim) string {
-	return "cdi-upload-" + pvc.Name
+	return naming.GetResourceName("cdi-upload", pvc.Name)
 }
 
 // UploadPVCDefinition creates a PVC with the upload target annotation
@@ -51,17 +56,17 @@ func WaitPVCUploadPodStatusRunning(clientSet *kubernetes.Clientset, pvc *k8sv1.P
 
 // RequestUploadToken sends an upload token request to the server
 func RequestUploadToken(clientSet *cdiClientset.Clientset, pvc *k8sv1.PersistentVolumeClaim) (string, error) {
-	request := &cdiuploadv1alpha1.UploadTokenRequest{
+	request := &cdiuploadv1.UploadTokenRequest{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-token",
 			Namespace: pvc.Namespace,
 		},
-		Spec: cdiuploadv1alpha1.UploadTokenRequestSpec{
+		Spec: cdiuploadv1.UploadTokenRequestSpec{
 			PvcName: pvc.Name,
 		},
 	}
 
-	response, err := clientSet.UploadV1alpha1().UploadTokenRequests(pvc.Namespace).Create(request)
+	response, err := clientSet.UploadV1beta1().UploadTokenRequests(pvc.Namespace).Create(context.TODO(), request, metav1.CreateOptions{})
 	if err != nil {
 		return "", err
 	}
