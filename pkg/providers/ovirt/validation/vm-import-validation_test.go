@@ -3,6 +3,7 @@ package validation_test
 import (
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
+	otemplates "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/templates"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	. "github.com/onsi/ginkgo"
@@ -51,7 +52,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		conditions := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		conditions := vmImportValidator.Validate(vm, crName, newOvirtMappings(), newFinder())
 
 		Expect(conditions).To(HaveLen(2))
 		By("having positive status of the validation condition")
@@ -75,7 +76,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings(), newFinder())
 
 		condition := conditions.FindConditionOfType(result, v2vv1.MappingRulesVerified)
 		Expect(condition.Type).To(Equal(v2vv1.MappingRulesVerified))
@@ -110,7 +111,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings(), newFinder())
 
 		condition := conditions.FindConditionOfType(result, v2vv1.MappingRulesVerified)
 		Expect(condition.Type).To(Equal(v2vv1.MappingRulesVerified))
@@ -136,7 +137,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings(), newFinder())
 
 		condition := conditions.FindConditionOfType(result, v2vv1.MappingRulesVerified)
 		Expect(condition.Type).To(Equal(v2vv1.MappingRulesVerified))
@@ -163,7 +164,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings(), newFinder())
 
 		condition := conditions.FindConditionOfType(result, v2vv1.MappingRulesVerified)
 		Expect(condition.Type).To(Equal(v2vv1.MappingRulesVerified))
@@ -183,7 +184,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings(), newFinder())
 
 		condition := conditions.FindConditionOfType(result, v2vv1.MappingRulesVerified)
 		Expect(condition.Type).To(Equal(v2vv1.MappingRulesVerified))
@@ -205,7 +206,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings(), newFinder())
 
 		condition := conditions.FindConditionOfType(result, v2vv1.MappingRulesVerified)
 		Expect(condition.Type).To(Equal(v2vv1.MappingRulesVerified))
@@ -224,7 +225,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings(), newFinder())
 
 		condition := conditions.FindConditionOfType(result, v2vv1.MappingRulesVerified)
 		Expect(condition.Type).To(Equal(v2vv1.MappingRulesVerified))
@@ -247,7 +248,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings(), newFinder())
 
 		condition := conditions.FindConditionOfType(result, v2vv1.MappingRulesVerified)
 		Expect(condition.Type).To(Equal(v2vv1.MappingRulesVerified))
@@ -266,7 +267,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 		vm := newVM()
 		crName := newNamespacedName()
 
-		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings(), newFinder())
 
 		condition := conditions.FindConditionOfType(result, v2vv1.MappingRulesVerified)
 		Expect(condition.Type).To(Equal(v2vv1.MappingRulesVerified))
@@ -324,7 +325,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 			}
 		}
 
-		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings(), newFinder())
 
 		condition := conditions.FindConditionOfType(result, v2vv1.MappingRulesVerified)
 		Expect(condition.Type).To(Equal(v2vv1.MappingRulesVerified))
@@ -350,7 +351,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 			}
 		}
 
-		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings(), newFinder())
 
 		condition := conditions.FindConditionOfType(result, v2vv1.Valid)
 		Expect(condition.Type).To(Equal(v2vv1.Valid))
@@ -380,7 +381,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 			}
 		}
 
-		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings(), newFinder())
 
 		condition := conditions.FindConditionOfType(result, v2vv1.Valid)
 		Expect(condition.Type).To(Equal(v2vv1.Valid))
@@ -409,7 +410,7 @@ var _ = Describe("Validating VirtualMachineImport Admitter", func() {
 			}
 		}
 
-		result := vmImportValidator.Validate(vm, crName, newOvirtMappings())
+		result := vmImportValidator.Validate(vm, crName, newOvirtMappings(), newFinder())
 
 		condition := conditions.FindConditionOfType(result, v2vv1.Valid)
 		Expect(condition.Type).To(Equal(v2vv1.Valid))
@@ -452,4 +453,7 @@ func newNamespacedName() *types.NamespacedName {
 		Namespace: "bar",
 	}
 	return &nn
+}
+func newFinder() *otemplates.TemplateFinder {
+	return &otemplates.TemplateFinder{}
 }

@@ -77,6 +77,8 @@ const (
 	VMMemoryPolicyOvercommitPercentID = CheckID("vm.memory_policy.over_commit.percent")
 	// VMMemoryPolicyGuaranteedID defines an ID of a vm.memory_policy.guaranteed check
 	VMMemoryPolicyGuaranteedID = CheckID("vm.memory_policy.guaranteed")
+	// VMMemoryTemplateLimitID defines that vm memory is below template requirements
+	VMMemoryTemplateLimitID = CheckID("vm.memory template.requests")
 	// VMMigrationID defines an ID of a vm.migration check
 	VMMigrationID = CheckID("vm.migration")
 	// VMMigrationDowntimeID defines an ID of a vm.migration_downtime check

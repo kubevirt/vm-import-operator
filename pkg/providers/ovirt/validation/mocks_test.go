@@ -2,6 +2,7 @@ package validation_test
 
 import (
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
+	otemplates "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/templates"
 	validators "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/validation/validators"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
@@ -18,7 +19,7 @@ var validateStorageMappingMock func(
 
 type mockValidator struct{}
 
-func (v *mockValidator) ValidateVM(vm *ovirtsdk.Vm) []validators.ValidationFailure {
+func (v *mockValidator) ValidateVM(vm *ovirtsdk.Vm, finder *otemplates.TemplateFinder) []validators.ValidationFailure {
 	return validateVMMock(vm)
 }
 
