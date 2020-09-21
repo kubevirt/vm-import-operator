@@ -1,31 +1,40 @@
-v0.2.1
-
-Release v0.2.1
+v0.2.2
 
 Features:
-* Using controller-lifecycle-operator-sdk
-* Allow specifying nodeSelector, affinity and tolerations
-* Update formating and depts
-* Split buildDevices into buildDisks and buildNics
-* Fix search pattern for qcow2 overlays
-* Add Vmware VM mapper
-* Add comments to exported functions in pkg/mappings/merger.go
-* Add mapping merger for the VMWare provider
-* Move entrypoint into bin subfolder
-* Add qemu-guest-agent package
-* Add virt-v2v container image
-* Refactor shared *Manager interfaces into provider package
-* Add Vmware template finder
-* Add Vmware OSFinder and GuestOs identifier mappings
-* Select newest template
-* Add event on import pod failure
-
-Bugs:
-* Added missing properties in the operator.yaml.in template
-* Update older version of VMImportConfig params
-* Add monitoring ns to operator env
-* Allow to watch and create servicemonitors
-* Missing permission
-* Update types
-* Permissions issue during HCO deployment
-* Restore v1alpha1 types
+* Increase test timeouts to account for virt-v2v job
+* Make virt-v2v default to treating the first disk as the root
+* Set controller reference on the conversion job
+* Validate template memory requirements
+* Move guest conversion functions into their own package
+* Add JobsManager tests
+* Refactor guest conversion job creation + cleanup
+* Add Jobs manager
+* Add VIRTV2V_IMAGE to operator.yaml.in
+* Add convertGuest step after importDisks, to launch virt-v2v job
+* Add basic vm import integration tests for vSphere
+* Update vSphere mapper to use actual VDDK datasource
+* Update CDI to 1.23.1, use generated CDI client in framework.go
+* Fixing problem with changed qe-tools sum
+* Improve template not found message
+* Update template finder
+* Add virtv2v image build/push to Makefile
+* handle cluster default bios type
+* Normalize vm hostname
+* Comment fixes and autoformatting.
+* Refactor e2e tests so failures from both providers are caught
+* Revert StopVM refactor
+* Increased nsDeleteTime
+* Give vm-import-controller SA permission to list templates
+* Add initial Vmware e2e test
+* Refactor e2e tests to support Vmware
+* VM not being created yet should not cause CleanUp to fail
+* Move foldErrors, updateLabels and updateAnnotations into utils
+* Check status via vmProperties before calling vmwareClient.StopVM
+* Return an error from client.getVMBy* methods if VM is not found.
+* Sort the list of disks in VmwareMapper.MapDisk
+* Get client before testing connection to avoid nil ptr dereference
+* Use MoRef as parameter to Vmware client's StartVM and StopVM
+* Add support for the VMware provider in the import controller
+* Add VmwareProvider to support importing VMs from vSphere
+* Merge pull request #395 from jakub-dzon/fix-deployment-creation-problem
+* Fix HCO upgrade problem: v0.0.4->v0.2.1
