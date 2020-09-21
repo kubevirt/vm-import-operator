@@ -3,6 +3,7 @@ package vmware
 import (
 	"encoding/xml"
 	"fmt"
+
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	"github.com/kubevirt/vm-import-operator/pkg/configmaps"
 	"github.com/kubevirt/vm-import-operator/pkg/guestconversion"
