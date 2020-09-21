@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	batchv1 "k8s.io/api/batch/v1"
+
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
 
 	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
@@ -39,25 +41,29 @@ import (
 )
 
 var (
-	get                func(context.Context, client.ObjectKey, runtime.Object) error
-	pinit              func(*corev1.Secret, *v2vv1.VirtualMachineImport) error
-	loadVM             func(v2vv1.VirtualMachineImportSourceSpec) error
-	getResourceMapping func(types.NamespacedName) (*v2vv1.ResourceMapping, error)
-	validate           func() ([]v2vv1.VirtualMachineImportCondition, error)
-	statusPatch        func(ctx context.Context, obj runtime.Object, patch client.Patch) error
-	getVMStatus        func() (provider.VMStatus, error)
-	findTemplate       func() (*oapiv1.Template, error)
-	processTemplate    func(template *oapiv1.Template, name *string, namespace string) (*kubevirtv1.VirtualMachine, error)
-	create             func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error
-	cleanUp            func() error
-	update             func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error
-	mapDisks           func() (map[string]cdiv1.DataVolume, error)
-	getVM              func(id *string, name *string, cluster *string, clusterID *string) (interface{}, error)
-	stopVM             func(id string) error
-	list               func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error
-	getKvConfig        func() kvConfig.KubeVirtConfig
-	getCtrlConfig      func() ctrlConfig.ControllerConfig
+	get                      func(context.Context, client.ObjectKey, runtime.Object) error
+	pinit                    func(*corev1.Secret, *v2vv1.VirtualMachineImport) error
+	loadVM                   func(v2vv1.VirtualMachineImportSourceSpec) error
+	getResourceMapping       func(types.NamespacedName) (*v2vv1.ResourceMapping, error)
+	validate                 func() ([]v2vv1.VirtualMachineImportCondition, error)
+	statusPatch              func(ctx context.Context, obj runtime.Object, patch client.Patch) error
+	getVMStatus              func() (provider.VMStatus, error)
+	findTemplate             func() (*oapiv1.Template, error)
+	processTemplate          func(template *oapiv1.Template, name *string, namespace string) (*kubevirtv1.VirtualMachine, error)
+	create                   func(ctx context.Context, obj runtime.Object, opts ...client.CreateOption) error
+	cleanUp                  func() error
+	update                   func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error
+	mapDisks                 func() (map[string]cdiv1.DataVolume, error)
+	getVM                    func(id *string, name *string, cluster *string, clusterID *string) (interface{}, error)
+	stopVM                   func(id string) error
+	list                     func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error
+	getKvConfig              func() kvConfig.KubeVirtConfig
+	getCtrlConfig            func() ctrlConfig.ControllerConfig
+	needsGuestConversion     func() bool
+	getGuestConversionJob    func() (*batchv1.Job, error)
+	launchGuestConversionJob func() (*batchv1.Job, error)
 )
+
 var _ = Describe("Reconcile steps", func() {
 	var (
 		reconciler *ReconcileVirtualMachineImport
@@ -119,6 +125,9 @@ var _ = Describe("Reconcile steps", func() {
 		}
 		update = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 			return nil
+		}
+		needsGuestConversion = func() bool {
+			return false
 		}
 		vmName = types.NamespacedName{Name: "test", Namespace: "default"}
 		rec := record.NewFakeRecorder(2)
@@ -866,37 +875,6 @@ var _ = Describe("Reconcile steps", func() {
 		})
 	})
 
-	Describe("manageDataVolumeState step", func() {
-		It("should do nothing: ", func() {
-			done := map[string]bool{}
-			number := len(done)
-			conditions := []v2vv1.VirtualMachineImportCondition{}
-			reason := string(v2vv1.VirtualMachineReady)
-			conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
-				Status: corev1.ConditionTrue,
-				Type:   v2vv1.Succeeded,
-				Reason: &reason,
-			})
-			instance.Status.Conditions = conditions
-
-			_, err := reconciler.manageDataVolumeState(instance, done, number)
-
-			Expect(err).To(BeNil())
-		})
-
-		It("should fail to update status condition: ", func() {
-			update = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
-				return fmt.Errorf("Not modified")
-			}
-			done := map[string]bool{"test": true, "test2": true}
-			number := len(done)
-
-			_, err := reconciler.manageDataVolumeState(instance, done, number)
-
-			Expect(err).To(Not(BeNil()))
-		})
-	})
-
 	Describe("importDisks step", func() {
 		var (
 			mockMap *mockMapper
@@ -945,7 +923,7 @@ var _ = Describe("Reconcile steps", func() {
 				return map[string]cdiv1.DataVolume{}, nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(BeNil())
 		})
@@ -962,7 +940,7 @@ var _ = Describe("Reconcile steps", func() {
 				return fmt.Errorf("Not created")
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -984,7 +962,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(BeNil())
 		})
@@ -998,7 +976,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -1017,7 +995,7 @@ var _ = Describe("Reconcile steps", func() {
 				return fmt.Errorf("Not modified")
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -1033,7 +1011,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(BeNil())
 		})
@@ -1057,7 +1035,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(BeNil())
 		})
@@ -1076,9 +1054,98 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.importDisks(mock, instance, mockMap, vmName)
+			_, err := reconciler.importDisks(mock, instance, mockMap, vmName)
 
 			Expect(err).To(BeNil())
+		})
+	})
+
+	Describe("convertGuest step", func() {
+		var (
+			prov   *mockProvider
+			vmName types.NamespacedName
+			job    *batchv1.Job
+		)
+
+		BeforeEach(func() {
+			prov = &mockProvider{}
+			vmName = types.NamespacedName{Name: "test", Namespace: "default"}
+
+			job = &batchv1.Job{
+				TypeMeta: v1.TypeMeta{},
+				ObjectMeta: v1.ObjectMeta{
+					Name: "test-job",
+				},
+				Spec: batchv1.JobSpec{},
+				Status: batchv1.JobStatus{
+					Conditions: []batchv1.JobCondition{},
+				},
+			}
+
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *kubevirtv1.VirtualMachine:
+					volumes := []kubevirtv1.Volume{}
+					volumes = append(volumes, kubevirtv1.Volume{
+						Name: "test",
+						VolumeSource: kubevirtv1.VolumeSource{
+							DataVolume: &kubevirtv1.DataVolumeSource{
+								Name: "test",
+							},
+						},
+					})
+					obj.(*kubevirtv1.VirtualMachine).Spec.Template = &kubevirtv1.VirtualMachineInstanceTemplateSpec{
+						Spec: kubevirtv1.VirtualMachineInstanceSpec{
+							Volumes: volumes,
+						},
+					}
+					refs := []v1.OwnerReference{}
+					isController := true
+					refs = append(refs, v1.OwnerReference{
+						Controller: &isController,
+					})
+					obj.(*kubevirtv1.VirtualMachine).ObjectMeta.OwnerReferences = refs
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{}
+					obj.(*v2vv1.VirtualMachineImport).Annotations = map[string]string{sourceVMInitialState: string(provider.VMStatusUp)}
+				case *batchv1.Job:
+					obj = job
+				}
+				return nil
+			}
+			needsGuestConversion = func() bool {
+				return true
+			}
+			getGuestConversionJob = func() (*batchv1.Job, error) {
+				return nil, nil
+			}
+			launchGuestConversionJob = func() (*batchv1.Job, error) {
+				return job, nil
+			}
+		})
+
+		It("should return false with no error when the job is active", func() {
+			job.Status.Active = int32(1)
+
+			done, err := reconciler.convertGuest(prov, instance, vmName)
+			Expect(err).To(BeNil())
+			Expect(done).To(BeFalse())
+		})
+
+		It("should return false with no error when the job is failed", func() {
+			job.Status.Failed = int32(1)
+
+			done, err := reconciler.convertGuest(prov, instance, vmName)
+			Expect(err).To(BeNil())
+			Expect(done).To(BeFalse())
+		})
+
+		It("should return true with no error when the job is successful", func() {
+			job.Status.Succeeded = int32(1)
+
+			done, err := reconciler.convertGuest(prov, instance, vmName)
+			Expect(err).To(BeNil())
+			Expect(done).To(BeTrue())
 		})
 	})
 
@@ -1436,7 +1503,6 @@ var _ = Describe("Reconcile steps", func() {
 			}
 
 			result, err := reconciler.Reconcile(request)
-
 			Expect(err).To(Not(BeNil()))
 			Expect(result).To(Equal(reconcile.Result{}))
 		})
@@ -1491,10 +1557,10 @@ var _ = Describe("Disks import progress", func() {
 		},
 		table.Entry("No progress", map[string]float64{"1": 0.0}, "10"),
 		table.Entry("Two disks no progress", map[string]float64{"1": 0.0, "2": 0.0}, "10"),
-		table.Entry("Two disks done progress", map[string]float64{"1": 100, "2": 100}, "85"),
-		table.Entry("Two disks half done", map[string]float64{"1": 50, "2": 50}, "47"),
-		table.Entry("Two disks one done", map[string]float64{"1": 50, "2": 100}, "66"),
-		table.Entry("Done progress", map[string]float64{"1": 100}, "85"),
+		table.Entry("Two disks done progress", map[string]float64{"1": 100, "2": 100}, "75"),
+		table.Entry("Two disks half done", map[string]float64{"1": 50, "2": 50}, "42"),
+		table.Entry("Two disks one done", map[string]float64{"1": 50, "2": 100}, "58"),
+		table.Entry("Done progress", map[string]float64{"1": 100}, "75"),
 	)
 })
 
@@ -1653,6 +1719,18 @@ func (p *mockProvider) FindTemplate() (*oapiv1.Template, error) {
 // ProcessTemplate implements Provider.ProcessTemplate
 func (p *mockProvider) ProcessTemplate(template *oapiv1.Template, name *string, namespace string) (*kubevirtv1.VirtualMachine, error) {
 	return processTemplate(template, name, namespace)
+}
+
+func (p *mockProvider) NeedsGuestConversion() bool {
+	return needsGuestConversion()
+}
+
+func (p *mockProvider) GetGuestConversionJob() (*batchv1.Job, error) {
+	return getGuestConversionJob()
+}
+
+func (p *mockProvider) LaunchGuestConversionJob(_ *kubevirtv1.VirtualMachine) (*batchv1.Job, error) {
+	return launchGuestConversionJob()
 }
 
 // CreateEmptyVM implements Mapper.CreateEmptyVM

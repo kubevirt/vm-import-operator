@@ -53,6 +53,7 @@ type ClusterServiceVersionData struct {
 	OperatorVersion    string
 	OperatorImage      string
 	ControllerImage    string
+	VirtV2vImage       string
 }
 
 type csvPermissions struct {
@@ -236,6 +237,17 @@ func getControllerPolicyRules() []rbacv1.PolicyRule {
 				"list",
 			},
 		},
+		{
+			APIGroups: []string{
+				"batch",
+			},
+			Resources: []string{
+				"jobs",
+			},
+			Verbs: []string{
+				"*",
+			},
+		},
 	}
 	return rules
 }
@@ -323,23 +335,23 @@ func getOperatorPolicyRules() []rbacv1.PolicyRule {
 }
 
 // CreateControllerDeployment returns vmimport controller deployment
-func CreateControllerDeployment(name, namespace, image, pullPolicy string, numReplicas int32, policy *sdkapi.NodePlacement) *appsv1.Deployment {
+func CreateControllerDeployment(name, namespace, image, virtV2vImage, pullPolicy string, numReplicas int32, policy *sdkapi.NodePlacement) *appsv1.Deployment {
 	podSpec := corev1.PodSpec{
 		ServiceAccountName: ControllerName,
-		Containers:         createControllerContainers(image, pullPolicy),
+		Containers:         createControllerContainers(image, virtV2vImage, pullPolicy),
 	}
 	selectorMatchMap := resourceBuilder.WithOperatorLabels(map[string]string{"v2v.kubevirt.io": ControllerName})
 	return resources.CreateDeployment(name, namespace, selectorMatchMap, selectorMatchMap, numReplicas, podSpec, ControllerName, policy)
 }
 
-func createControllerContainers(image, pullPolicy string) []v1.Container {
+func createControllerContainers(image, virtV2vImage, pullPolicy string) []v1.Container {
 	container := resourceBuilder.CreateContainer(ControllerName, image, pullPolicy)
-	container.Env = createControllerEnv(pullPolicy)
+	container.Env = createControllerEnv(virtV2vImage, pullPolicy)
 	container.Command = []string{ControllerName}
 	return []corev1.Container{*container}
 }
 
-func createControllerEnv(pullPolicy string) []v1.EnvVar {
+func createControllerEnv(virtV2vImage, pullPolicy string) []v1.EnvVar {
 	return []corev1.EnvVar{
 		{
 			Name: "WATCH_NAMESPACE",
@@ -363,6 +375,10 @@ func createControllerEnv(pullPolicy string) []v1.EnvVar {
 		{
 			Name:  "PULL_POLICY",
 			Value: pullPolicy,
+		},
+		{
+			Name:  "VIRTV2V_IMAGE",
+			Value: virtV2vImage,
 		},
 	}
 }
@@ -2725,10 +2741,10 @@ DiskMappings.Source.ID represents the DiskObjectId or vDiskID of the VirtualDisk
 	}
 }
 
-func createOperatorDeployment(operatorVersion, namespace, deployClusterResources, operatorImage, controllerImage, pullPolicy string) *appsv1.Deployment {
+func createOperatorDeployment(operatorVersion, namespace, deployClusterResources, operatorImage, controllerImage, virtV2vImage, pullPolicy string) *appsv1.Deployment {
 	deployment := CreateOperatorDeployment(operatorName, namespace, "name", operatorName, serviceAccountName, int32(1))
 	container := CreateContainer(operatorName, operatorImage, pullPolicy)
-	container.Env = createOperatorEnvVar(operatorVersion, deployClusterResources, controllerImage, pullPolicy)
+	container.Env = createOperatorEnvVar(operatorVersion, deployClusterResources, controllerImage, virtV2vImage, pullPolicy)
 	deployment.Spec.Template.Spec.Containers = []corev1.Container{container}
 	return deployment
 }
@@ -2749,7 +2765,7 @@ func CreateContainer(name, image string, pullPolicy string) corev1.Container {
 	return *resourceBuilder.CreateContainer(name, image, pullPolicy)
 }
 
-func createOperatorEnvVar(operatorVersion, deployClusterResources, controllerImage, pullPolicy string) []corev1.EnvVar {
+func createOperatorEnvVar(operatorVersion, deployClusterResources, controllerImage, virtV2vImage, pullPolicy string) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
 			Name:  "DEPLOY_CLUSTER_RESOURCES",
@@ -2781,6 +2797,10 @@ func createOperatorEnvVar(operatorVersion, deployClusterResources, controllerIma
 		{
 			Name:  "MONITORING_NAMESPACE",
 			Value: "openshift-monitoring",
+		},
+		{
+			Name:  "VIRTV2V_IMAGE",
+			Value: virtV2vImage,
 		},
 	}
 }
@@ -2838,6 +2858,7 @@ func NewClusterServiceVersion(data *ClusterServiceVersionData) (*csvv1.ClusterSe
 		"true",
 		data.OperatorImage,
 		data.ControllerImage,
+		data.VirtV2vImage,
 		data.ImagePullPolicy,
 	)
 

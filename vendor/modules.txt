@@ -1451,6 +1451,8 @@ kubevirt.io/containerized-data-importer/pkg/util
 kubevirt.io/containerized-data-importer/pkg/util/naming
 kubevirt.io/containerized-data-importer/tests/utils
 kubevirt.io/containerized-data-importer/tools/util
+# libvirt.org/libvirt-go-xml v6.6.0+incompatible
+libvirt.org/libvirt-go-xml
 # sigs.k8s.io/controller-runtime v0.6.2 => sigs.k8s.io/controller-runtime v0.5.9
 sigs.k8s.io/controller-runtime/pkg/cache
 sigs.k8s.io/controller-runtime/pkg/cache/internal

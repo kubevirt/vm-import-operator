@@ -17,6 +17,7 @@ var (
 	operatorVersion    = flag.String("operator-version", "", "The operator version")
 	operatorImage      = flag.String("operator-image", "", "The operator image name")
 	controllerImage    = flag.String("controller-image", "", "The controller image name")
+	virtV2vImage       = flag.String("virtv2v-image", "", "The virtv2v image name")
 	dumpCRDs           = flag.Bool("dump-crds", false, "optional - dumps crd manifests to stdout")
 	controllerOnly     = flag.Bool("controller-only", false, "optional - dumps manifests to stdout only for controller local deployment")
 )
@@ -34,6 +35,7 @@ func main() {
 		OperatorVersion:    *operatorVersion,
 		OperatorImage:      *operatorImage,
 		ControllerImage:    *controllerImage,
+		VirtV2vImage:       *virtV2vImage,
 	}
 
 	// Generate resources required for deploying the controller only

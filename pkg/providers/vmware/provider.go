@@ -1,16 +1,19 @@
 package vmware
 
 import (
+	"encoding/xml"
 	"fmt"
-
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	"github.com/kubevirt/vm-import-operator/pkg/configmaps"
+	"github.com/kubevirt/vm-import-operator/pkg/guestconversion"
+	"github.com/kubevirt/vm-import-operator/pkg/jobs"
 	oapiv1 "github.com/openshift/api/template/v1"
 	tempclient "github.com/openshift/client-go/template/clientset/versioned/typed/template/v1"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 	"gopkg.in/yaml.v2"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -54,6 +57,7 @@ type VmwareProvider struct {
 	resourceMapping       *v1beta1.VmwareMappings
 	secretsManager        provider.SecretsManager
 	configMapsManager     provider.ConfigMapsManager
+	jobsManager           provider.JobsManager
 	templateFinder        *vtemplates.TemplateFinder
 	templateHandler       *templates.TemplateHandler
 	virtualMachineManager provider.VirtualMachineManager
@@ -71,6 +75,7 @@ func NewVmwareProvider(vmiObjectMeta metav1.ObjectMeta, vmiTypeMeta metav1.TypeM
 	configMapsManager := configmaps.NewManager(client)
 	dataVolumesManager := datavolumes.NewManager(client)
 	virtualMachineManager := virtualmachines.NewManager(client)
+	jobsManager := jobs.NewManager(client)
 	templateProvider := templates.NewTemplateProvider(tempClient)
 	osFinder := vos.VmwareOSFinder{OsMapProvider: os.NewOSMapProvider(client, ctrlConfig.OsConfigMapName(), ctrlConfig.OsConfigMapNamespace())}
 	return VmwareProvider{
@@ -81,6 +86,7 @@ func NewVmwareProvider(vmiObjectMeta metav1.ObjectMeta, vmiTypeMeta metav1.TypeM
 		configMapsManager:     &configMapsManager,
 		dataVolumesManager:    &dataVolumesManager,
 		virtualMachineManager: &virtualMachineManager,
+		jobsManager:           &jobsManager,
 		osFinder:              &osFinder,
 		templateHandler:       templates.NewTemplateHandler(templateProvider),
 		templateFinder:        vtemplates.NewTemplateFinder(templateProvider, osFinder),
@@ -284,6 +290,15 @@ func (r *VmwareProvider) CleanUp(failure bool, cr *v1beta1.VirtualMachineImport,
 		errs = append(errs, err)
 	}
 
+	// only clean up the job on success,
+	// since the job log is important for debugging
+	if !failure {
+		err = r.jobsManager.DeleteFor(vmiName)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
 	if failure {
 		err = r.dataVolumesManager.DeleteFor(vmiName)
 		if err != nil {
@@ -389,10 +404,7 @@ func (r *VmwareProvider) prepareDataVolumeCredentials() (*mapper.DataVolumeCrede
 }
 
 func (r *VmwareProvider) ensureSecretIsPresent(keyAccess, keySecret string) (*corev1.Secret, error) {
-	vmiName := k8stypes.NamespacedName{
-		Name:      r.vmiObjectMeta.Name,
-		Namespace: r.vmiObjectMeta.Namespace,
-	}
+	vmiName := r.getNamespacedName()
 	secret, err := r.secretsManager.FindFor(vmiName)
 	if err != nil {
 		return nil, err
@@ -407,10 +419,7 @@ func (r *VmwareProvider) ensureSecretIsPresent(keyAccess, keySecret string) (*co
 }
 
 func (r *VmwareProvider) createSecret(username, password string) (*corev1.Secret, error) {
-	vmiName := k8stypes.NamespacedName{
-		Name:      r.vmiObjectMeta.Name,
-		Namespace: r.vmiObjectMeta.Namespace,
-	}
+	vmiName := r.getNamespacedName()
 	newSecret := corev1.Secret{
 		Data: map[string][]byte{
 			keyAccessKey: []byte(username),
@@ -425,4 +434,97 @@ func (r *VmwareProvider) createSecret(username, password string) (*corev1.Secret
 		return nil, err
 	}
 	return &newSecret, nil
+}
+
+func (r *VmwareProvider) NeedsGuestConversion() bool {
+	return true
+}
+
+func (r *VmwareProvider) GetGuestConversionJob() (*batchv1.Job, error) {
+	vmiName := r.getNamespacedName()
+	job, err := r.jobsManager.FindFor(vmiName)
+	if err != nil {
+		return nil, err
+	}
+	return job, nil
+}
+
+func (r *VmwareProvider) LaunchGuestConversionJob(vmSpec *v1.VirtualMachine) (*batchv1.Job, error) {
+	configMap, err := r.ensureConfigMapIsPresent(vmSpec)
+	if err != nil {
+		return nil, err
+	}
+	return r.ensureGuestConversionJobIsPresent(vmSpec, configMap)
+}
+
+func (r *VmwareProvider) ensureConfigMapIsPresent(vmSpec *v1.VirtualMachine) (*corev1.ConfigMap, error) {
+	vmiName := r.getNamespacedName()
+	configMap, err := r.configMapsManager.FindFor(vmiName)
+	if err != nil {
+		return nil, err
+	}
+	if configMap == nil {
+		configMap, err = r.createConfigMap(vmSpec)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return configMap, nil
+}
+
+func (r *VmwareProvider) createConfigMap(vmSpec *v1.VirtualMachine) (*corev1.ConfigMap, error) {
+	vmiName := r.getNamespacedName()
+	domain := guestconversion.MakeLibvirtDomain(vmSpec)
+	domXML, err := xml.Marshal(domain)
+	if err != nil {
+		return nil, err
+	}
+	newConfigMap := &corev1.ConfigMap{
+		BinaryData: map[string][]byte{
+			"input.xml": domXML,
+		},
+	}
+	newConfigMap.OwnerReferences = []metav1.OwnerReference{
+		ownerreferences.NewVMImportOwnerReference(r.vmiTypeMeta, r.vmiObjectMeta),
+	}
+	err = r.configMapsManager.CreateFor(newConfigMap, vmiName)
+	if err != nil {
+		return nil, err
+	}
+	return newConfigMap, nil
+}
+
+func (r *VmwareProvider) ensureGuestConversionJobIsPresent(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) (*batchv1.Job, error) {
+	vmiName := r.getNamespacedName()
+	job, err := r.jobsManager.FindFor(vmiName)
+	if err != nil {
+		return nil, err
+	}
+	if job == nil {
+		job, err = r.createGuestConversionJob(vmSpec, libvirtConfigMap)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return job, nil
+}
+
+func (r *VmwareProvider) createGuestConversionJob(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) (*batchv1.Job, error) {
+	vmiName := r.getNamespacedName()
+	job := guestconversion.MakeGuestConversionJobSpec(vmSpec, libvirtConfigMap)
+	job.OwnerReferences = []metav1.OwnerReference{
+		ownerreferences.NewVMImportControllerReference(r.vmiTypeMeta, r.vmiObjectMeta),
+	}
+	err := r.jobsManager.CreateFor(job, vmiName)
+	if err != nil {
+		return nil, err
+	}
+	return job, nil
+}
+
+func (r *VmwareProvider) getNamespacedName() k8stypes.NamespacedName {
+	return k8stypes.NamespacedName{
+		Name:      r.vmiObjectMeta.Name,
+		Namespace: r.vmiObjectMeta.Namespace,
+	}
 }

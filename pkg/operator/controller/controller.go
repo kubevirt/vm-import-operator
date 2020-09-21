@@ -54,6 +54,7 @@ func Add(mgr manager.Manager) error {
 type OperatorArgs struct {
 	OperatorVersion        string `required:"true" split_words:"true"`
 	ControllerImage        string `required:"true" split_words:"true"`
+	Virtv2vImage           string `required:"true" split_words:"true"`
 	DeployClusterResources string `required:"true" split_words:"true"`
 	PullPolicy             string `required:"true" split_words:"true"`
 	Namespace              string

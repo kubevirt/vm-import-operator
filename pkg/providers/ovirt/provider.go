@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	batchv1 "k8s.io/api/batch/v1"
+
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
 
 	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
@@ -393,6 +395,18 @@ func (o *OvirtProvider) CleanUp(failure bool, cr *v2vv1.VirtualMachineImport, cl
 		return utils.FoldCleanUpErrors(errs, vmiName)
 	}
 	return nil
+}
+
+func (o *OvirtProvider) NeedsGuestConversion() bool {
+	return false
+}
+
+func (o *OvirtProvider) GetGuestConversionJob() (*batchv1.Job, error) {
+	return nil, nil
+}
+
+func (o *OvirtProvider) LaunchGuestConversionJob(_ *kubevirtv1.VirtualMachine) (*batchv1.Job, error) {
+	return nil, nil
 }
 
 func (o *OvirtProvider) prepareDataVolumeCredentials() (mapper.DataVolumeCredentials, error) {

@@ -59,6 +59,7 @@ var (
 		"OPERATOR_VERSION":         Version,
 		"DEPLOY_CLUSTER_RESOURCES": "true",
 		"CONTROLLER_IMAGE":         "kubevirt/vm-import-controller",
+		"VIRTV2V_IMAGE":            "kubevirt/vm-import-virtv2v",
 		"PULL_POLICY":              "Always",
 	}
 )
@@ -646,7 +647,7 @@ var _ = Describe("Controller", func() {
 	},
 		Entry("verify - unused deployment deleted",
 			func() (runtime.Object, error) {
-				deployment := resources.CreateControllerDeployment("fake-deployment", Namespace, "fake-vmimport", "Always", int32(1), &sdkapi.NodePlacement{})
+				deployment := resources.CreateControllerDeployment("fake-deployment", Namespace, "fake-vmimport", "fake-virtv2v", "Always", int32(1), &sdkapi.NodePlacement{})
 				return deployment, nil
 			}),
 
