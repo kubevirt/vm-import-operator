@@ -45,3 +45,8 @@ func (ic *importCounter) IncFailed() {
 func (ic *importCounter) IncSuccessful() {
 	ic.importCounterVec.With(prometheus.Labels{"result": "successful"}).Inc()
 }
+
+// IncCancelled increment successfull label
+func (ic *importCounter) IncCancelled() {
+	ic.importCounterVec.With(prometheus.Labels{"result": "cancelled"}).Inc()
+}
