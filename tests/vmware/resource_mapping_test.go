@@ -1,13 +1,12 @@
-package ovirt_test
+package vmware_test
 
 import (
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
-	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
-	sapi "github.com/machacekondra/fakeovirt/pkg/api/stubbing"
+	"github.com/kubevirt/vm-import-operator/tests/vmware"
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -16,43 +15,36 @@ import (
 	v1 "kubevirt.io/client-go/api/v1"
 )
 
-type resourceMappingTest struct {
-	framework *fwk.Framework
-}
-
 var _ = Describe("VM import ", func() {
 
 	var (
-		f         = fwk.NewFrameworkOrDie("resource-mapping", fwk.ProviderOvirt)
+		f         = fwk.NewFrameworkOrDie("resource-mapping", fwk.ProviderVmware)
 		secret    corev1.Secret
 		namespace string
-		test      = resourceMappingTest{f}
+		err       error
 	)
 
 	BeforeEach(func() {
 		namespace = f.Namespace.Name
-		s, err := f.CreateOvirtSecretFromCACert()
+		secret, err = f.CreateVmwareSecretInNamespace(namespace)
 		if err != nil {
 			Fail("Cannot create secret: " + err.Error())
 		}
-		secret = s
 	})
 
 	Context("with external resource mapping for network", func() {
 		It("should create running VM", func() {
-			vmID := vms.BasicNetworkVmID
-			ovirtMappings := v2vv1.OvirtMappings{
+			vmwareMappings := v2vv1.VmwareMappings{
 				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-					{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+					{Source: v2vv1.Source{Name: &vmware.VM70Network}, Type: &tests.PodType},
 				},
 			}
-			rm, err := f.CreateOvirtResourceMapping(ovirtMappings)
+			rm, err := f.CreateVmwareResourceMapping(vmwareMappings)
 			if err != nil {
 				Fail(err.Error())
 			}
-			nicsXml := f.LoadFile("nics/one.xml")
-			test.stub(vmID, &nicsXml)
-			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
+
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM70, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
@@ -78,21 +70,19 @@ var _ = Describe("VM import ", func() {
 		})
 	})
 
-	Context("with external resource mapping for storage domain", func() {
+	Context("with external resource mapping for datastore", func() {
 		It("should create running VM", func() {
-			vmID := vms.BasicVmID
-			mappings := v2vv1.OvirtMappings{
+			mappings := v2vv1.VmwareMappings{
 				StorageMappings: &[]v2vv1.StorageResourceMappingItem{
-					{Source: v2vv1.Source{ID: &vms.StorageDomainID}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+					{Source: v2vv1.Source{ID: &vmware.VM66Datastore}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
 			}
-			rm, err := f.CreateOvirtResourceMapping(mappings)
+			rm, err := f.CreateVmwareResourceMapping(mappings)
 			if err != nil {
 				Fail(err.Error())
 			}
-			nicsXml := f.LoadFile("nics/empty.xml")
-			test.stub(vmID, &nicsXml)
-			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
+
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
@@ -112,17 +102,15 @@ var _ = Describe("VM import ", func() {
 	})
 
 	Context("with both internal and external storage mappings", func() {
-		table.DescribeTable("should create running VM", func(externalMapping v2vv1.OvirtMappings, internalMapping v2vv1.OvirtMappings, storageClass *string) {
-			vmID := vms.BasicNetworkVmID
-			rm, err := f.CreateOvirtResourceMapping(externalMapping)
+		table.DescribeTable("should create running VM", func(externalMapping v2vv1.VmwareMappings, internalMapping v2vv1.VmwareMappings, storageClass *string) {
+			rm, err := f.CreateVmwareResourceMapping(externalMapping)
 			if err != nil {
 				Fail(err.Error())
 			}
-			nicsXml := f.LoadFile("nics/one.xml")
-			test.stub(vmID, &nicsXml)
-			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
+
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM70, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
-			vmi.Spec.Source.Ovirt.Mappings = &internalMapping
+			vmi.Spec.Source.Vmware.Mappings = &internalMapping
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
 
 			Expect(err).NotTo(HaveOccurred())
@@ -147,82 +135,63 @@ var _ = Describe("VM import ", func() {
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveStorageClassReference(storageClass, f))
 		},
 			table.Entry("with default storage class ignoring external mapping",
-				v2vv1.OvirtMappings{
+				v2vv1.VmwareMappings{
 					DiskMappings: &[]v2vv1.StorageResourceMappingItem{
-						{Source: v2vv1.Source{ID: &vms.DiskID}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+						{Source: v2vv1.Source{Name: &vmware.VM70DiskName1}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+						{Source: v2vv1.Source{Name: &vmware.VM70DiskName2}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 					},
 					NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-						{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+						{Source: v2vv1.Source{Name: &vmware.VM70Network}, Type: &tests.PodType},
 					},
 				},
-				v2vv1.OvirtMappings{},
+				v2vv1.VmwareMappings{},
 				nil),
 			table.Entry("with storage class based on internal storage domain",
-				v2vv1.OvirtMappings{
+				v2vv1.VmwareMappings{
 					NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-						{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+						{Source: v2vv1.Source{ID: &vmware.VM70Network}, Type: &tests.PodType},
 					},
 				},
-				v2vv1.OvirtMappings{
+				v2vv1.VmwareMappings{
 					StorageMappings: &[]v2vv1.StorageResourceMappingItem{
-						{Source: v2vv1.Source{ID: &vms.StorageDomainID}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+						{Source: v2vv1.Source{ID: &vmware.VM70Datastore}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 					},
 				},
 				&f.DefaultStorageClass),
 			table.Entry("with storage class based on internal mapping overriding external mapping",
-				v2vv1.OvirtMappings{
+				v2vv1.VmwareMappings{
 					StorageMappings: &[]v2vv1.StorageResourceMappingItem{
-						{Source: v2vv1.Source{ID: &vms.StorageDomainID}, Target: v2vv1.ObjectIdentifier{Name: "wrong-sc"}},
+						{Source: v2vv1.Source{ID: &vmware.VM70Datastore}, Target: v2vv1.ObjectIdentifier{Name: "wrong-sc"}},
 					},
 					NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-						{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+						{Source: v2vv1.Source{ID: &vmware.VM70Network}, Type: &tests.PodType},
 					},
 				},
-				v2vv1.OvirtMappings{
+				v2vv1.VmwareMappings{
 					StorageMappings: &[]v2vv1.StorageResourceMappingItem{
-						{Source: v2vv1.Source{ID: &vms.StorageDomainID}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+						{Source: v2vv1.Source{ID: &vmware.VM70Datastore}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 					},
 				},
 				&f.DefaultStorageClass),
 			table.Entry("with pod network based on internal network mapping overriding external mapping",
-				v2vv1.OvirtMappings{
+				v2vv1.VmwareMappings{
+					StorageMappings: &[]v2vv1.StorageResourceMappingItem{
+						{Source: v2vv1.Source{ID: &vmware.VM70Datastore}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+					},
 					NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
 						{
 							Type:   &tests.MultusType,
-							Source: v2vv1.Source{ID: &vms.VNicProfile1ID},
+							Source: v2vv1.Source{ID: &vmware.VM70Network},
 							Target: v2vv1.ObjectIdentifier{Name: "wrong-network"},
 						},
 					},
 				},
-				v2vv1.OvirtMappings{
+				v2vv1.VmwareMappings{
 					NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-						{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
+						{Source: v2vv1.Source{ID: &vmware.VM70Network}, Type: &tests.PodType},
 					},
 				},
 				nil),
 		)
 	})
 })
-
-func (t *resourceMappingTest) stub(vmID string, nicsXml *string) {
-	diskAttachmentsXml := t.framework.LoadFile("disk-attachments/one.xml")
-	diskXml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
-	domainXml := t.framework.LoadFile("storage-domains/domain-1.xml")
-	consolesXml := t.framework.LoadFile("graphic-consoles/vnc.xml")
-	networkXml := t.framework.LoadFile("networks/net-1.xml")
-	vnicProfileXml := t.framework.LoadFile("vnic-profiles/vnic-profile-1.xml")
-	vmXml := t.framework.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
-	builder := sapi.NewStubbingBuilder().
-		StubGet("/ovirt-engine/api/vms/"+vmID+"/diskattachments", &diskAttachmentsXml).
-		StubGet("/ovirt-engine/api/vms/"+vmID+"/graphicsconsoles", &consolesXml).
-		StubGet("/ovirt-engine/api/vms/"+vmID+"/nics", nicsXml).
-		StubGet("/ovirt-engine/api/disks/disk-1", &diskXml).
-		StubGet("/ovirt-engine/api/networks/net-1", &networkXml).
-		StubGet("/ovirt-engine/api/vnicprofiles/vnic-profile-1", &vnicProfileXml).
-		StubGet("/ovirt-engine/api/storagedomains/domain-1", &domainXml).
-		StubGet("/ovirt-engine/api/vms/"+vmID, &vmXml)
-	err := t.framework.OvirtStubbingClient.Stub(builder.Build())
-	if err != nil {
-		Fail(err.Error())
-	}
-}
