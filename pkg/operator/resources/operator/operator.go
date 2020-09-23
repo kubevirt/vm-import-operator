@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
-	sdkapi "github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/api"
+	sdkapi "kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/api"
 
-	"github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/resources"
-	sdkopenapi "github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/resources/openapi"
+	"kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources"
+	sdkopenapi "kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources/openapi"
 
 	"k8s.io/apimachinery/pkg/util/validation"
 
@@ -1379,7 +1379,7 @@ func CreateVMImportConfig() *extv1.CustomResourceDefinition {
 										},
 									},
 								},
-								"status": sdkopenapi.OperatorConfigStatus("VMImportConfig"),
+								"status": sdkopenapi.OperatorConfigStatus("", "VMImportConfig"),
 							},
 						},
 					},

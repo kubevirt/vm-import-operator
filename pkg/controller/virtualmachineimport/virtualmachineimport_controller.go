@@ -12,7 +12,7 @@ import (
 
 	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware"
 
-	"github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/resources"
+	"kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/resources"
 
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
 

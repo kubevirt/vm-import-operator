@@ -667,8 +667,6 @@ github.com/kubernetes-csi/csi-lib-utils v0.7.0/go.mod h1:bze+2G9+cmoHxN6+WyG1qT4
 github.com/kubernetes-csi/csi-test v2.0.0+incompatible/go.mod h1:YxJ4UiuPWIhMBkxUKY5c267DyA0uDZ/MtAimhx/2TA0=
 github.com/kubernetes-csi/external-snapshotter/v2 v2.1.1/go.mod h1:dV5oB3U62KBdlf9ADWkMmjGd3USauqQtwIm2OZb5mqI=
 github.com/kubernetes-sigs/kube-storage-version-migrator v0.0.0-20191127225502-51849bc15f17/go.mod h1:enH0BVV+4+DAgWdwSlMefG8bBzTfVMTr1lApzdLZ/cc=
-github.com/kubevirt/controller-lifecycle-operator-sdk v0.0.6 h1:jEF/SKPhz7o9E7FDw0hge3ts6RGM3bbx8DAummtptkA=
-github.com/kubevirt/controller-lifecycle-operator-sdk v0.0.6/go.mod h1:EZt2SMCCMzuwI9sCjF6LTyiRiimikXvxeZJDVOoWqjI=
 github.com/kylelemons/godebug v0.0.0-20170820004349-d65d576e9348/go.mod h1:B69LEHPfb2qLo0BaaOLcbitczOKLWTsrBG9LczfCD4k=
 github.com/lib/pq v1.0.0/go.mod h1:5WUZQaWbwv1U+lTReE5YruASi9Al49XbQIvNi/34Woo=
 github.com/lib/pq v1.2.0 h1:LXpIM/LZ5xGFhOpXAQUIMM1HdyqzVYM13zNdjCEEcA0=
@@ -1538,6 +1536,8 @@ kubevirt.io/client-go v0.26.2/go.mod h1:1ooQZUI8b9A8CcCRvpekF6Llf66drzK76C57tya6
 kubevirt.io/containerized-data-importer v1.10.6/go.mod h1:qF594BtRRkruyrqLwt3zbLCWdPIQNs1qWh4LR1cOzy0=
 kubevirt.io/containerized-data-importer v1.23.1 h1:lVWlPwWiaTB/jMnCAjPWeG4h7eiJcH1TycG7Qbr7PfE=
 kubevirt.io/containerized-data-importer v1.23.1/go.mod h1:2nNKnigVFQAwGq2v5/92+e758nKYacb03uSkHM14mX0=
+kubevirt.io/controller-lifecycle-operator-sdk v0.1.0 h1:wi6kO+nd9fbMDjdMy7rO6dbKXTxLdt6RjVZBpjddOew=
+kubevirt.io/controller-lifecycle-operator-sdk v0.1.0/go.mod h1:M+UuZsp90mmKUVGb5zXDZtIIY1noY5pJk9i2YCQwSnk=
 kubevirt.io/qe-tools v0.1.6 h1:S6z9CATmgV2/z9CWetij++Rhu7l/Z4ObZqerLdNMo0Y=
 kubevirt.io/qe-tools v0.1.6/go.mod h1:PJyH/YXC4W0AmxfheDmXWMbLNsMSboVGXKpMAwfKzVE=
 libvirt.org/libvirt-go-xml v6.6.0+incompatible h1:OjqCuSgsfv+Ig3x8Xt7P8rBM2lNCA69eMaID45LeH48=
