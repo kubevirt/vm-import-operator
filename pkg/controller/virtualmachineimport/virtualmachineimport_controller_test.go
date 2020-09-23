@@ -7,6 +7,7 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
+	"github.com/kubevirt/vm-import-operator/pkg/metrics"
 
 	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 
@@ -1545,6 +1546,88 @@ var _ = Describe("Reconcile steps", func() {
 
 			Expect(err).To(BeNil())
 			Expect(result).To(Equal(reconcile.Result{}))
+		})
+	})
+
+	Describe("Metrics for cancelled import", func() {
+
+		var (
+			request reconcile.Request
+		)
+
+		BeforeEach(func() {
+			rec := record.NewFakeRecorder(3)
+			reconciler.recorder = rec
+		})
+
+		AfterEach(func() {
+			if reconciler != nil {
+				close(reconciler.recorder.(*record.FakeRecorder).Events)
+				reconciler = nil
+			}
+		})
+
+		It("should increment counter for not in progress import: ", func() {
+			request = reconcile.Request{}
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{
+						Source: v2vv1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
+						},
+					}
+					name := "test"
+					obj.(*v2vv1.VirtualMachineImport).Spec.TargetVMName = &name
+					obj.(*v2vv1.VirtualMachineImport).SetDeletionTimestamp(&v1.Time{})
+				case *corev1.Secret:
+					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
+				}
+				return nil
+			}
+
+			counterValueBefore, err := metrics.ImportCounter.GetCancelled()
+			Expect(err).To(BeNil())
+
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(BeNil())
+			Expect(result).To(Equal(reconcile.Result{}))
+			counterValueAfter, err := metrics.ImportCounter.GetCancelled()
+			Expect(counterValueAfter).To(Equal(counterValueBefore + 1))
+		})
+
+		It("should not increment counter for done import: ", func() {
+			request = reconcile.Request{}
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{
+						Source: v2vv1.VirtualMachineImportSourceSpec{
+							Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
+						},
+					}
+					name := "test"
+					obj.(*v2vv1.VirtualMachineImport).Spec.TargetVMName = &name
+					obj.(*v2vv1.VirtualMachineImport).SetDeletionTimestamp(&v1.Time{})
+					obj.(*v2vv1.VirtualMachineImport).Annotations = make(map[string]string)
+					obj.(*v2vv1.VirtualMachineImport).Annotations[AnnCurrentProgress] = progressDone
+
+				case *corev1.Secret:
+					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
+				}
+				return nil
+			}
+
+			counterValueBefore, err := metrics.ImportCounter.GetCancelled()
+			Expect(err).To(BeNil())
+
+			result, err := reconciler.Reconcile(request)
+
+			Expect(err).To(BeNil())
+			Expect(result).To(Equal(reconcile.Result{}))
+			counterValueAfter, err := metrics.ImportCounter.GetCancelled()
+			Expect(counterValueAfter).To(Equal(counterValueBefore))
 		})
 	})
 })

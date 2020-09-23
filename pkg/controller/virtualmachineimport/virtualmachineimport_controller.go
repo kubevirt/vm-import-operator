@@ -1128,17 +1128,12 @@ func (r *ReconcileVirtualMachineImport) updateProgress(instance *v2vv1.VirtualMa
 
 func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName, p provider.Provider, instance *v2vv1.VirtualMachineImport) error {
 
-	err := utils.RemoveFinalizer(instance, utils.CancelledImportFinalizer, r.client)
-	if err != nil {
-		reqLogger := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
-		reqLogger.Error(err, "Failed to remove finalizer "+utils.CancelledImportFinalizer)
-
-	}
+	r.removeFinalizer(utils.CancelledImportFinalizer, instance)
 
 	metrics.ImportCounter.IncSuccessful()
 	vmiName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	var errs []error
-	err = p.CleanUp(false, instance, r.client)
+	err := p.CleanUp(false, instance, r.client)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -1157,17 +1152,12 @@ func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName
 //TODO: use in proper places
 func (r *ReconcileVirtualMachineImport) afterFailure(p provider.Provider, instance *v2vv1.VirtualMachineImport) error {
 
-	err := utils.RemoveFinalizer(instance, utils.CancelledImportFinalizer, r.client)
-	if err != nil {
-		reqLogger := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
-		reqLogger.Error(err, "Failed to remove finalizer "+utils.CancelledImportFinalizer)
-
-	}
+	r.removeFinalizer(utils.CancelledImportFinalizer, instance)
 
 	metrics.ImportCounter.IncFailed()
 	vmiName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	var errs []error
-	err = p.CleanUp(true, instance, r.client)
+	err := p.CleanUp(true, instance, r.client)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -1405,4 +1395,13 @@ func disksImportProgress(dvsImportProgress map[string]float64, dvCount float64) 
 	startProgress, _ := strconv.Atoi(progressCopyingDisks)
 	disksAverageProgress := sumProgress / dvCount
 	return fmt.Sprintf("%v", startProgress+int(disksAverageProgress*progressCopyDiskRange))
+}
+
+func (r *ReconcileVirtualMachineImport) removeFinalizer(finalizer string, instance *v2vv1.VirtualMachineImport) {
+	err := utils.RemoveFinalizer(instance, finalizer, r.client)
+	if err != nil {
+		reqLogger := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
+		reqLogger.Error(err, "Failed to remove finalizer "+finalizer)
+
+	}
 }
