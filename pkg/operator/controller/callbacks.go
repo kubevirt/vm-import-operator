@@ -4,7 +4,7 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/callbacks"
+	"kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/callbacks"
 
 	resources "github.com/kubevirt/vm-import-operator/pkg/operator/resources/operator"
 

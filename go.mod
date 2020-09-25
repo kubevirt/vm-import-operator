@@ -13,7 +13,6 @@ require (
 	github.com/go-openapi/spec v0.19.4
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20191119172530-79f836b90111
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubevirt/controller-lifecycle-operator-sdk v0.0.6
 	github.com/machacekondra/fakeovirt v0.0.0-20200617055337-1afdfa789aab
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
@@ -41,6 +40,7 @@ require (
 	k8s.io/utils v0.0.0-20200619165400-6e3d28b6ed19
 	kubevirt.io/client-go v0.26.2
 	kubevirt.io/containerized-data-importer v1.23.1
+	kubevirt.io/controller-lifecycle-operator-sdk v0.1.0
 	libvirt.org/libvirt-go-xml v6.6.0+incompatible
 	sigs.k8s.io/controller-runtime v0.6.2
 	sigs.k8s.io/yaml v1.2.0

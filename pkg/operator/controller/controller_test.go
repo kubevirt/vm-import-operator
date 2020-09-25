@@ -10,11 +10,11 @@ import (
 
 	"k8s.io/client-go/tools/record"
 
-	"github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/callbacks"
+	"kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/callbacks"
 
-	sdkr "github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/reconciler"
+	sdkr "kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/reconciler"
 
-	sdkapi "github.com/kubevirt/controller-lifecycle-operator-sdk/pkg/sdk/api"
+	sdkapi "kubevirt.io/controller-lifecycle-operator-sdk/pkg/sdk/api"
 
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
 
