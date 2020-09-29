@@ -1150,6 +1150,92 @@ var _ = Describe("Reconcile steps", func() {
 		})
 	})
 
+	Describe("afterSuccess and afterFailure steps", func() {
+		var (
+			config *v2vv1.VirtualMachineImport
+		)
+		BeforeEach(func() {
+			config = &v2vv1.VirtualMachineImport{}
+			config.Spec = v2vv1.VirtualMachineImportSpec{
+				Source: v2vv1.VirtualMachineImportSourceSpec{
+					Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
+				},
+			}
+			conditions := []v2vv1.VirtualMachineImportCondition{}
+			conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
+				Status: corev1.ConditionTrue,
+				Type:   v2vv1.Valid,
+			})
+			conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
+				Status: corev1.ConditionTrue,
+				Type:   v2vv1.MappingRulesVerified,
+			})
+			config.Status.Conditions = conditions
+			name := "test"
+			config.Spec.TargetVMName = &name
+			vmName = types.NamespacedName{Name: "test", Namespace: "default"}
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *kubevirtv1.VirtualMachine:
+					volumes := []kubevirtv1.Volume{}
+					volumes = append(volumes, kubevirtv1.Volume{
+						Name: "test",
+						VolumeSource: kubevirtv1.VolumeSource{
+							DataVolume: &kubevirtv1.DataVolumeSource{
+								Name: "test",
+							},
+						},
+					})
+					obj.(*kubevirtv1.VirtualMachine).Spec.Template = &kubevirtv1.VirtualMachineInstanceTemplateSpec{
+						Spec: kubevirtv1.VirtualMachineInstanceSpec{
+							Volumes: volumes,
+						},
+					}
+					refs := []v1.OwnerReference{}
+					isController := true
+					refs = append(refs, v1.OwnerReference{
+						Controller: &isController,
+					})
+					obj.(*kubevirtv1.VirtualMachine).ObjectMeta.OwnerReferences = refs
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{}
+					obj.(*v2vv1.VirtualMachineImport).Annotations = map[string]string{sourceVMInitialState: string(provider.VMStatusUp)}
+				}
+				return nil
+			}
+			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
+				switch obj.(type) {
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).DeepCopyInto(config)
+				default:
+					return nil
+				}
+
+				return nil
+			}
+		})
+		It("should increment success counter", func() {
+			counterValueBefore := getCounterSuccessful()
+
+			err := reconciler.afterSuccess(vmName, &mockProvider{}, config)
+
+			Expect(err).To(BeNil())
+			counterValueAfter := getCounterSuccessful()
+			Expect(counterValueAfter).To(Equal(counterValueBefore + 1))
+			Expect(config.Finalizers).To(BeNil())
+		})
+		It("should increment failed counter", func() {
+			counterValueBefore := getCounterFailed()
+
+			err := reconciler.afterFailure(&mockProvider{}, config)
+
+			Expect(err).To(BeNil())
+			counterValueAfter := getCounterFailed()
+			Expect(counterValueAfter).To(Equal(counterValueBefore + 1))
+			Expect(config.Finalizers).To(BeNil())
+		})
+	})
+
 	Describe("Reconcile step", func() {
 
 		var (
@@ -1547,87 +1633,105 @@ var _ = Describe("Reconcile steps", func() {
 			Expect(err).To(BeNil())
 			Expect(result).To(Equal(reconcile.Result{}))
 		})
-	})
 
-	Describe("Metrics for cancelled import", func() {
-
-		var (
-			request reconcile.Request
-		)
-
-		BeforeEach(func() {
-			rec := record.NewFakeRecorder(3)
-			reconciler.recorder = rec
-		})
-
-		AfterEach(func() {
-			if reconciler != nil {
-				close(reconciler.recorder.(*record.FakeRecorder).Events)
-				reconciler = nil
-			}
-		})
-
-		It("should increment counter for not in progress import: ", func() {
-			request = reconcile.Request{}
-			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-				switch obj.(type) {
-				case *v2vv1.VirtualMachineImport:
-					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{
-						Source: v2vv1.VirtualMachineImportSourceSpec{
-							Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
-						},
-					}
-					name := "test"
-					obj.(*v2vv1.VirtualMachineImport).Spec.TargetVMName = &name
-					obj.(*v2vv1.VirtualMachineImport).SetDeletionTimestamp(&v1.Time{})
-				case *corev1.Secret:
-					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
+		Describe("Cancelled import", func() {
+			var (
+				config *v2vv1.VirtualMachineImport
+			)
+			BeforeEach(func() {
+				config = &v2vv1.VirtualMachineImport{}
+				config.Spec = v2vv1.VirtualMachineImportSpec{
+					Source: v2vv1.VirtualMachineImportSourceSpec{
+						Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
+					},
 				}
-				return nil
-			}
-
-			counterValueBefore, err := metrics.ImportCounter.GetCancelled()
-			Expect(err).To(BeNil())
-
-			result, err := reconciler.Reconcile(request)
-
-			Expect(err).To(BeNil())
-			Expect(result).To(Equal(reconcile.Result{}))
-			counterValueAfter, err := metrics.ImportCounter.GetCancelled()
-			Expect(counterValueAfter).To(Equal(counterValueBefore + 1))
-		})
-
-		It("should not increment counter for done import: ", func() {
-			request = reconcile.Request{}
-			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
-				switch obj.(type) {
-				case *v2vv1.VirtualMachineImport:
-					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{
-						Source: v2vv1.VirtualMachineImportSourceSpec{
-							Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
-						},
+				conditions := []v2vv1.VirtualMachineImportCondition{}
+				conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
+					Status: corev1.ConditionTrue,
+					Type:   v2vv1.Valid,
+				})
+				conditions = append(conditions, v2vv1.VirtualMachineImportCondition{
+					Status: corev1.ConditionTrue,
+					Type:   v2vv1.MappingRulesVerified,
+				})
+				config.Status.Conditions = conditions
+				name := "test"
+				config.Spec.TargetVMName = &name
+				get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+					switch obj.(type) {
+					case *v2vv1.VirtualMachineImport:
+						config.DeepCopyInto(obj.(*v2vv1.VirtualMachineImport))
+					case *corev1.Secret:
+						obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
 					}
-					name := "test"
-					obj.(*v2vv1.VirtualMachineImport).Spec.TargetVMName = &name
-					obj.(*v2vv1.VirtualMachineImport).SetDeletionTimestamp(&v1.Time{})
-					obj.(*v2vv1.VirtualMachineImport).Annotations = make(map[string]string)
-					obj.(*v2vv1.VirtualMachineImport).Annotations[AnnCurrentProgress] = progressDone
-
-				case *corev1.Secret:
-					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
+					return nil
 				}
-				return nil
-			}
+				statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
+					switch obj.(type) {
+					case *v2vv1.VirtualMachineImport:
+						obj.(*v2vv1.VirtualMachineImport).DeepCopyInto(config)
+					default:
+						return nil
+					}
 
-			counterValueBefore, err := metrics.ImportCounter.GetCancelled()
-			Expect(err).To(BeNil())
+					return nil
+				}
+			})
 
-			result, err := reconciler.Reconcile(request)
+			It("should increment counter for not in progress import: ", func() {
+				config.SetDeletionTimestamp(&v1.Time{})
 
-			Expect(err).To(BeNil())
-			Expect(result).To(Equal(reconcile.Result{}))
-			counterValueAfter, err := metrics.ImportCounter.GetCancelled()
-			Expect(counterValueAfter).To(Equal(counterValueBefore))
+				counterValueBefore := getCounterCancelled()
+
+				result, err := reconciler.Reconcile(request)
+
+				Expect(err).To(BeNil())
+				Expect(result).To(Equal(reconcile.Result{}))
+
+				counterValueAfter := getCounterCancelled()
+				Expect(counterValueAfter).To(Equal(counterValueBefore + 1))
+				Expect(config.Finalizers).To(BeNil())
+			})
+
+			It("should not increment counter for done import: ", func() {
+				config.SetDeletionTimestamp(&v1.Time{})
+				config.Annotations = make(map[string]string)
+				config.Annotations[AnnCurrentProgress] = progressDone
+
+				counterValueBefore := getCounterCancelled()
+
+				result, err := reconciler.Reconcile(request)
+
+				Expect(err).To(BeNil())
+				Expect(result).To(Equal(reconcile.Result{}))
+
+				counterValueAfter := getCounterCancelled()
+				Expect(counterValueAfter).To(Equal(counterValueBefore))
+				Expect(config.Annotations[AnnCurrentProgress]).To(Equal(progressDone))
+				Expect(config.Finalizers).To(BeNil())
+			})
+
+			It("should increment counter for in progress import: ", func() {
+				counterValueBefore := getCounterCancelled()
+				// First call Reconcile to make it in progress
+				result, err := reconciler.Reconcile(request)
+
+				Expect(err).To(BeNil())
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(config.Finalizers).To(Not(BeNil()))
+				Expect(config.Annotations[AnnCurrentProgress]).To(Not(BeNil()))
+
+				// Now make the resource deleted and call Reocncile
+				config.SetDeletionTimestamp(&v1.Time{})
+
+				result, err = reconciler.Reconcile(request)
+
+				Expect(err).To(BeNil())
+				Expect(result).To(Equal(reconcile.Result{}))
+				Expect(config.Finalizers).To(BeNil())
+				counterValueAfter := getCounterCancelled()
+				Expect(counterValueAfter).To(Equal(counterValueBefore + 1))
+			})
 		})
 	})
 })
@@ -1962,4 +2066,22 @@ func newVM() *ovirtsdk.Vm {
 	vm.SetPlacementPolicy(ovirtsdk.NewVmPlacementPolicyBuilder().
 		Affinity(ovirtsdk.VMAFFINITY_MIGRATABLE).MustBuild())
 	return &vm
+}
+
+func getCounterFailed() float64 {
+	value, err := metrics.ImportCounter.GetFailed()
+	Expect(err).To(BeNil())
+	return value
+}
+
+func getCounterCancelled() float64 {
+	value, err := metrics.ImportCounter.GetCancelled()
+	Expect(err).To(BeNil())
+	return value
+}
+
+func getCounterSuccessful() float64 {
+	value, err := metrics.ImportCounter.GetSuccessful()
+	Expect(err).To(BeNil())
+	return value
 }
