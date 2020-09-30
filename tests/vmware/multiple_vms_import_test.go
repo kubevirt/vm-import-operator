@@ -91,24 +91,6 @@ var _ = Describe("Multiple VMs import ", func() {
 			Expect(created).To(BeUnsuccessful(f, ""))
 		})
 
-		It("should create one started VM from two imports of the same NIC-less source VM with same target name to one namespace ", func() {
-			By("Importing and starting first VM")
-			test.importVMWithSecretAndMakeSureItsRunning(vmware.VM63, namespace, "vm-no-1", test.secret.Name, &emptyMapping)
-
-			By("Importing second VM")
-			created, err := test.triggerVMImport(vmware.VM63, namespace, "vm-no-1", test.secret.Name, &emptyMapping)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(created).To(BeSuccessful(f))
-
-			By("Having only one VM imported in the end")
-			vms, err := f.KubeVirtClient.VirtualMachine(namespace).List(&metav1.ListOptions{})
-			if err != nil {
-				Fail(err.Error())
-			}
-			Expect(vms.Items).To(HaveLen(1))
-			Expect(vms.Items[0].Name).To(BeEquivalentTo("vm-no-1"))
-		})
-
 		It("should create two started VMs from the same NIC-less source VM and with same target name in different namespaces", func() {
 			namespace2, err := f.CreateNamespace(f.NsPrefix, make(map[string]string))
 			Expect(err).ToNot(HaveOccurred())

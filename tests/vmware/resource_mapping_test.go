@@ -146,10 +146,10 @@ var _ = Describe("VM import ", func() {
 				},
 				v2vv1.VmwareMappings{},
 				nil),
-			table.Entry("with storage class based on internal storage domain",
+			table.Entry("with storage class based on datastore",
 				v2vv1.VmwareMappings{
 					NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-						{Source: v2vv1.Source{ID: &vmware.VM70Network}, Type: &tests.PodType},
+						{Source: v2vv1.Source{Name: &vmware.VM70Network}, Type: &tests.PodType},
 					},
 				},
 				v2vv1.VmwareMappings{
@@ -164,7 +164,7 @@ var _ = Describe("VM import ", func() {
 						{Source: v2vv1.Source{ID: &vmware.VM70Datastore}, Target: v2vv1.ObjectIdentifier{Name: "wrong-sc"}},
 					},
 					NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-						{Source: v2vv1.Source{ID: &vmware.VM70Network}, Type: &tests.PodType},
+						{Source: v2vv1.Source{Name: &vmware.VM70Network}, Type: &tests.PodType},
 					},
 				},
 				v2vv1.VmwareMappings{
@@ -181,17 +181,17 @@ var _ = Describe("VM import ", func() {
 					NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
 						{
 							Type:   &tests.MultusType,
-							Source: v2vv1.Source{ID: &vmware.VM70Network},
+							Source: v2vv1.Source{Name: &vmware.VM70Network},
 							Target: v2vv1.ObjectIdentifier{Name: "wrong-network"},
 						},
 					},
 				},
 				v2vv1.VmwareMappings{
 					NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-						{Source: v2vv1.Source{ID: &vmware.VM70Network}, Type: &tests.PodType},
+						{Source: v2vv1.Source{Name: &vmware.VM70Network}, Type: &tests.PodType},
 					},
 				},
-				nil),
+				&f.DefaultStorageClass),
 		)
 	})
 })

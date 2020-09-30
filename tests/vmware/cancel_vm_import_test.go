@@ -49,11 +49,6 @@ var _ = Describe("VM import cancellation ", func() {
 	})
 
 	It("should have deleted all the import-associated resources", func() {
-		By("Temporary config map existing - sanity check")
-		configMap, err := getTemporaryConfigMap(f, namespace, vmiName)
-		Expect(err).ToNot(HaveOccurred())
-		Expect(configMap).ToNot(BeNil())
-
 		By("Temporary secret existing - sanity check")
 		secret, err := getTemporarySecret(f, namespace, vmiName)
 		Expect(err).ToNot(HaveOccurred())
@@ -84,11 +79,6 @@ var _ = Describe("VM import cancellation ", func() {
 		err = f.EnsureVMImportDoesNotExist(vmiName)
 		Expect(err).ToNot(HaveOccurred())
 
-		By("Temporary config map no longer existing")
-		Eventually(func() (*corev1.ConfigMap, error) {
-			return getTemporaryConfigMap(f, namespace, vmiName)
-		}, 2*time.Minute, time.Second).Should(BeNil())
-
 		By("Temporary secret no longer existing")
 		Eventually(func() (*corev1.Secret, error) {
 			return getTemporarySecret(f, namespace, vmiName)
@@ -114,20 +104,6 @@ var _ = Describe("VM import cancellation ", func() {
 	})
 
 })
-
-func getTemporaryConfigMap(f *framework.Framework, namespace string, vmiName string) (*corev1.ConfigMap, error) {
-	listOptions := metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("vmimport.v2v.kubevirt.io/vmi-name=%s", oputils.EnsureLabelValueLength(vmiName)),
-	}
-	list, err := f.K8sClient.CoreV1().ConfigMaps(namespace).List(listOptions)
-	if err != nil {
-		return nil, err
-	}
-	if len(list.Items) == 0 {
-		return nil, nil
-	}
-	return &list.Items[0], nil
-}
 
 func getTemporarySecret(f *framework.Framework, namespace string, vmiName string) (*corev1.Secret, error) {
 	listOptions := metav1.ListOptions{

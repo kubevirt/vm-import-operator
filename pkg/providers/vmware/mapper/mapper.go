@@ -122,8 +122,11 @@ func (r *VmwareMapper) buildNics() {
 		case *types.VirtualVmxnet3:
 			virtualNetwork = &v.VirtualEthernetCard
 		}
-		if virtualNetwork != nil {
-			backing := virtualNetwork.Backing.(*types.VirtualEthernetCardNetworkBackingInfo)
+		if virtualNetwork != nil && virtualNetwork.Backing != nil {
+			backing, ok := virtualNetwork.Backing.(*types.VirtualEthernetCardNetworkBackingInfo)
+			if !ok {
+				continue
+			}
 
 			var moRef string
 			if backing.Network != nil {
@@ -219,9 +222,18 @@ func (r *VmwareMapper) getStorageClassForDisk(disk *disk) *string {
 		for _, mapping := range *r.mappings.StorageMappings {
 			targetName := mapping.Target.Name
 			// compare datastore moRef
-			if disk.datastore == *mapping.Source.ID {
-				if targetName != defaultStorageClassTargetName {
-					return &targetName
+			if mapping.Source.ID != nil {
+				if disk.datastore == *mapping.Source.ID {
+					if targetName != defaultStorageClassTargetName {
+						return &targetName
+					}
+				}
+			}
+			if mapping.Source.Name != nil {
+				if disk.datastore == *mapping.Source.Name {
+					if targetName != defaultStorageClassTargetName {
+						return &targetName
+					}
 				}
 			}
 		}
