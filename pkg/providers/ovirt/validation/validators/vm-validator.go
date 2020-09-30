@@ -3,6 +3,7 @@ package validators
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 
 	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 
@@ -12,8 +13,12 @@ import (
 	otemplates "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/templates"
 	outils "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
-	kubevirtv1 "kubevirt.io/client-go/api/v1"
 )
+
+type rule struct {
+	Name string      `json:"name"`
+	Min  interface{} `json:"min,omitempty"`
+}
 
 // ValidateVM validates given VM
 func ValidateVM(vm *ovirtsdk.Vm, config kvConfig.KubeVirtConfig, finder *otemplates.TemplateFinder) []ValidationFailure {
@@ -125,21 +130,51 @@ func isMemoryAboveRequests(vm *ovirtsdk.Vm, finder *otemplates.TemplateFinder) (
 		// missing template is verified later
 		return ValidationFailure{}, true
 	}
-	tempVM := kubevirtv1.VirtualMachine{}
-	err = json.Unmarshal(template.Objects[0].Raw, &tempVM)
+	validations := template.Annotations["validations"]
+	var rules []rule
+	err = json.Unmarshal([]byte(validations), &rules)
 	if err != nil {
-		// template processed later
+		// ignoring, issue with template validation rules
 		return ValidationFailure{}, true
 	}
-	tempMem, tok := tempVM.Spec.Template.Spec.Domain.Resources.Requests.Memory().AsInt64()
-	sourceMem, sok := vm.Memory()
-	if tok && sok && tempMem > sourceMem {
-		return ValidationFailure{
-			ID:      VMMemoryTemplateLimitID,
-			Message: fmt.Sprintf("Source VM memory is lower than enforced by template."),
-		}, false
+
+	for i := range rules {
+		r := &rules[i]
+		if r.Name == "minimal-required-memory" {
+			sourceMem, sok := vm.Memory()
+			tempMem, ok := toInt64(r.Min)
+			if ok && sok && tempMem > sourceMem {
+				return ValidationFailure{
+					ID:      VMMemoryTemplateLimitID,
+					Message: fmt.Sprintf("Source VM memory %d is lower than %d enforced by %s template.", sourceMem, tempMem, template.Name),
+				}, false
+			}
+		}
 	}
+
 	return ValidationFailure{}, true
+}
+
+func toInt64(obj interface{}) (int64, bool) {
+	switch val := obj.(type) {
+	case int:
+		return int64(val), true
+	case int32:
+		return int64(val), true
+	case int64:
+		return int64(val), true
+	case uint:
+		return int64(val), true
+	case uint32:
+		return int64(val), true
+	case uint64:
+		return int64(val), true
+	case float32:
+		return int64(math.Round(float64(val))), true
+	case float64:
+		return int64(math.Round(val)), true
+	}
+	return 0, false
 }
 
 func isValidStatus(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
