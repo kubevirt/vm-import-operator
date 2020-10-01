@@ -525,7 +525,7 @@ func newVMWithStatusControl(withStatus bool) *ovirtsdk.Vm {
 	cpu.SetCpuTune(&cpuTune)
 	vm.SetCpu(&cpu)
 
-	vm.SetMemory(536870912)
+	vm.SetMemory(2147483648)
 
 	ha := ovirtsdk.HighAvailability{}
 	ha.SetEnabled(true)
@@ -613,9 +613,10 @@ func (t *mockTemplateProvider) Find(name *string, os *string, workload *string, 
 		Items: []templatev1.Template{
 			{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      *name,
-					Namespace: "default",
-					Labels:    templates.OSLabelBuilder(os, workload, flavor),
+					Name:        *name,
+					Namespace:   "default",
+					Labels:      templates.OSLabelBuilder(os, workload, flavor),
+					Annotations: getAnnotations(),
 				},
 				Objects: []runtime.RawExtension{
 					{
@@ -625,6 +626,18 @@ func (t *mockTemplateProvider) Find(name *string, os *string, workload *string, 
 			},
 		},
 	}, nil
+}
+
+func getAnnotations() map[string]string {
+	annons := make(map[string]string)
+	annons["validations"] = `[{
+		"name": "minimal-required-memory",
+		"path": "jsonpath::.spec.domain.resources.requests.memory",
+		"rule": "integer",
+		"message": "This VM requires more memory.",
+		"min": 1610612736
+	}]`
+	return annons
 }
 
 // Process mocks the behavior of the client for calling process API
