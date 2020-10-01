@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
@@ -36,12 +37,36 @@ type importCounter struct {
 	importCounterVec *prometheus.CounterVec
 }
 
+// Return current value of counter. If error is not nil then value is undefined
+func (ic *importCounter) getValue(labels prometheus.Labels) (float64, error) {
+	var m = &dto.Metric{}
+	err := ic.importCounterVec.With(labels).Write(m)
+	return m.Counter.GetValue(), err
+}
+
 // IncFailed increment failed label
 func (ic *importCounter) IncFailed() {
 	ic.importCounterVec.With(prometheus.Labels{"result": "failed"}).Inc()
 }
 
+func (ic *importCounter) GetFailed() (float64, error) {
+	return ic.getValue(prometheus.Labels{"result": "failed"})
+}
+
 // IncSuccessful increment successfull label
 func (ic *importCounter) IncSuccessful() {
 	ic.importCounterVec.With(prometheus.Labels{"result": "successful"}).Inc()
+}
+
+func (ic *importCounter) GetSuccessful() (float64, error) {
+	return ic.getValue(prometheus.Labels{"result": "successful"})
+}
+
+// IncCancelled increment successfull label
+func (ic *importCounter) IncCancelled() {
+	ic.importCounterVec.With(prometheus.Labels{"result": "cancelled"}).Inc()
+}
+
+func (ic *importCounter) GetCancelled() (float64, error) {
+	return ic.getValue(prometheus.Labels{"result": "cancelled"})
 }

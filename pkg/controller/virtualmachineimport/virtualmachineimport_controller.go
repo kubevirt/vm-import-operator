@@ -232,6 +232,37 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		return reconcile.Result{}, err
 	}
 
+	// Add finalizer to handle cancelled import
+	if !r.vmImportInProgress(instance) {
+		err := utils.AddFinalizer(instance, utils.CancelledImportFinalizer, r.client)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	// Handle deleted import
+	if instance.DeletionTimestamp != nil {
+
+		// We know that additional finalizers after this point are created when VM import is in progress
+		// Therefore, if one of them fails and we return to Reconcile again ==> the code above will not add cancel finalizer again
+		// Finalizers that do not rely on import state should be handled here
+
+		// Cancelled import finalizer
+		if utils.HasFinalizer(instance, utils.CancelledImportFinalizer) {
+			err := utils.RemoveFinalizer(instance, utils.CancelledImportFinalizer, r.client)
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			metrics.ImportCounter.IncCancelled()
+		}
+
+		// If no more finalizers then return so resource can be deleted
+		if len(instance.GetFinalizers()) == 0 {
+			return reconcile.Result{}, nil
+		}
+	}
+
 	// Init provider:
 	provider, err := r.createProvider(instance)
 	if err != nil {
@@ -1096,6 +1127,9 @@ func (r *ReconcileVirtualMachineImport) updateProgress(instance *v2vv1.VirtualMa
 }
 
 func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName, p provider.Provider, instance *v2vv1.VirtualMachineImport) error {
+
+	r.removeFinalizer(utils.CancelledImportFinalizer, instance)
+
 	metrics.ImportCounter.IncSuccessful()
 	vmiName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	var errs []error
@@ -1117,6 +1151,9 @@ func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName
 
 //TODO: use in proper places
 func (r *ReconcileVirtualMachineImport) afterFailure(p provider.Provider, instance *v2vv1.VirtualMachineImport) error {
+
+	r.removeFinalizer(utils.CancelledImportFinalizer, instance)
+
 	metrics.ImportCounter.IncFailed()
 	vmiName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	var errs []error
@@ -1358,4 +1395,13 @@ func disksImportProgress(dvsImportProgress map[string]float64, dvCount float64) 
 	startProgress, _ := strconv.Atoi(progressCopyingDisks)
 	disksAverageProgress := sumProgress / dvCount
 	return fmt.Sprintf("%v", startProgress+int(disksAverageProgress*progressCopyDiskRange))
+}
+
+func (r *ReconcileVirtualMachineImport) removeFinalizer(finalizer string, instance *v2vv1.VirtualMachineImport) {
+	err := utils.RemoveFinalizer(instance, finalizer, r.client)
+	if err != nil {
+		reqLogger := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
+		reqLogger.Error(err, "Failed to remove finalizer "+finalizer)
+
+	}
 }

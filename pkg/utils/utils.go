@@ -21,6 +21,9 @@ import (
 const (
 	// RestoreVMStateFinalizer defines restore source vm finalizer
 	RestoreVMStateFinalizer = "vmimport.v2v.kubevirt.io/restore-state"
+
+	// Finalaizer for handling cancelled import
+	CancelledImportFinalizer = "vmimport.v2v.kubevirt.io/cancelled-import"
 )
 
 var (
@@ -257,7 +260,13 @@ func AddFinalizer(cr *v2vv1.VirtualMachineImport, name string, client rclient.Cl
 	copy.Finalizers = append(copy.Finalizers, name)
 
 	patch := rclient.MergeFrom(cr)
-	return client.Patch(context.TODO(), copy, patch)
+	err := client.Patch(context.TODO(), copy, patch)
+
+	if err == nil {
+		cr.Finalizers = copy.Finalizers
+	}
+
+	return err
 }
 
 // HasFinalizer checks whether specific finalizer is set on VM import CR
@@ -286,7 +295,13 @@ func RemoveFinalizer(cr *v2vv1.VirtualMachineImport, name string, client rclient
 	copy.Finalizers = finalizers
 
 	patch := rclient.MergeFrom(cr)
-	return client.Patch(context.TODO(), copy, patch)
+	err := client.Patch(context.TODO(), copy, patch)
+
+	if err == nil {
+		cr.Finalizers = copy.Finalizers
+	}
+
+	return err
 }
 
 // FoldCleanUpErrors combines clean up errors into one error
