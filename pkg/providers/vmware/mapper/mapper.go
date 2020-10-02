@@ -56,9 +56,10 @@ type disk struct {
 
 // nic is an abstraction of a VMWare VirtualEthernetCard
 type nic struct {
-	name  string
-	moRef string
-	mac   string
+	name        string
+	network     string
+	mac         string
+	dvportgroup string
 }
 
 // DataVolumeCredentials defines the credentials required
@@ -123,19 +124,25 @@ func (r *VmwareMapper) buildNics() {
 			virtualNetwork = &v.VirtualEthernetCard
 		}
 		if virtualNetwork != nil && virtualNetwork.Backing != nil {
-			backing, ok := virtualNetwork.Backing.(*types.VirtualEthernetCardNetworkBackingInfo)
-			if !ok {
-				continue
+			var network string
+			var dvportgroup string
+			var deviceName string
+
+			switch backing := virtualNetwork.Backing.(type) {
+			case *types.VirtualEthernetCardNetworkBackingInfo:
+				if backing.Network != nil {
+					network = backing.Network.Value
+				}
+				deviceName = backing.DeviceName
+			case *types.VirtualEthernetCardDistributedVirtualPortBackingInfo:
+				dvportgroup = backing.Port.PortgroupKey
 			}
 
-			var moRef string
-			if backing.Network != nil {
-				moRef = backing.Network.Value
-			}
 			nic := nic{
-				name:  backing.DeviceName,
+				name:  deviceName,
 				mac:   virtualNetwork.MacAddress,
-				moRef: moRef,
+				network: network,
+				dvportgroup: dvportgroup,
 			}
 			nics = append(nics, nic)
 		}
@@ -527,7 +534,7 @@ func (r *VmwareMapper) mapNetworks() ([]kubevirtv1.Network, error) {
 		kubevirtNet := kubevirtv1.Network{}
 		for _, mapping := range *r.mappings.NetworkMappings {
 			if (mapping.Source.Name != nil && nic.name == *mapping.Source.Name) ||
-				(mapping.Source.ID != nil && nic.moRef == *mapping.Source.ID) {
+				(mapping.Source.ID != nil && (nic.network == *mapping.Source.ID || nic.dvportgroup == *mapping.Source.ID)) {
 				if mapping.Type == nil || *mapping.Type == networkTypePod {
 					kubevirtNet.Pod = &kubevirtv1.PodNetwork{}
 				} else if *mapping.Type == networkTypeMultus {
