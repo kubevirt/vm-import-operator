@@ -28,8 +28,8 @@ var (
 	importDurationVec = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:    "kubevirt_vmimport_duration",
-			Help:    "Satistics of virtual machine import duration",
-			Buckets: []float64{60, 15 * 60, 60 * 60}, // 1 minute, 15 minutesm 1 hour and above 1 hour duration
+			Help:    "Statistics of virtual machine import duration",
+			Buckets: []float64{60, 15 * 60, 60 * 60}, // 1 minute, 15 minutes 1 hour and above 1 hour duration
 		},
 		[]string{"result"},
 	)

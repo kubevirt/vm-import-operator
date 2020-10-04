@@ -4,5 +4,5 @@ Virtual Machine Import uses Prometheus for metrics reporting. The metrics can be
 
 | Name                       | Description                                                                   | Type      | Labels                                   |
 |----------------------------|-------------------------------------------------------------------------------|-----------|------------------------------------------|
-| kubevirt_vmimport_counter  | The total number of successfull/failed/cancelled Virtual Machine imports.     | Counter   | result=successful\|failed\|cancelled     |
-| kubevirt_vmimport_duration | Duration, in seconds, of successfull/failed/cancelled Virtual Machine imports.| Histogram | result=successful\|failed\|cancelled     |
+| kubevirt_vmimport_counter  | The total number of successful/failed/cancelled Virtual Machine imports.     | Counter   | result=successful\|failed\|cancelled     |
+| kubevirt_vmimport_duration | Duration, in seconds, of successful/failed/cancelled Virtual Machine imports.| Histogram | result=successful\|failed\|cancelled     |
