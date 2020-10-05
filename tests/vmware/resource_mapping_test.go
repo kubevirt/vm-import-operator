@@ -169,7 +169,7 @@ var _ = Describe("VM import ", func() {
 				},
 				v2vv1.VmwareMappings{
 					StorageMappings: &[]v2vv1.StorageResourceMappingItem{
-						{Source: v2vv1.Source{ID: &vmware.VM70Datastore}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+						{Source: v2vv1.Source{Name: &vmware.VM70DatastoreName}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 					},
 				},
 				&f.DefaultStorageClass),

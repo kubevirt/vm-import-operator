@@ -2,6 +2,7 @@ package mapper
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -49,7 +50,8 @@ var biosTypeMapping = map[string]*kubevirtv1.Bootloader{
 type disk struct {
 	backingFileName string
 	capacity        resource.Quantity
-	datastore       string
+	datastoreMoRef  string
+	datastoreName   string
 	id              string
 	name            string
 }
@@ -126,22 +128,30 @@ func (r *VmwareMapper) buildNics() {
 		if virtualNetwork != nil && virtualNetwork.Backing != nil {
 			var network string
 			var dvportgroup string
-			var deviceName string
+			var name string
 
 			switch backing := virtualNetwork.Backing.(type) {
 			case *types.VirtualEthernetCardNetworkBackingInfo:
 				if backing.Network != nil {
 					network = backing.Network.Value
 				}
-				deviceName = backing.DeviceName
+				// despite being called DeviceName, this is actually
+				// the name of the Network the device is attached to,
+				// e.g. "VM Network"
+				name = backing.DeviceName
 			case *types.VirtualEthernetCardDistributedVirtualPortBackingInfo:
 				dvportgroup = backing.Port.PortgroupKey
+				desc := virtualNetwork.DeviceInfo.GetDescription()
+				if desc != nil {
+					// this is the actual device name, e.g. "ethernet-0"
+					name = desc.Label
+				}
 			}
 
 			nic := nic{
-				name:  deviceName,
-				mac:   virtualNetwork.MacAddress,
-				network: network,
+				name:        name,
+				mac:         virtualNetwork.MacAddress,
+				network:     network,
 				dvportgroup: dvportgroup,
 			}
 			nics = append(nics, nic)
@@ -164,16 +174,18 @@ func (r *VmwareMapper) buildDisks() error {
 	for _, device := range devices {
 		// is this device a VirtualDisk?
 		if virtualDisk, ok := device.(*types.VirtualDisk); ok {
-			var datastore string
+			var datastoreMoRef string
+			var datastoreName string
 			var backingFileName string
 			var diskId string
 
 			backing := virtualDisk.Backing.(types.BaseVirtualDeviceFileBackingInfo)
 			backingInfo := backing.GetVirtualDeviceFileBackingInfo()
 			if backingInfo.Datastore != nil {
-				datastore = backingInfo.Datastore.Value
+				datastoreMoRef = backingInfo.Datastore.Value
 			}
 			backingFileName = backingInfo.FileName
+			datastoreName = getDatastoreNameFromBacking(backingFileName)
 
 			capacity, err := getCapacityForVirtualDisk(virtualDisk)
 			if err != nil {
@@ -189,7 +201,8 @@ func (r *VmwareMapper) buildDisks() error {
 			disk := disk{
 				backingFileName: backingFileName,
 				capacity:        capacity,
-				datastore:       datastore,
+				datastoreMoRef:  datastoreMoRef,
+				datastoreName:   datastoreName,
 				id:              diskId,
 				name:            virtualDisk.DeviceInfo.GetDescription().Label,
 			}
@@ -228,16 +241,15 @@ func (r *VmwareMapper) getStorageClassForDisk(disk *disk) *string {
 	if r.mappings.StorageMappings != nil {
 		for _, mapping := range *r.mappings.StorageMappings {
 			targetName := mapping.Target.Name
-			// compare datastore moRef
 			if mapping.Source.ID != nil {
-				if disk.datastore == *mapping.Source.ID {
+				if disk.datastoreMoRef == *mapping.Source.ID {
 					if targetName != defaultStorageClassTargetName {
 						return &targetName
 					}
 				}
 			}
 			if mapping.Source.Name != nil {
-				if disk.datastore == *mapping.Source.Name {
+				if disk.datastoreName == *mapping.Source.Name {
 					if targetName != defaultStorageClassTargetName {
 						return &targetName
 					}
@@ -562,10 +574,11 @@ func (r *VmwareMapper) mapNetworkInterfaces(networkToType map[string]string) ([]
 		switch networkToType[kubevirtInterface.Name] {
 		case networkTypeMultus:
 			kubevirtInterface.Bridge = &kubevirtv1.InterfaceBridge{}
+			interfaces = append(interfaces, kubevirtInterface)
 		case networkTypePod:
 			kubevirtInterface.Masquerade = &kubevirtv1.InterfaceMasquerade{}
+			interfaces = append(interfaces, kubevirtInterface)
 		}
-		interfaces = append(interfaces, kubevirtInterface)
 	}
 
 	return interfaces, nil
@@ -622,4 +635,14 @@ func getCapacityForVirtualDisk(disk *types.VirtualDisk) (resource.Quantity, erro
 		return capacity, err
 	}
 	return capacity, nil
+}
+
+func getDatastoreNameFromBacking(backingFile string) string {
+	var datastoreName string
+	datastoreNamePattern := regexp.MustCompile(`^\[(.+)\]`)
+	matches := datastoreNamePattern.FindStringSubmatch(backingFile)
+	if len(matches) > 1 {
+		datastoreName = matches[1]
+	}
+	return datastoreName
 }

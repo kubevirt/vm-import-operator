@@ -113,7 +113,12 @@ var _ = Describe("Basic VM import ", func() {
 					{Source: v2vv1.Source{Name: &vmware.VM66DiskName}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
 			}, f.DefaultStorageClass),
-			table.Entry(" for storage domain", v2vv1.VmwareMappings{
+			table.Entry(" for storage domain by name", v2vv1.VmwareMappings{
+				StorageMappings: &[]v2vv1.StorageResourceMappingItem{
+					{Source: v2vv1.Source{Name: &vmware.VM66DatastoreName}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+				},
+			}, f.DefaultStorageClass),
+			table.Entry(" for storage domain by id", v2vv1.VmwareMappings{
 				StorageMappings: &[]v2vv1.StorageResourceMappingItem{
 					{Source: v2vv1.Source{ID: &vmware.VM66Datastore}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},

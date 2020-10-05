@@ -9,6 +9,7 @@ var (
 	VM70DiskName1 = "disk-202-0"
 	VM70DiskName2 = "disk-202-1"
 	VM70Datastore = "/tmp/govcsim-DC0-LocalDS_0-024565671@folder-5"
+	VM70DatastoreName = "LocalDS_0"
 )
 
 // vcsim/0051-VirtualMachine-vm-66.xml
@@ -17,6 +18,7 @@ var (
 	VM66 = "f7c371d6-2003-5a48-9859-3bc9a8b08908"
 	VM66DiskName = "disk-202-0"
 	VM66Datastore = "/tmp/govcsim-DC0-LocalDS_0-024565671@folder-5"
+	VM66DatastoreName = "LocalDS_0"
 )
 
 // vcsim/0049-VirtualMachine-vm-63.xml
