@@ -185,8 +185,11 @@ func (r RichVmwareClient) TestConnection() error {
 	return err
 }
 
-// Close is a no-op which is present in order to satisfy the VMClient interface.
+// Close logs out and shuts down idle connections.
 func (r RichVmwareClient) Close() error {
-	// nothing to do
-	return nil
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	defer r.client.CloseIdleConnections()
+
+	return r.sessionManager.Logout(ctx)
 }
