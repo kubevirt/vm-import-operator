@@ -22,7 +22,7 @@ spec:
             type: pod
         storageMappings:
           - source:
-              name: vmware_datastore_1
+              id: datastore-13
             target:
               name: storage_class_1
         diskMappings: # specifies per-disk placement on storage class

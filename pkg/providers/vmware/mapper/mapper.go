@@ -2,6 +2,7 @@ package mapper
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -49,16 +50,18 @@ var biosTypeMapping = map[string]*kubevirtv1.Bootloader{
 type disk struct {
 	backingFileName string
 	capacity        resource.Quantity
-	datastore       string
+	datastoreMoRef  string
+	datastoreName   string
 	id              string
 	name            string
 }
 
 // nic is an abstraction of a VMWare VirtualEthernetCard
 type nic struct {
-	name  string
-	moRef string
-	mac   string
+	name        string
+	network     string
+	mac         string
+	dvportgroup string
 }
 
 // DataVolumeCredentials defines the credentials required
@@ -122,17 +125,34 @@ func (r *VmwareMapper) buildNics() {
 		case *types.VirtualVmxnet3:
 			virtualNetwork = &v.VirtualEthernetCard
 		}
-		if virtualNetwork != nil {
-			backing := virtualNetwork.Backing.(*types.VirtualEthernetCardNetworkBackingInfo)
+		if virtualNetwork != nil && virtualNetwork.Backing != nil {
+			var network string
+			var dvportgroup string
+			var name string
 
-			var moRef string
-			if backing.Network != nil {
-				moRef = backing.Network.Value
+			switch backing := virtualNetwork.Backing.(type) {
+			case *types.VirtualEthernetCardNetworkBackingInfo:
+				if backing.Network != nil {
+					network = backing.Network.Value
+				}
+				// despite being called DeviceName, this is actually
+				// the name of the Network the device is attached to,
+				// e.g. "VM Network"
+				name = backing.DeviceName
+			case *types.VirtualEthernetCardDistributedVirtualPortBackingInfo:
+				dvportgroup = backing.Port.PortgroupKey
+				desc := virtualNetwork.DeviceInfo.GetDescription()
+				if desc != nil {
+					// this is the actual device name, e.g. "ethernet-0"
+					name = desc.Label
+				}
 			}
+
 			nic := nic{
-				name:  backing.DeviceName,
-				mac:   virtualNetwork.MacAddress,
-				moRef: moRef,
+				name:        name,
+				mac:         virtualNetwork.MacAddress,
+				network:     network,
+				dvportgroup: dvportgroup,
 			}
 			nics = append(nics, nic)
 		}
@@ -154,16 +174,18 @@ func (r *VmwareMapper) buildDisks() error {
 	for _, device := range devices {
 		// is this device a VirtualDisk?
 		if virtualDisk, ok := device.(*types.VirtualDisk); ok {
-			var datastore string
+			var datastoreMoRef string
+			var datastoreName string
 			var backingFileName string
 			var diskId string
 
 			backing := virtualDisk.Backing.(types.BaseVirtualDeviceFileBackingInfo)
 			backingInfo := backing.GetVirtualDeviceFileBackingInfo()
 			if backingInfo.Datastore != nil {
-				datastore = backingInfo.Datastore.Value
+				datastoreMoRef = backingInfo.Datastore.Value
 			}
 			backingFileName = backingInfo.FileName
+			datastoreName = getDatastoreNameFromBacking(backingFileName)
 
 			capacity, err := getCapacityForVirtualDisk(virtualDisk)
 			if err != nil {
@@ -179,7 +201,8 @@ func (r *VmwareMapper) buildDisks() error {
 			disk := disk{
 				backingFileName: backingFileName,
 				capacity:        capacity,
-				datastore:       datastore,
+				datastoreMoRef:  datastoreMoRef,
+				datastoreName:   datastoreName,
 				id:              diskId,
 				name:            virtualDisk.DeviceInfo.GetDescription().Label,
 			}
@@ -218,10 +241,18 @@ func (r *VmwareMapper) getStorageClassForDisk(disk *disk) *string {
 	if r.mappings.StorageMappings != nil {
 		for _, mapping := range *r.mappings.StorageMappings {
 			targetName := mapping.Target.Name
-			// compare datastore moRef
-			if disk.datastore == *mapping.Source.ID {
-				if targetName != defaultStorageClassTargetName {
-					return &targetName
+			if mapping.Source.ID != nil {
+				if disk.datastoreMoRef == *mapping.Source.ID {
+					if targetName != defaultStorageClassTargetName {
+						return &targetName
+					}
+				}
+			}
+			if mapping.Source.Name != nil {
+				if disk.datastoreName == *mapping.Source.Name {
+					if targetName != defaultStorageClassTargetName {
+						return &targetName
+					}
 				}
 			}
 		}
@@ -515,7 +546,7 @@ func (r *VmwareMapper) mapNetworks() ([]kubevirtv1.Network, error) {
 		kubevirtNet := kubevirtv1.Network{}
 		for _, mapping := range *r.mappings.NetworkMappings {
 			if (mapping.Source.Name != nil && nic.name == *mapping.Source.Name) ||
-				(mapping.Source.ID != nil && nic.moRef == *mapping.Source.ID) {
+				(mapping.Source.ID != nil && (nic.network == *mapping.Source.ID || nic.dvportgroup == *mapping.Source.ID)) {
 				if mapping.Type == nil || *mapping.Type == networkTypePod {
 					kubevirtNet.Pod = &kubevirtv1.PodNetwork{}
 				} else if *mapping.Type == networkTypeMultus {
@@ -543,10 +574,11 @@ func (r *VmwareMapper) mapNetworkInterfaces(networkToType map[string]string) ([]
 		switch networkToType[kubevirtInterface.Name] {
 		case networkTypeMultus:
 			kubevirtInterface.Bridge = &kubevirtv1.InterfaceBridge{}
+			interfaces = append(interfaces, kubevirtInterface)
 		case networkTypePod:
 			kubevirtInterface.Masquerade = &kubevirtv1.InterfaceMasquerade{}
+			interfaces = append(interfaces, kubevirtInterface)
 		}
-		interfaces = append(interfaces, kubevirtInterface)
 	}
 
 	return interfaces, nil
@@ -603,4 +635,14 @@ func getCapacityForVirtualDisk(disk *types.VirtualDisk) (resource.Quantity, erro
 		return capacity, err
 	}
 	return capacity, nil
+}
+
+func getDatastoreNameFromBacking(backingFile string) string {
+	var datastoreName string
+	datastoreNamePattern := regexp.MustCompile(`^\[(.+)\]`)
+	matches := datastoreNamePattern.FindStringSubmatch(backingFile)
+	if len(matches) > 1 {
+		datastoreName = matches[1]
+	}
+	return datastoreName
 }

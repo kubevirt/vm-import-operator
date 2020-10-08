@@ -13,6 +13,6 @@ spec:
         type: pod
     storageMappings:
       - source:
-          name: vmware_datastore # maps VMware datastore to a storage class
+          id: datastore-13 # maps VMware datastore to a storage class
         target:
           name: storage_class_1

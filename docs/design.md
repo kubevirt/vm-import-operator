@@ -137,17 +137,21 @@ spec:
     networkMappings:
     - source:
         name: VM Network # map network name to network attachment definition
-      target: xyz
+      target:
+        name: xyz
       type: multus
     - source:
-        id: network-7 # alternatively the network can be mapped by managed object reference
-      Target:
+        id: network-7 # alternatively the network can be mapped by managed object reference instead of name
+      target:
         name: pod
       type: pod
     storageMappings:
     - source:
-        name: iSCSI_Datastore # maps disks in a given VMware datastore to a storage class
+        id: datastore-13 # maps disks in a Datastore to a storage class via the Datastore managed object ref
       target: storage_class_1
+    - source:
+        name: LocalDS_0 # maps disks in a Datastore to a storage class via the Datastore name
+      target: storage_class_2
 ```
 
 ### Resource mapping resolution
