@@ -795,6 +795,7 @@ func setTrackerLabel(meta metav1.ObjectMeta, instance *v2vv1.VirtualMachineImpor
 func (r *ReconcileVirtualMachineImport) startVM(provider provider.Provider, instance *v2vv1.VirtualMachineImport, vmName types.NamespacedName) error {
 	vmi := &kubevirtv1.VirtualMachineInstance{}
 	err := r.client.Get(context.TODO(), vmName, vmi)
+	vmIdentifier := utils.ToLoggableResourceName(vmName.Name, &vmName.Namespace)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			if err = r.updateProgress(instance, progressStartVM); err != nil {
@@ -802,25 +803,26 @@ func (r *ReconcileVirtualMachineImport) startVM(provider provider.Provider, inst
 			}
 			if err = r.updateToRunning(vmName); err != nil {
 				// Emit event vm failed to start:
-				r.recorder.Eventf(instance, corev1.EventTypeWarning, EventVMStartFailed, "Virtual Machine %s/%s failed to start: %s", vmName.Namespace, vmName.Name, err)
+				r.recorder.Eventf(instance, corev1.EventTypeWarning, EventVMStartFailed, "Virtual Machine %s failed to start: %s", vmIdentifier, err)
 				return err
 			}
+		} else {
+			return err
 		}
-		return err
-	}
+	} else {
+		if vmi.Status.Phase == kubevirtv1.Running || vmi.Status.Phase == kubevirtv1.Scheduled {
+			// Emit event vm is successfully imported and started:
+			r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportSucceeded, "Virtual Machine %s imported and started", vmIdentifier)
 
-	if vmi.Status.Phase == kubevirtv1.Running || vmi.Status.Phase == kubevirtv1.Scheduled {
-		// Emit event vm is successfully imported and started:
-		r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportSucceeded, "Virtual Machine %s/%s imported and started", vmName.Namespace, vmName.Name)
-
-		if err = r.updateConditionsAfterSuccess(instance, "Virtual machine running", v2vv1.VirtualMachineRunning); err != nil {
-			return err
-		}
-		if err = r.updateProgress(instance, progressDone); err != nil {
-			return err
-		}
-		if err = r.afterSuccess(vmName, provider, instance); err != nil {
-			return err
+			if err = r.updateConditionsAfterSuccess(instance, "Virtual machine running", v2vv1.VirtualMachineRunning); err != nil {
+				return err
+			}
+			if err = r.updateProgress(instance, progressDone); err != nil {
+				return err
+			}
+			if err = r.afterSuccess(vmName, provider, instance); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

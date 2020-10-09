@@ -235,7 +235,7 @@ func (t *basicVmImportTest) validateTargetConfiguration(vmName string) *v1.Virtu
 func (t *basicVmImportTest) stub(vmID string) {
 	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
 	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
-	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "50331648"})
 	consolesXML := t.framework.LoadFile("graphic-consoles/vnc.xml")
 	vmXML := t.framework.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
 	nicsXML := t.framework.LoadFile("nics/empty.xml")

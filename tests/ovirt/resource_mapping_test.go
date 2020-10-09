@@ -206,7 +206,7 @@ var _ = Describe("VM import ", func() {
 
 func (t *resourceMappingTest) stub(vmID string, nicsXml *string) {
 	diskAttachmentsXml := t.framework.LoadFile("disk-attachments/one.xml")
-	diskXml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	diskXml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "50331648"})
 	domainXml := t.framework.LoadFile("storage-domains/domain-1.xml")
 	consolesXml := t.framework.LoadFile("graphic-consoles/vnc.xml")
 	networkXml := t.framework.LoadFile("networks/net-1.xml")

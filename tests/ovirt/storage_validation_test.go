@@ -49,7 +49,7 @@ var _ = Describe("VM storage validation ", func() {
 		vmID := vms.UnsupportedDiskAttachmentInterfaceVmIDPrefix + iFace
 		created := test.prepareImport(vmID, secretName)
 		diskAttachmentsXml := f.LoadTemplate("/disk-attachments/interface-template.xml", map[string]string{"@INTERFACE": iFace})
-		diskXml := f.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+		diskXml := f.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "50331648"})
 		err := test.stubForDiskAttachments(vmID, &diskAttachmentsXml, &diskXml)
 		if err != nil {
 			Fail(err.Error())
@@ -66,7 +66,7 @@ var _ = Describe("VM storage validation ", func() {
 		created := test.prepareImport(vmID, secretName)
 
 		diskAttachmentsXml := f.LoadFile("/invalid/disk-attachments/scsi-reservation.xml")
-		diskXml := f.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+		diskXml := f.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "50331648"})
 		err := test.stubForDiskAttachments(vmID, &diskAttachmentsXml, &diskXml)
 		if err != nil {
 			Fail(err.Error())
@@ -79,7 +79,7 @@ var _ = Describe("VM storage validation ", func() {
 		vmID := vms.UnsupportedDiskInterfaceVmIDPrefix + iFace
 		created := test.prepareImport(vmID, secretName)
 
-		diskXml := f.LoadTemplate("disks/interface-template.xml", map[string]string{"@DISKSIZE": "46137344", "@INTERFACE": iFace})
+		diskXml := f.LoadTemplate("disks/interface-template.xml", map[string]string{"@DISKSIZE": "50331648", "@INTERFACE": iFace})
 		err := test.stubForDisks(vmID, &diskXml)
 		if err != nil {
 			Fail(err.Error())
@@ -95,7 +95,7 @@ var _ = Describe("VM storage validation ", func() {
 		vmID := vms.ScsiReservationDiskVmID
 		created := test.prepareImport(vmID, secretName)
 
-		diskXml := f.LoadTemplate("invalid/disks/scsi-reservation.xml", map[string]string{"@DISKSIZE": "46137344"})
+		diskXml := f.LoadTemplate("invalid/disks/scsi-reservation.xml", map[string]string{"@DISKSIZE": "50331648"})
 		err := test.stubForDisks(vmID, &diskXml)
 		if err != nil {
 			Fail(err.Error())
@@ -108,7 +108,7 @@ var _ = Describe("VM storage validation ", func() {
 		vmID := vms.LUNStorageDiskVmID
 		created := test.prepareImport(vmID, secretName)
 
-		diskXml := f.LoadTemplate("invalid/disks/lun-storage.xml", map[string]string{"@DISKSIZE": "46137344"})
+		diskXml := f.LoadTemplate("invalid/disks/lun-storage.xml", map[string]string{"@DISKSIZE": "50331648"})
 		err := test.stubForDisks(vmID, &diskXml)
 		if err != nil {
 			Fail(err.Error())
@@ -120,7 +120,7 @@ var _ = Describe("VM storage validation ", func() {
 		vmID := vms.IllegalDiskStatusVmIDPrefix + status
 		created := test.prepareImport(vmID, secretName)
 
-		diskXml := f.LoadTemplate("disks/status-template.xml", map[string]string{"@DISKSIZE": "46137344", "@STATUS": status})
+		diskXml := f.LoadTemplate("disks/status-template.xml", map[string]string{"@DISKSIZE": "50331648", "@STATUS": status})
 		err := test.stubForDisks(vmID, &diskXml)
 		if err != nil {
 			Fail(err.Error())
@@ -136,7 +136,7 @@ var _ = Describe("VM storage validation ", func() {
 		vmID := vms.UnsupportedDiskStorageTypeVmIDPrefix + storageType
 		created := test.prepareImport(vmID, secretName)
 
-		diskXml := f.LoadTemplate("disks/storage-type-template.xml", map[string]string{"@DISKSIZE": "46137344", "@STORAGETYPE": storageType})
+		diskXml := f.LoadTemplate("disks/storage-type-template.xml", map[string]string{"@DISKSIZE": "50331648", "@STORAGETYPE": storageType})
 		err := test.stubForDisks(vmID, &diskXml)
 		if err != nil {
 			Fail(err.Error())
@@ -153,7 +153,7 @@ var _ = Describe("VM storage validation ", func() {
 		vmID := vms.UnsupportedDiskSGIOVmIDPrefix + sgio
 
 		created := test.prepareImport(vmID, secretName)
-		diskXml := f.LoadTemplate("disks/sgio-template.xml", map[string]string{"@DISKSIZE": "46137344", "@SGIO": sgio})
+		diskXml := f.LoadTemplate("disks/sgio-template.xml", map[string]string{"@DISKSIZE": "50331648", "@SGIO": sgio})
 		err := test.stubForDisks(vmID, &diskXml)
 		if err != nil {
 			Fail(err.Error())

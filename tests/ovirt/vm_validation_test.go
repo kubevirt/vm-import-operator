@@ -117,7 +117,7 @@ func (t *vmValidationTest) prepareImport(vmID string, secretName string) *v2vv1.
 func (t *vmValidationTest) stubResources(vmID string) *sapi.StubbingBuilder {
 	nicsXML := t.framework.LoadFile("nics/empty.xml")
 	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
-	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "50331648"})
 	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
 	consolesXML := t.framework.LoadFile("graphic-consoles/empty.xml")
 	return sapi.NewStubbingBuilder().

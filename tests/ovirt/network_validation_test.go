@@ -74,7 +74,7 @@ func (t *networkValidationTest) prepareImport(vmID string, secretName string) *v
 
 func (t *networkValidationTest) stub(vmID string, nicsXml *string, vnicProfileXml *string) {
 	diskAttachmentsXml := t.framework.LoadFile("disk-attachments/one.xml")
-	diskXml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	diskXml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "50331648"})
 	domainXml := t.framework.LoadFile("storage-domains/domain-1.xml")
 	consolesXml := t.framework.LoadFile("graphic-consoles/empty.xml")
 	networkXml := t.framework.LoadFile("networks/net-1.xml")

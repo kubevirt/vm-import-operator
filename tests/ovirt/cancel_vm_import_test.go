@@ -150,7 +150,7 @@ func getTemporarySecret(f *framework.Framework, namespace string, vmiName string
 func stub(f *framework.Framework, vmID string) {
 	domainXml := f.LoadFile("storage-domains/domain-1.xml")
 	diskAttachmentsXml := f.LoadFile("disk-attachments/one.xml")
-	diskXml := f.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	diskXml := f.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "50331648"})
 	consolesXml := f.LoadFile("graphic-consoles/vnc.xml")
 	vmXml := f.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})
 	nicsXml := f.LoadFile("nics/empty.xml")
