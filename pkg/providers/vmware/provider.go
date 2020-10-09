@@ -336,9 +336,11 @@ func (r *VmwareProvider) Validate() ([]v1beta1.VirtualMachineImportCondition, er
 	}, nil
 }
 
-// Close is a no-op which is present in order to satisfy the Provider interface.
+// Close logs out the client and shuts down idle connections.
 func (r *VmwareProvider) Close() {
-	// nothing to do
+	if r.vmwareClient != nil {
+		_ = r.vmwareClient.Close()
+	}
 }
 
 // ValidateDiskStatus is a no-op which is present in order to satisfy the Provider interface.
