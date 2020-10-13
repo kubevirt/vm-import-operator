@@ -515,7 +515,10 @@ func (o *OvirtMapper) mapArchitecture() *kubevirtv1.Machine {
 
 	// Override machine type in case custom emulated machine is specified
 	if custom, ok := o.vm.CustomEmulatedMachine(); ok {
-		machine.Type = custom
+		// do not override when i440fx which is unsupported
+		if !strings.Contains(custom, "i440fx") {
+			machine.Type = custom
+		}
 	}
 
 	return machine

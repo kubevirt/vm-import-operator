@@ -494,6 +494,15 @@ var _ = Describe("Validating VM", func() {
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMMemoryTemplateLimitID))
 	})
+	It("should flag custom emulated machne type when i440fx used", func() {
+		var vm = newVM()
+		vm.SetCustomEmulatedMachine("pc-i440fx-rhel7.6.0")
+
+		failures := validators.ValidateVM(vm, kvConfig, templateFinder)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.VMCustomEmulatedMachine))
+	})
 })
 
 func newGraphicsConsole(protocol string) *ovirtsdk.GraphicsConsole {

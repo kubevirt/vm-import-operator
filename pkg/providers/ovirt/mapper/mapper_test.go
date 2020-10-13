@@ -98,6 +98,16 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(vmSpecCPU.Threads).To(Equal(uint32(vmTopology.MustThreads())))
 	})
 
+	It("should not override machine type", func() {
+		vm = createVM()
+		vm.SetCustomEmulatedMachine("pc-i440fx-rhel7.6.0")
+
+		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
+		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+
+		Expect(vmSpec.Spec.Template.Spec.Domain.Machine.Type).To(Equal("q35"))
+	})
+
 	It("should map CPU pinning", func() {
 		vm = createVM()
 		vm.MustCpu().SetCpuTune(
@@ -536,6 +546,7 @@ func createVMGeneric(affinity ovirtsdk.VmAffinity, readonly bool, biostype ovirt
 						Sockets(2).
 						Threads(4).
 						MustBuild()).
+				Architecture(ovirtsdk.ARCHITECTURE_X86_64).
 				MustBuild()).
 		HighAvailability(
 			ovirtsdk.NewHighAvailabilityBuilder().
