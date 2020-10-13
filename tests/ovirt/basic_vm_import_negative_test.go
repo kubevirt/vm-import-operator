@@ -280,7 +280,7 @@ func (t *basicVMImportNegativeTest) prepareVmWithDiskXML(vmID string, diskID str
 }
 
 func (t *basicVMImportNegativeTest) prepareVmResourcesStub(vmID string) *sapi.StubbingBuilder {
-	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "50331648"})
 	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
 	return t.prepareVMResourceStubWithDiskData(vmID, "disk-1", diskXML, diskAttachmentsXML)
 }

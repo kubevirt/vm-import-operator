@@ -128,7 +128,7 @@ func (t *resourceMappingValidationTest) stub(vmID string) {
 
 func (t *resourceMappingValidationTest) prepareCommonSubResources(vmID string) *sapi.StubbingBuilder {
 	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
-	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "50331648"})
 	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
 	consolesXML := t.framework.LoadFile("graphic-consoles/vnc.xml")
 	networkXML := t.framework.LoadFile("networks/net-1.xml")

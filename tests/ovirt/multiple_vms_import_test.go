@@ -143,7 +143,7 @@ var _ = Describe("Multiple VMs import ", func() {
 			nicsXML := f.LoadTemplate("nics/mac-template.xml", map[string]string{"@MAC": "56:6f:05:0f:00:05"})
 			disk2ID := "cirros2"
 			diskAttachmentsXML := f.LoadTemplate("disk-attachments/disk_id-template.xml", map[string]string{"@DISKID": disk2ID})
-			diskXML := f.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344", "@DISKID": disk2ID})
+			diskXML := f.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "50331648", "@DISKID": disk2ID})
 			test.stubWithDiskAndNicsXML(vmID2, nicsXML, diskAttachmentsXML, diskXML, disk2ID)
 
 			By("Triggering the first VM import")
@@ -204,7 +204,7 @@ func (t *multipleVmsImportTest) stub(vmID string, mac string) {
 
 func (t *multipleVmsImportTest) stubWithNicsXML(vmID string, nicsXML string) {
 	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
-	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "50331648"})
 	t.stubWithDiskAndNicsXML(vmID, nicsXML, diskAttachmentsXML, diskXML, "disk-1")
 }
 

@@ -85,8 +85,8 @@ var _ = Describe("VM import ", func() {
 
 func (t *multipleDisksTest) stub(vmID string) {
 	diskAttachmentsXml := t.framework.LoadFile("disk-attachments/two.xml")
-	disk1Xml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
-	disk2Xml := t.framework.LoadTemplate("disks/disk-2.xml", map[string]string{"@DISKSIZE": "46137344"})
+	disk1Xml := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "50331648"})
+	disk2Xml := t.framework.LoadTemplate("disks/disk-2.xml", map[string]string{"@DISKSIZE": "50331648"})
 	domainXml := t.framework.LoadFile("storage-domains/domain-1.xml")
 	consolesXml := t.framework.LoadFile("graphic-consoles/empty.xml")
 	vmXml := t.framework.LoadTemplate("vms/basic-vm.xml", map[string]string{"@VMID": vmID})

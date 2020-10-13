@@ -40,6 +40,7 @@ var _ = Describe("Import", func() {
 			Fail("Cannot create secret: " + err.Error())
 		}
 		test.secret = s
+		setupConfigMap(f)
 	})
 
 	AfterEach(func() {
@@ -209,6 +210,21 @@ var _ = Describe("Import", func() {
 	)
 })
 
+func setupConfigMap(f *fwk.Framework) {
+	configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get("kubevirt-config", metav1.GetOptions{})
+	if err != nil {
+		Fail(err.Error())
+	}
+	data := configMap.Data["feature-gates"]
+	if !strings.Contains(data, "ImportWithoutTemplate") {
+		configMap.Data["feature-gates"] = data + ",ImportWithoutTemplate"
+		_, err = f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(configMap)
+		if err != nil {
+			Fail(err.Error())
+		}
+	}
+}
+
 func cleanUpConfigMap(f *fwk.Framework) {
 	configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get("kubevirt-config", metav1.GetOptions{})
 	if err != nil {
@@ -271,7 +287,7 @@ func (t *variousVMConfigurationsTest) stub(vmID string, vmFile string, vmMacros 
 func (t *variousVMConfigurationsTest) createVMResourcesStubs(vmID string) *sapi.StubbingBuilder {
 	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
 	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
-	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "46137344"})
+	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "50331648"})
 	consolesXML := t.framework.LoadFile("graphic-consoles/vnc.xml")
 
 	nicsXML := t.framework.LoadFile("nics/one.xml")

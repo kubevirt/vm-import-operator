@@ -66,5 +66,5 @@ func (f *Framework) WaitForVMImportConditionInStatus(pollInterval time.Duration,
 
 // WaitForVMToBeProcessing blocks until VM import with given name is in Processing state
 func (f *Framework) WaitForVMToBeProcessing(vmiName string) error {
-	return f.WaitForVMImportConditionInStatus(2*time.Second, time.Minute, vmiName, v2vv1.Processing, corev1.ConditionTrue, "", f.Namespace.Name)
+	return f.WaitForVMImportConditionInStatus(2*time.Second, time.Minute, vmiName, v2vv1.Processing, corev1.ConditionTrue, string(v2vv1.CopyingDisks), f.Namespace.Name)
 }
