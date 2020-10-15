@@ -108,6 +108,18 @@ func NormalizeName(name string) (string, error) {
 		return name, nil
 	}
 
+	name, err := normalize(name)
+	if err != nil {
+		return name, err
+	}
+
+	if len(name) > k8svalidation.DNS1123SubdomainMaxLength {
+		name = name[0:k8svalidation.DNS1123SubdomainMaxLength]
+	}
+	return name, nil
+}
+
+func normalize(name string) (string, error) {
 	// convert name to lowercase and replace '.' with '-'
 	name = strings.ToLower(name)
 	name = strings.Replace(name, ".", "-", -1)
@@ -124,10 +136,25 @@ func NormalizeName(name string) (string, error) {
 	reg := regexp.MustCompile("[^a-z0-9-]+")
 	name = reg.ReplaceAllString(name, "")
 
-	if len(name) > k8svalidation.DNS1123SubdomainMaxLength {
-		name = name[0:k8svalidation.DNS1123SubdomainMaxLength]
-	}
 	return name, nil
+}
+
+// NormalizeLabel returns a normalized label based on the given name that complies to DNS 1123 format
+func NormalizeLabel(name string) (string, error) {
+	if len(name) == 0 {
+		return "", fmt.Errorf("The provided label is empty")
+	}
+	errors := k8svalidation.IsDNS1123Label(name)
+	if len(errors) == 0 {
+		return name, nil
+	}
+
+	name, err := normalize(name)
+	if err != nil {
+		return name, err
+	}
+
+	return EnsureLabelValueLength(name), nil
 }
 
 // WithMessage joins message and newMessage with a ", " string and returns the resulting string or returns newMessage if message is empty

@@ -134,7 +134,7 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 
 	// Map hostname
 	if fqdn, ok := o.vm.Fqdn(); ok {
-		name, _ := utils.NormalizeName(fqdn)
+		name, _ := utils.NormalizeLabel(fqdn)
 		vmSpec.Spec.Template.Spec.Hostname = name
 	}
 

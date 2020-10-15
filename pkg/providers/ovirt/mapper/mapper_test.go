@@ -127,7 +127,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 	It("should normalize hostname", func() {
 		fqdn := "rhev-orange-03.rdu2.scalelab.redhat.com"
-		norm, _ := utils.NormalizeName(fqdn)
+		norm, _ := utils.NormalizeLabel(fqdn)
 		vm = createVM()
 		vm.SetFqdn(fqdn)
 
