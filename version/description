@@ -1,13 +1,12 @@
-v0.2.3
-
-Features:
-* Updated controller-lifecycle-operator-sdk dependency
-* Cancelled import metrics
+v0.2.4
 
 Bugs:
-* Update placement types
-* Use template validation rules
-* Fixing rendered view of column "Labels"
+* Do not override machine type for i440fx
+* Use label normalizer
+* Add missing condition
+* vSphere: Implement Close() to log out and shutdown idle connections
+* Fix vSphere datastore mapping by name
+* vSphere: map nics that are connected to distributedportgroups
 
 Docs:
-* Document new metric for cancelled import
+* Fix datastore references in documentation
