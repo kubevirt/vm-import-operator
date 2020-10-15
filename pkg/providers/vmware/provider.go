@@ -1,6 +1,7 @@
 package vmware
 
 import (
+	"context"
 	"encoding/xml"
 	"fmt"
 
@@ -51,6 +52,7 @@ const (
 
 // VmwareProvider is VMware implementation of the Provider interface to support importing VMs from VMware
 type VmwareProvider struct {
+	client                client.Client
 	dataVolumesManager    provider.DataVolumesManager
 	factory               pclient.Factory
 	instance              *v1beta1.VirtualMachineImport
@@ -68,6 +70,7 @@ type VmwareProvider struct {
 	vmiTypeMeta           metav1.TypeMeta
 	vmwareClient          *vclient.RichVmwareClient
 	vmwareSecretDataMap   map[string]string
+	privilegedSA          string
 }
 
 // NewVmwareProvider creates a new VmwareProvider
@@ -80,6 +83,7 @@ func NewVmwareProvider(vmiObjectMeta metav1.ObjectMeta, vmiTypeMeta metav1.TypeM
 	templateProvider := templates.NewTemplateProvider(tempClient)
 	osFinder := vos.VmwareOSFinder{OsMapProvider: os.NewOSMapProvider(client, ctrlConfig.OsConfigMapName(), ctrlConfig.OsConfigMapNamespace())}
 	return VmwareProvider{
+		client:                client,
 		vmiObjectMeta:         vmiObjectMeta,
 		vmiTypeMeta:           vmiTypeMeta,
 		factory:               factory,
@@ -89,6 +93,7 @@ func NewVmwareProvider(vmiObjectMeta metav1.ObjectMeta, vmiTypeMeta metav1.TypeM
 		virtualMachineManager: &virtualMachineManager,
 		jobsManager:           &jobsManager,
 		osFinder:              &osFinder,
+		privilegedSA:          ctrlConfig.PrivilegedSAName(),
 		templateHandler:       templates.NewTemplateHandler(templateProvider),
 		templateFinder:        vtemplates.NewTemplateFinder(templateProvider, osFinder),
 	}
@@ -514,7 +519,7 @@ func (r *VmwareProvider) ensureGuestConversionJobIsPresent(vmSpec *v1.VirtualMac
 
 func (r *VmwareProvider) createGuestConversionJob(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) (*batchv1.Job, error) {
 	vmiName := r.getNamespacedName()
-	job := guestconversion.MakeGuestConversionJobSpec(vmSpec, libvirtConfigMap)
+	job := guestconversion.MakeGuestConversionJobSpec(vmSpec, libvirtConfigMap, r.getPrivilegedSA())
 	job.OwnerReferences = []metav1.OwnerReference{
 		ownerreferences.NewVMImportControllerReference(r.vmiTypeMeta, r.vmiObjectMeta),
 	}
@@ -523,6 +528,17 @@ func (r *VmwareProvider) createGuestConversionJob(vmSpec *v1.VirtualMachine, lib
 		return nil, err
 	}
 	return job, nil
+}
+
+func (r *VmwareProvider) getPrivilegedSA() string {
+	if r.privilegedSA != "" {
+		saName := k8stypes.NamespacedName{Namespace: r.vmiObjectMeta.Namespace, Name: r.privilegedSA}
+		err := r.client.Get(context.TODO(), saName, &corev1.ServiceAccount{})
+		if err == nil {
+			return r.privilegedSA
+		}
+	}
+	return ""
 }
 
 func (r *VmwareProvider) getNamespacedName() k8stypes.NamespacedName {

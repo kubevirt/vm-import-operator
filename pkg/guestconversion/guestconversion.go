@@ -20,7 +20,7 @@ var (
 // MakeGuestConversionJobSpec creates a job spec for a virt-v2v job,
 // containing a volume and a mount for each volume on the VM, as well
 // as a volume and mount for the config map containing the libvirt domain XML.
-func MakeGuestConversionJobSpec(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) *batchv1.Job {
+func MakeGuestConversionJobSpec(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap, privilegedSA string) *batchv1.Job {
 	// Only ever run the guest conversion job once per VM
 	completions := int32(1)
 	parallelism := int32(1)
@@ -28,7 +28,7 @@ func MakeGuestConversionJobSpec(vmSpec *v1.VirtualMachine, libvirtConfigMap *cor
 
 	volumes, volumeMounts := makeJobVolumeMounts(vmSpec, libvirtConfigMap)
 
-	return &batchv1.Job{
+	jobSpec := &batchv1.Job{
 		Spec: batchv1.JobSpec{
 			Completions:  &completions,
 			Parallelism:  &parallelism,
@@ -50,6 +50,55 @@ func MakeGuestConversionJobSpec(vmSpec *v1.VirtualMachine, libvirtConfigMap *cor
 		},
 		Status: batchv1.JobStatus{},
 	}
+
+	if privilegedSA != "" {
+		scPrivileged := true
+		runAsUser := int64(0)
+		fsGroup := int64(107)
+		jobSpec.Spec.Template.Spec.Containers[0].SecurityContext = &corev1.SecurityContext{
+			Privileged: &scPrivileged,
+		}
+		jobSpec.Spec.Template.Spec.NodeSelector = map[string]string{
+			"kubevirt.io/schedulable": "true",
+		}
+		jobSpec.Spec.Template.Spec.Affinity = &corev1.Affinity{
+			NodeAffinity: &corev1.NodeAffinity{
+				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.PreferredSchedulingTerm{
+					{
+						Weight: 1,
+						Preference: corev1.NodeSelectorTerm{
+							MatchExpressions: []corev1.NodeSelectorRequirement{
+								{
+									Key:      "feature.node.kubernetes.io/cpu-feature-svm",
+									Operator: "In",
+									Values:   []string{"true"},
+								},
+							},
+						},
+					},
+					{
+						Weight: 1,
+						Preference: corev1.NodeSelectorTerm{
+							MatchExpressions: []corev1.NodeSelectorRequirement{
+								{
+									Key:      "feature.node.kubernetes.io/cpu-feature-vmx",
+									Operator: "In",
+									Values:   []string{"true"},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		jobSpec.Spec.Template.Spec.ServiceAccountName = privilegedSA
+		jobSpec.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{
+			RunAsUser: &runAsUser,
+			FSGroup:   &fsGroup,
+		}
+	}
+
+	return jobSpec
 }
 
 func makeJobVolumeMounts(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) ([]corev1.Volume, []corev1.VolumeMount) {

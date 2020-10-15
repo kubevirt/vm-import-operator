@@ -8,6 +8,9 @@ const (
 
 	// OsConfigMapNameKey defines the configuration key for the OS mapping config map name
 	OsConfigMapNameKey = "osConfigMap.name"
+
+	// PrivilegedSANameKey defines the configuration key for the privileged service account to use for guest conversion
+	PrivilegedSANameKey = "privilegedServiceAccount.name"
 )
 
 // ControllerConfig stores controller runtime configuration
@@ -30,4 +33,9 @@ func (c ControllerConfig) OsConfigMapNamespace() string {
 // OsConfigMapName provides name of the the OS mapping ConfigMap. Empty string is returned when the name is not present.
 func (c ControllerConfig) OsConfigMapName() string {
 	return c.ConfigMap.Data[OsConfigMapNameKey]
+}
+
+// PrivilegedSAName providess the name of the privileged service account to use for guest conversion.
+func (c ControllerConfig) PrivilegedSAName() string {
+	return c.ConfigMap.Data[PrivilegedSANameKey]
 }
