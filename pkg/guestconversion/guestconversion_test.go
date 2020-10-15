@@ -36,7 +36,7 @@ var _ = Describe("GuestConversion", func() {
 		})
 
 		It("should create a volume and mount for the libvirt domain config map", func() {
-			job := MakeGuestConversionJobSpec(vmSpec, configMap)
+			job := MakeGuestConversionJobSpec(vmSpec, configMap, "")
 			Expect(len(job.Spec.Template.Spec.Volumes)).To(Equal(1))
 			Expect(job.Spec.Template.Spec.Volumes[0].Name).To(Equal(configMapVolumeName))
 			Expect(job.Spec.Template.Spec.Volumes[0].ConfigMap).ToNot(BeNil())
@@ -60,7 +60,7 @@ var _ = Describe("GuestConversion", func() {
 					},
 				},
 			}
-			job := MakeGuestConversionJobSpec(vmSpec, configMap)
+			job := MakeGuestConversionJobSpec(vmSpec, configMap, "")
 			Expect(len(job.Spec.Template.Spec.Volumes)).To(Equal(3))
 			Expect(job.Spec.Template.Spec.Volumes[0].Name).To(Equal("dv-1"))
 			Expect(job.Spec.Template.Spec.Volumes[0].VolumeSource.PersistentVolumeClaim.ClaimName).To(Equal("dv-1"))
