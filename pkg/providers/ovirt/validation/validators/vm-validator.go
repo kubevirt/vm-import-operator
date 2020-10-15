@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strings"
 
 	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 
@@ -97,6 +98,9 @@ func ValidateVM(vm *ovirtsdk.Vm, config kvConfig.KubeVirtConfig, finder *otempla
 	if failure, valid := isValidFloppies(vm); !valid {
 		results = append(results, failure)
 	}
+	if failure, valid := isValidCustomEmulatedMachine(vm); !valid {
+		results = append(results, failure)
+	}
 	if failure, valid := isMemoryAboveRequests(vm, finder); !valid {
 		results = append(results, failure)
 	}
@@ -122,6 +126,18 @@ func isValidBios(vm *ovirtsdk.Vm) []ValidationFailure {
 		}
 	}
 	return results
+}
+
+func isValidCustomEmulatedMachine(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
+	if emulatedMachine, ok := vm.CustomEmulatedMachine(); ok {
+		if strings.Contains(emulatedMachine, "i440fx") {
+			return ValidationFailure{
+				ID:      VMCustomEmulatedMachine,
+				Message: fmt.Sprintf("Source VM use custom emulated machine which is overwitten by cpu architecture."),
+			}, false
+		}
+	}
+	return ValidationFailure{}, true
 }
 
 func isMemoryAboveRequests(vm *ovirtsdk.Vm, finder *otemplates.TemplateFinder) (ValidationFailure, bool) {

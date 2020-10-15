@@ -68,6 +68,7 @@ var checkToAction = map[validators.CheckID]action{
 	validators.VMCpuArchitectureID:               block,
 	validators.VMCpuTuneID:                       warn,
 	validators.VMCpuSharesID:                     log,
+	validators.VMCustomEmulatedMachine:           log,
 	validators.VMCustomPropertiesID:              warn,
 	validators.VMDisplayTypeID:                   log,
 	validators.VMHasIllegalImagesID:              block,
