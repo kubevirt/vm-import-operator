@@ -1216,6 +1216,7 @@ var _ = Describe("Reconcile steps", func() {
 		})
 		It("should increment success counter", func() {
 			counterValueBefore := getCounterSuccessful()
+			durationSamplesBefore := getCountDurationSuccessful()
 
 			err := reconciler.afterSuccess(vmName, &mockProvider{}, config)
 
@@ -1223,9 +1224,12 @@ var _ = Describe("Reconcile steps", func() {
 			counterValueAfter := getCounterSuccessful()
 			Expect(counterValueAfter).To(Equal(counterValueBefore + 1))
 			Expect(config.Finalizers).To(BeNil())
+			durationSamplesAfter := getCountDurationSuccessful()
+			Expect(durationSamplesAfter).To(Equal(durationSamplesBefore + 1))
 		})
 		It("should increment failed counter", func() {
 			counterValueBefore := getCounterFailed()
+			durationSamplesBefore := getCountDurationFailed()
 
 			err := reconciler.afterFailure(&mockProvider{}, config)
 
@@ -1233,6 +1237,8 @@ var _ = Describe("Reconcile steps", func() {
 			counterValueAfter := getCounterFailed()
 			Expect(counterValueAfter).To(Equal(counterValueBefore + 1))
 			Expect(config.Finalizers).To(BeNil())
+			durationSamplesAfter := getCountDurationFailed()
+			Expect(durationSamplesAfter).To(Equal(durationSamplesBefore + 1))
 		})
 	})
 
@@ -1682,6 +1688,7 @@ var _ = Describe("Reconcile steps", func() {
 				config.SetDeletionTimestamp(&v1.Time{})
 
 				counterValueBefore := getCounterCancelled()
+				durationSamplesBefore := getCountDurationCancelled()
 
 				result, err := reconciler.Reconcile(request)
 
@@ -1691,6 +1698,8 @@ var _ = Describe("Reconcile steps", func() {
 				counterValueAfter := getCounterCancelled()
 				Expect(counterValueAfter).To(Equal(counterValueBefore + 1))
 				Expect(config.Finalizers).To(BeNil())
+				durationSamplesAfter := getCountDurationCancelled()
+				Expect(durationSamplesAfter).To(Equal(durationSamplesBefore + 1))
 			})
 
 			It("should not increment counter for done import: ", func() {
@@ -1699,6 +1708,7 @@ var _ = Describe("Reconcile steps", func() {
 				config.Annotations[AnnCurrentProgress] = progressDone
 
 				counterValueBefore := getCounterCancelled()
+				durationSamplesBefore := getCountDurationCancelled()
 
 				result, err := reconciler.Reconcile(request)
 
@@ -1709,10 +1719,13 @@ var _ = Describe("Reconcile steps", func() {
 				Expect(counterValueAfter).To(Equal(counterValueBefore))
 				Expect(config.Annotations[AnnCurrentProgress]).To(Equal(progressDone))
 				Expect(config.Finalizers).To(BeNil())
+				durationSamplesAfter := getCountDurationCancelled()
+				Expect(durationSamplesAfter).To(Equal(durationSamplesBefore))
 			})
 
 			It("should increment counter for in progress import: ", func() {
 				counterValueBefore := getCounterCancelled()
+				durationSamplesBefore := getCountDurationCancelled()
 				// First call Reconcile to make it in progress
 				result, err := reconciler.Reconcile(request)
 
@@ -1731,6 +1744,8 @@ var _ = Describe("Reconcile steps", func() {
 				Expect(config.Finalizers).To(BeNil())
 				counterValueAfter := getCounterCancelled()
 				Expect(counterValueAfter).To(Equal(counterValueBefore + 1))
+				durationSamplesAfter := getCountDurationCancelled()
+				Expect(durationSamplesAfter).To(Equal(durationSamplesBefore + 1))
 			})
 		})
 	})
@@ -2069,19 +2084,37 @@ func newVM() *ovirtsdk.Vm {
 }
 
 func getCounterFailed() float64 {
-	value, err := metrics.ImportCounter.GetFailed()
+	value, err := metrics.ImportMetrics.GetFailed()
 	Expect(err).To(BeNil())
 	return value
 }
 
 func getCounterCancelled() float64 {
-	value, err := metrics.ImportCounter.GetCancelled()
+	value, err := metrics.ImportMetrics.GetCancelled()
 	Expect(err).To(BeNil())
 	return value
 }
 
 func getCounterSuccessful() float64 {
-	value, err := metrics.ImportCounter.GetSuccessful()
+	value, err := metrics.ImportMetrics.GetSuccessful()
+	Expect(err).To(BeNil())
+	return value
+}
+
+func getCountDurationFailed() uint64 {
+	value, err := metrics.ImportMetrics.GetCountDurationFailed()
+	Expect(err).To(BeNil())
+	return value
+}
+
+func getCountDurationCancelled() uint64 {
+	value, err := metrics.ImportMetrics.GetCountDurationCancelled()
+	Expect(err).To(BeNil())
+	return value
+}
+
+func getCountDurationSuccessful() uint64 {
+	value, err := metrics.ImportMetrics.GetCountDurationSuccessful()
 	Expect(err).To(BeNil())
 	return value
 }

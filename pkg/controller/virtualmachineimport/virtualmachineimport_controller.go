@@ -254,7 +254,8 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 				return reconcile.Result{}, err
 			}
 
-			metrics.ImportCounter.IncCancelled()
+			metrics.ImportMetrics.IncCancelled()
+			metrics.ImportMetrics.SaveDurationCancelled(calculateImportDuration(instance))
 		}
 
 		// If no more finalizers then return so resource can be deleted
@@ -1132,7 +1133,9 @@ func (r *ReconcileVirtualMachineImport) afterSuccess(vmName types.NamespacedName
 
 	r.removeFinalizer(utils.CancelledImportFinalizer, instance)
 
-	metrics.ImportCounter.IncSuccessful()
+	metrics.ImportMetrics.IncSuccessful()
+	metrics.ImportMetrics.SaveDurationSuccessful(calculateImportDuration(instance))
+
 	vmiName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	var errs []error
 	err := p.CleanUp(false, instance, r.client)
@@ -1156,7 +1159,9 @@ func (r *ReconcileVirtualMachineImport) afterFailure(p provider.Provider, instan
 
 	r.removeFinalizer(utils.CancelledImportFinalizer, instance)
 
-	metrics.ImportCounter.IncFailed()
+	metrics.ImportMetrics.IncFailed()
+	metrics.ImportMetrics.SaveDurationFailed(calculateImportDuration(instance))
+
 	vmiName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	var errs []error
 	err := p.CleanUp(true, instance, r.client)
@@ -1406,4 +1411,17 @@ func (r *ReconcileVirtualMachineImport) removeFinalizer(finalizer string, instan
 		reqLogger.Error(err, "Failed to remove finalizer "+finalizer)
 
 	}
+}
+
+func calculateImportDuration(instance *v2vv1.VirtualMachineImport) float64 {
+	var endTime, startTime time.Time
+	if instance.GetDeletionTimestamp() == nil {
+		endTime = time.Now().UTC()
+	} else {
+		endTime = instance.GetDeletionTimestamp().Time.UTC()
+	}
+
+	startTime = instance.GetCreationTimestamp().Time.UTC()
+
+	return endTime.Sub(startTime).Seconds()
 }
