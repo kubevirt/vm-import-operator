@@ -44,7 +44,7 @@ func MakeGuestConversionJobSpec(vmSpec *v1.VirtualMachine, libvirtConfigMap *cor
 							VolumeMounts:    volumeMounts,
 							ImagePullPolicy: imagePullPolicy,
 							// Request access to /dev/kvm via Kubevirt's Device Manager
-							Resources = corev1.ResourceRequirements{
+							Resources: corev1.ResourceRequirements{
 								Limits: corev1.ResourceList{
 									"devices.kubevirt.io/kvm": resource.MustParse("1"),
 								},
@@ -53,7 +53,7 @@ func MakeGuestConversionJobSpec(vmSpec *v1.VirtualMachine, libvirtConfigMap *cor
 					},
 					Volumes: volumes,
 					// Ensure that pod is deployed on a node where /dev/kvm is present
-					NodeSelector = map[string]string{
+					NodeSelector: map[string]string{
 						"kubevirt.io/schedulable": "true",
 					},
 				},
