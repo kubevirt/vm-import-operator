@@ -3,9 +3,9 @@ package jobs
 import (
 	"context"
 	"fmt"
-
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	batchv1 "k8s.io/api/batch/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -57,6 +57,10 @@ func (m *Manager) CreateFor(job *batchv1.Job, vmiCrName types.NamespacedName) er
 		job.Labels = make(map[string]string)
 	}
 	job.Labels[vmiNameLabel] = utils.EnsureLabelValueLength(vmiCrName.Name)
+	if job.Spec.Template.Labels == nil {
+		job.Spec.Template.Labels = make(map[string]string)
+	}
+	job.Spec.Template.Labels[vmiNameLabel] = utils.EnsureLabelValueLength(vmiCrName.Name)
 
 	return m.client.Create(context.TODO(), job)
 }
@@ -68,7 +72,9 @@ func (m *Manager) DeleteFor(vmiCrName types.NamespacedName) error {
 		return err
 	}
 	if job != nil {
-		return m.client.Delete(context.TODO(), job)
+		foreground := metav1.DeletePropagationForeground
+		opts := &client.DeleteOptions{PropagationPolicy: &foreground}
+		return m.client.Delete(context.TODO(), job, opts)
 	}
 	return nil
 }
