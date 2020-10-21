@@ -9,7 +9,7 @@ function debug {
 }
 
 function install_cdi {
-    export VERSION=$(curl -s https://github.com/kubevirt/containerized-data-importer/releases/latest | grep -o "v[0-9]\.[0-9]*\.[0-9]*")
+    export VERSION=$(curl -s https://api.github.com/repos/kubevirt/containerized-data-importer/releases | jq 'sort_by(.tag_name) | .[-1].tag_name' -r)
     ./cluster/kubectl.sh apply -f https://github.com/kubevirt/containerized-data-importer/releases/download/$VERSION/cdi-operator.yaml
     ./cluster/kubectl.sh apply -f https://github.com/kubevirt/containerized-data-importer/releases/download/$VERSION/cdi-cr.yaml
     ./cluster/kubectl.sh wait cdis.cdi.kubevirt.io/cdi --for=condition=Available --timeout=1200s || debug cdi
