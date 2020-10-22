@@ -2,13 +2,12 @@ package vmware_test
 
 import (
 	"github.com/kubevirt/vm-import-operator/tests/vmware"
+	"github.com/onsi/ginkgo/extensions/table"
 	"time"
 
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
-	"github.com/onsi/ginkgo/extensions/table"
-
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
 	"github.com/kubevirt/vm-import-operator/tests/utils"
@@ -51,7 +50,7 @@ var _ = Describe("Basic VM import ", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			validCondition := conditions.FindConditionOfType(retrieved.Status.Conditions, v2vv1.Valid)
@@ -63,6 +62,12 @@ var _ = Describe("Basic VM import ", func() {
 
 			vm := test.validateTargetConfiguration(vmBlueprint.Name)
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveDefaultStorageClass(f))
+
+			// ensure the virt-v2v pod is cleaned up after a success
+			podLabel := "vmimport.v2v.kubevirt.io/vmi-name=" + retrieved.Name
+			podList, err := f.K8sClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: podLabel})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(podList.Items)).To(BeZero())
 		})
 
 		It("should create started VM", func() {
@@ -73,7 +78,7 @@ var _ = Describe("Basic VM import ", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			validCondition := conditions.FindConditionOfType(retrieved.Status.Conditions, v2vv1.Valid)
@@ -85,6 +90,12 @@ var _ = Describe("Basic VM import ", func() {
 
 			vm := test.validateTargetConfiguration(vmBlueprint.Name)
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveDefaultStorageClass(f))
+
+			// ensure the virt-v2v pod is cleaned up after a success
+			podLabel := "vmimport.v2v.kubevirt.io/vmi-name=" + retrieved.Name
+			podList, err := f.K8sClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: podLabel})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(podList.Items)).To(BeZero())
 		})
 	})
 
