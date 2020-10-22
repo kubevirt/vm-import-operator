@@ -1,12 +1,8 @@
-v0.2.4
+v0.2.5
+
+Features:
+* Expose /dev/kvm in the guest conversion pod
 
 Bugs:
-* Do not override machine type for i440fx
-* Use label normalizer
-* Add missing condition
-* vSphere: Implement Close() to log out and shutdown idle connections
-* Fix vSphere datastore mapping by name
-* vSphere: map nics that are connected to distributedportgroups
-
-Docs:
-* Fix datastore references in documentation
+* Use DeletePropagationForeground when deleting jobs
+* Install the latest version of CDI on the test cluster
