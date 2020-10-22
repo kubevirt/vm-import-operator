@@ -6,6 +6,7 @@ import (
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "kubevirt.io/client-go/api/v1"
 	libvirtxml "libvirt.org/libvirt-go-xml"
 )
@@ -42,9 +43,19 @@ func MakeGuestConversionJobSpec(vmSpec *v1.VirtualMachine, libvirtConfigMap *cor
 							Image:           virtV2vImage,
 							VolumeMounts:    volumeMounts,
 							ImagePullPolicy: imagePullPolicy,
+							// Request access to /dev/kvm via Kubevirt's Device Manager
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									"devices.kubevirt.io/kvm": resource.MustParse("1"),
+								},
+							},
 						},
 					},
 					Volumes: volumes,
+					// Ensure that the pod is deployed on a node where /dev/kvm is present.
+					NodeSelector: map[string]string{
+						"kubevirt.io/schedulable": "true",
+					},
 				},
 			},
 		},
