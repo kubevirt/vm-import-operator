@@ -63,6 +63,8 @@ var (
 	needsGuestConversion     func() bool
 	getGuestConversionJob    func() (*batchv1.Job, error)
 	launchGuestConversionJob func() (*batchv1.Job, error)
+	supportsWarmMigration    func() bool
+	createVMSnapshot         func() (string, error)
 )
 
 var _ = Describe("Reconcile steps", func() {
@@ -1933,6 +1935,14 @@ func (p *mockProvider) GetGuestConversionJob() (*batchv1.Job, error) {
 
 func (p *mockProvider) LaunchGuestConversionJob(_ *kubevirtv1.VirtualMachine) (*batchv1.Job, error) {
 	return launchGuestConversionJob()
+}
+
+func (p *mockProvider) SupportsWarmMigration() bool {
+	return supportsWarmMigration()
+}
+
+func (p *mockProvider) CreateVMSnapshot() (string, error) {
+	return createVMSnapshot()
 }
 
 // CreateEmptyVM implements Mapper.CreateEmptyVM

@@ -259,6 +259,59 @@ var _ = Describe("GetVMName", func() {
 	})
 })
 
+var _ = Describe("CreateVMSnapshot", func() {
+	var provider *VmwareProvider
+	var model *simulator.Model
+	var server *simulator.Server
+
+	BeforeEach(func() {
+		model, server, provider = makeProvider()
+	})
+
+	AfterEach(func() {
+		server.Close()
+		model.Remove()
+	})
+
+	It("Should create a snapshot of a VM that is identified by UUID", func() {
+		vm := getSimulatorVM()
+		_, uuid, _ := getSimulatorVMIdentifiers(vm)
+		provider.instance.Spec.Source = v1beta1.VirtualMachineImportSourceSpec{
+			Vmware: &v1beta1.VirtualMachineImportVmwareSourceSpec{
+				VM: v1beta1.VirtualMachineImportVmwareSourceVMSpec{
+					ID:   &uuid,
+					Name: nil,
+				},
+			},
+		}
+
+		Expect(provider.vm).To(BeNil())
+		snapshotRef, err := provider.CreateVMSnapshot()
+		Expect(err).To(BeNil())
+		Expect(provider.vm).ToNot(BeNil())
+		Expect(snapshotRef[0:9]).To(Equal("snapshot-"))
+	})
+
+	It("Should create a snapshot of a VM that is identified by Name", func() {
+		vm := getSimulatorVM()
+		_, _, name := getSimulatorVMIdentifiers(vm)
+		provider.instance.Spec.Source = v1beta1.VirtualMachineImportSourceSpec{
+			Vmware: &v1beta1.VirtualMachineImportVmwareSourceSpec{
+				VM: v1beta1.VirtualMachineImportVmwareSourceVMSpec{
+					ID:   nil,
+					Name: &name,
+				},
+			},
+		}
+
+		Expect(provider.vm).To(BeNil())
+		snapshotRef, err := provider.CreateVMSnapshot()
+		Expect(err).To(BeNil())
+		Expect(provider.vm).ToNot(BeNil())
+		Expect(snapshotRef[0:9]).To(Equal("snapshot-"))
+	})
+})
+
 var _ = Describe("GetVMStatus", func() {
 	var provider *VmwareProvider
 	var model *simulator.Model

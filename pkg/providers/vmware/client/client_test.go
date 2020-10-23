@@ -117,6 +117,25 @@ var _ = Describe("Test VMware rich client", func() {
 		Entry("ESXi", simulator.ESX()),
 	)
 
+	DescribeTable("should create a snapshot for a VM", func(model *simulator.Model) {
+		_ = model.Create()
+		server := model.Service.NewServer()
+		defer model.Remove()
+		defer server.Close()
+		richClient, err := createRichClient(server)
+		Expect(err).To(BeNil())
+		moRef, _ := getVMIdentifiers()
+
+		snapshotRef, err := richClient.CreateVMSnapshot(moRef, "name", "description", false, true)
+		Expect(err).To(BeNil())
+		Expect(snapshotRef).ToNot(BeNil())
+		Expect(snapshotRef.Type).To(Equal("VirtualMachineSnapshot"))
+		Expect(snapshotRef.Value[0:9]).To(Equal("snapshot-"))
+	},
+		Entry("vCenter", simulator.VPX()),
+		Entry("ESXi", simulator.ESX()),
+	)
+
 	DescribeTable("should power off and on a VM by ID", func(model *simulator.Model) {
 		_ = model.Create()
 		server := model.Service.NewServer()

@@ -47,6 +47,9 @@ const (
 	keySecretKey    = "secretKey"
 	thumbprintKey   = "thumbprint"
 	vmwareSecretKey = "vmware"
+
+	warmMigrationSnapshotName        = "warm-migration-stage"
+	warmMigrationSnapshotDescription = "VM Import Operator warm migration stage"
 )
 
 // VmwareProvider is VMware implementation of the Provider interface to support importing VMs from VMware
@@ -265,6 +268,24 @@ func (r *VmwareProvider) StopVM(instance *v1beta1.VirtualMachineImport, client c
 	}
 
 	return nil
+}
+
+// CreateVMSnapshot creates a snapshot to use in a warm migration.
+func (r *VmwareProvider) CreateVMSnapshot() (string, error) {
+	vm, err := r.getVM()
+	if err != nil {
+		return "", err
+	}
+
+	snapshotRef, err := r.vmwareClient.CreateVMSnapshot(vm.Reference().Value, warmMigrationSnapshotName, warmMigrationSnapshotDescription, false, true)
+	if err != nil {
+		return "", err
+	}
+	return snapshotRef.Value, nil
+}
+
+func (r *VmwareProvider) SupportsWarmMigration() bool {
+	return true
 }
 
 // CleanUp removes transient resources created for import
