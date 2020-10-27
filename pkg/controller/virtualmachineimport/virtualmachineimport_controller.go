@@ -365,9 +365,14 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	if shouldStartVM(instance) {
-		if err = r.startVM(provider, instance, vmName); err != nil {
+		var requeue bool
+		if requeue, err = r.startVM(provider, instance, vmName); err != nil {
 			return reconcile.Result{}, err
 		}
+		if requeue {
+			// Requeue when vmi was not created yet or was not scheduled
+			return reconcile.Result{RequeueAfter: time.Second * 15}, err
+		} 
 	} else {
 		// Update progress if all disks import done:
 		if err := r.updateProgress(instance, progressDone); err != nil {
@@ -377,6 +382,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 			return reconcile.Result{}, err
 		}
 
+		reqLogger.Info("Virtual Machine imported successful without starting", "VM.name", vmName)
 		// Emit event vm is successfully imported
 		r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportSucceeded, "Virtual Machine %s/%s import successful", vmName.Namespace, vmName.Name)
 	}
@@ -426,6 +432,7 @@ func (r *ReconcileVirtualMachineImport) addWatchForImportPod(instance *v2vv1.Vir
 
 // convertGuest starts a Job to run virt-v2v on the target VM
 func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider, instance *v2vv1.VirtualMachineImport, vmName types.NamespacedName) (bool, error) {
+	log := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
 	// find the vmspec
 	vmSpec := &kubevirtv1.VirtualMachine{}
 	err := r.client.Get(context.TODO(), vmName, vmSpec)
@@ -438,6 +445,7 @@ func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider,
 		return false, err
 	}
 	if job == nil {
+		log.Info("Creating conversion job")
 		job, err = provider.LaunchGuestConversionJob(vmSpec)
 		if err != nil {
 			return false, err
@@ -459,6 +467,7 @@ func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider,
 	}
 
 	if job.Status.Failed > 0 {
+		log.Info("Conversion job failed.", "Job.Name", job.Name)
 		err := r.endGuestConversionAsFailed(provider, instance, fmt.Sprintf("virt-v2v job %s failed", job.Name))
 		if err != nil {
 			return false, err
@@ -470,6 +479,7 @@ func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider,
 }
 
 func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, instance *v2vv1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName) (bool, error) {
+	log := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
 	dvs, err := mapper.MapDataVolumes(&vmName.Name)
 	if err != nil {
 		return false, err
@@ -492,6 +502,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 				return false, err
 			}
 			if valid {
+				log.Info("Creating data volume", "DataVolume.Name", dv.Name, "VM.Name", vmName)
 				if err = r.createDataVolume(provider, mapper, instance, dv, vmName); err != nil {
 					if err = r.endImportAsFailed(provider, instance, foundDv, err.Error()); err != nil {
 						return false, err
@@ -500,6 +511,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 				}
 			} else {
 				// If disk status is wrong, end the import as failed:
+				log.Info("Disk status is incorrect", "DataVolume.Name", dv.Name, "VM.Name", vmName)
 				if err = r.endImportAsFailed(provider, instance, foundDv, "disk is in illegal status"); err != nil {
 					return false, err
 				}
@@ -508,14 +520,16 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 			instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 			// Set dataVolume as done, if it's in Succeeded state:
 			if foundDv.Status.Phase == cdiv1.Succeeded {
+				log.Info("Data volume import succeeded", "DataVolume.Name", foundDv.Name, "VM.Name", vmName)
 				dvsDone[dvID] = true
 			} else if foundDv.Status.Phase == cdiv1.Failed {
+				log.Info("Data volume import failed", "DataVolume.Name", foundDv.Name, "VM.Name", vmName)
 				if err = r.endImportAsFailed(provider, instance, foundDv, "dv is in Failed Phase"); err != nil {
 					return false, err
 				}
 			} else if foundDv.Status.Phase == cdiv1.Pending {
 				// Update condition to pending the PVC bound:
-				message := fmt.Sprintf("DataVolume %s is pending to bound", foundDv.Name)
+				message := fmt.Sprintf("DataVolume %s is pending to bound.", foundDv.Name)
 				processingCond := conditions.NewProcessingCondition(string(v2vv1.Pending), message, corev1.ConditionTrue)
 				if err := r.upsertStatusConditions(instanceNamespacedName, processingCond); err != nil {
 					return false, err
@@ -542,6 +556,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 					// End the import in case the pod keeps crashing:
 					for _, cs := range foundPod.Status.ContainerStatuses {
 						if cs.State.Waiting != nil && cs.State.Waiting.Reason == podCrashLoopBackOff && cs.RestartCount > int32(importPodRestartTolerance) {
+							log.Info("CDI import pod failed.", "VM.Name", vmName)
 							if err = r.endImportAsFailed(provider, instance, foundDv, "pod CrashLoopBackoff restart exceeded"); err != nil {
 								return false, err
 							}
@@ -685,6 +700,7 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 			}
 		}
 	}
+	reqLogger.Info("Mapping virtual machine resources.", "VM.Name", targetVMName)
 	vmSpec, err := mapper.MapVM(targetVMName, spec)
 	if err != nil {
 		return "", err
@@ -793,40 +809,47 @@ func setTrackerLabel(meta metav1.ObjectMeta, instance *v2vv1.VirtualMachineImpor
 }
 
 // startVM start the VM if was requested to be started and VM disks are imported and ready:
-func (r *ReconcileVirtualMachineImport) startVM(provider provider.Provider, instance *v2vv1.VirtualMachineImport, vmName types.NamespacedName) error {
+func (r *ReconcileVirtualMachineImport) startVM(provider provider.Provider, instance *v2vv1.VirtualMachineImport, vmName types.NamespacedName) (bool, error) {
+	log := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
 	vmi := &kubevirtv1.VirtualMachineInstance{}
 	err := r.client.Get(context.TODO(), vmName, vmi)
 	vmIdentifier := utils.ToLoggableResourceName(vmName.Name, &vmName.Namespace)
+	log.Info("startVM method", "VM.Name", vmName)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
+			log.Info("Updating progress while starting vm", "VM.Name", vmName)
 			if err = r.updateProgress(instance, progressStartVM); err != nil {
-				return err
+				return false, err
 			}
+			log.Info("Starting a vm", "VM.Name", vmName)
 			if err = r.updateToRunning(vmName); err != nil {
 				// Emit event vm failed to start:
 				r.recorder.Eventf(instance, corev1.EventTypeWarning, EventVMStartFailed, "Virtual Machine %s failed to start: %s", vmIdentifier, err)
-				return err
+				return false, err
 			}
-		} else {
-			return err
+			return true, nil
+		}
+		return false, err
+	} 
+
+	log.Info("VMI available", "VM.Name", vmName)
+	if vmi.Status.Phase == kubevirtv1.Running || vmi.Status.Phase == kubevirtv1.Scheduled {
+		log.Info("The vm started", "VM.Name", vmName)
+		// Emit event vm is successfully imported and started:
+		r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportSucceeded, "Virtual Machine %s imported and started", vmIdentifier)
+		if err = r.updateConditionsAfterSuccess(instance, "Virtual machine running", v2vv1.VirtualMachineRunning); err != nil {
+			return false, err
+		}
+		if err = r.updateProgress(instance, progressDone); err != nil {
+			return false, err
+		}
+		if err = r.afterSuccess(vmName, provider, instance); err != nil {
+			return false, err
 		}
 	} else {
-		if vmi.Status.Phase == kubevirtv1.Running || vmi.Status.Phase == kubevirtv1.Scheduled {
-			// Emit event vm is successfully imported and started:
-			r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportSucceeded, "Virtual Machine %s imported and started", vmIdentifier)
-
-			if err = r.updateConditionsAfterSuccess(instance, "Virtual machine running", v2vv1.VirtualMachineRunning); err != nil {
-				return err
-			}
-			if err = r.updateProgress(instance, progressDone); err != nil {
-				return err
-			}
-			if err = r.afterSuccess(vmName, provider, instance); err != nil {
-				return err
-			}
-		}
+		return true, nil
 	}
-	return nil
+	return false, nil
 }
 
 func (r *ReconcileVirtualMachineImport) updateConditionsAfterSuccess(instance *v2vv1.VirtualMachineImport, message string, reason v2vv1.SucceededConditionReason) error {

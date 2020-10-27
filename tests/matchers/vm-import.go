@@ -56,6 +56,19 @@ func HaveValidationFailure(testFramework *framework.Framework, reason string) ty
 	return &matcher
 }
 
+// HaveRunningVM creates the matcher checking whether Virtual Machine Instance is running
+func HaveRunningVM(testFramework *framework.Framework) types.GomegaMatcher {
+	matcher := hasConditionInStatus{}
+	matcher.timeout = 1 * time.Minute
+	matcher.pollInterval = 1 * time.Second
+	matcher.testFramework = testFramework
+
+	matcher.conditionType = v2vv1.Succeeded
+	matcher.status = corev1.ConditionTrue
+	matcher.reason = string(v2vv1.VirtualMachineRunning)
+	return &matcher
+}
+
 // BeProcessing creates the matcher checking whether Virtual Machine Import is currently processing
 func BeProcessing(testFramework *framework.Framework) types.GomegaMatcher {
 	matcher := hasConditionInStatus{}

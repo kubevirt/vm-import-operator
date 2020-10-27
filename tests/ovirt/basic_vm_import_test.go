@@ -88,6 +88,8 @@ var _ = Describe("Basic VM import ", func() {
 
 			vm := test.validateTargetConfiguration(vmBlueprint.Name)
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveDefaultStorageClass(f))
+
+			Expect(retrieved).To(HaveRunningVM(f))
 		})
 	})
 
@@ -110,6 +112,8 @@ var _ = Describe("Basic VM import ", func() {
 
 			vm := test.validateTargetConfiguration(vmBlueprint.Name)
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveStorageClass(storageClass, f))
+
+			Expect(retrieved).To(HaveRunningVM(f))
 		},
 			table.Entry(" for disk", v2vv1.OvirtMappings{
 				DiskMappings: &[]v2vv1.StorageResourceMappingItem{
