@@ -82,6 +82,34 @@ var _ = Describe("Finding a Template", func() {
 		Expect(err).To(BeNil())
 		Expect(template.CreationTimestamp).To(Equal(newer))
 	})
+	It("should prefer a server template if one exists:", func() {
+		findTemplatesMock = func(name *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error) {
+			template := createTemplate(name, os, workload, flavor)
+			return createTemplatesList(template), nil
+		}
+
+		vm := &mo.VirtualMachine{}
+		template, err := templateFinder.FindTemplate(vm)
+		Expect(err).To(BeNil())
+		Expect(template).ToNot(BeNil())
+		Expect(template.Labels[fmt.Sprintf(templates.TemplateWorkloadLabel, "server")]).To(Equal("true"))
+	})
+	It("should fall back to finding a desktop template:", func() {
+		findTemplatesMock = func(name *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error) {
+			if *workload == "server" {
+				return createTemplatesList(), nil
+			} else {
+				template := createTemplate(name, os, workload, flavor)
+				return createTemplatesList(template), nil
+			}
+		}
+
+		vm := &mo.VirtualMachine{}
+		template, err := templateFinder.FindTemplate(vm)
+		Expect(err).To(BeNil())
+		Expect(template).ToNot(BeNil())
+		Expect(template.Labels[fmt.Sprintf(templates.TemplateWorkloadLabel, "desktop")]).To(Equal("true"))
+	})
 })
 
 func createTemplate(name *string, os *string, workload *string, flavor *string) *templatev1.Template {
