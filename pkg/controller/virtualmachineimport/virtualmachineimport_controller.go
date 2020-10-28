@@ -90,6 +90,12 @@ const (
 	EventPVCImportFailed = "EventPVCImportFailed"
 	// EventGuestConversionFailed is emitted when the virt-v2v conversion job fails.
 	EventGuestConversionFailed = "GuestConversionFailed"
+	// EventWarmImportFailed is emmitted when a warm import attempt fails.
+	EventWarmImportFailed = "WarmImportFailed"
+
+	SlowReQ = time.Second * 10
+	FastReQ = time.Second * 2
+	NoReQ   = time.Second * 0
 )
 
 var (
@@ -122,6 +128,11 @@ func newReconciler(mgr manager.Manager, kvConfigProvider kvConfig.KubeVirtConfig
 	finder := mappings.NewResourceMappingsFinder(client)
 	ownerreferencesmgr := ownerreferences.NewOwnerReferenceManager(client)
 	factory := pclient.NewSourceClientFactory()
+
+	controllerConfig, err := ctrlConfigProvider.GetConfig()
+	if err != nil {
+		log.Error(err, "Cannot get controller config.")
+	}
 	return &ReconcileVirtualMachineImport{client: client,
 		apiReader:              reader,
 		scheme:                 mgr.GetScheme(),
@@ -131,6 +142,7 @@ func newReconciler(mgr manager.Manager, kvConfigProvider kvConfig.KubeVirtConfig
 		factory:                factory,
 		kvConfigProvider:       kvConfigProvider,
 		ctrlConfigProvider:     ctrlConfigProvider,
+		ctrlConfig:             controllerConfig,
 		recorder:               mgr.GetEventRecorderFor("virtualmachineimport-controller"),
 	}
 }
@@ -205,6 +217,7 @@ type ReconcileVirtualMachineImport struct {
 	factory                pclient.Factory
 	kvConfigProvider       kvConfig.KubeVirtConfigProvider
 	ctrlConfigProvider     ctrlConfig.ControllerConfigProvider
+	ctrlConfig             ctrlConfig.ControllerConfig
 	recorder               record.EventRecorder
 	controller             controller.Controller
 	apiReader              client.Reader
@@ -337,6 +350,11 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportScheduled, "Import of Virtual Machine %s/%s started", vmName.Namespace, vmName.Name)
 	}
 
+	if shouldWarmImport(provider, instance) {
+		requeueAfter, err := r.warmImport(provider, instance, mapper, vmName, reqLogger)
+		return reconcile.Result{RequeueAfter: requeueAfter}, err
+	}
+
 	if shouldImportDisks(instance) {
 		done, err := r.importDisks(provider, instance, mapper, vmName)
 		if err != nil {
@@ -344,6 +362,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		}
 
 		if !done {
+			reqLogger.Info("Waiting for disks to be imported")
 			return reconcile.Result{}, nil
 		}
 	}
@@ -355,6 +374,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		}
 
 		if !done {
+			reqLogger.Info("Waiting for guest to be converted")
 			return reconcile.Result{}, nil
 		}
 	}
@@ -389,6 +409,18 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileVirtualMachineImport) getDataVolume(dvName types.NamespacedName) (*cdiv1.DataVolume, error) {
+	dv := &cdiv1.DataVolume{}
+	err := r.client.Get(context.TODO(), dvName, dv)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return dv, nil
 }
 
 func (r *ReconcileVirtualMachineImport) finalize(instance *v2vv1.VirtualMachineImport, provider provider.Provider) error {
@@ -504,7 +536,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 			}
 			if valid {
 				log.Info("Creating data volume", "DataVolume.Name", dv.Name, "VM.Name", vmName)
-				if err = r.createDataVolume(provider, mapper, instance, dv, vmName); err != nil {
+				if _, err = r.createDataVolume(provider, mapper, instance, &dv, vmName); err != nil {
 					if err = r.endImportAsFailed(provider, instance, foundDv, err.Error()); err != nil {
 						return false, err
 					}
@@ -518,6 +550,12 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 				}
 			}
 		} else if err == nil {
+			if instance.Spec.Warm {
+				err = r.setFinalCheckpoint(foundDv)
+				if err != nil {
+					return false, err
+				}
+			}
 			instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 			// Set dataVolume as done, if it's in Succeeded state:
 			if foundDv.Status.Phase == cdiv1.Succeeded {
@@ -543,7 +581,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 					return false, err
 				}
 
-				// During ImportInProgress phase importer pod can be in crashloppbackoff, so we need
+				// During ImportInProgress phase importer pod can be in crashloopbackoff, so we need
 				// to check the state of the pod and fail the import:
 				foundPod := &corev1.Pod{}
 				err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: importerPodNameFromDv(dvID)}, foundPod)
@@ -643,6 +681,37 @@ func (r *ReconcileVirtualMachineImport) endImportAsFailed(provider provider.Prov
 
 	// Update event:
 	r.recorder.Event(instance, corev1.EventTypeWarning, EventDVCreationFailed, message)
+
+	// Cleanup
+	if err := r.afterFailure(provider, instance); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *ReconcileVirtualMachineImport) endWarmImportAsFailed(provider provider.Provider, instance *v2vv1.VirtualMachineImport, message string) error {
+	errorMessage := fmt.Sprintf("Error while attempting warm import: %s", message)
+	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
+
+	// Update processing condition to failed:
+	processingCond := conditions.NewProcessingCondition(string(v2vv1.ProcessingFailed), errorMessage, corev1.ConditionFalse)
+	if err := r.upsertStatusConditions(instanceNamespacedName, processingCond); err != nil {
+		return err
+	}
+	// Update succeed condition to failed:
+	succeededCond := conditions.NewSucceededCondition(string(v2vv1.WarmImportFailed), errorMessage, corev1.ConditionFalse)
+	if err := r.upsertStatusConditions(instanceNamespacedName, succeededCond); err != nil {
+		return err
+	}
+
+	// Update progress to done.
+	if err := r.updateProgress(instance, progressDone); err != nil {
+		return err
+	}
+
+	// Update event:
+	r.recorder.Event(instance, corev1.EventTypeWarning, EventWarmImportFailed, message)
 
 	// Cleanup
 	if err := r.afterFailure(provider, instance); err != nil {
@@ -901,44 +970,43 @@ func (r *ReconcileVirtualMachineImport) isDoneImport(dvsDone map[string]bool, nu
 	return done == numberOfDvs
 }
 
-func (r *ReconcileVirtualMachineImport) createDataVolume(provider provider.Provider, mapper provider.Mapper, instance *v2vv1.VirtualMachineImport, dv cdiv1.DataVolume, vmName types.NamespacedName) error {
+func (r *ReconcileVirtualMachineImport) createDataVolume(provider provider.Provider, mapper provider.Mapper, instance *v2vv1.VirtualMachineImport, dv *cdiv1.DataVolume, vmName types.NamespacedName) (*cdiv1.DataVolume, error) {
 	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 	// Update condition to create VM:
 	processingCond := conditions.NewProcessingCondition(string(v2vv1.CopyingDisks), "Copying virtual machine disks", corev1.ConditionTrue)
 	err := r.upsertStatusConditions(instanceNamespacedName, processingCond)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Update progress to copying disks:
 	if err := r.updateProgress(instance, progressCopyingDisks); err != nil {
-		return err
+		return nil, err
 	}
 	// Fetch VM:
 	vmDef := &kubevirtv1.VirtualMachine{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, vmDef)
-
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// Set controller owner reference:
-	if err := controllerutil.SetControllerReference(instance, &dv, r.scheme); err != nil {
-		return err
+	if err := controllerutil.SetControllerReference(instance, dv, r.scheme); err != nil {
+		return nil, err
 	}
 
 	// Set tracking label
 	setTrackerLabel(dv.ObjectMeta, instance)
 
-	err = r.client.Create(context.TODO(), &dv)
+	err = r.client.Create(context.TODO(), dv)
 	if err != nil {
 		message := fmt.Sprintf("Data volume %s/%s creation failed: %s", dv.Namespace, dv.Name, err)
 		log.Error(err, message)
-		return errors.New(message)
+		return nil, errors.New(message)
 	}
 
 	// Set VM as owner reference:
-	if err := r.ownerreferencesmgr.AddOwnerReference(vmDef, &dv); err != nil {
-		return err
+	if err := r.ownerreferencesmgr.AddOwnerReference(vmDef, dv); err != nil {
+		return nil, err
 	}
 
 	// Emit event that DV import is in progress:
@@ -950,18 +1018,18 @@ func (r *ReconcileVirtualMachineImport) createDataVolume(provider provider.Provi
 	)
 
 	// Update datavolume in VM import CR status:
-	if err = r.updateDVs(instanceNamespacedName, dv); err != nil {
-		return err
+	if err = r.updateDVs(instanceNamespacedName, *dv); err != nil {
+		return nil, err
 	}
 
 	// Update VM spec with imported disks:
-	err = r.updateVMSpecDataVolumes(mapper, types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, dv)
+	err = r.updateVMSpecDataVolumes(mapper, types.NamespacedName{Namespace: vmName.Namespace, Name: vmName.Name}, *dv)
 	if err != nil {
 		log.Error(err, "Cannot update VM with Data Volumes")
-		return err
+		return nil, err
 	}
 
-	return nil
+	return dv, nil
 }
 
 func (r *ReconcileVirtualMachineImport) fetchSecret(vmImport *v2vv1.VirtualMachineImport) (*corev1.Secret, error) {
@@ -1001,22 +1069,17 @@ func isIncomplete(condition *v2vv1.VirtualMachineImportCondition) bool {
 }
 
 func (r *ReconcileVirtualMachineImport) createProvider(vmi *v2vv1.VirtualMachineImport) (provider.Provider, error) {
-	config, err := r.ctrlConfigProvider.GetConfig()
-	if err != nil {
-		log.Error(err, "Cannot get controller config.")
-	}
-
 	if vmi.Spec.Source.Ovirt != nil && vmi.Spec.Source.Vmware != nil {
 		return nil, fmt.Errorf("Invalid source. Must only include one source type.")
 	}
 
 	// The type of the provider is evaluated based on the source field from the CR
 	if vmi.Spec.Source.Ovirt != nil {
-		provider := ovirtprovider.NewOvirtProvider(vmi.ObjectMeta, vmi.TypeMeta, r.client, r.ocClient, r.factory, r.kvConfigProvider, config)
+		provider := ovirtprovider.NewOvirtProvider(vmi.ObjectMeta, vmi.TypeMeta, r.client, r.ocClient, r.factory, r.kvConfigProvider, r.ctrlConfig)
 		return &provider, nil
 	}
 	if vmi.Spec.Source.Vmware != nil {
-		provider := vmware.NewVmwareProvider(vmi.ObjectMeta, vmi.TypeMeta, r.client, r.ocClient, r.factory, config)
+		provider := vmware.NewVmwareProvider(vmi.ObjectMeta, vmi.TypeMeta, r.client, r.ocClient, r.factory, r.ctrlConfig)
 		return &provider, nil
 	}
 

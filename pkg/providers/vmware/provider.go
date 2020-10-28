@@ -312,6 +312,18 @@ func (r *VmwareProvider) CleanUp(failure bool, cr *v1beta1.VirtualMachineImport,
 		errs = append(errs, err)
 	}
 
+	vm, err := r.getVM()
+	if err != nil {
+		errs = append(errs, err)
+	}
+	// remove all the snapshots that were created for warm import
+	if cr.Status.WarmImport.RootSnapshot != nil {
+		err = r.vmwareClient.RemoveVMSnapshot(vm.Reference().Value, *cr.Status.WarmImport.RootSnapshot, true, nil)
+		if err != nil {
+			errs = append(errs, err)
+		}
+	}
+
 	// only clean up the job on success,
 	// since the job log is important for debugging
 	if !failure {
@@ -350,11 +362,20 @@ func (r *VmwareProvider) TestConnection() error {
 
 // Validate checks whether the source VM and resource mapping is valid.
 func (r *VmwareProvider) Validate() ([]v1beta1.VirtualMachineImportCondition, error) {
-	// TODO: implement vmware rule validation
-	return []v1beta1.VirtualMachineImportCondition{
-		conditions.NewCondition(v1beta1.Valid, string(v1beta1.ValidationCompleted), "Validation completed successfully", corev1.ConditionTrue),
-		conditions.NewCondition(v1beta1.MappingRulesVerified, string(v1beta1.MappingRulesVerificationCompleted), "All mapping rules checks passed", corev1.ConditionTrue),
-	}, nil
+	validCondition := conditions.NewCondition(v1beta1.Valid, string(v1beta1.ValidationCompleted), "Validation completed successfully", corev1.ConditionTrue)
+	mappingCondition := conditions.NewCondition(v1beta1.MappingRulesVerified, string(v1beta1.MappingRulesVerificationCompleted), "All mapping rules checks passed", corev1.ConditionTrue)
+
+	if r.instance.Spec.Warm {
+		vmProperties, err := r.getVmProperties()
+		if err != nil {
+			return nil, err
+		}
+		if vmProperties.Config.ChangeTrackingEnabled == nil || !*vmProperties.Config.ChangeTrackingEnabled {
+			//validCondition = conditions.NewCondition(v1beta1.Valid, string(v1beta1.ValidationFailed), "Changed Block Tracking must be enabled to allow warm import", corev1.ConditionFalse)
+		}
+	}
+
+	return []v1beta1.VirtualMachineImportCondition{validCondition, mappingCondition}, nil
 }
 
 // Close logs out the client and shuts down idle connections.
