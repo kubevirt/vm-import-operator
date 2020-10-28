@@ -41,6 +41,11 @@ const (
 	networkTypePod    = "pod"
 )
 
+// architectures
+const (
+	q35 = "q35"
+)
+
 var biosTypeMapping = map[string]*kubevirtv1.Bootloader{
 	"efi":  {EFI: &kubevirtv1.EFI{}},
 	"bios": {BIOS: &kubevirtv1.BIOS{}},
@@ -427,6 +432,7 @@ func (r *VmwareMapper) MapVM(targetVmName *string, vmSpec *kubevirtv1.VirtualMac
 	nameParts := strings.Split(hostname, ".")
 	vmSpec.Spec.Template.Spec.Hostname = nameParts[0]
 
+	vmSpec.Spec.Template.Spec.Domain.Machine = kubevirtv1.Machine{Type: q35}
 	vmSpec.Spec.Template.Spec.Domain.CPU = r.mapCPUTopology()
 	vmSpec.Spec.Template.Spec.Domain.Firmware = r.mapFirmware()
 	vmSpec.Spec.Template.Spec.Domain.Features = r.mapFeatures()

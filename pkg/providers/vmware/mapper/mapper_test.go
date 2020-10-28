@@ -27,6 +27,7 @@ var (
 	cpuCores             int32 = 1
 	cpuSockets           int32 = 4
 	gmtOffsetSeconds     int32 = 3600
+	machineType                = "q35"
 
 	// networks
 	networkName              = "VM Network"
@@ -127,6 +128,15 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 		quantity, _ := resource.ParseQuantity(memoryReservationStr)
 		Expect(vmSpec.Spec.Template.Spec.Domain.Resources.Requests.Memory().Value()).To(Equal(quantity.Value()))
+	})
+
+	It("should map machine type", func() {
+		mappings := createMinimalMapping()
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+		Expect(err).To(BeNil())
+
+		Expect(vmSpec.Spec.Template.Spec.Domain.Machine.Type).To(Equal(machineType))
 	})
 
 	It("should map CPU topology", func() {
