@@ -13,6 +13,7 @@ spec:
     vmware:
       vm:
         id: 42253ce0-5f76-918d-d85c-d7506f7cc056 # VirtualMachine UUID
+        # name: my-vm-name
       mappings:
         networkMappings:
           - source:
@@ -22,11 +23,16 @@ spec:
             type: pod
         storageMappings:
           - source:
-              id: datastore-13
+              id: datastore-13 # Datastore Managed Object Reference
             target:
               name: storage_class_1
-        diskMappings: # specifies per-disk placement on storage class
+        diskMappings: # specifies per-disk placement on storage class, overriding the datastore mapping
           - source:
-              id: 421-2000 # VirtualDisk DiskObjectId or vDiskID
+              name: Hard disk 1 # VirtualDisk name
             target:
-              name: storage_class_1
+              name: storage_class_2
+
+# The VirtualMachine can be identified either by its UUID, or by its name. Its UUID can be retrieved
+# via the vSphere SDK, or from the vCenter Flash client. To find the UUID in the UI, find the Host
+# containing the VM you want, choose the VMs tab, and then right click on the columns.
+# From the dropdown choose "Show/Hide Columns", and then check the box for "UUID".
