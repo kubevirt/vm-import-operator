@@ -12,11 +12,10 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/validation"
 
-	"github.com/blang/semver"
+	"github.com/coreos/go-semver/semver"
 	monitoringv1 "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1"
 	vmimportmetrics "github.com/kubevirt/vm-import-operator/pkg/metrics"
 	csvv1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/version"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -1721,7 +1720,7 @@ func CreateVMImportConfig() *extv1.CustomResourceDefinition {
 										},
 									},
 								},
-								"status": sdkopenapi.OperatorConfigStatus("", "VMImportConfig"),
+								"status": sdkopenapi.OperatorConfigStatus(""),
 							},
 						},
 					},
@@ -3248,10 +3247,7 @@ func NewClusterServiceVersion(data *ClusterServiceVersionData) (*csvv1.ClusterSe
 		return nil, err
 	}
 
-	csvVersion, err := semver.New(data.CsvVersion)
-	if err != nil {
-		return nil, err
-	}
+	csvVersion := semver.New(data.CsvVersion)
 
 	return &csvv1.ClusterServiceVersion{
 		TypeMeta: metav1.TypeMeta{
@@ -3283,7 +3279,7 @@ func NewClusterServiceVersion(data *ClusterServiceVersionData) (*csvv1.ClusterSe
 			DisplayName: "VM import operator",
 			Description: "VM import operator provides ability to import virtual machines from other infrastructure like oVirt/RHV",
 			Keywords:    []string{"Import", "Virtualization", "oVirt", "RHV"},
-			Version:     version.OperatorVersion{Version: *csvVersion},
+			Version:     *csvVersion,
 			Maturity:    "alpha",
 			Replaces:    data.ReplacesCsvVersion,
 			Maintainers: []csvv1.Maintainer{{

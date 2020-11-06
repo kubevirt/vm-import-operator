@@ -6,11 +6,13 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators"
 )
 
 const (
 	InstallPlanKind       = "InstallPlan"
-	InstallPlanAPIVersion = GroupName + "/" + GroupVersion
+	InstallPlanAPIVersion = operators.GroupName + "/" + GroupVersion
 )
 
 // Approval is the user approval policy for an InstallPlan.
@@ -23,8 +25,8 @@ const (
 
 // InstallPlanSpec defines a set of Application resources to be installed
 type InstallPlanSpec struct {
-	CatalogSource              string   `json:"source,omitempty"`
-	CatalogSourceNamespace     string   `json:"sourceNamespace,omitempty"`
+	CatalogSource              string   `json:"source"`
+	CatalogSourceNamespace     string   `json:"sourceNamespace"`
 	ClusterServiceVersionNames []string `json:"clusterServiceVersionNames"`
 	Approval                   Approval `json:"approval"`
 	Approved                   bool     `json:"approved"`
@@ -84,10 +86,6 @@ type InstallPlanStatus struct {
 	Conditions     []InstallPlanCondition `json:"conditions,omitempty"`
 	CatalogSources []string               `json:"catalogSources"`
 	Plan           []*Step                `json:"plan,omitempty"`
-
-	// AttenuatedServiceAccountRef references the service account that is used
-	// to do scoped operator install.
-	AttenuatedServiceAccountRef *corev1.ObjectReference `json:"attenuatedServiceAccountRef,omitempty"`
 }
 
 // InstallPlanCondition represents the overall status of the execution of
@@ -104,23 +102,12 @@ type InstallPlanCondition struct {
 // allow overwriting `now` function for deterministic tests
 var now = metav1.Now
 
-// GetCondition returns the InstallPlanCondition of the given type if it exists in the InstallPlanStatus' Conditions.
-// Returns a condition of the given type with a ConditionStatus of "Unknown" if not found.
-func (s InstallPlanStatus) GetCondition(conditionType InstallPlanConditionType) InstallPlanCondition {
-	for _, cond := range s.Conditions {
-		if cond.Type == conditionType {
-			return cond
-		}
-	}
-
-	return InstallPlanCondition{
-		Type:   conditionType,
-		Status: corev1.ConditionUnknown,
-	}
-}
-
-// SetCondition adds or updates a condition, using `Type` as merge key.
+// SetCondition adds or updates a condition, using `Type` as merge key
 func (s *InstallPlanStatus) SetCondition(cond InstallPlanCondition) InstallPlanCondition {
+	updated := now()
+	cond.LastUpdateTime = updated
+	cond.LastTransitionTime = updated
+
 	for i, existing := range s.Conditions {
 		if existing.Type != cond.Type {
 			continue
@@ -135,23 +122,19 @@ func (s *InstallPlanStatus) SetCondition(cond InstallPlanCondition) InstallPlanC
 	return cond
 }
 
-func ConditionFailed(cond InstallPlanConditionType, reason InstallPlanConditionReason, message string, now *metav1.Time) InstallPlanCondition {
+func ConditionFailed(cond InstallPlanConditionType, reason InstallPlanConditionReason, err error) InstallPlanCondition {
 	return InstallPlanCondition{
-		Type:               cond,
-		Status:             corev1.ConditionFalse,
-		Reason:             reason,
-		Message:            message,
-		LastUpdateTime:     *now,
-		LastTransitionTime: *now,
+		Type:    cond,
+		Status:  corev1.ConditionFalse,
+		Reason:  reason,
+		Message: err.Error(),
 	}
 }
 
-func ConditionMet(cond InstallPlanConditionType, now *metav1.Time) InstallPlanCondition {
+func ConditionMet(cond InstallPlanConditionType) InstallPlanCondition {
 	return InstallPlanCondition{
-		Type:               cond,
-		Status:             corev1.ConditionTrue,
-		LastUpdateTime:     *now,
-		LastTransitionTime: *now,
+		Type:   cond,
+		Status: corev1.ConditionTrue,
 	}
 }
 
@@ -160,43 +143,6 @@ type Step struct {
 	Resolving string       `json:"resolving"`
 	Resource  StepResource `json:"resource"`
 	Status    StepStatus   `json:"status"`
-}
-
-// ManifestsMatch returns true if the CSV manifests in the StepResources of the given list of steps
-// matches those in the InstallPlanStatus.
-func (s *InstallPlanStatus) CSVManifestsMatch(steps []*Step) bool {
-	if s.Plan == nil && steps == nil {
-		return true
-	}
-	if s.Plan == nil || steps == nil {
-		return false
-	}
-
-	manifests := make(map[string]struct{})
-	for _, step := range s.Plan {
-		resource := step.Resource
-		if resource.Kind != ClusterServiceVersionKind {
-			continue
-		}
-		manifests[resource.Manifest] = struct{}{}
-	}
-
-	for _, step := range steps {
-		resource := step.Resource
-		if resource.Kind != ClusterServiceVersionKind {
-			continue
-		}
-		if _, ok := manifests[resource.Manifest]; !ok {
-			return false
-		}
-		delete(manifests, resource.Manifest)
-	}
-
-	if len(manifests) == 0 {
-		return true
-	}
-
-	return false
 }
 
 func (s *Step) String() string {
@@ -221,8 +167,6 @@ func (r StepResource) String() string {
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +genclient
-
-// InstallPlan defines the installation of a set of operators.
 type InstallPlan struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata"`
@@ -244,8 +188,6 @@ func (p *InstallPlan) EnsureCatalogSource(sourceName string) {
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// InstallPlanList is a list of InstallPlan resources.
 type InstallPlanList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata"`

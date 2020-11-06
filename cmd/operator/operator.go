@@ -12,7 +12,6 @@ import (
 	"github.com/kubevirt/vm-import-operator/pkg/operator/controller"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
-	"github.com/operator-framework/operator-sdk/pkg/restmapper"
 	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -56,7 +55,6 @@ func main() {
 
 	mgr, err := manager.New(cfg, manager.Options{
 		Namespace:      namespace,
-		MapperProvider: restmapper.NewDynamicRESTMapper,
 	})
 	if err != nil {
 		log.Error(err, "")

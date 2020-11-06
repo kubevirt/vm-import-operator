@@ -267,9 +267,10 @@ var _ = Describe("Controller", func() {
 			controllerConfigMap.Name = ctrlConfig.ConfigMapName
 			retrieved, err := getObject(args.client, &controllerConfigMap)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(retrieved.(*corev1.ConfigMap).Data).To(BeEmpty())
-			controllerConfigMap.Data = map[string]string{"foo": "bar"}
-			err = args.client.Update(context.TODO(), &controllerConfigMap)
+			cm := retrieved.(*corev1.ConfigMap)
+			Expect(cm.Data).To(BeEmpty())
+			cm.Data = map[string]string{"foo": "bar"}
+			err = args.client.Update(context.TODO(), cm)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(args.config.Status.ObservedVersion).Should(Equal(newVersion))

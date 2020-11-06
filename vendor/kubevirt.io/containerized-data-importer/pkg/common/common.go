@@ -25,6 +25,9 @@ const (
 	// PrometheusServiceName is the name of the prometheus service created by the operator.
 	PrometheusServiceName = "cdi-prometheus-metrics"
 
+	// UploadTargetLabel has the UID of upload target PVC
+	UploadTargetLabel = CDIComponentLabel + "/uploadTarget"
+
 	// ImporterVolumePath provides a constant for the directory where the PV is mounted.
 	ImporterVolumePath = "/data"
 	// DiskImageName provides a constant for our importer/datastream_ginkgo_test and to build ImporterWritePath
@@ -104,6 +107,11 @@ const (
 	UploadServerServiceLabel = "service"
 	// UploadImageSize provides a constant to capture our env variable "UPLOAD_IMAGE_SIZE"
 	UploadImageSize = "UPLOAD_IMAGE_SIZE"
+
+	// FilesystemOverheadVar provides a constant to capture our env variable "FILESYSTEM_OVERHEAD"
+	FilesystemOverheadVar = "FILESYSTEM_OVERHEAD"
+	// DefaultGlobalOverhead is the amount of space reserved on Filesystem volumes by default
+	DefaultGlobalOverhead = "0.055"
 
 	// ConfigName is the name of default CDI Config
 	ConfigName = "config"

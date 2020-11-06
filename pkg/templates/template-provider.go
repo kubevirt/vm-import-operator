@@ -1,6 +1,7 @@
 package templates
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -52,7 +53,7 @@ func (t *Templates) Find(namespace *string, os *string, workload *string, flavor
 	options := metav1.ListOptions{
 		LabelSelector: labelSelector,
 	}
-	return t.Client.Templates(*namespace).List(options)
+	return t.Client.Templates(*namespace).List(context.TODO(), options)
 }
 
 // Process calls the openshift api to process parameters
@@ -73,7 +74,7 @@ func (t *Templates) Process(namespace string, vmName *string, template *template
 		Namespace(namespace).
 		Resource(processingURI).
 		Body(temp).
-		Do().
+		Do(context.TODO()).
 		Into(result)
 	if err != nil {
 		return nil, err
