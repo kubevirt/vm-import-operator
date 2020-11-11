@@ -41,7 +41,7 @@ require (
 	k8s.io/klog v1.0.0
 	k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 	k8s.io/utils v0.0.0-20200619165400-6e3d28b6ed19
-	kubevirt.io/client-go v0.26.2
+	kubevirt.io/client-go v0.33.0
 	kubevirt.io/containerized-data-importer v1.25.0
 	kubevirt.io/controller-lifecycle-operator-sdk v0.1.1
 	libvirt.org/libvirt-go-xml v6.6.0+incompatible

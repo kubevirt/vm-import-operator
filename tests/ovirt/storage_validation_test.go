@@ -1,7 +1,9 @@
 package ovirt_test
 
 import (
+	"context"
 	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
@@ -169,7 +171,7 @@ var _ = Describe("VM storage validation ", func() {
 func (t *storageValidationTest) prepareImport(vmID string, secretName string) *v2vv1.VirtualMachineImport {
 	namespace := t.framework.Namespace.Name
 	vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secretName, t.framework.NsPrefix, true)
-	created, err := t.framework.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+	created, err := t.framework.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 	if err != nil {
 		Fail(err.Error())
 	}

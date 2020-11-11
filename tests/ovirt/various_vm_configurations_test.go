@@ -1,6 +1,8 @@
 package ovirt_test
 
 import (
+	"context"
+	"k8s.io/apimachinery/pkg/types"
 	"strings"
 
 	"github.com/onsi/ginkgo/extensions/table"
@@ -52,12 +54,12 @@ var _ = Describe("Import", func() {
 
 	It("placement policy: 'migratable' and LiveMigration enabled", func() {
 		vmID := vms.PlacementPolicyAffinityVmIDPrefix + "migratable"
-		configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get("kubevirt-config", metav1.GetOptions{})
+		configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get(context.TODO(), "kubevirt-config", metav1.GetOptions{})
 		if err != nil {
 			Fail(err.Error())
 		}
 		configMap.Data["feature-gates"] = configMap.Data["feature-gates"] + ",LiveMigration"
-		f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(configMap)
+		f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
 		test.stub(vmID, "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "migratable"})
 		test.ensureVMIsRunningOnStorage(vmID, &[]v2vv1.StorageResourceMappingItem{
 			{Source: v2vv1.Source{ID: &vms.StorageDomainID}, Target: v2vv1.ObjectIdentifier{Name: f.NfsStorageClass}},
@@ -211,14 +213,14 @@ var _ = Describe("Import", func() {
 })
 
 func setupConfigMap(f *fwk.Framework) {
-	configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get("kubevirt-config", metav1.GetOptions{})
+	configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get(context.TODO(), "kubevirt-config", metav1.GetOptions{})
 	if err != nil {
 		Fail(err.Error())
 	}
 	data := configMap.Data["feature-gates"]
 	if !strings.Contains(data, "ImportWithoutTemplate") {
 		configMap.Data["feature-gates"] = data + ",ImportWithoutTemplate"
-		_, err = f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(configMap)
+		_, err = f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
 		if err != nil {
 			Fail(err.Error())
 		}
@@ -226,12 +228,12 @@ func setupConfigMap(f *fwk.Framework) {
 }
 
 func cleanUpConfigMap(f *fwk.Framework) {
-	configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get("kubevirt-config", metav1.GetOptions{})
+	configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get(context.TODO(), "kubevirt-config", metav1.GetOptions{})
 	if err != nil {
 		Fail(err.Error())
 	}
 	configMap.Data["feature-gates"] = strings.ReplaceAll(configMap.Data["feature-gates"], ",LiveMigration", "")
-	_, err = f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(configMap)
+	_, err = f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
 	if err != nil {
 		Fail(err.Error())
 	}
@@ -258,18 +260,20 @@ func (t *variousVMConfigurationsTest) ensureVMIsRunningOnStorageWithVMName(vmID 
 		vmi.Spec.Source.Ovirt.Mappings.StorageMappings = storageMappings
 	}
 
-	created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+	created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 	Expect(err).NotTo(HaveOccurred())
 	Expect(created).To(BeSuccessful(f))
 
-	retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+	retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 	Expect(vmBlueprint).To(BeRunning(f))
 
-	vm, _ := f.KubeVirtClient.VirtualMachine(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+	vmNamespacedName := types.NamespacedName{Namespace: vmBlueprint.Namespace, Name: vmBlueprint.Name}
+	vm := &v1.VirtualMachine{}
+	_ = f.Client.Get(context.TODO(), vmNamespacedName, vm)
 	return vm
 }
 

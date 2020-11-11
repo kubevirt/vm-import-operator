@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -38,7 +39,7 @@ func (f *Framework) CreateVmwareResourceMapping(vmwareMappings v2vv1.VmwareMappi
 }
 
 func (f *Framework) createResourceMapping(resourceMapping v2vv1.ResourceMapping) (v2vv1.ResourceMapping, error) {
-	rm, err := f.VMImportClient.V2vV1beta1().ResourceMappings(f.Namespace.Name).Create(&resourceMapping)
+	rm, err := f.VMImportClient.V2vV1beta1().ResourceMappings(f.Namespace.Name).Create(context.TODO(), &resourceMapping, metav1.CreateOptions{})
 	if err != nil {
 		return v2vv1.ResourceMapping{}, err
 	}

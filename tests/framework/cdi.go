@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -11,7 +12,7 @@ import (
 // WaitForDataVolumeToExist blocks until Data Volume is created
 func (f *Framework) WaitForDataVolumeToExist(dvName string) error {
 	pollErr := wait.PollImmediate(2*time.Second, 1*time.Minute, func() (bool, error) {
-		_, err := f.CdiClient.CdiV1alpha1().DataVolumes(f.Namespace.Name).Get(dvName, metav1.GetOptions{})
+		_, err := f.CdiClient.CdiV1alpha1().DataVolumes(f.Namespace.Name).Get(context.TODO(), dvName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return false, nil

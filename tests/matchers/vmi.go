@@ -1,7 +1,9 @@
 package matchers
 
 import (
+	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
 	"sync/atomic"
 	"time"
 
@@ -9,7 +11,6 @@ import (
 
 	"github.com/kubevirt/vm-import-operator/tests/framework"
 	"github.com/onsi/gomega/format"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	v1 "kubevirt.io/client-go/api/v1"
 )
@@ -37,7 +38,10 @@ func (matcher *beRunningMatcher) Timeout(timeout time.Duration) *beRunningMatche
 func (matcher *beRunningMatcher) Match(actual interface{}) (bool, error) {
 	vm := actual.(v1.VirtualMachine)
 	pollErr := wait.PollImmediate(5*time.Second, matcher.timeout, func() (bool, error) {
-		vmi, err := matcher.testFramework.KubeVirtClient.VirtualMachineInstance(vm.Namespace).Get(vm.Name, &metav1.GetOptions{})
+		vmi := &v1.VirtualMachineInstance{}
+		vmiNamespacedName := types.NamespacedName{Namespace: vm.Namespace, Name: vm.Name}
+
+		err := matcher.testFramework.Client.Get(context.TODO(), vmiNamespacedName, vmi)
 		matcher.lastVirtualMachineInstance.Store(vmi)
 		if err != nil {
 			fmt.Fprintf(ginkgo.GinkgoWriter, "ERROR: VM instance polling error: %v\n", err)

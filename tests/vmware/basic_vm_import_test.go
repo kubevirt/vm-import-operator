@@ -1,8 +1,10 @@
 package vmware_test
 
 import (
+	"context"
 	"github.com/kubevirt/vm-import-operator/tests/vmware"
 	"github.com/onsi/ginkgo/extensions/table"
+	"k8s.io/apimachinery/pkg/types"
 	"time"
 
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
@@ -45,12 +47,12 @@ var _ = Describe("Basic VM import ", func() {
 		It("should create stopped VM", func() {
 			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, false)
 
-			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			validCondition := conditions.FindConditionOfType(retrieved.Status.Conditions, v2vv1.Valid)
@@ -65,7 +67,7 @@ var _ = Describe("Basic VM import ", func() {
 
 			// ensure the virt-v2v pod is cleaned up after a success
 			podLabel := "vmimport.v2v.kubevirt.io/vmi-name=" + retrieved.Name
-			podList, err := f.K8sClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: podLabel})
+			podList, err := f.K8sClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: podLabel})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(podList.Items)).To(BeZero())
 		})
@@ -73,12 +75,12 @@ var _ = Describe("Basic VM import ", func() {
 		It("should create started VM", func() {
 			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, true)
 
-			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			validCondition := conditions.FindConditionOfType(retrieved.Status.Conditions, v2vv1.Valid)
@@ -93,7 +95,7 @@ var _ = Describe("Basic VM import ", func() {
 
 			// ensure the virt-v2v pod is cleaned up after a success
 			podLabel := "vmimport.v2v.kubevirt.io/vmi-name=" + retrieved.Name
-			podList, err := f.K8sClient.CoreV1().Pods(namespace).List(metav1.ListOptions{LabelSelector: podLabel})
+			podList, err := f.K8sClient.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{LabelSelector: podLabel})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(podList.Items)).To(BeZero())
 		})
@@ -105,12 +107,12 @@ var _ = Describe("Basic VM import ", func() {
 			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Vmware.Mappings = &mappings
 
-			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
@@ -142,12 +144,12 @@ var _ = Describe("Basic VM import ", func() {
 			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, true)
 			vmImports := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace)
 
-			created, err := vmImports.Create(&vmi)
+			created, err := vmImports.Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := vmImports.Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := vmImports.Get(context.TODO(), created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
@@ -159,7 +161,7 @@ var _ = Describe("Basic VM import ", func() {
 				deleteOptions := metav1.DeleteOptions{
 					PropagationPolicy: &foreground,
 				}
-				err = vmImports.Delete(retrieved.Name, &deleteOptions)
+				err = vmImports.Delete(context.TODO(), retrieved.Name, deleteOptions)
 				if err != nil {
 					Fail(err.Error())
 				}
@@ -169,33 +171,37 @@ var _ = Describe("Basic VM import ", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
+
+			vmInstanceName := types.NamespacedName{Namespace: namespace, Name: vmBlueprint.Name}
+			vmInstance := &v1.VirtualMachineInstance{}
 			Consistently(func() (*v1.VirtualMachineInstance, error) {
-				vmi, err := f.KubeVirtClient.VirtualMachineInstance(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+				err = f.Client.Get(context.TODO(), vmInstanceName, vmInstance)
 				if err != nil {
 					return nil, err
 				}
-				return vmi, nil
+				return vmInstance, nil
 
 			}, 2*time.Minute, 15*time.Second).ShouldNot(BeNil())
-			vmInstance, err := f.KubeVirtClient.VirtualMachineInstance(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+			err = f.Client.Get(context.TODO(), vmInstanceName, vmInstance)
 			if err != nil {
 				Fail(err.Error())
 			}
 			Expect(vmInstance.IsRunning()).To(BeTrue())
 
-			vm, err := f.KubeVirtClient.VirtualMachine(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+			vm := &v1.VirtualMachine{}
+			err = f.Client.Get(context.TODO(), vmInstanceName, vm)
 			if err != nil {
 				Fail(err.Error())
 			}
-			Expect(vm).NotTo(BeNil())
 		})
 	})
 })
 
 func (t *basicVmImportTest) validateTargetConfiguration(vmName string) *v1.VirtualMachine {
-	vmNamespace := t.framework.Namespace.Name
-	f := t.framework
-	vm, _ := f.KubeVirtClient.VirtualMachine(vmNamespace).Get(vmName, &metav1.GetOptions{})
+	vmNamespacedName := types.NamespacedName{Name: vmName, Namespace: t.framework.Namespace.Name}
+
+	vm := &v1.VirtualMachine{}
+	_ = t.framework.Client.Get(context.TODO(), vmNamespacedName, vm)
 	spec := vm.Spec.Template.Spec
 
 	By("having correct machine type")

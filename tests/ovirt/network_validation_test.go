@@ -1,6 +1,7 @@
 package ovirt_test
 
 import (
+	"context"
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
@@ -11,6 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type networkValidationTest struct {
@@ -65,7 +67,7 @@ func (t *networkValidationTest) prepareImport(vmID string, secretName string) *v
 			{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 		},
 	}
-	created, err := t.framework.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+	created, err := t.framework.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 	if err != nil {
 		Fail(err.Error())
 	}

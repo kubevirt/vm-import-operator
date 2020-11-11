@@ -2,11 +2,17 @@ package framework
 
 import (
 	"bytes"
+	"context"
 	"flag"
 	"fmt"
+	netv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
+	"github.com/kubevirt/vm-import-operator/pkg/apis"
 	"io/ioutil"
+	kubevirtv1 "kubevirt.io/client-go/api/v1"
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"os"
 	"os/exec"
+	rclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"testing"
 	"time"
 
@@ -16,6 +22,7 @@ import (
 	"k8s.io/klog"
 
 	vmiclientset "github.com/kubevirt/vm-import-operator/pkg/api-client/clientset/versioned"
+	cdi "github.com/kubevirt/vm-import-operator/pkg/generated/cdi/clientset/versioned"
 	"github.com/onsi/ginkgo"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
@@ -26,8 +33,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"kubevirt.io/client-go/kubecli"
-	cdi "github.com/kubevirt/vm-import-operator/pkg/generated/cdi/clientset/versioned"
 )
 
 const (
@@ -56,6 +61,8 @@ var (
 // This package is based on https://github.com/kubevirt/containerized-data-importer/blob/master/tests/framework/framework.go
 // Framework supports common operations used by functional/e2e tests.
 type Framework struct {
+	// Client is a controller-runtime client.
+	Client rclient.Client
 	// NsPrefix is a prefix for generated namespace
 	NsPrefix string
 	//  k8sClient provides our k8s client pointer
@@ -63,7 +70,7 @@ type Framework struct {
 	// VMImportClient provides Virtual Machine Import client pointer
 	VMImportClient *vmiclientset.Clientset
 	// KubeVirtClient provides KubeVirt client pointer
-	KubeVirtClient kubecli.KubevirtClient
+	//KubeVirtClient kubecli.KubevirtClient
 	// CdiClient provides our CDI client pointer
 	CdiClient *cdi.Clientset
 	// RestConfig provides a pointer to our REST client config.
@@ -168,6 +175,33 @@ func NewFramework(prefix, provider string) (*Framework, error) {
 	}
 	f.RestConfig = restConfig
 	// clients
+	scheme := runtime.NewScheme()
+	err = apis.AddToScheme(scheme)
+	if err != nil {
+		return nil, errors.Wrap(err, "ERROR, unable to add apis to scheme")
+	}
+	err = kubevirtv1.AddToScheme(scheme)
+	if err != nil {
+		return nil, errors.Wrap(err, "ERROR, unable to add apis to scheme")
+	}
+	err = cdiv1.AddToScheme(scheme)
+	if err != nil {
+		return nil, errors.Wrap(err, "ERROR, unable to add apis to scheme")
+	}
+	err = netv1.AddToScheme(scheme)
+	if err != nil {
+		return nil, errors.Wrap(err, "ERROR, unable to add apis to scheme")
+	}
+
+	options := rclient.Options{
+		Scheme: scheme,
+	}
+	client, err := rclient.New(f.RestConfig, options)
+	if err != nil {
+		return nil, errors.Wrap(err, "ERROR, unable to create runtime client")
+	}
+	f.Client = client
+
 	kcs, err := f.GetKubeClient()
 	if err != nil {
 		return nil, errors.Wrap(err, "ERROR, unable to create K8SClient")
@@ -178,11 +212,11 @@ func NewFramework(prefix, provider string) (*Framework, error) {
 		return nil, errors.Wrap(err, "ERROR, unable to create VMImportClient")
 	}
 	f.VMImportClient = vmics
-	kvClient, err := f.GetKubeVirtClient()
-	if err != nil {
-		return nil, errors.Wrap(err, "ERROR, unable to create KubeVirt client")
-	}
-	f.KubeVirtClient = kvClient
+	//kvClient, err := f.GetKubeVirtClient()
+	//if err != nil {
+	//	return nil, errors.Wrap(err, "ERROR, unable to create KubeVirt client")
+	//}
+	//f.KubeVirtClient = kvClient
 	cs, err := f.GetCdiClient()
 	if err != nil {
 		return nil, errors.Wrap(err, "ERROR, unable to create CdiClient")
@@ -249,7 +283,7 @@ func (f *Framework) CreateNamespace(prefix string, labels map[string]string) (*v
 	c := f.K8sClient
 	err := wait.PollImmediate(2*time.Second, nsCreateTime, func() (bool, error) {
 		var err error
-		nsObj, err = c.CoreV1().Namespaces().Create(ns)
+		nsObj, err = c.CoreV1().Namespaces().Create(context.TODO(), ns, metav1.CreateOptions{})
 		if err == nil || apierrs.IsAlreadyExists(err) {
 			return true, nil // done
 		}
@@ -272,12 +306,12 @@ func (f *Framework) AddNamespaceToDelete(ns *v1.Namespace) {
 // DeleteNS provides a function to delete the specified namespace from the test cluster
 func DeleteNS(c *kubernetes.Clientset, ns string) error {
 	return wait.PollImmediate(2*time.Second, nsDeleteTime, func() (bool, error) {
-		err := c.CoreV1().Namespaces().Delete(ns, nil)
+		err := c.CoreV1().Namespaces().Delete(context.TODO(), ns, metav1.DeleteOptions{})
 		if err != nil && !apierrs.IsNotFound(err) {
 			return false, nil // keep trying
 		}
 		// see if ns is really deleted
-		_, err = c.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
+		_, err = c.CoreV1().Namespaces().Get(context.TODO(), ns, metav1.GetOptions{})
 		if apierrs.IsNotFound(err) {
 			return true, nil // deleted, done
 		}
@@ -304,15 +338,6 @@ func (f *Framework) GetVMImportClient() (*vmiclientset.Clientset, error) {
 		return nil, err
 	}
 	return vmiClient, nil
-}
-
-// GetVMImportClient gets an instance of a KubeVirt client
-func (f *Framework) GetKubeVirtClient() (kubecli.KubevirtClient, error) {
-	kvClient, err := kubecli.GetKubevirtClientFromFlags(f.Master, f.KubeConfig)
-	if err != nil {
-		return nil, err
-	}
-	return kvClient, nil
 }
 
 // GetCdiClient gets an instance of a kubernetes client that includes all the CDI extensions.

@@ -1,6 +1,8 @@
 package ovirt_test
 
 import (
+	"context"
+	"k8s.io/apimachinery/pkg/types"
 	"strings"
 	"time"
 
@@ -53,24 +55,29 @@ var _ = Describe("VM import", func() {
 		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 		test.prepareInvalidVm(vmID, diskSize)
 
-		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 		// Check if vm import failed:
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(HaveDataVolumeCreationFailure(f))
 
-		retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+		retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// Check if virtual machine was removed after failure:
 		vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
-		_, err = f.KubeVirtClient.VirtualMachine(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+		vmNamespacedName := types.NamespacedName{
+			Namespace: vmBlueprint.Namespace,
+			Name: vmBlueprint.Name,
+		}
+		vm := &v1.VirtualMachine{}
+		err = f.Client.Get(context.TODO(), vmNamespacedName, vm)
 		Expect(errors.IsNotFound(err)).To(BeTrue())
 
 		// Check if data volumes was removed after failure:
 		for _, createdDv := range retrieved.Status.DataVolumes {
 			dv := cdiv1.DataVolume{ObjectMeta: metav1.ObjectMeta{Name: createdDv.Name, Namespace: namespace}}
-			_, err = f.CdiClient.CdiV1alpha1().DataVolumes(namespace).Get(dv.Name, metav1.GetOptions{})
+			_, err = f.CdiClient.CdiV1alpha1().DataVolumes(namespace).Get(context.TODO(), dv.Name, metav1.GetOptions{})
 			Expect(errors.IsNotFound(err)).To(BeTrue())
 		}
 	},
@@ -83,12 +90,12 @@ var _ = Describe("VM import", func() {
 		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, "no-such-secret", f.NsPrefix, true)
 		test.prepareVm(vmID)
 
-		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(HaveValidationFailure(f, string(v2vv1.SecretNotFound)))
 		Expect(created).To(BeUnsuccessful(f, string(v2vv1.ValidationFailed)))
-		retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+		retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 		Expect(retrieved.Status.Conditions).To(HaveLen(2))
 	})
 
@@ -98,12 +105,12 @@ var _ = Describe("VM import", func() {
 		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, invalidSecret.Name, f.NsPrefix, true)
 		test.prepareVm(vmID)
 
-		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(HaveValidationFailure(f, string(v2vv1.UninitializedProvider)))
 		Expect(created).To(BeUnsuccessful(f, string(v2vv1.ValidationFailed)))
-		retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+		retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 		Expect(retrieved.Status.Conditions).To(HaveLen(2))
 	})
 
@@ -115,12 +122,12 @@ var _ = Describe("VM import", func() {
 		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, invalidSecret.Name, f.NsPrefix, true)
 		test.prepareVm(vmID)
 
-		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(HaveValidationFailure(f, string(v2vv1.UninitializedProvider)))
 		Expect(created).To(BeUnsuccessful(f, string(v2vv1.ValidationFailed)))
-		retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+		retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 		Expect(retrieved.Status.Conditions).To(HaveLen(2))
 	},
 		table.Entry("oVirt URL", vms.InvalidOVirtUrlVmID, ovirtenv.NewFakeOvirtEnvironment(f.ImageioInstallNamespace, f.OVirtCA).WithAPIURL("")),
@@ -139,12 +146,12 @@ var _ = Describe("VM import", func() {
 		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, invalidSecret.Name, f.NsPrefix, true)
 		test.prepareVm(vmID)
 
-		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(HaveValidationFailure(f, string(v2vv1.UnreachableProvider)))
 		Expect(created).To(BeUnsuccessful(f, string(v2vv1.ValidationFailed)))
-		retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+		retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 		Expect(retrieved.Status.Conditions).To(HaveLen(2))
 	})
 
@@ -152,7 +159,7 @@ var _ = Describe("VM import", func() {
 		vmID := "does-not-exist"
 		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 
-		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(HaveValidationFailure(f, string(v2vv1.SourceVMNotFound)))
@@ -165,7 +172,7 @@ var _ = Describe("VM import", func() {
 
 		test.prepareVm(vmID)
 
-		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(HaveValidationFailure(f, string(v2vv1.ResourceMappingNotFound)))
@@ -191,12 +198,12 @@ var _ = Describe("VM import", func() {
 			StubGet("/ovirt-engine/api/vms/"+vmID, &vmXML)
 		test.recordStubbing(builder)
 
-		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 		Expect(err).NotTo(HaveOccurred())
 
 		Consistently(func() (*v2vv1.VirtualMachineImportCondition, error) {
-			retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(f.Namespace.Name).Get(created.Name, metav1.GetOptions{})
+			retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(f.Namespace.Name).Get(context.TODO(), created.Name, metav1.GetOptions{})
 			if err != nil {
 				return nil, err
 			}
@@ -208,13 +215,13 @@ var _ = Describe("VM import", func() {
 
 	It("should fail when ImportWithoutTemplate feature gate is disabled and VM template can't be found", func() {
 		vmID := vms.BasicVmID
-		configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get("kubevirt-config", metav1.GetOptions{})
+		configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get(context.TODO(), "kubevirt-config", metav1.GetOptions{})
 		if err != nil {
 			Fail(err.Error())
 		}
 		configMap.Data["feature-gates"] = strings.ReplaceAll(configMap.Data["feature-gates"], ",ImportWithoutTemplate", "")
 
-		f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(configMap)
+		f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
 		defer test.cleanUpConfigMap()
 
 		vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
@@ -224,7 +231,7 @@ var _ = Describe("VM import", func() {
 			},
 		}
 		test.prepareVm(vmID)
-		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(HaveTemplateMatchingFailure(f))
@@ -236,7 +243,7 @@ var _ = Describe("VM import", func() {
 		vmi := utils.VirtualMachineImportCrWithName(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true, vmName)
 		test.prepareVm(vmID)
 
-		_, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+		_, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(ContainSubstring("spec.targetVmName in body should be at most 63 chars long"))
@@ -253,7 +260,7 @@ func (t *basicVMImportNegativeTest) createInvalidSecret() *corev1.Secret {
 		},
 		StringData: map[string]string{"ovirt": "garbage"},
 	}
-	created, err := f.K8sClient.CoreV1().Secrets(namespace).Create(&secret)
+	created, err := f.K8sClient.CoreV1().Secrets(namespace).Create(context.TODO(), &secret, metav1.CreateOptions{})
 	if err != nil {
 		Fail(err.Error())
 	}
@@ -304,12 +311,12 @@ func (t *basicVMImportNegativeTest) recordStubbing(builder *sapi.StubbingBuilder
 
 func (t *basicVMImportNegativeTest) cleanUpConfigMap() {
 	f := t.framework
-	configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get("kubevirt-config", metav1.GetOptions{})
+	configMap, err := f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Get(context.TODO(), "kubevirt-config", metav1.GetOptions{})
 	if err != nil {
 		Fail(err.Error())
 	}
 	configMap.Data["feature-gates"] = configMap.Data["feature-gates"] + ",ImportWithoutTemplate"
-	_, err = f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(configMap)
+	_, err = f.K8sClient.CoreV1().ConfigMaps(f.KubeVirtInstallNamespace).Update(context.TODO(), configMap, metav1.UpdateOptions{})
 	if err != nil {
 		Fail(err.Error())
 	}

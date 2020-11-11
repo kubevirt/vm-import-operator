@@ -1,6 +1,7 @@
 package ovirt_test
 
 import (
+	"context"
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
@@ -13,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	v1 "kubevirt.io/client-go/api/v1"
 )
 
@@ -54,19 +56,24 @@ var _ = Describe("VM import ", func() {
 			test.stub(vmID, &nicsXml)
 			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
-			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).To(BeRunning(f))
 
 			By("Having correct network configuration")
-			vm, _ := f.KubeVirtClient.VirtualMachine(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+			vmNamespacedName := types.NamespacedName{
+				Namespace: vmBlueprint.Namespace,
+				Name: vmBlueprint.Name,
+			}
+			vm := &v1.VirtualMachine{}
+			_ = f.Client.Get(context.TODO(), vmNamespacedName, vm)
 			spec := vm.Spec.Template.Spec
 			Expect(spec.Networks).To(HaveLen(1))
 			Expect(spec.Networks[0].Pod).ToNot(BeNil())
@@ -94,19 +101,24 @@ var _ = Describe("VM import ", func() {
 			test.stub(vmID, &nicsXml)
 			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
-			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).To(BeRunning(f))
 
 			By("Having DV with correct storage class")
-			vm, _ := f.KubeVirtClient.VirtualMachine(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+			vmNamespacedName := types.NamespacedName{
+				Namespace: vmBlueprint.Namespace,
+				Name: vmBlueprint.Name,
+			}
+			vm := &v1.VirtualMachine{}
+			_ = f.Client.Get(context.TODO(), vmNamespacedName, vm)
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveStorageClass(f.DefaultStorageClass, f))
 		})
 	})
@@ -123,19 +135,24 @@ var _ = Describe("VM import ", func() {
 			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
 			vmi.Spec.Source.Ovirt.Mappings = &internalMapping
-			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).To(BeRunning(f))
 
 			By("having pod network from external resource mapping")
-			vm, _ := f.KubeVirtClient.VirtualMachine(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+			vmNamespacedName := types.NamespacedName{
+				Namespace: vmBlueprint.Namespace,
+				Name: vmBlueprint.Name,
+			}
+			vm := &v1.VirtualMachine{}
+			_ = f.Client.Get(context.TODO(), vmNamespacedName, vm)
 			spec := vm.Spec.Template.Spec
 			Expect(spec.Networks).To(HaveLen(1))
 			Expect(spec.Domain.Devices.Interfaces).To(HaveLen(1))

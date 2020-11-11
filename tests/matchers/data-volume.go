@@ -1,6 +1,7 @@
 package matchers
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/kubevirt/vm-import-operator/tests/framework"
@@ -31,7 +32,7 @@ func HaveStorageClassReference(sc *string, f *framework.Framework) types.GomegaM
 // Match checks whether data volume of a given name has expected storage class
 func (matcher *haveStorageClassMatcher) Match(dvName interface{}) (bool, error) {
 	f := matcher.testFramework
-	dv, err := f.CdiClient.CdiV1alpha1().DataVolumes(f.Namespace.Name).Get(dvName.(string), v1.GetOptions{})
+	dv, err := f.CdiClient.CdiV1alpha1().DataVolumes(f.Namespace.Name).Get(context.TODO(), dvName.(string), v1.GetOptions{})
 	if err != nil {
 		return false, err
 	}
