@@ -54,7 +54,7 @@ func main() {
 	}
 
 	mgr, err := manager.New(cfg, manager.Options{
-		Namespace:      namespace,
+		Namespace: namespace,
 	})
 	if err != nil {
 		log.Error(err, "")

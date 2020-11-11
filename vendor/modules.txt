@@ -204,10 +204,6 @@ github.com/form3tech-oss/jwt-go
 github.com/fsnotify/fsnotify
 # github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 github.com/ghodss/yaml
-# github.com/go-kit/kit v0.9.0
-github.com/go-kit/kit/log
-# github.com/go-logfmt/logfmt v0.4.0
-github.com/go-logfmt/logfmt
 # github.com/go-logr/logr v0.1.0
 github.com/go-logr/logr
 # github.com/go-logr/zapr v0.1.1
@@ -254,12 +250,8 @@ github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
 github.com/gogo/protobuf/sortkeys
 github.com/gogo/protobuf/types
-# github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-github.com/golang/glog
 # github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
 github.com/golang/groupcache/lru
-# github.com/golang/mock v1.4.0
-github.com/golang/mock/gomock
 # github.com/golang/protobuf v1.4.2
 github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes
@@ -294,8 +286,6 @@ github.com/gophercloud/gophercloud/openstack/utils
 github.com/gophercloud/gophercloud/pagination
 # github.com/gorilla/mux v1.7.4
 github.com/gorilla/mux
-# github.com/gorilla/websocket v1.4.0
-github.com/gorilla/websocket
 # github.com/gosuri/uitable v0.0.4
 github.com/gosuri/uitable
 github.com/gosuri/uitable/util/strutil
@@ -339,10 +329,6 @@ github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8
 github.com/kelseyhightower/envconfig
 # github.com/konsorten/go-windows-terminal-sequences v1.0.3
 github.com/konsorten/go-windows-terminal-sequences
-# github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515
-github.com/kr/logfmt
-# github.com/kubernetes-csi/external-snapshotter/v2 v2.1.1
-github.com/kubernetes-csi/external-snapshotter/v2/pkg/apis/volumesnapshot/v1beta1
 # github.com/lann/builder v0.0.0-20180802200727-47ae307949d0
 github.com/lann/builder
 # github.com/lann/ps v0.0.0-20150810152359-62de8c46ede0
@@ -449,11 +435,8 @@ github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
 # github.com/openshift/api v3.9.1-0.20190924102528-32369d4db2ad+incompatible => github.com/openshift/api v0.0.0-20200526144822-34f54f12813a
 github.com/openshift/api/pkg/serialization
-github.com/openshift/api/security/v1
 github.com/openshift/api/template/v1
 # github.com/openshift/client-go v0.0.0 => github.com/openshift/client-go v0.0.0-20200521150516-05eb9880269c
-github.com/openshift/client-go/security/clientset/versioned/scheme
-github.com/openshift/client-go/security/clientset/versioned/typed/security/v1
 github.com/openshift/client-go/template/clientset/versioned/scheme
 github.com/openshift/client-go/template/clientset/versioned/typed/template/v1
 # github.com/openshift/custom-resource-status v0.0.0-20200602122900-c002fd1547ca
@@ -1254,36 +1237,13 @@ k8s.io/kubectl/pkg/validation
 k8s.io/utils/buffer
 k8s.io/utils/exec
 k8s.io/utils/integer
-k8s.io/utils/net
 k8s.io/utils/path
 k8s.io/utils/pointer
 k8s.io/utils/trace
 # kubevirt.io/client-go v0.33.0
 kubevirt.io/client-go/api/v1
-kubevirt.io/client-go/apis/snapshot
-kubevirt.io/client-go/apis/snapshot/v1alpha1
-kubevirt.io/client-go/generated/containerized-data-importer/clientset/versioned
-kubevirt.io/client-go/generated/containerized-data-importer/clientset/versioned/scheme
-kubevirt.io/client-go/generated/containerized-data-importer/clientset/versioned/typed/core/v1alpha1
-kubevirt.io/client-go/generated/containerized-data-importer/clientset/versioned/typed/upload/v1alpha1
-kubevirt.io/client-go/generated/external-snapshotter/clientset/versioned
-kubevirt.io/client-go/generated/external-snapshotter/clientset/versioned/scheme
-kubevirt.io/client-go/generated/external-snapshotter/clientset/versioned/typed/volumesnapshot/v1beta1
-kubevirt.io/client-go/generated/kubevirt/clientset/versioned
-kubevirt.io/client-go/generated/kubevirt/clientset/versioned/scheme
-kubevirt.io/client-go/generated/kubevirt/clientset/versioned/typed/snapshot/v1alpha1
-kubevirt.io/client-go/generated/network-attachment-definition-client/clientset/versioned
-kubevirt.io/client-go/generated/network-attachment-definition-client/clientset/versioned/scheme
-kubevirt.io/client-go/generated/network-attachment-definition-client/clientset/versioned/typed/k8s.cni.cncf.io/v1
-kubevirt.io/client-go/generated/prometheus-operator/clientset/versioned
-kubevirt.io/client-go/generated/prometheus-operator/clientset/versioned/scheme
-kubevirt.io/client-go/generated/prometheus-operator/clientset/versioned/typed/monitoring/v1
-kubevirt.io/client-go/kubecli
-kubevirt.io/client-go/log
 kubevirt.io/client-go/precond
-kubevirt.io/client-go/subresources
 kubevirt.io/client-go/util
-kubevirt.io/client-go/version
 # kubevirt.io/containerized-data-importer v1.25.0
 kubevirt.io/containerized-data-importer/pkg/apis/core
 kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1
