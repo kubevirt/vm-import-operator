@@ -126,6 +126,28 @@ Spec:
 
 #### VMware Mappings
 
+##### Storage Mappings
+Datastores may be mapped to storage classes by their name, or by their managed object reference (moref). For example,
+`iSCSI_Datastore` or `datastore-13`. The name of the datastore can be found in the vCenter UI, and the moref can be
+found via the API explorer or through the vSphere SDK. VMs with disks that are located in the given datastore will
+be mapped to the selected storage class, unless a more specific Disk Mapping is present.
+
+##### Disk Mappings
+Disks may be individually mapped to storage classes by their name (device label), or by their vDiskID/DiskObjectID.
+For example, `Hard disk 1` or `410-2001`. Disk names can be discovered via the vCenter UI, and disk IDs can be
+retrieved via the vSphere SDK.
+
+##### Network Mappings
+Networks can be mapped by their name, or by their managed object reference (moref). For example,
+`VM_10G_Network` or `network-7`. The name of the network can be found in the vCenter UI, and the moref can be
+found via the API explorer or through the vSphere SDK.
+
+If a NIC is connected to a distributed port group, then instead
+it can be mapped by its device name, or by the portGroupKey of the distributed port group. For example,
+`ethernet-0` or `dvportgroup-13`.
+
+##### Example Mapping
+
 ```yaml
 apiVersion: v2v.kubevirt.io/v1beta1
 kind: ResourceMapping
@@ -275,8 +297,15 @@ stringData:
    # Username provided in the format of username@domain.
    username: administrator@vsphere.local
    password: 123456
-   # The certificate thumbprint of the vCenter or ESXi host, in colon-separated hexidecimal octets.
+   # The SHA-1 certificate thumbprint of the vCenter or ESXi host, in colon-separated hexidecimal octets.
    thumbprint: 21:EA:74:11:59:89:5E:20:D5:D9:A2:39:5C:6A:2D:36:38:B2:52:2B
+```
+
+The Thumbprint is the SHA-1 certificate thumbprint of the vCenter or ESXi host. It can be retrieved in the required format
+via the openssl client:
+
+```
+openssl s_client -connect my.vcenter.example:443 < /dev/null 2>/dev/null | openssl x509 -fingerprint -sha1 -noout -in /dev/stdin | cut -d '=' -f 2
 ```
 
 ### Import Validations
