@@ -397,16 +397,29 @@ func (o *OvirtProvider) CleanUp(failure bool, cr *v2vv1.VirtualMachineImport, cl
 	return nil
 }
 
+// NeedsGuestConversion indicates whether a VM from this provider must undergo guest conversion.
 func (o *OvirtProvider) NeedsGuestConversion() bool {
 	return false
 }
 
+// GetGuestConversionJob is not implemented.
 func (o *OvirtProvider) GetGuestConversionJob() (*batchv1.Job, error) {
 	return nil, nil
 }
 
+// LaunchGuestConversionJob is not implemented.
 func (o *OvirtProvider) LaunchGuestConversionJob(_ *kubevirtv1.VirtualMachine) (*batchv1.Job, error) {
 	return nil, nil
+}
+
+// SupportsWarmMigration returns whether this provider supports warm migrations.
+func (o *OvirtProvider) SupportsWarmMigration() bool {
+	return false
+}
+
+// CreateVMSnapshot is not implemented.
+func (o *OvirtProvider) CreateVMSnapshot() (string, error) {
+	return "", nil
 }
 
 func (o *OvirtProvider) prepareDataVolumeCredentials() (mapper.DataVolumeCredentials, error) {

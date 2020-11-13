@@ -109,6 +109,24 @@ func (r RichVmwareClient) getVMByInventoryPath(vmPath string) (*object.VirtualMa
 	return vm, nil
 }
 
+// CreateVMSnapshot creates a snapshot of the VM.
+func (r RichVmwareClient) CreateVMSnapshot(moRef string, name string, desc string, memory bool, quiesce bool) (*types.ManagedObjectReference, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	vm := r.getVMByMoRef(moRef)
+	task, err := vm.CreateSnapshot(ctx, name, desc, memory, quiesce)
+	if err != nil {
+		return nil, err
+	}
+	res, err := task.WaitForResult(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	snapshotRef := res.Result.(types.ManagedObjectReference)
+	return &snapshotRef, nil
+}
+
 // GetVMProperties retrieves the Properties struct for the VM.
 func (r RichVmwareClient) GetVMProperties(vm *object.VirtualMachine) (*mo.VirtualMachine, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)

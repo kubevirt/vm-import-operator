@@ -38,6 +38,8 @@ type Provider interface {
 	NeedsGuestConversion() bool
 	GetGuestConversionJob() (*batchv1.Job, error)
 	LaunchGuestConversionJob(*kubevirtv1.VirtualMachine) (*batchv1.Job, error)
+	SupportsWarmMigration() bool
+	CreateVMSnapshot() (string, error)
 }
 
 // Mapper is interface to be used for mapping external VM to kubevirt VM
