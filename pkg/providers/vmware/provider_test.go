@@ -3,6 +3,7 @@ package vmware
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/onsi/ginkgo/extensions/table"
 
 	"github.com/ghodss/yaml"
