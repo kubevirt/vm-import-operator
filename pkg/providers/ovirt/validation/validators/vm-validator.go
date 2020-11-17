@@ -429,7 +429,7 @@ func isValidNumaTuneMode(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
 	if mode, ok := vm.NumaTuneMode(); ok {
 		return ValidationFailure{
 			ID:      VMNumaTuneModeID,
-			Message: fmt.Sprintf("VM has NUMA tune mode secified: %s", mode),
+			Message: fmt.Sprintf("VM has NUMA tune mode specified: %s", mode),
 		}, false
 	}
 	return ValidationFailure{}, true
