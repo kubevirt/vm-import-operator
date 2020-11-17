@@ -100,6 +100,8 @@ The import VM operator will be responsible to deduce the configuration of the ta
 
 Type in network mappings can be omitted as long as target namespace is not present as well; in that case "pod" type will be assumed.
 
+In for each mapping in "storageMappings" section under "ovirt", it is possible to specify the Volume Mode for the target PVC. The value is `Block` or `Filesystem`.
+
 ```yaml
 apiVersion: v2v.kubevirt.io/v1beta1
 kind: ResourceMapping
@@ -122,6 +124,7 @@ Spec:
     - source:
         name: ovirt_storage_domain_1 # maps ovirt storage domains to storage class
       target: storage_class_1
+      volumeMode: Block
 ```
 
 #### VMware Mappings
