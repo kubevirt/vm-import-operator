@@ -423,8 +423,9 @@ func (r *VmwareMapper) MapVM(targetVmName *string, vmSpec *kubevirtv1.VirtualMac
 		vmSpec.Spec.Template = &kubevirtv1.VirtualMachineInstanceTemplateSpec{}
 	}
 
-	running := false
-	vmSpec.Spec.Running = &running
+	true_ := true
+	false_ := false
+	vmSpec.Spec.Running = &false_
 
 	// Map hostname
 	hostname, _ := utils.NormalizeName(r.vmProperties.Guest.HostName)
@@ -457,6 +458,14 @@ func (r *VmwareMapper) MapVM(targetVmName *string, vmSpec *kubevirtv1.VirtualMac
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// if there are no interfaces defined, force NetworkInterfaceMultiQueue to false
+	// https://github.com/kubevirt/common-templates/issues/186
+	if len(vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces) > 0 {
+		vmSpec.Spec.Template.Spec.Domain.Devices.NetworkInterfaceMultiQueue = &true_
+	} else {
+		vmSpec.Spec.Template.Spec.Domain.Devices.NetworkInterfaceMultiQueue = &false_
 	}
 
 	os, _ := r.osFinder.FindOperatingSystem(r.vmProperties)
@@ -560,10 +569,11 @@ func (r *VmwareMapper) mapNetworks() ([]kubevirtv1.Network, error) {
 						NetworkName: mapping.Target.Name,
 					}
 				}
+				kubevirtNet.Name, _ = utils.NormalizeName(nic.name)
+				kubevirtNetworks = append(kubevirtNetworks, kubevirtNet)
 			}
 		}
-		kubevirtNet.Name, _ = utils.NormalizeName(nic.name)
-		kubevirtNetworks = append(kubevirtNetworks, kubevirtNet)
+
 	}
 
 	return kubevirtNetworks, nil

@@ -714,10 +714,10 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 
 	// Create kubevirt VM from source VM:
 	reqLogger.Info("Creating a new VM", "VM.Namespace", vmSpec.Namespace, "VM.Name", vmSpec.Name)
-	if err = r.client.Create(context.TODO(), vmSpec); err != nil && !k8serrors.IsAlreadyExists(err) {
+	if createErr := r.client.Create(context.TODO(), vmSpec); createErr != nil && !k8serrors.IsAlreadyExists(createErr) {
 		vmJSON, _ := json.Marshal(vmSpec)
 		reqLogger.Info("VM struct", "VM spec", string(vmJSON))
-		message := fmt.Sprintf("Error while creating virtual machine %s/%s: %s", vmSpec.Namespace, vmSpec.Name, err)
+		message := fmt.Sprintf("Error while creating virtual machine %s/%s: %s", vmSpec.Namespace, vmSpec.Name, createErr)
 		// Update event:
 		r.recorder.Event(instance, corev1.EventTypeWarning, EventVMCreationFailed, message)
 
@@ -736,7 +736,7 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 		}
 
 		// Reconcile
-		return "", err
+		return "", createErr
 	}
 
 	// Get created VM Name
