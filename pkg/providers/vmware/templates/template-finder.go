@@ -2,11 +2,12 @@ package templates
 
 import (
 	"fmt"
+	"sort"
+
 	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware/os"
 	"github.com/kubevirt/vm-import-operator/pkg/templates"
 	templatev1 "github.com/openshift/api/template/v1"
 	"github.com/vmware/govmomi/vim25/mo"
-	"sort"
 )
 
 const (

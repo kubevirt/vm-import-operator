@@ -3,6 +3,8 @@ package mapper_test
 import (
 	"context"
 
+	v1 "k8s.io/api/core/v1"
+
 	"github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware/mapper"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware/os"
@@ -39,8 +41,15 @@ var (
 
 	// disks
 	expectedNumDisks  = 2
+	diskId1           = "disk-202-0"
+	diskId2           = "disk-202-1"
 	expectedDiskName1 = "basic-vm-disk-202-0"
 	expectedDiskName2 = "basic-vm-disk-202-1"
+
+	volumeModeBlock      = v1.PersistentVolumeBlock
+	volumeModeFilesystem = v1.PersistentVolumeFilesystem
+	accessModeRWO        = v1.ReadWriteOnce
+	accessModeRWM        = v1.ReadWriteMany
 )
 
 type mockOsFinder struct{}
@@ -278,13 +287,40 @@ var _ = Describe("Test mapping disks", func() {
 		credentials = prepareCredentials(server)
 	})
 
-	It("should map disks", func() {
+	It("should map datavolumes", func() {
+		storageClass := "mystorageclass"
 		mappings := createMinimalMapping()
+		mappings.DiskMappings = &[]v1beta1.StorageResourceMappingItem{
+			{
+				Source: v1beta1.Source{
+					Name: &diskId1,
+				},
+				Target: v1beta1.ObjectIdentifier{
+					Name: storageClass,
+				},
+				VolumeMode: &volumeModeBlock,
+				AccessMode: &accessModeRWM,
+			},
+			{
+				// using defaults
+				Source: v1beta1.Source{
+					Name: &diskId2,
+				},
+			},
+		}
 		mapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
 		dvs, _ := mapper.MapDataVolumes(&targetVMName)
 		Expect(dvs).To(HaveLen(expectedNumDisks))
 		Expect(dvs).To(HaveKey(expectedDiskName1))
 		Expect(dvs).To(HaveKey(expectedDiskName2))
+		// check that mapped options are set correctly
+		Expect(dvs[expectedDiskName1].Spec.PVC.VolumeMode).To(Equal(&volumeModeBlock))
+		Expect(dvs[expectedDiskName1].Spec.PVC.AccessModes[0]).To(Equal(accessModeRWM))
+		Expect(dvs[expectedDiskName1].Spec.PVC.StorageClassName).To(Equal(&storageClass))
+		// check that defaults are set correctly
+		Expect(dvs[expectedDiskName2].Spec.PVC.VolumeMode).To(Equal(&volumeModeFilesystem))
+		Expect(dvs[expectedDiskName2].Spec.PVC.AccessModes[0]).To(Equal(accessModeRWO))
+		Expect(dvs[expectedDiskName2].Spec.PVC.StorageClassName).To(BeNil())
 	})
 })
 

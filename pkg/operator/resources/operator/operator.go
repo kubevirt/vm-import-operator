@@ -2220,6 +2220,9 @@ func CreateVMImport() *extv1.CustomResourceDefinition {
 																				"volumeMode": {
 																					Type: "string",
 																				},
+																				"accessMode": {
+																					Type: "string",
+																				},
 																			},
 																			Required: []string{"source"},
 																		},
@@ -2264,6 +2267,9 @@ func CreateVMImport() *extv1.CustomResourceDefinition {
 																					Type: "string",
 																				},
 																				"volumeMode": {
+																					Type: "string",
+																				},
+																				"accessMode": {
 																					Type: "string",
 																				},
 																			},
@@ -2394,6 +2400,9 @@ NetworkMappings.Source.ID represents the macAddress field of the network adapter
 																				"volumeMode": {
 																					Type: "string",
 																				},
+																				"accessMode": {
+																					Type: "string",
+																				},
 																			},
 																			Required: []string{"source"},
 																		},
@@ -2438,6 +2447,9 @@ DiskMappings.Source.ID represents the DiskObjectId or vDiskID of the VirtualDisk
 																					Type: "string",
 																				},
 																				"volumeMode": {
+																					Type: "string",
+																				},
+																				"accessMode": {
 																					Type: "string",
 																				},
 																			},
@@ -2867,6 +2879,9 @@ func CreateResourceMapping() *extv1.CustomResourceDefinition {
 																"volumeMode": {
 																	Type: "string",
 																},
+																"accessMode": {
+																	Type: "string",
+																},
 															},
 															Required: []string{"source", "target"},
 														},
@@ -2911,6 +2926,9 @@ func CreateResourceMapping() *extv1.CustomResourceDefinition {
 																	Type: "string",
 																},
 																"volumeMode": {
+																	Type: "string",
+																},
+																"accessMode": {
 																	Type: "string",
 																},
 															},
@@ -3006,6 +3024,9 @@ NetworkMappings.Source.ID represents the macAddress field of the network adapter
 																"volumeMode": {
 																	Type: "string",
 																},
+																"accessMode": {
+																	Type: "string",
+																},
 															},
 															Required: []string{"source", "target"},
 														},
@@ -3050,6 +3071,9 @@ DiskMappings.Source.ID represents the DiskObjectId or vDiskID of the VirtualDisk
 																	Type: "string",
 																},
 																"volumeMode": {
+																	Type: "string",
+																},
+																"accessMode": {
 																	Type: "string",
 																},
 															},

@@ -231,9 +231,12 @@ func (o *OvirtMapper) mapDiskInterface(iface ovirtsdk.DiskInterface) string {
 	return string(iface)
 }
 
-// Set the access mode of the PVC based on the VM's disk read only attribute
-// and based on the affinity settings of the VM.
-func (o *OvirtMapper) getAccessMode(diskAttachment *ovirtsdk.DiskAttachment) corev1.PersistentVolumeAccessMode {
+// If the mapping specifies the access mode return that, otherwise determine the access mode
+// of the PVC based on the VM's disk read only attribute and based on the affinity settings of the VM.
+func (o *OvirtMapper) getAccessMode(diskAttachment *ovirtsdk.DiskAttachment, mapping *v2vv1.StorageResourceMappingItem) corev1.PersistentVolumeAccessMode {
+	if mapping != nil && mapping.AccessMode != nil {
+		return *mapping.AccessMode
+	}
 	accessMode := corev1.ReadWriteOnce
 	if readOnly, ok := diskAttachment.ReadOnly(); ok && readOnly {
 		accessMode = corev1.ReadOnlyMany
@@ -265,9 +268,9 @@ func (o *OvirtMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.Dat
 			return dvs, err
 		}
 		quantity, _ := resource.ParseQuantity(diskSizeConverted)
-		accessMode := o.getAccessMode(diskAttachment)
 
 		mapping := o.getMapping(disk, o.mappings)
+		accessMode := o.getAccessMode(diskAttachment, mapping)
 		sdClass := o.getStorageClassForDisk(mapping)
 		volumeMode := o.getVolumeMode(mapping)
 

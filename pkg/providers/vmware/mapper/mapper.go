@@ -46,6 +46,11 @@ const (
 	q35 = "q35"
 )
 
+var (
+	defaultVolumeMode = corev1.PersistentVolumeFilesystem
+	defaultAccessMode = corev1.ReadWriteOnce
+)
+
 var biosTypeMapping = map[string]*kubevirtv1.Bootloader{
 	"efi":  {EFI: &kubevirtv1.EFI{}},
 	"bios": {BIOS: &kubevirtv1.BIOS{}},
@@ -222,22 +227,17 @@ func (r *VmwareMapper) buildDisks() error {
 	return nil
 }
 
-func (r *VmwareMapper) getStorageClassForDisk(disk *disk) *string {
+func (r *VmwareMapper) getMappingForDisk(disk disk) *v1beta1.StorageResourceMappingItem {
 	if r.mappings.DiskMappings != nil {
 		for _, mapping := range *r.mappings.DiskMappings {
-			targetName := mapping.Target.Name
 			if mapping.Source.ID != nil {
 				if disk.id == *mapping.Source.ID {
-					if targetName != defaultStorageClassTargetName {
-						return &targetName
-					}
+					return &mapping
 				}
 			}
 			if mapping.Source.Name != nil {
 				if disk.name == *mapping.Source.Name {
-					if targetName != defaultStorageClassTargetName {
-						return &targetName
-					}
+					return &mapping
 				}
 			}
 		}
@@ -245,24 +245,47 @@ func (r *VmwareMapper) getStorageClassForDisk(disk *disk) *string {
 
 	if r.mappings.StorageMappings != nil {
 		for _, mapping := range *r.mappings.StorageMappings {
-			targetName := mapping.Target.Name
 			if mapping.Source.ID != nil {
 				if disk.datastoreMoRef == *mapping.Source.ID {
-					if targetName != defaultStorageClassTargetName {
-						return &targetName
-					}
+					return &mapping
 				}
 			}
 			if mapping.Source.Name != nil {
 				if disk.datastoreName == *mapping.Source.Name {
-					if targetName != defaultStorageClassTargetName {
-						return &targetName
-					}
+					return &mapping
 				}
 			}
 		}
 	}
 	return nil
+}
+
+func (r *VmwareMapper) getStorageClassForDisk(mapping *v1beta1.StorageResourceMappingItem) *string {
+	if mapping != nil {
+		targetName := mapping.Target.Name
+		if targetName != defaultStorageClassTargetName {
+			return &targetName
+		}
+	}
+
+	// Use default storage class:
+	return nil
+}
+
+func (r *VmwareMapper) getAccessModeForDisk(mapping *v1beta1.StorageResourceMappingItem) corev1.PersistentVolumeAccessMode {
+	if mapping != nil && mapping.AccessMode != nil {
+		return *mapping.AccessMode
+	}
+
+	return defaultAccessMode
+}
+
+func (r *VmwareMapper) getVolumeModeForDisk(mapping *v1beta1.StorageResourceMappingItem) *corev1.PersistentVolumeMode {
+	if mapping != nil && mapping.VolumeMode != nil {
+		return mapping.VolumeMode
+	}
+
+	return &defaultVolumeMode
 }
 
 // MapDataVolumes maps the VMware disks to CDI DataVolumes
@@ -276,6 +299,8 @@ func (r *VmwareMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.Da
 
 	for _, disk := range *r.disks {
 		dvName := buildDataVolumeName(*targetVMName, disk.name)
+
+		mapping := r.getMappingForDisk(disk)
 
 		dvs[dvName] = cdiv1.DataVolume{
 			TypeMeta: metav1.TypeMeta{
@@ -298,19 +323,17 @@ func (r *VmwareMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.Da
 				},
 				PVC: &corev1.PersistentVolumeClaimSpec{
 					AccessModes: []corev1.PersistentVolumeAccessMode{
-						corev1.ReadWriteOnce,
+						r.getAccessModeForDisk(mapping),
 					},
+					VolumeMode: r.getVolumeModeForDisk(mapping),
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
 							corev1.ResourceStorage: disk.capacity,
 						},
 					},
+					StorageClassName: r.getStorageClassForDisk(mapping),
 				},
 			},
-		}
-		sdClass := r.getStorageClassForDisk(&disk)
-		if sdClass != nil {
-			dvs[dvName].Spec.PVC.StorageClassName = sdClass
 		}
 	}
 	return dvs, nil
