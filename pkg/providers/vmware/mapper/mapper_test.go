@@ -167,6 +167,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 		interfaces := vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces
 		networks := vmSpec.Spec.Template.Spec.Networks
+		networkInterfaceMultiQueue := vmSpec.Spec.Template.Spec.Domain.Devices.NetworkInterfaceMultiQueue
 
 		// interface to be connected to a pod network
 		Expect(interfaces[0].Name).To(Equal(networkNormalizedName))
@@ -175,6 +176,8 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(interfaces[0].MacAddress).To(Equal(macAddress))
 		Expect(networks[0].Name).To(Equal(networkNormalizedName))
 		Expect(networks[0].Pod).To(Not(BeNil()))
+		Expect(networkInterfaceMultiQueue).ToNot(BeNil())
+		Expect(*networkInterfaceMultiQueue).To(BeTrue())
 	})
 
 	It("should map pod network by name", func() {
@@ -185,6 +188,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 		interfaces := vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces
 		networks := vmSpec.Spec.Template.Spec.Networks
+		networkInterfaceMultiQueue := vmSpec.Spec.Template.Spec.Domain.Devices.NetworkInterfaceMultiQueue
 
 		// interface to be connected to a pod network
 		Expect(interfaces[0].Name).To(Equal(networkNormalizedName))
@@ -193,6 +197,8 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(interfaces[0].MacAddress).To(Equal(macAddress))
 		Expect(networks[0].Name).To(Equal(networkNormalizedName))
 		Expect(networks[0].Pod).To(Not(BeNil()))
+		Expect(networkInterfaceMultiQueue).ToNot(BeNil())
+		Expect(*networkInterfaceMultiQueue).To(BeTrue())
 	})
 
 	It("should map multus network by network moref", func() {
@@ -204,6 +210,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		interfaces := vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces
 		networks := vmSpec.Spec.Template.Spec.Networks
 		networkMapping := *mappings.NetworkMappings
+		networkInterfaceMultiQueue := vmSpec.Spec.Template.Spec.Domain.Devices.NetworkInterfaceMultiQueue
 
 		// interface to be connected to a multus network
 		Expect(interfaces[0].Name).To(Equal(networkNormalizedName))
@@ -211,6 +218,8 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(interfaces[0].MacAddress).To(Equal(macAddress))
 		Expect(networks[0].Name).To(Equal(networkNormalizedName))
 		Expect(networks[0].Multus.NetworkName).To(Equal(networkMapping[0].Target.Name))
+		Expect(networkInterfaceMultiQueue).ToNot(BeNil())
+		Expect(*networkInterfaceMultiQueue).To(BeTrue())
 	})
 
 	It("should map multus network by name", func() {
@@ -222,6 +231,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		interfaces := vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces
 		networks := vmSpec.Spec.Template.Spec.Networks
 		networkMapping := *mappings.NetworkMappings
+		networkInterfaceMultiQueue := vmSpec.Spec.Template.Spec.Domain.Devices.NetworkInterfaceMultiQueue
 
 		// interface to be connected to a multus network
 		Expect(interfaces[0].Name).To(Equal(networkNormalizedName))
@@ -229,6 +239,24 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(interfaces[0].MacAddress).To(Equal(macAddress))
 		Expect(networks[0].Name).To(Equal(networkNormalizedName))
 		Expect(networks[0].Multus.NetworkName).To(Equal(networkMapping[0].Target.Name))
+		Expect(networkInterfaceMultiQueue).ToNot(BeNil())
+		Expect(*networkInterfaceMultiQueue).To(BeTrue())
+	})
+
+	It("should disable NetworkInterfaceMultiQueue when there are no mapped interfaces", func() {
+		mappings := createMinimalMapping()
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
+		Expect(err).To(BeNil())
+
+		interfaces := vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces
+		networks := vmSpec.Spec.Template.Spec.Networks
+		networkInterfaceMultiQueue := vmSpec.Spec.Template.Spec.Domain.Devices.NetworkInterfaceMultiQueue
+
+		Expect(len(interfaces)).To(Equal(0))
+		Expect(len(networks)).To(Equal(0))
+		Expect(networkInterfaceMultiQueue).ToNot(BeNil())
+		Expect(*networkInterfaceMultiQueue).To(BeFalse())
 	})
 })
 
