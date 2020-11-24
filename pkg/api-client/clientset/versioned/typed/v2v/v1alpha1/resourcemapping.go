@@ -18,6 +18,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"time"
 
 	scheme "github.com/kubevirt/vm-import-operator/pkg/api-client/clientset/versioned/scheme"
@@ -36,15 +37,15 @@ type ResourceMappingsGetter interface {
 
 // ResourceMappingInterface has methods to work with ResourceMapping resources.
 type ResourceMappingInterface interface {
-	Create(*v1alpha1.ResourceMapping) (*v1alpha1.ResourceMapping, error)
-	Update(*v1alpha1.ResourceMapping) (*v1alpha1.ResourceMapping, error)
-	UpdateStatus(*v1alpha1.ResourceMapping) (*v1alpha1.ResourceMapping, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v1alpha1.ResourceMapping, error)
-	List(opts v1.ListOptions) (*v1alpha1.ResourceMappingList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ResourceMapping, err error)
+	Create(ctx context.Context, resourceMapping *v1alpha1.ResourceMapping, opts v1.CreateOptions) (*v1alpha1.ResourceMapping, error)
+	Update(ctx context.Context, resourceMapping *v1alpha1.ResourceMapping, opts v1.UpdateOptions) (*v1alpha1.ResourceMapping, error)
+	UpdateStatus(ctx context.Context, resourceMapping *v1alpha1.ResourceMapping, opts v1.UpdateOptions) (*v1alpha1.ResourceMapping, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.ResourceMapping, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ResourceMappingList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ResourceMapping, err error)
 	ResourceMappingExpansion
 }
 
@@ -63,20 +64,20 @@ func newResourceMappings(c *V2vV1alpha1Client, namespace string) *resourceMappin
 }
 
 // Get takes name of the resourceMapping, and returns the corresponding resourceMapping object, and an error if there is any.
-func (c *resourceMappings) Get(name string, options v1.GetOptions) (result *v1alpha1.ResourceMapping, err error) {
+func (c *resourceMappings) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ResourceMapping, err error) {
 	result = &v1alpha1.ResourceMapping{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("resourcemappings").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of ResourceMappings that match those selectors.
-func (c *resourceMappings) List(opts v1.ListOptions) (result *v1alpha1.ResourceMappingList, err error) {
+func (c *resourceMappings) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ResourceMappingList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -87,13 +88,13 @@ func (c *resourceMappings) List(opts v1.ListOptions) (result *v1alpha1.ResourceM
 		Resource("resourcemappings").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested resourceMappings.
-func (c *resourceMappings) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *resourceMappings) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -104,87 +105,90 @@ func (c *resourceMappings) Watch(opts v1.ListOptions) (watch.Interface, error) {
 		Resource("resourcemappings").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a resourceMapping and creates it.  Returns the server's representation of the resourceMapping, and an error, if there is any.
-func (c *resourceMappings) Create(resourceMapping *v1alpha1.ResourceMapping) (result *v1alpha1.ResourceMapping, err error) {
+func (c *resourceMappings) Create(ctx context.Context, resourceMapping *v1alpha1.ResourceMapping, opts v1.CreateOptions) (result *v1alpha1.ResourceMapping, err error) {
 	result = &v1alpha1.ResourceMapping{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("resourcemappings").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(resourceMapping).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a resourceMapping and updates it. Returns the server's representation of the resourceMapping, and an error, if there is any.
-func (c *resourceMappings) Update(resourceMapping *v1alpha1.ResourceMapping) (result *v1alpha1.ResourceMapping, err error) {
+func (c *resourceMappings) Update(ctx context.Context, resourceMapping *v1alpha1.ResourceMapping, opts v1.UpdateOptions) (result *v1alpha1.ResourceMapping, err error) {
 	result = &v1alpha1.ResourceMapping{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("resourcemappings").
 		Name(resourceMapping.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(resourceMapping).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *resourceMappings) UpdateStatus(resourceMapping *v1alpha1.ResourceMapping) (result *v1alpha1.ResourceMapping, err error) {
+func (c *resourceMappings) UpdateStatus(ctx context.Context, resourceMapping *v1alpha1.ResourceMapping, opts v1.UpdateOptions) (result *v1alpha1.ResourceMapping, err error) {
 	result = &v1alpha1.ResourceMapping{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("resourcemappings").
 		Name(resourceMapping.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(resourceMapping).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the resourceMapping and deletes it. Returns an error if one occurs.
-func (c *resourceMappings) Delete(name string, options *v1.DeleteOptions) error {
+func (c *resourceMappings) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("resourcemappings").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *resourceMappings) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *resourceMappings) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("resourcemappings").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched resourceMapping.
-func (c *resourceMappings) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1alpha1.ResourceMapping, err error) {
+func (c *resourceMappings) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ResourceMapping, err error) {
 	result = &v1alpha1.ResourceMapping{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("resourcemappings").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

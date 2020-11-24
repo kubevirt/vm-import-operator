@@ -1,6 +1,7 @@
 package ovirt_test
 
 import (
+	"context"
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
@@ -102,7 +103,8 @@ var _ = Describe("Multiple VMs import ", func() {
 			Expect(created).To(BeSuccessful(f))
 
 			By("Having only one VM imported in the end")
-			vms, err := f.KubeVirtClient.VirtualMachine(namespace).List(&metav1.ListOptions{})
+			vms := &v1.VirtualMachineList{}
+			err = f.Client.List(context.TODO(), vms)
 			if err != nil {
 				Fail(err.Error())
 			}
@@ -174,7 +176,7 @@ func (t *multipleVmsImportTest) importVMWithSecretAndMakeSureItsRunning(vmID str
 	created, err := t.triggerVMImport(vmID, namespace, vmName, secretName)
 	Expect(created).To(BeSuccessful(t.framework))
 
-	retrieved, _ := t.framework.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+	retrieved, _ := t.framework.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
 	effectiveTargetVMName := retrieved.Status.TargetVMName
@@ -191,7 +193,7 @@ func (t *multipleVmsImportTest) triggerVMImport(vmID string, namespace string, v
 			{Source: v2vv1.Source{ID: &vms.VNicProfile1ID}, Type: &tests.PodType},
 		},
 	}
-	created, err := t.framework.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+	created, err := t.framework.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 	Expect(err).NotTo(HaveOccurred())
 	return created, err

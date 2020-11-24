@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -21,7 +22,7 @@ func (f *Framework) AddLabelToAllNodes(name string, value string) error {
 	for _, node := range nodeList.Items {
 		newNode := node.DeepCopy()
 		newNode.Labels[name] = value
-		_, err = f.K8sClient.CoreV1().Nodes().Update(newNode)
+		_, err = f.K8sClient.CoreV1().Nodes().Update(context.TODO(), newNode, metav1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
@@ -38,7 +39,7 @@ func (f *Framework) RemoveLabelFromNodes(name string) error {
 	for _, node := range nodeList.Items {
 		newNode := node.DeepCopy()
 		delete(newNode.Labels, name)
-		_, err = f.K8sClient.CoreV1().Nodes().Update(newNode)
+		_, err = f.K8sClient.CoreV1().Nodes().Update(context.TODO(), newNode, metav1.UpdateOptions{})
 		if err != nil {
 			return err
 		}
@@ -48,7 +49,7 @@ func (f *Framework) RemoveLabelFromNodes(name string) error {
 
 // GetAllSchedulableNodes retrieves all schedulable nodes
 func (f *Framework) GetAllSchedulableNodes() (*k8sv1.NodeList, error) {
-	return f.K8sClient.CoreV1().Nodes().List(metav1.ListOptions{LabelSelector: v1.NodeSchedulable + "=" + "true"})
+	return f.K8sClient.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{LabelSelector: v1.NodeSchedulable + "=" + "true"})
 }
 
 // Tests in Multus suite are expecting a Linux bridge to be available on each node, with iptables allowing
@@ -58,7 +59,7 @@ func (f *Framework) GetAllSchedulableNodes() (*k8sv1.NodeList, error) {
 // Based on https://github.com/kubevirt/kubevirt/blob/master/tests/vmi_multus_test.go
 func (f *Framework) ConfigureNodeNetwork() error {
 	// Fetching the kubevirt-operator image from the pod makes this independent from the installation method / image used
-	pods, err := f.K8sClient.CoreV1().Pods(f.KubeVirtInstallNamespace).List(metav1.ListOptions{LabelSelector: "kubevirt.io=virt-operator"})
+	pods, err := f.K8sClient.CoreV1().Pods(f.KubeVirtInstallNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "kubevirt.io=virt-operator"})
 	if err != nil {
 		return err
 	}
@@ -132,7 +133,7 @@ func (f *Framework) ConfigureNodeNetwork() error {
 
 	// Helper function returning existing network-config DaemonSet if exists
 	getNetworkConfigDaemonSet := func() (*appsv1.DaemonSet, error) {
-		daemonSet, err := f.K8sClient.AppsV1().DaemonSets(metav1.NamespaceSystem).Get(networkConfigDaemonSet.Name, metav1.GetOptions{})
+		daemonSet, err := f.K8sClient.AppsV1().DaemonSets(metav1.NamespaceSystem).Get(context.TODO(), networkConfigDaemonSet.Name, metav1.GetOptions{})
 		if errors.IsNotFound(err) {
 			return nil, nil
 		}
@@ -148,7 +149,7 @@ func (f *Framework) ConfigureNodeNetwork() error {
 		return nil
 	}
 	if runningNetworkConfigDaemonSet == nil {
-		_, err := f.K8sClient.AppsV1().DaemonSets(metav1.NamespaceSystem).Create(&networkConfigDaemonSet)
+		_, err := f.K8sClient.AppsV1().DaemonSets(metav1.NamespaceSystem).Create(context.TODO(), &networkConfigDaemonSet, metav1.CreateOptions{})
 		if err != nil {
 			return nil
 		}

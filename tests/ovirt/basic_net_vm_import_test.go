@@ -1,6 +1,7 @@
 package ovirt_test
 
 import (
+	"context"
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
@@ -13,6 +14,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	v1 "kubevirt.io/client-go/api/v1"
 )
 
@@ -46,12 +48,12 @@ var _ = Describe("Networked VM import ", func() {
 			},
 		}
 		test.stub(vmID)
-		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(BeSuccessful(f))
 
-		retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+		retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
@@ -66,8 +68,12 @@ var _ = Describe("Networked VM import ", func() {
 })
 
 func (t *networkedVMImportTest) validateTargetConfiguration(vmName string) *v1.VirtualMachine {
-	vmNamespace := t.framework.Namespace.Name
-	vm, _ := t.framework.KubeVirtClient.VirtualMachine(vmNamespace).Get(vmName, &metav1.GetOptions{})
+	vmNamespacedName := types.NamespacedName{
+		Namespace: t.framework.Namespace.Name,
+		Name: vmName,
+	}
+	vm := &v1.VirtualMachine{}
+	_ = t.framework.Client.Get(context.TODO(), vmNamespacedName, vm)
 	spec := vm.Spec.Template.Spec
 
 	By("having correct machine type")

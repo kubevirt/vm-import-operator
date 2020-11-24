@@ -1,6 +1,7 @@
 package ovirt_test
 
 import (
+	"context"
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
@@ -12,6 +13,7 @@ import (
 	"github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type resourceMappingValidationTest struct {
@@ -45,7 +47,7 @@ var _ = Describe("VM import ", func() {
 			StorageMappings: storageMappings,
 			DiskMappings:    diskMapping,
 		}
-		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(HaveValidationFailure(f, string(v2vv1.IncompleteMappingRules)))
@@ -108,7 +110,7 @@ var _ = Describe("VM import ", func() {
 					}},
 			},
 		}
-		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(created).To(HaveValidationFailure(f, string(v2vv1.IncompleteMappingRules)))
 	})

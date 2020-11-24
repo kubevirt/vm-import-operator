@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 // EnsureVMImportDoesNotExist blocks until VM import with given name does not exist in the cluster
 func (f *Framework) EnsureVMImportDoesNotExist(vmiName string) error {
 	return wait.PollImmediate(2*time.Second, 1*time.Minute, func() (bool, error) {
-		_, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(f.Namespace.Name).Get(vmiName, metav1.GetOptions{})
+		_, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(f.Namespace.Name).Get(context.TODO(), vmiName, metav1.GetOptions{})
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return true, nil
@@ -30,7 +31,7 @@ func (f *Framework) EnsureVMImportDoesNotExist(vmiName string) error {
 // WaitForVMImportConditionInStatus blocks until VM import with given name has given status condition with given status
 func (f *Framework) WaitForVMImportConditionInStatus(pollInterval time.Duration, timeout time.Duration, vmiName string, conditionType v2vv1.VirtualMachineImportConditionType, status corev1.ConditionStatus, reason string, namespace string) error {
 	pollErr := wait.PollImmediate(pollInterval, timeout, func() (bool, error) {
-		retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(vmiName, metav1.GetOptions{})
+		retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), vmiName, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -50,7 +51,7 @@ func (f *Framework) WaitForVMImportConditionInStatus(pollInterval time.Duration,
 		return true, nil
 	})
 	if pollErr == wait.ErrWaitTimeout {
-		retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(vmiName, metav1.GetOptions{})
+		retrieved, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), vmiName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}

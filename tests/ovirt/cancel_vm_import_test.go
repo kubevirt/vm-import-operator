@@ -1,7 +1,10 @@
 package ovirt_test
 
 import (
+	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/types"
+	v1 "kubevirt.io/client-go/api/v1"
 	"time"
 
 	"github.com/kubevirt/vm-import-operator/tests/ovirt/vms"
@@ -41,7 +44,7 @@ var _ = Describe("VM import cancellation ", func() {
 		vmID := vms.BasicVmID
 		cr := utils.VirtualMachineImportCr(framework.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, true)
 		stub(f, vmID)
-		vmi, err = vmImports.Create(&cr)
+		vmi, err = vmImports.Create(context.TODO(), &cr, metav1.CreateOptions{})
 		if err != nil {
 			Fail(err.Error())
 		}
@@ -78,7 +81,7 @@ var _ = Describe("VM import cancellation ", func() {
 			deleteOptions := metav1.DeleteOptions{
 				PropagationPolicy: &foreground,
 			}
-			err = vmImports.Delete(vmiName, &deleteOptions)
+			err = vmImports.Delete(context.TODO(), vmiName, deleteOptions)
 			if err != nil {
 				Fail(err.Error())
 			}
@@ -100,7 +103,7 @@ var _ = Describe("VM import cancellation ", func() {
 
 		By("VM Data Volume no longer existing")
 		Eventually(func() error {
-			_, err = f.CdiClient.CdiV1alpha1().DataVolumes(f.Namespace.Name).Get(dvName, metav1.GetOptions{})
+			_, err = f.CdiClient.CdiV1alpha1().DataVolumes(f.Namespace.Name).Get(context.TODO(), dvName, metav1.GetOptions{})
 			return err
 		}, 2*time.Minute, time.Second).Should(And(
 			HaveOccurred(),
@@ -109,7 +112,9 @@ var _ = Describe("VM import cancellation ", func() {
 
 		By("VM no longer existing")
 		Eventually(func() error {
-			_, err = f.KubeVirtClient.VirtualMachine(namespace).Get(*vmi.Spec.TargetVMName, &metav1.GetOptions{})
+			vmNamespacedName := types.NamespacedName{Namespace: namespace, Name: *vmi.Spec.TargetVMName}
+			vm := &v1.VirtualMachine{}
+			err = f.Client.Get(context.TODO(), vmNamespacedName, vm)
 			return err
 		}, 2*time.Minute, time.Second).Should(And(
 			HaveOccurred(),
@@ -123,7 +128,7 @@ func getTemporaryConfigMap(f *framework.Framework, namespace string, vmiName str
 	listOptions := metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("vmimport.v2v.kubevirt.io/vmi-name=%s", oputils.EnsureLabelValueLength(vmiName)),
 	}
-	list, err := f.K8sClient.CoreV1().ConfigMaps(namespace).List(listOptions)
+	list, err := f.K8sClient.CoreV1().ConfigMaps(namespace).List(context.TODO(), listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +142,7 @@ func getTemporarySecret(f *framework.Framework, namespace string, vmiName string
 	listOptions := metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("vmimport.v2v.kubevirt.io/vmi-name=%s", oputils.EnsureLabelValueLength(vmiName)),
 	}
-	list, err := f.K8sClient.CoreV1().Secrets(namespace).List(listOptions)
+	list, err := f.K8sClient.CoreV1().Secrets(namespace).List(context.TODO(), listOptions)
 	if err != nil {
 		return nil, err
 	}

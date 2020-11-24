@@ -18,6 +18,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"context"
 	"time"
 
 	scheme "github.com/kubevirt/vm-import-operator/pkg/api-client/clientset/versioned/scheme"
@@ -36,15 +37,15 @@ type VirtualMachineImportsGetter interface {
 
 // VirtualMachineImportInterface has methods to work with VirtualMachineImport resources.
 type VirtualMachineImportInterface interface {
-	Create(*v1beta1.VirtualMachineImport) (*v1beta1.VirtualMachineImport, error)
-	Update(*v1beta1.VirtualMachineImport) (*v1beta1.VirtualMachineImport, error)
-	UpdateStatus(*v1beta1.VirtualMachineImport) (*v1beta1.VirtualMachineImport, error)
-	Delete(name string, options *v1.DeleteOptions) error
-	DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error
-	Get(name string, options v1.GetOptions) (*v1beta1.VirtualMachineImport, error)
-	List(opts v1.ListOptions) (*v1beta1.VirtualMachineImportList, error)
-	Watch(opts v1.ListOptions) (watch.Interface, error)
-	Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.VirtualMachineImport, err error)
+	Create(ctx context.Context, virtualMachineImport *v1beta1.VirtualMachineImport, opts v1.CreateOptions) (*v1beta1.VirtualMachineImport, error)
+	Update(ctx context.Context, virtualMachineImport *v1beta1.VirtualMachineImport, opts v1.UpdateOptions) (*v1beta1.VirtualMachineImport, error)
+	UpdateStatus(ctx context.Context, virtualMachineImport *v1beta1.VirtualMachineImport, opts v1.UpdateOptions) (*v1beta1.VirtualMachineImport, error)
+	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
+	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1beta1.VirtualMachineImport, error)
+	List(ctx context.Context, opts v1.ListOptions) (*v1beta1.VirtualMachineImportList, error)
+	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.VirtualMachineImport, err error)
 	VirtualMachineImportExpansion
 }
 
@@ -63,20 +64,20 @@ func newVirtualMachineImports(c *V2vV1beta1Client, namespace string) *virtualMac
 }
 
 // Get takes name of the virtualMachineImport, and returns the corresponding virtualMachineImport object, and an error if there is any.
-func (c *virtualMachineImports) Get(name string, options v1.GetOptions) (result *v1beta1.VirtualMachineImport, err error) {
+func (c *virtualMachineImports) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1beta1.VirtualMachineImport, err error) {
 	result = &v1beta1.VirtualMachineImport{}
 	err = c.client.Get().
 		Namespace(c.ns).
 		Resource("virtualmachineimports").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // List takes label and field selectors, and returns the list of VirtualMachineImports that match those selectors.
-func (c *virtualMachineImports) List(opts v1.ListOptions) (result *v1beta1.VirtualMachineImportList, err error) {
+func (c *virtualMachineImports) List(ctx context.Context, opts v1.ListOptions) (result *v1beta1.VirtualMachineImportList, err error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -87,13 +88,13 @@ func (c *virtualMachineImports) List(opts v1.ListOptions) (result *v1beta1.Virtu
 		Resource("virtualmachineimports").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Watch returns a watch.Interface that watches the requested virtualMachineImports.
-func (c *virtualMachineImports) Watch(opts v1.ListOptions) (watch.Interface, error) {
+func (c *virtualMachineImports) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	var timeout time.Duration
 	if opts.TimeoutSeconds != nil {
 		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
@@ -104,87 +105,90 @@ func (c *virtualMachineImports) Watch(opts v1.ListOptions) (watch.Interface, err
 		Resource("virtualmachineimports").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Watch()
+		Watch(ctx)
 }
 
 // Create takes the representation of a virtualMachineImport and creates it.  Returns the server's representation of the virtualMachineImport, and an error, if there is any.
-func (c *virtualMachineImports) Create(virtualMachineImport *v1beta1.VirtualMachineImport) (result *v1beta1.VirtualMachineImport, err error) {
+func (c *virtualMachineImports) Create(ctx context.Context, virtualMachineImport *v1beta1.VirtualMachineImport, opts v1.CreateOptions) (result *v1beta1.VirtualMachineImport, err error) {
 	result = &v1beta1.VirtualMachineImport{}
 	err = c.client.Post().
 		Namespace(c.ns).
 		Resource("virtualmachineimports").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(virtualMachineImport).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Update takes the representation of a virtualMachineImport and updates it. Returns the server's representation of the virtualMachineImport, and an error, if there is any.
-func (c *virtualMachineImports) Update(virtualMachineImport *v1beta1.VirtualMachineImport) (result *v1beta1.VirtualMachineImport, err error) {
+func (c *virtualMachineImports) Update(ctx context.Context, virtualMachineImport *v1beta1.VirtualMachineImport, opts v1.UpdateOptions) (result *v1beta1.VirtualMachineImport, err error) {
 	result = &v1beta1.VirtualMachineImport{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("virtualmachineimports").
 		Name(virtualMachineImport.Name).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(virtualMachineImport).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-
-func (c *virtualMachineImports) UpdateStatus(virtualMachineImport *v1beta1.VirtualMachineImport) (result *v1beta1.VirtualMachineImport, err error) {
+func (c *virtualMachineImports) UpdateStatus(ctx context.Context, virtualMachineImport *v1beta1.VirtualMachineImport, opts v1.UpdateOptions) (result *v1beta1.VirtualMachineImport, err error) {
 	result = &v1beta1.VirtualMachineImport{}
 	err = c.client.Put().
 		Namespace(c.ns).
 		Resource("virtualmachineimports").
 		Name(virtualMachineImport.Name).
 		SubResource("status").
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(virtualMachineImport).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }
 
 // Delete takes name of the virtualMachineImport and deletes it. Returns an error if one occurs.
-func (c *virtualMachineImports) Delete(name string, options *v1.DeleteOptions) error {
+func (c *virtualMachineImports) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("virtualmachineimports").
 		Name(name).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // DeleteCollection deletes a collection of objects.
-func (c *virtualMachineImports) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
+func (c *virtualMachineImports) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	var timeout time.Duration
-	if listOptions.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOptions.TimeoutSeconds) * time.Second
+	if listOpts.TimeoutSeconds != nil {
+		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
 		Namespace(c.ns).
 		Resource("virtualmachineimports").
-		VersionedParams(&listOptions, scheme.ParameterCodec).
+		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
-		Body(options).
-		Do().
+		Body(&opts).
+		Do(ctx).
 		Error()
 }
 
 // Patch applies the patch and returns the patched virtualMachineImport.
-func (c *virtualMachineImports) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.VirtualMachineImport, err error) {
+func (c *virtualMachineImports) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1beta1.VirtualMachineImport, err error) {
 	result = &v1beta1.VirtualMachineImport{}
 	err = c.client.Patch(pt).
 		Namespace(c.ns).
 		Resource("virtualmachineimports").
-		SubResource(subresources...).
 		Name(name).
+		SubResource(subresources...).
+		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(data).
-		Do().
+		Do(ctx).
 		Into(result)
 	return
 }

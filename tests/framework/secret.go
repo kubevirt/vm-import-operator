@@ -2,6 +2,7 @@ package framework
 
 import
 (
+	"context"
 	ovirtenv "github.com/kubevirt/vm-import-operator/tests/env/ovirt"
 	"github.com/kubevirt/vm-import-operator/tests/env/vmware"
 	"gopkg.in/yaml.v2"
@@ -43,7 +44,7 @@ func (f *Framework) CreateOvirtSecretInNamespace(environment ovirtenv.Environmen
 		},
 		StringData: map[string]string{"ovirt": string(marshalled)},
 	}
-	created, err := f.K8sClient.CoreV1().Secrets(namespace).Create(&secret)
+	created, err := f.K8sClient.CoreV1().Secrets(namespace).Create(context.TODO(), &secret, metav1.CreateOptions{})
 	if err != nil {
 		return corev1.Secret{}, err
 	}
@@ -72,7 +73,7 @@ func (f *Framework) CreateVmwareSecret(env vmware.Environment, namespace string)
 		},
 		StringData: map[string]string{"vmware": string(marshalled)},
 	}
-	created, err := f.K8sClient.CoreV1().Secrets(namespace).Create(&secret)
+	created, err := f.K8sClient.CoreV1().Secrets(namespace).Create(context.TODO(), &secret, metav1.CreateOptions{})
 	if err != nil {
 		return corev1.Secret{}, nil
 	}

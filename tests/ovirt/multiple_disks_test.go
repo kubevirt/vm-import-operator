@@ -1,6 +1,7 @@
 package ovirt_test
 
 import (
+	"context"
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
 	. "github.com/kubevirt/vm-import-operator/tests/matchers"
@@ -11,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	v1 "kubevirt.io/client-go/api/v1"
 )
 
@@ -41,18 +43,23 @@ var _ = Describe("VM import ", func() {
 			vmi := utils.VirtualMachineImportCr(fwk.ProviderOvirt, vmID, namespace, secret.Name, f.NsPrefix, tests.TrueVar)
 			vmi.Spec.StartVM = &tests.TrueVar
 			test.stub(vmID)
-			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).To(BeRunning(f))
 
-			vm, err := f.KubeVirtClient.VirtualMachine(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+			vmNamespacedName := types.NamespacedName{
+				Namespace: vmBlueprint.Namespace,
+				Name: vmBlueprint.Name,
+			}
+			vm := &v1.VirtualMachine{}
+			err = f.Client.Get(context.TODO(), vmNamespacedName, vm)
 			if err != nil {
 				Fail(err.Error())
 			}

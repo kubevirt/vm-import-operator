@@ -1,6 +1,7 @@
 package ovirt_test
 
 import (
+	"context"
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/tests"
 	fwk "github.com/kubevirt/vm-import-operator/tests/framework"
@@ -12,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	v1 "kubevirt.io/client-go/api/v1"
 )
 
@@ -71,18 +73,24 @@ var _ = Describe("Import of VM ", func() {
 					}},
 				},
 			}
-			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).To(BeRunning(f))
 
 			By("having correct network configuration")
-			vm, _ := f.KubeVirtClient.VirtualMachineInstance(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+
+			vmNamespacedName := types.NamespacedName{
+				Namespace: vmBlueprint.Namespace,
+				Name: vmBlueprint.Name,
+			}
+			vm := &v1.VirtualMachineInstance{}
+			_ = f.Client.Get(context.TODO(), vmNamespacedName, vm)
 			spec := vm.Spec
 			Expect(spec.Networks).To(HaveLen(1))
 			Expect(spec.Networks[0].Multus).ToNot(BeNil())
@@ -127,19 +135,25 @@ var _ = Describe("Import of VM ", func() {
 					{Source: v2vv1.Source{ID: &vms.VNicProfile2ID}, Type: &tests.PodType},
 				},
 			}
-			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).To(BeRunning(f))
 
 			By("having correct network configurations")
-			vm, _ := f.KubeVirtClient.VirtualMachineInstance(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+			vmNamespacedName := types.NamespacedName{
+				Namespace: vmBlueprint.Namespace,
+				Name: vmBlueprint.Name,
+			}
+			vm := &v1.VirtualMachineInstance{}
+			_ = f.Client.Get(context.TODO(), vmNamespacedName, vm)
 			spec := vm.Spec
+
 			Expect(spec.Networks).To(HaveLen(2))
 			net1 := spec.Networks[0]
 			net2 := spec.Networks[1]
@@ -222,19 +236,25 @@ var _ = Describe("Import of VM ", func() {
 						}},
 				},
 			}
-			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(&vmi)
+			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(created).To(BeSuccessful(f))
 
-			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(created.Name, metav1.GetOptions{})
+			retrieved, _ := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Get(context.TODO(), created.Name, metav1.GetOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).To(BeRunning(f))
 
 			By("having correct network configurations")
-			vm, _ := f.KubeVirtClient.VirtualMachineInstance(namespace).Get(vmBlueprint.Name, &metav1.GetOptions{})
+			vmNamespacedName := types.NamespacedName{
+				Namespace: vmBlueprint.Namespace,
+				Name: vmBlueprint.Name,
+			}
+			vm := &v1.VirtualMachineInstance{}
+			_ = f.Client.Get(context.TODO(), vmNamespacedName, vm)
 			spec := vm.Spec
+
 			Expect(spec.Networks).To(HaveLen(2))
 			net1 := spec.Networks[0]
 			net2 := spec.Networks[1]

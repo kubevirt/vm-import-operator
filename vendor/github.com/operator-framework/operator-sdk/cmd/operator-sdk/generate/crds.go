@@ -16,15 +16,23 @@ package generate
 
 import (
 	"fmt"
-
-	"github.com/operator-framework/operator-sdk/cmd/operator-sdk/internal/genutil"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	gencrd "github.com/operator-framework/operator-sdk/internal/generate/crd"
+	"github.com/operator-framework/operator-sdk/internal/genutil"
+	"github.com/operator-framework/operator-sdk/internal/scaffold"
+	"github.com/operator-framework/operator-sdk/internal/util/projutil"
+)
+
+var (
+	crdVersion string
 )
 
 func newGenerateCRDsCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "crds",
 		Short: "Generates CRDs for API's",
 		Long: `generate crds generates CRDs or updates them if they exist,
@@ -40,16 +48,29 @@ Example:
 `,
 		RunE: crdsFunc,
 	}
+
+	cmd.Flags().StringVar(&crdVersion, "crd-version", gencrd.DefaultCRDVersion, "CRD version to generate")
+	return cmd
 }
 
 func crdsFunc(cmd *cobra.Command, args []string) error {
 	if len(args) != 0 {
 		return fmt.Errorf("command %s doesn't accept any arguments", cmd.CommandPath())
 	}
+	projutil.MustInProjectRoot()
+
+	stat, err := os.Stat(scaffold.ApisDir)
+	if os.IsNotExist(err) {
+		log.Fatalf("Failed to generate CRDs; directory %q not found.", scaffold.ApisDir)
+	} else if err != nil {
+		log.Fatalf("Failed to generate CRDs; stat: %v", err)
+	} else if !stat.IsDir() {
+		log.Fatalf("Failed to generate CRDs; expected %q to be a directory.", scaffold.ApisDir)
+	}
 
 	// Skip usage printing on error, since this command will never fail from
 	// improper CLI usage.
-	if err := genutil.CRDGen(); err != nil {
+	if err := genutil.CRDGen(crdVersion); err != nil {
 		log.Fatal(err)
 	}
 	return nil
