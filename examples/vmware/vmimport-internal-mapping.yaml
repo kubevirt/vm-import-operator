@@ -17,20 +17,36 @@ spec:
       mappings:
         networkMappings:
           - source:
-              name: VM Network
+              id: network-7 # Network Managed Object Reference
             target:
               name: pod
             type: pod
+          - source:
+              id: VM Network # Network name
+            target:
+              name: my-network
+            type: multus
         storageMappings:
           - source:
-              id: datastore-13 # Datastore Managed Object Reference
+              name: iSCSI_Datastore # Datastore name
             target:
               name: storage_class_1
-        diskMappings: # specifies per-disk placement on storage class, overriding the datastore mapping
+          - source:
+              id: datastore-13 # maps disks in a Datastore to a storage class via the Datastore managed object ref
+            target: storage_class_1
+            accessMode: ReadWriteOnce
+            volumeMode: Filesystem
+        diskMappings: # specifies per-disk placement on storage class
+          - source:
+              id: 421-2000 # VirtualDisk DiskObjectId or vDiskID
+            target:
+              name: storage_class_2
+            accessMode: ReadWriteMany
+            volumeMode: Block
           - source:
               name: Hard disk 1 # VirtualDisk name
             target:
-              name: storage_class_2
+              name: storage_class_1
 
 # The VirtualMachine can be identified either by its UUID, or by its name. Its UUID can be retrieved
 # via the vSphere SDK, or from the vCenter Flash client. To find the UUID in the UI, find the Host

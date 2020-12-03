@@ -100,7 +100,9 @@ The import VM operator will be responsible to deduce the configuration of the ta
 
 Type in network mappings can be omitted as long as target namespace is not present as well; in that case "pod" type will be assumed.
 
-In for each mapping in "storageMappings" section under "ovirt", it is possible to specify the Volume Mode for the target PVC. The value is `Block` or `Filesystem`.
+For each oVirt storage mapping it is possible to specify the volume mode and access mode for the target PVC. The value of `volumeMode` may be `Block` or `Filesystem`,
+and the value of `accessMode` may be one of `ReadWriteOnce`, `ReadWriteMany`, or `ReadOnlyMany`. If the access mode is not specified, the oVirt provider will attempt
+to determine the correct access mode. If the volume mode is not specified, it will default to `Filesystem`.
 
 ```yaml
 apiVersion: v2v.kubevirt.io/v1beta1
@@ -134,6 +136,10 @@ Datastores may be mapped to storage classes by their name, or by their managed o
 `iSCSI_Datastore` or `datastore-13`. The name of the datastore can be found in the vCenter UI, and the moref can be
 found via the API explorer or through the vSphere SDK. VMs with disks that are located in the given datastore will
 be mapped to the selected storage class, unless a more specific Disk Mapping is present.
+
+It is possible to specify the Volume Mode and Access Mode for the target PVC. The value of `volumeMode` may be `Block` or `Filesystem`,
+and the value of `accessMode` may be one of `ReadWriteOnce`, `ReadWriteMany`, or `ReadOnlyMany`. If the access mode is not specified, it will default to `ReadWriteOnce`.
+If the volume mode is not specified, it will default to `Filesystem`.
 
 ##### Disk Mappings
 Disks may be individually mapped to storage classes by their name (device label), or by their vDiskID/DiskObjectID.
@@ -177,6 +183,8 @@ spec:
     - source:
         name: LocalDS_0 # maps disks in a Datastore to a storage class via the Datastore name
       target: storage_class_2
+      volumeMode: Block
+      accessMode: ReadOnlyMany
 ```
 
 ### Resource mapping resolution
