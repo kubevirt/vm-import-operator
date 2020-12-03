@@ -594,7 +594,7 @@ var _ = Describe("Reconcile steps", func() {
 		It("should not start vm: ", func() {
 			instance.Status.Conditions = []v2vv1.VirtualMachineImportCondition{}
 
-			err := reconciler.startVM(mock, instance, vmName)
+			_, err := reconciler.startVM(mock, instance, vmName)
 
 			Expect(err).To(BeNil())
 		})
@@ -604,7 +604,7 @@ var _ = Describe("Reconcile steps", func() {
 				return fmt.Errorf("Not found")
 			}
 
-			err := reconciler.startVM(mock, instance, vmName)
+			_, err := reconciler.startVM(mock, instance, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -622,7 +622,7 @@ var _ = Describe("Reconcile steps", func() {
 				return fmt.Errorf("Not modified")
 			}
 
-			err := reconciler.startVM(mock, instance, vmName)
+			_, err := reconciler.startVM(mock, instance, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -645,7 +645,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.startVM(mock, instance, vmName)
+			_, err := reconciler.startVM(mock, instance, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -662,7 +662,7 @@ var _ = Describe("Reconcile steps", func() {
 				return fmt.Errorf("Not modified")
 			}
 
-			err := reconciler.startVM(mock, instance, vmName)
+			_, err := reconciler.startVM(mock, instance, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -679,7 +679,7 @@ var _ = Describe("Reconcile steps", func() {
 				return fmt.Errorf("Not modified")
 			}
 
-			err := reconciler.startVM(mock, instance, vmName)
+			_, err := reconciler.startVM(mock, instance, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -721,7 +721,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.startVM(mock, instance, vmName)
+			_, err := reconciler.startVM(mock, instance, vmName)
 
 			Expect(err).To(BeNil())
 		})
