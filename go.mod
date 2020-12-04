@@ -100,3 +100,5 @@ replace bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-201207
 replace sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.2.4
 
 replace kubevirt.io/qe-tools => kubevirt.io/qe-tools v0.1.6
+
+replace github.com/gorilla/websocket => github.com/gorilla/websocket v1.4.2
