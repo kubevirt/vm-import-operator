@@ -27,6 +27,8 @@ const (
 const (
 	// TinyCoreIsoURL provides a test url for the tineyCore iso image
 	TinyCoreIsoURL = "http://cdi-file-host.%s/tinyCore.iso"
+	// TinyCoreQcow2URL provides a test url for the tineyCore qcow2 image
+	TinyCoreQcow2URL = "http://cdi-file-host.%s/tinyCore.qcow2"
 	//TinyCoreIsoRegistryURL provides a test url for the tinycore.qcow2 image wrapped in docker container
 	TinyCoreIsoRegistryURL = "docker://cdi-docker-registry-host.%s/tinycoreqcow2"
 	//TinyCoreIsoRegistryProxyURL provides a test url for the tinycore.qcow2 image wrapped in docker container available through rate-limiting proxy
@@ -86,7 +88,8 @@ func NewCloningDataVolume(dataVolumeName, size string, sourcePvc *k8sv1.Persiste
 func NewDataVolumeWithHTTPImport(dataVolumeName string, size string, httpURL string) *cdiv1.DataVolume {
 	return &cdiv1.DataVolume{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: dataVolumeName,
+			Name:        dataVolumeName,
+			Annotations: map[string]string{},
 		},
 		Spec: cdiv1.DataVolumeSpec{
 			Source: cdiv1.DataVolumeSource{
@@ -194,7 +197,8 @@ func NewDataVolumeCloneToBlockPV(dataVolumeName string, size string, srcNamespac
 func NewDataVolumeForUpload(dataVolumeName string, size string) *cdiv1.DataVolume {
 	return &cdiv1.DataVolume{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: dataVolumeName,
+			Name:        dataVolumeName,
+			Annotations: map[string]string{},
 		},
 		Spec: cdiv1.DataVolumeSpec{
 			Source: cdiv1.DataVolumeSource{
@@ -264,7 +268,8 @@ func NewDataVolumeForBlankRawImageBlock(dataVolumeName, size string, storageClas
 func NewDataVolumeForImageCloning(dataVolumeName, size, namespace, pvcName string, storageClassName *string, volumeMode *k8sv1.PersistentVolumeMode) *cdiv1.DataVolume {
 	dv := &cdiv1.DataVolume{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: dataVolumeName,
+			Name:        dataVolumeName,
+			Annotations: map[string]string{},
 		},
 		Spec: cdiv1.DataVolumeSpec{
 			Source: cdiv1.DataVolumeSource{
