@@ -16,8 +16,14 @@ import (
 	"github.com/vmware/govmomi/vim25/types"
 )
 
-// timeout value in seconds for vmware api requests
-const timeout = 30 * time.Second
+const (
+	// Number of minutes to wait for VM to be stopped
+	shutdownTimeout = 5 * time.Minute
+	// Vm poll interval in seconds
+	pollInterval = 5 * time.Second
+	// timeout value in seconds for vmware api requests
+	timeout = 30 * time.Second
+)
 
 // RichVmwareClient is responsible for retrieving VM data from the VMware API.
 type RichVmwareClient struct {
@@ -179,22 +185,63 @@ func (r RichVmwareClient) StartVM(moRef string) error {
 
 // StopVM stops the VM and waits for the vm to be stopped.
 func (r RichVmwareClient) StopVM(moRef string) error {
+	err := r.shutdownGuest(moRef)
+	if err != nil {
+		return err
+	}
+
+	// wait for the VM to shut down
+	c := make(chan bool, 1)
+	go func() {
+		for {
+			time.Sleep(pollInterval)
+			powerState, err := r.powerState(moRef)
+			if err != nil {
+				c <- false
+			}
+			if powerState == types.VirtualMachinePowerStatePoweredOff {
+				c <- true
+				break
+			}
+		}
+	}()
+
+	select {
+	case success := <-c:
+		if !success {
+			return fmt.Errorf("failed to gracefully shutdown vm %s", moRef)
+		}
+		return nil
+	case <-time.After(shutdownTimeout):
+		return fmt.Errorf("timed out trying to gracefully shutdown vm %s", moRef)
+	}
+}
+
+func (r RichVmwareClient) shutdownGuest(moRef string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	vm := r.getVMByMoRef(moRef)
+
 	powerState, err := vm.PowerState(ctx)
 	if err != nil {
 		return err
 	}
-	if powerState != types.VirtualMachinePowerStatePoweredOff {
-		task, err := vm.PowerOff(ctx)
-		if err != nil {
-			return err
-		}
-		return task.Wait(ctx)
+
+	if powerState == types.VirtualMachinePowerStatePoweredOff {
+		return nil
 	}
-	return nil
+
+	return vm.ShutdownGuest(ctx)
+}
+
+func (r RichVmwareClient) powerState(moRef string) (types.VirtualMachinePowerState, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	vm := r.getVMByMoRef(moRef)
+
+	return vm.PowerState(ctx)
 }
 
 // TestConnection checks the connectivity to the vCenter or ESXi host.
