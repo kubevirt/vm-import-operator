@@ -110,6 +110,34 @@ var _ = Describe("Finding a Template", func() {
 		Expect(template).ToNot(BeNil())
 		Expect(template.Labels[fmt.Sprintf(templates.TemplateWorkloadLabel, "desktop")]).To(Equal("true"))
 	})
+	It("should prefer a small template if one exists:", func() {
+		findTemplatesMock = func(name *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error) {
+			template := createTemplate(name, os, workload, flavor)
+			return createTemplatesList(template), nil
+		}
+
+		vm := &mo.VirtualMachine{}
+		template, err := templateFinder.FindTemplate(vm)
+		Expect(err).To(BeNil())
+		Expect(template).ToNot(BeNil())
+		Expect(template.Labels[fmt.Sprintf(templates.TemplateFlavorLabel, "small")]).To(Equal("true"))
+	})
+	It("should fall back to finding a medium template if one exists:", func() {
+		findTemplatesMock = func(name *string, os *string, workload *string, flavor *string) (*templatev1.TemplateList, error) {
+			if *flavor == "small" {
+				return createTemplatesList(), nil
+			} else {
+				template := createTemplate(name, os, workload, flavor)
+				return createTemplatesList(template), nil
+			}
+		}
+
+		vm := &mo.VirtualMachine{}
+		template, err := templateFinder.FindTemplate(vm)
+		Expect(err).To(BeNil())
+		Expect(template).ToNot(BeNil())
+		Expect(template.Labels[fmt.Sprintf(templates.TemplateFlavorLabel, "medium")]).To(Equal("true"))
+	})
 })
 
 func createTemplate(name *string, os *string, workload *string, flavor *string) *templatev1.Template {

@@ -10,15 +10,12 @@ import (
 	"github.com/vmware/govmomi/vim25/mo"
 )
 
-const (
-	// TemplateNamespace stores the default namespace for kubevirt templates
-	templateNamespace = "openshift"
-	defaultFlavor     = "medium"
-)
-
 var (
+	templateNamespace = "openshift"
 	serverWorkload  = "server"
 	desktopWorkload = "desktop"
+	smallFlavor     = "small"
+	mediumFlavor    = "medium"
 )
 
 // TemplateFinder attempts to find a template based on given parameters
@@ -41,33 +38,37 @@ func (f *TemplateFinder) FindTemplate(vm *mo.VirtualMachine) (*templatev1.Templa
 	if err != nil {
 		return nil, err
 	}
-	// We update metadata from the source vm so we default to medium flavor
-	namespace := templateNamespace
-	flavor := defaultFlavor
-	tmpls, err := f.templateProvider.Find(&namespace, &os, &serverWorkload, &flavor)
-	if err != nil {
-		return nil, err
-	}
 
-	// no server template was found, look for a desktop template instead.
-	if len(tmpls.Items) == 0 {
-		tmpls, err = f.templateProvider.Find(&namespace, &os, &desktopWorkload, &flavor)
-		if err != nil {
-			return nil, err
+	// look for a small template first, then look for a medium template
+	// if neither a small server nor desktop template can be found
+	var template *templatev1.Template
+
+loop:
+	for _, flavor := range []string{smallFlavor, mediumFlavor} {
+		for _, workload := range []string{serverWorkload, desktopWorkload} {
+			tmpls, err := f.templateProvider.Find(&templateNamespace, &os, &workload, &flavor)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(tmpls.Items) == 0 {
+				continue
+			} else {
+				// Take first which matches label selector
+				sort.Slice(tmpls.Items, func(i, j int) bool {
+					return tmpls.Items[j].CreationTimestamp.Before(&tmpls.Items[i].CreationTimestamp)
+				})
+				template = &tmpls.Items[0]
+				break loop
+			}
 		}
-		if len(tmpls.Items) == 0 {
-			return nil, fmt.Errorf("template not found for %s OS", os)
-		}
 	}
 
-	if len(tmpls.Items) > 1 {
-		sort.Slice(tmpls.Items, func(i, j int) bool {
-			return tmpls.Items[j].CreationTimestamp.Before(&tmpls.Items[i].CreationTimestamp)
-		})
+	if template == nil {
+		return nil, fmt.Errorf("template not found for %s OS", os)
 	}
 
-	// Take first which matches label selector
-	return &tmpls.Items[0], nil
+	return template, nil
 }
 
 // GetMetadata fetches OS and workload specific labels and annotations
@@ -81,6 +82,7 @@ func (f *TemplateFinder) GetMetadata(template *templatev1.Template, vm *mo.Virtu
 		key: template.GetAnnotations()[key],
 	}
 
+	// get workload label from the template
 	var workload *string
 	if _, ok := template.Labels[fmt.Sprintf(templates.TemplateWorkloadLabel, serverWorkload)]; ok {
 		workload = &serverWorkload
@@ -88,9 +90,15 @@ func (f *TemplateFinder) GetMetadata(template *templatev1.Template, vm *mo.Virtu
 		workload = &desktopWorkload
 	}
 
-	flavor := defaultFlavor
-	// get workload label from the template
-	labels := templates.OSLabelBuilder(&os, workload, &flavor)
+	// get flavor label from the template
+	var flavor *string
+	if _, ok := template.Labels[fmt.Sprintf(templates.TemplateFlavorLabel, smallFlavor)]; ok {
+		flavor = &smallFlavor
+	} else if _, ok := template.Labels[fmt.Sprintf(templates.TemplateFlavorLabel, mediumFlavor)]; ok {
+		flavor = &mediumFlavor
+	}
+
+	labels := templates.OSLabelBuilder(&os, workload, flavor)
 
 	return labels, annotations, nil
 }
