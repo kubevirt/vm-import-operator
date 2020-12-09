@@ -228,7 +228,7 @@ func (t *basicVmImportTest) validateTargetConfiguration(vmName string) *v1.Virtu
 	Expect(disks).To(HaveLen(1))
 	disk0 := disks[0]
 	Expect(disk0.Disk.Bus).To(BeEquivalentTo("virtio"))
-	Expect(disk0.Name).To(BeEquivalentTo("dv-target-vm-disk-202-0"))
+	Expect(disk0.Name).To(BeEquivalentTo("dv-f7c371d6-2003-5a48-9859-3bc9a8b08908-204"))
 
 	By("having correct volumes")
 	Expect(spec.Volumes).To(HaveLen(1))

@@ -103,10 +103,10 @@ func (t *networkedVMImportTest) validateTargetConfiguration(vmName string) *v1.V
 	Expect(disks).To(HaveLen(2))
 	disk0 := disks[0]
 	Expect(disk0.Disk.Bus).To(BeEquivalentTo("virtio"))
-	Expect(disk0.Name).To(BeEquivalentTo("dv-target-vm-disk-202-0"))
+	Expect(disk0.Name).To(BeEquivalentTo("dv-c39a8d6c-ea37-5c91-8979-334e7e07cab5-203"))
 	disk1 := disks[1]
 	Expect(disk1.Disk.Bus).To(BeEquivalentTo("virtio"))
-	Expect(disk1.Name).To(BeEquivalentTo("dv-target-vm-disk-202-1"))
+	Expect(disk1.Name).To(BeEquivalentTo("dv-c39a8d6c-ea37-5c91-8979-334e7e07cab5-205"))
 
 	By("having correct volumes")
 	Expect(spec.Volumes).To(HaveLen(2))

@@ -64,6 +64,7 @@ type disk struct {
 	datastoreName   string
 	id              string
 	name            string
+	key             int32
 }
 
 // nic is an abstraction of a VMWare VirtualEthernetCard
@@ -214,6 +215,7 @@ func (r *VmwareMapper) buildDisks() error {
 				datastoreMoRef:  datastoreMoRef,
 				datastoreName:   datastoreName,
 				id:              diskId,
+				key:             virtualDisk.Key,
 				name:            virtualDisk.DeviceInfo.GetDescription().Label,
 			}
 
@@ -289,7 +291,7 @@ func (r *VmwareMapper) getVolumeModeForDisk(mapping *v1beta1.StorageResourceMapp
 }
 
 // MapDataVolumes maps the VMware disks to CDI DataVolumes
-func (r *VmwareMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.DataVolume, error) {
+func (r *VmwareMapper) MapDataVolumes(_ *string) (map[string]cdiv1.DataVolume, error) {
 	err := r.buildDisks()
 	if err != nil {
 		return nil, err
@@ -298,7 +300,7 @@ func (r *VmwareMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.Da
 	dvs := make(map[string]cdiv1.DataVolume)
 
 	for _, disk := range *r.disks {
-		dvName := buildDataVolumeName(*targetVMName, disk.name)
+		dvName := fmt.Sprintf("%s-%d", r.vmProperties.Config.Uuid, disk.key)
 
 		mapping := r.getMappingForDisk(disk)
 
@@ -648,11 +650,6 @@ func (r *VmwareMapper) mapResourceReservations() (kubevirtv1.ResourceRequirement
 		corev1.ResourceMemory: resQuantity,
 	}
 	return reqs, nil
-}
-
-func buildDataVolumeName(targetVMName string, diskName string) string {
-	dvName, _ := utils.NormalizeName(targetVMName + "-" + diskName)
-	return dvName
 }
 
 func getCapacityForVirtualDisk(disk *types.VirtualDisk) (resource.Quantity, error) {
