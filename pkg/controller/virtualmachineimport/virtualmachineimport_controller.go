@@ -1365,6 +1365,23 @@ func validateName(instance *v2vv1.VirtualMachineImport, sourceName string) error
 	return nil
 }
 
+func (r *ReconcileVirtualMachineImport) validateUnique(instance *v2vv1.VirtualMachineImport, sourceName string) (bool, error) {
+	var name string
+	if instance.Spec.TargetVMName != nil {
+		name = *instance.Spec.TargetVMName
+	} else {
+		name = sourceName
+	}
+
+	namespacedName := types.NamespacedName{Namespace: instance.Namespace, Name: name}
+	err := r.client.Get(context.TODO(), namespacedName, &kubevirtv1.VirtualMachine{})
+	if err != nil && k8serrors.IsNotFound(err) {
+		return true, nil
+	}
+
+	return false, err
+}
+
 func (r *ReconcileVirtualMachineImport) validate(instance *v2vv1.VirtualMachineImport, provider provider.Provider) (bool, error) {
 	logger := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
 	if shouldInvoke(&instance.Status) {
@@ -1378,6 +1395,16 @@ func (r *ReconcileVirtualMachineImport) validate(instance *v2vv1.VirtualMachineI
 		if err != nil {
 			invalidNameCond := conditions.NewCondition(v2vv1.Valid, string(v2vv1.InvalidTargetVMName), err.Error(), corev1.ConditionFalse)
 			err := r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, invalidNameCond)
+			return false, err
+		}
+
+		unique, err := r.validateUnique(instance, vmName)
+		if err != nil {
+			return false, err
+		}
+		if !unique {
+			duplicateNameCond := conditions.NewCondition(v2vv1.Valid, string(v2vv1.DuplicateTargetVMName), "Virtual machine already exists in target namespace", corev1.ConditionFalse)
+			err := r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, duplicateNameCond)
 			return false, err
 		}
 
