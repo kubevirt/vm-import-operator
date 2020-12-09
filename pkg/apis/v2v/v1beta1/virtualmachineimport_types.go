@@ -194,6 +194,9 @@ const (
 
 	// InvalidTargetVMName represents the target VM name being an invalid k8s name
 	InvalidTargetVMName ValidConditionReason = "InvalidTargetVMName"
+
+	// DuplicateTargetVMName
+	DuplicateTargetVMName ValidConditionReason = "DuplicateTargetVMName"
 )
 
 // MappingRulesVerifiedReason defines the reasons for the MappingRulesVerified condition of VM import

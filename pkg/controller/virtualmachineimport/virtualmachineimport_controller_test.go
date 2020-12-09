@@ -324,6 +324,39 @@ var _ = Describe("Reconcile steps", func() {
 		})
 	})
 
+	Describe("validate uniqueness", func() {
+		BeforeEach(func() {
+			instance.Spec.Source.Ovirt = &v2vv1.VirtualMachineImportOvirtSourceSpec{}
+			instance.Name = "test"
+			instance.Namespace = "test"
+			mock = &mockProvider{}
+		})
+
+		It("should fail if the target VM already exists in the namespace", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *kubevirtv1.VirtualMachine:
+					obj.(*kubevirtv1.VirtualMachine).Spec = kubevirtv1.VirtualMachineSpec{}
+				}
+				return nil
+			}
+
+			unique, err := reconciler.validateUniqueness(instance, "vm-exists")
+			Expect(unique).To(BeFalse())
+			Expect(err).To(BeNil())
+		})
+
+		It("should succeed if the target VM doesn't already exists in the namespace", func() {
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				return errors.NewNotFound(schema.GroupResource{}, "")
+			}
+
+			unique, err := reconciler.validateUniqueness(instance, "not-found")
+			Expect(unique).To(BeTrue())
+			Expect(err).To(BeNil())
+		})
+	})
+
 	Describe("validate step", func() {
 		BeforeEach(func() {
 			instance.Spec.Source.Ovirt = &v2vv1.VirtualMachineImportOvirtSourceSpec{}
@@ -333,6 +366,21 @@ var _ = Describe("Reconcile steps", func() {
 			targetVMName := "valid-target-name"
 			instance.Spec.TargetVMName = &targetVMName
 			mock = &mockProvider{}
+
+			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
+				switch obj.(type) {
+				case *v2vv1.VirtualMachineImport:
+					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{}
+				case *v2vv1.ResourceMapping:
+					obj.(*v2vv1.ResourceMapping).Spec = v2vv1.ResourceMappingSpec{}
+				case *corev1.Secret:
+					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
+				case *kubevirtv1.VirtualMachine:
+					return errors.NewNotFound(schema.GroupResource{}, "")
+
+				}
+				return nil
+			}
 		})
 
 		It("should succeed to validate: ", func() {
@@ -360,8 +408,10 @@ var _ = Describe("Reconcile steps", func() {
 					return fmt.Errorf("Let's make it fail if it tries to validate")
 				case *v2vv1.ResourceMapping:
 					obj.(*v2vv1.ResourceMapping).Spec = v2vv1.ResourceMappingSpec{}
-				default:
+				case *corev1.Secret:
 					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
+				case *kubevirtv1.VirtualMachine:
+					return errors.NewNotFound(schema.GroupResource{}, "")
 				}
 				return nil
 			}
@@ -390,8 +440,10 @@ var _ = Describe("Reconcile steps", func() {
 					return fmt.Errorf("Not found")
 				case *v2vv1.ResourceMapping:
 					obj.(*v2vv1.ResourceMapping).Spec = v2vv1.ResourceMappingSpec{}
-				default:
+				case *corev1.Secret:
 					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
+				case *kubevirtv1.VirtualMachine:
+					return errors.NewNotFound(schema.GroupResource{}, "")
 				}
 				return nil
 			}
@@ -1467,6 +1519,8 @@ var _ = Describe("Reconcile steps", func() {
 					}
 				case *corev1.Secret:
 					obj.(*corev1.Secret).Data = map[string][]byte{"ovirt": getSecret()}
+				case *kubevirtv1.VirtualMachine:
+					return errors.NewNotFound(schema.GroupResource{}, "")
 				}
 				return nil
 			}

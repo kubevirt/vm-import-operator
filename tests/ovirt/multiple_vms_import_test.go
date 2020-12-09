@@ -100,7 +100,7 @@ var _ = Describe("Multiple VMs import ", func() {
 			By("Importing second VM")
 			created, err := test.triggerVMImport(vmID, namespace, vmName, test.secret.Name)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(created).To(BeSuccessful(f))
+			Expect(created).To(HaveValidationFailure(f, string(v2vv1.DuplicateTargetVMName)))
 
 			By("Having only one VM imported in the end")
 			vms := &v1.VirtualMachineList{}
