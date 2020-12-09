@@ -266,12 +266,72 @@ var _ = Describe("Reconcile steps", func() {
 
 	})
 
+	Describe("validate name", func() {
+		It("should fail with a target VM name that is provided but empty: ", func() {
+			emptyName := ""
+			instance.Spec.TargetVMName = &emptyName
+			err := validateName(instance, "ignored")
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail with a source VM name that is empty if no target VM is provided: ", func() {
+			emptyName := ""
+			instance.Spec.TargetVMName = nil
+			err := validateName(instance, emptyName)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail with a target VM name that contains invalid characters: ", func() {
+			invalidName := "#$%^&*()"
+			instance.Spec.TargetVMName = &invalidName
+			err := validateName(instance, "ignored")
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail with a source VM name that contains invalid characters: ", func() {
+			invalidName := "#$%^&*()"
+			instance.Spec.TargetVMName = nil
+			err := validateName(instance, invalidName)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail with a target VM name that is longer than 63 characters: ", func() {
+			longName := "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijkl"
+			instance.Spec.TargetVMName = &longName
+			err := validateName(instance, "ignored")
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should fail with a source VM name that is longer than 63 characters: ", func() {
+			longName := "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijkl"
+			instance.Spec.TargetVMName = nil
+			err := validateName(instance, longName)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should succeed with a target VM name that is 63 characters long: ", func() {
+			name := "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"
+			instance.Spec.TargetVMName = &name
+			err := validateName(instance, "ignored")
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should succeed with a source VM name that is 63 characters long: ", func() {
+			name := "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk"
+			instance.Spec.TargetVMName = nil
+			err := validateName(instance, name)
+			Expect(err).ToNot(HaveOccurred())
+		})
+	})
+
 	Describe("validate step", func() {
 		BeforeEach(func() {
 			instance.Spec.Source.Ovirt = &v2vv1.VirtualMachineImportOvirtSourceSpec{}
 			instance.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{}
 			instance.Name = "test"
 			instance.Namespace = "test"
+			targetVMName := "valid-target-name"
+			instance.Spec.TargetVMName = &targetVMName
 			mock = &mockProvider{}
 		})
 

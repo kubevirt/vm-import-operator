@@ -191,6 +191,9 @@ const (
 
 	// ValidationReportedWarnings represents the existence of warnings related to resource mapping validation
 	ValidationReportedWarnings ValidConditionReason = "ValidationReportedWarnings"
+
+	// InvalidTargetVMName represents the target VM name being an invalid k8s name
+	InvalidTargetVMName ValidConditionReason = "InvalidTargetVMName"
 )
 
 // MappingRulesVerifiedReason defines the reasons for the MappingRulesVerified condition of VM import

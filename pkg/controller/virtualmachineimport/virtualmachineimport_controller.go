@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 	"os"
 	"strconv"
 	"strings"
@@ -1341,9 +1342,45 @@ func (r *ReconcileVirtualMachineImport) fetchVM(instance *v2vv1.VirtualMachineIm
 	return nil
 }
 
+func validateName(instance *v2vv1.VirtualMachineImport, sourceName string) error {
+	var message string
+	var name string
+	if instance.Spec.TargetVMName != nil {
+		message = "`targetVmName` is not a valid k8s name: %v"
+		name = *instance.Spec.TargetVMName
+	} else {
+		message = "Source VM name is not a valid k8s name: %v"
+		name = sourceName
+	}
+
+	errs := k8svalidation.IsQualifiedName(name)
+	if len(errs) != 0 {
+		var errString string
+		for _, e := range errs {
+			errString = utils.WithMessage(errString, e)
+		}
+		return fmt.Errorf(message, errString)
+	}
+
+	return nil
+}
+
 func (r *ReconcileVirtualMachineImport) validate(instance *v2vv1.VirtualMachineImport, provider provider.Provider) (bool, error) {
 	logger := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
 	if shouldInvoke(&instance.Status) {
+
+		vmName, err := provider.GetVMName()
+		if err != nil {
+			return false, err
+		}
+
+		err = validateName(instance, vmName)
+		if err != nil {
+			invalidNameCond := conditions.NewCondition(v2vv1.Valid, string(v2vv1.InvalidTargetVMName), err.Error(), corev1.ConditionFalse)
+			err := r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, invalidNameCond)
+			return false, err
+		}
+
 		conditions, err := provider.Validate()
 		if err != nil {
 			return true, err
@@ -1354,14 +1391,10 @@ func (r *ReconcileVirtualMachineImport) validate(instance *v2vv1.VirtualMachineI
 		}
 		if valid, message := shouldFailWith(conditions); !valid {
 			logger.Info("Import blocked. " + message)
-
 			// Emit event vm import blocked:
-			if vmName, err := provider.GetVMName(); err == nil {
-				// This potentially flood events service, consider checking if event already occurred and don't emit it if it did,
-				// if any performance implication occur.
-				r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportBlocked, "Virtual Machine %s/%s import blocked: %s", instance.Namespace, vmName, message)
-			}
-
+			// This potentially flood events service, consider checking if event already occurred and don't emit it if it did,
+			// if any performance implication occur.
+			r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportBlocked, "Virtual Machine %s/%s import blocked: %s", instance.Namespace, vmName, message)
 			return false, nil
 		}
 
