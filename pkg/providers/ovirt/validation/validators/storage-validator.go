@@ -2,13 +2,11 @@ package validators
 
 import (
 	"fmt"
+	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
 
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 )
-
-// DiskInterfaceModelMapping defines mapping of disk interface models between oVirt and kubevirt domains
-var DiskInterfaceModelMapping = map[string]string{"sata": "sata", "virtio_scsi": "virtio", "virtio": "virtio"}
 
 // diskInterfaceOwner defines means of getting interface of a storage entity
 type diskInterfaceOwner interface {
@@ -124,10 +122,10 @@ func isValidDiskInterface(disk *ovirtsdk.Disk, diskID string) (ValidationFailure
 
 func isValidStorageInterface(diskAttachment diskInterfaceOwner, ownerID string, checkID CheckID) (ValidationFailure, bool) {
 	if iface, ok := diskAttachment.Interface(); ok {
-		if _, found := DiskInterfaceModelMapping[string(iface)]; !found {
+		if _, found := mapper.DiskInterfaceModelMapping[string(iface)]; !found {
 			return ValidationFailure{
 				ID:      checkID,
-				Message: fmt.Sprintf("%s %s uses interface %v. Allowed values: %v", checkID, ownerID, iface, utils.GetMapKeys(DiskInterfaceModelMapping)),
+				Message: fmt.Sprintf("%s %s uses interface %v. Allowed values: %v", checkID, ownerID, iface, utils.GetMapKeys(mapper.DiskInterfaceModelMapping)),
 			}, false
 		}
 	}
