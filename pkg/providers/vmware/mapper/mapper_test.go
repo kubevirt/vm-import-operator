@@ -41,10 +41,10 @@ var (
 
 	// disks
 	expectedNumDisks  = 2
-	diskId1           = "disk-202-0"
-	diskId2           = "disk-202-1"
-	expectedDiskName1 = "basic-vm-disk-202-0"
-	expectedDiskName2 = "basic-vm-disk-202-1"
+	diskName1         = "disk-202-0"
+	diskName2         = "disk-202-1"
+	expectedDiskName1 = "c39a8d6c-ea37-5c91-8979-334e7e07cab5-203"
+	expectedDiskName2 = "c39a8d6c-ea37-5c91-8979-334e7e07cab5-205"
 
 	volumeModeBlock      = v1.PersistentVolumeBlock
 	volumeModeFilesystem = v1.PersistentVolumeFilesystem
@@ -293,7 +293,7 @@ var _ = Describe("Test mapping disks", func() {
 		mappings.DiskMappings = &[]v1beta1.StorageResourceMappingItem{
 			{
 				Source: v1beta1.Source{
-					Name: &diskId1,
+					Name: &diskName1,
 				},
 				Target: v1beta1.ObjectIdentifier{
 					Name: storageClass,
@@ -304,7 +304,7 @@ var _ = Describe("Test mapping disks", func() {
 			{
 				// using defaults
 				Source: v1beta1.Source{
-					Name: &diskId2,
+					Name: &diskName2,
 				},
 			},
 		}
