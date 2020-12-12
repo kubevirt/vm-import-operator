@@ -2,6 +2,7 @@ package mapper_test
 
 import (
 	"fmt"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 
@@ -41,7 +42,7 @@ var _ = Describe("Test mapping virtual machine bios type", func() {
 	})
 
 	table.DescribeTable("to smm feature ", func(biostype ovirtsdk.BiosType, smm *bool) {
-		vm := createVMGeneric(ovirtsdk.VMAFFINITY_USER_MIGRATABLE, true, biostype)
+		vm := createVMGeneric(ovirtsdk.VMAFFINITY_USER_MIGRATABLE, true, biostype, ovirtsdk.DISKINTERFACE_VIRTIO)
 
 		mappings := createMappings()
 		credentials := mapper.DataVolumeCredentials{
@@ -355,7 +356,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 var _ = Describe("Test pvc accessmodes", func() {
 	table.DescribeTable("should be : ", func(affinity ovirtsdk.VmAffinity, readonly bool, accessMode corev1.PersistentVolumeAccessMode) {
-		vm := createVMGeneric(affinity, readonly, ovirtsdk.BIOSTYPE_Q35_SEA_BIOS)
+		vm := createVMGeneric(affinity, readonly, ovirtsdk.BIOSTYPE_Q35_SEA_BIOS, ovirtsdk.DISKINTERFACE_VIRTIO)
 
 		mappings := createMappings()
 		credentials := mapper.DataVolumeCredentials{
@@ -526,13 +527,48 @@ var _ = Describe("Test mapping disks", func() {
 		Expect(dvs[expectedDVName].Spec.PVC.StorageClassName).To(BeNil())
 	})
 
+	table.DescribeTable("should map disk bus type: ", func(diskInterface ovirtsdk.DiskInterface) {
+		vm := createVMGeneric(ovirtsdk.VMAFFINITY_MIGRATABLE, false, ovirtsdk.BIOSTYPE_Q35_SEA_BIOS, diskInterface)
+		vmSpec := &kubevirtv1.VirtualMachine{
+			ObjectMeta: v1.ObjectMeta{
+				Name: targetVMName,
+			},
+		}
+		vmSpec.Spec.Template = &kubevirtv1.VirtualMachineInstanceTemplateSpec{}
+
+		diskID := "disk-ID"
+		targetStorageClass := "storageclassname"
+		disks := []v2vv1.StorageResourceMappingItem{
+			{
+				Source: v2vv1.Source{
+					ID: &diskID,
+				},
+				Target: v2vv1.ObjectIdentifier{
+					Name: targetStorageClass,
+				},
+			},
+		}
+		mappings := v2vv1.OvirtMappings{
+			DiskMappings:    &disks,
+			StorageMappings: &[]v2vv1.StorageResourceMappingItem{},
+		}
+
+		mapper_ := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
+		dvs, _ := mapper_.MapDataVolumes(&targetVMName)
+		mapper_.MapDisk(vmSpec, dvs[expectedDVName])
+		Expect(vmSpec.Spec.Template.Spec.Domain.Devices.Disks[0].Disk.Bus).To(Equal(mapper.DiskInterfaceModelMapping[string(diskInterface)]))
+	},
+		table.Entry("virtio to virtio", ovirtsdk.DISKINTERFACE_VIRTIO),
+		table.Entry("sata to sata", ovirtsdk.DISKINTERFACE_SATA),
+		table.Entry("virtio_scsi to scsi", ovirtsdk.DISKINTERFACE_VIRTIO_SCSI),
+	)
 })
 
 func createVM() *ovirtsdk.Vm {
-	return createVMGeneric(ovirtsdk.VMAFFINITY_MIGRATABLE, false, ovirtsdk.BIOSTYPE_Q35_SEA_BIOS)
+	return createVMGeneric(ovirtsdk.VMAFFINITY_MIGRATABLE, false, ovirtsdk.BIOSTYPE_Q35_SEA_BIOS, ovirtsdk.DISKINTERFACE_VIRTIO)
 }
 
-func createVMGeneric(affinity ovirtsdk.VmAffinity, readonly bool, biostype ovirtsdk.BiosType) *ovirtsdk.Vm {
+func createVMGeneric(affinity ovirtsdk.VmAffinity, readonly bool, biostype ovirtsdk.BiosType, interfaceType ovirtsdk.DiskInterface) *ovirtsdk.Vm {
 	return ovirtsdk.NewVmBuilder().
 		Name("myvm").
 		Bios(
@@ -612,6 +648,7 @@ func createVMGeneric(affinity ovirtsdk.VmAffinity, readonly bool, biostype ovirt
 			ovirtsdk.NewDiskAttachmentBuilder().
 				Id("123").
 				ReadOnly(readonly).
+				Interface(interfaceType).
 				Disk(
 					ovirtsdk.NewDiskBuilder().
 						Id("disk-ID").

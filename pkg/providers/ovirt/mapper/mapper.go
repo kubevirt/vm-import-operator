@@ -46,6 +46,9 @@ var (
 	DefaultVolumeMode = corev1.PersistentVolumeFilesystem
 )
 
+// DiskInterfaceModelMapping defines mapping of disk interface models between oVirt and kubevirt domains
+var DiskInterfaceModelMapping = map[string]string{"sata": "sata", "virtio_scsi": "scsi", "virtio": "virtio"}
+
 // BiosTypeMapping defines mapping of BIOS types between oVirt and kubevirt domains
 var BiosTypeMapping = map[string]*kubevirtv1.Bootloader{
 	"q35_sea_bios":    {BIOS: &kubevirtv1.BIOS{}},
@@ -211,7 +214,7 @@ func (o *OvirtMapper) MapDisk(vmSpec *kubevirtv1.VirtualMachine, dv cdiv1.DataVo
 		Name: name,
 		DiskDevice: kubevirtv1.DiskDevice{
 			Disk: &kubevirtv1.DiskTarget{
-				Bus: o.mapDiskInterface(iface),
+				Bus: DiskInterfaceModelMapping[string(iface)],
 			},
 		},
 	}
@@ -222,13 +225,6 @@ func (o *OvirtMapper) MapDisk(vmSpec *kubevirtv1.VirtualMachine, dv cdiv1.DataVo
 
 	vmSpec.Spec.Template.Spec.Volumes = append(vmSpec.Spec.Template.Spec.Volumes, volume)
 	vmSpec.Spec.Template.Spec.Domain.Devices.Disks = append(vmSpec.Spec.Template.Spec.Domain.Devices.Disks, disk)
-}
-
-func (o *OvirtMapper) mapDiskInterface(iface ovirtsdk.DiskInterface) string {
-	if iface == ovirtsdk.DISKINTERFACE_VIRTIO_SCSI {
-		return string(ovirtsdk.DISKINTERFACE_VIRTIO)
-	}
-	return string(iface)
 }
 
 // If the mapping specifies the access mode return that, otherwise determine the access mode
