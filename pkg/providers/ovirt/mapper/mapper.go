@@ -646,6 +646,13 @@ func (o *OvirtMapper) mapResourceRequirements(dedicatedCPUPlacement bool) (kubev
 	reqs := kubevirtv1.ResourceRequirements{}
 
 	// Requests
+	memoryPolicy, _ := o.vm.MemoryPolicy()
+	maxMemory, _ := memoryPolicy.Max()
+	maxMemoryConverted, err := utils.FormatBytes(maxMemory)
+	if err != nil {
+		return reqs, err
+	}
+	maxMemoryQuantity, _ := resource.ParseQuantity(maxMemoryConverted)
 	requestedMemory := maxMemoryQuantity
 	if !dedicatedCPUPlacement {
 		ovirtVMMemory, _ := o.vm.Memory()
