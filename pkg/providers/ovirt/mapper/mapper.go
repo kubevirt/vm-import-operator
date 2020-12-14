@@ -645,18 +645,6 @@ func (o *OvirtMapper) mapHugePages() *kubevirtv1.Hugepages {
 func (o *OvirtMapper) mapResourceRequirements(dedicatedCPUPlacement bool) (kubevirtv1.ResourceRequirements, error) {
 	reqs := kubevirtv1.ResourceRequirements{}
 
-	// Limits
-	memoryPolicy, _ := o.vm.MemoryPolicy()
-	maxMemory, _ := memoryPolicy.Max()
-	maxMemoryConverted, err := utils.FormatBytes(maxMemory)
-	if err != nil {
-		return reqs, err
-	}
-	maxMemoryQuantity, _ := resource.ParseQuantity(maxMemoryConverted)
-	reqs.Limits = map[corev1.ResourceName]resource.Quantity{
-		corev1.ResourceMemory: maxMemoryQuantity,
-	}
-
 	// Requests
 	requestedMemory := maxMemoryQuantity
 	if !dedicatedCPUPlacement {
