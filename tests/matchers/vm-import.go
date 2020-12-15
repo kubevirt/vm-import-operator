@@ -81,6 +81,20 @@ func BeProcessing(testFramework *framework.Framework) types.GomegaMatcher {
 	return &matcher
 }
 
+// BeProcessing creates the matcher checking whether Virtual Machine Import is currently processing
+func BeProcessingWithReason(testFramework *framework.Framework, reason string) types.GomegaMatcher {
+	matcher := hasConditionInStatus{}
+	matcher.timeout = 5 * time.Minute
+	matcher.pollInterval = 2 * time.Second
+	matcher.testFramework = testFramework
+
+	matcher.conditionType = v2vv1.Processing
+	matcher.status = corev1.ConditionTrue
+	matcher.reason = reason
+	return &matcher
+}
+
+
 // BeSuccessful creates the matcher checking whether Virtual Machine Import is successful
 func BeSuccessful(testFramework *framework.Framework) types.GomegaMatcher {
 	matcher := hasConditionInStatus{}
