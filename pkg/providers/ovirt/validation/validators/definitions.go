@@ -127,6 +127,8 @@ const (
 	NetworkConfig = CheckID("network.config")
 	// NetworkMultiplePodTargetsID defines an ID of a check verifying that there is not more than one network mapped to a pod network
 	NetworkMultiplePodTargetsID = CheckID("network.pod.multiple")
+	// NetworkSourceDuplicateID defines an ID of a check verifying that there are no duplicated keys in source networks
+	NetworkSourceDuplicateID = CheckID("network.source.duplicate")
 	// StorageTargetID defines an ID of a check verifying existence of target storage class
 	StorageTargetID = CheckID("storage.target")
 	// DiskTargetID defines an ID of a check verifying existence of target storage class

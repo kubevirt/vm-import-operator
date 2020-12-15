@@ -44,6 +44,30 @@ func (v *NetworkMappingValidator) ValidateNetworkMapping(nics []*ovirtsdk.Nic, m
 		return failures
 	}
 
+	// Validate non-duplicates in source networks mapping for both Name and ID
+	usedNames := make(map[string]bool)
+	usedIDs := make(map[string]bool)
+	for _, mapp := range *mapping {
+		if mapp.Source.ID != nil {
+			if val, _ := usedIDs[*mapp.Source.ID]; val {
+				failures = append(failures, ValidationFailure{
+					ID:      NetworkSourceDuplicateID,
+					Message: fmt.Sprintf("There are duplicate source network entries for ID: %v ", *mapp.Source.Name),
+				})
+			}
+			usedIDs[*mapp.Source.ID] = true
+		}
+		if mapp.Source.Name != nil {
+			if val, _ := usedNames[*mapp.Source.Name]; val {
+				failures = append(failures, ValidationFailure{
+					ID:      NetworkSourceDuplicateID,
+					Message: fmt.Sprintf("There are duplicate source network entries for name: %v ", *mapp.Source.Name),
+				})
+			}
+			usedNames[*mapp.Source.Name] = true
+		}
+	}
+
 	// Map source id and name to ResourceMappingItem
 	mapByID, mapByName := utils.IndexNetworkByIDAndName(mapping)
 

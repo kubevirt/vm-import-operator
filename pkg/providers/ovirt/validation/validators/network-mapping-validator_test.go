@@ -373,6 +373,37 @@ var _ = Describe("Validating Network mapping", func() {
 
 		Expect(failures).To(BeEmpty())
 	})
+	It("should reject duplicate mapping for single source nic", func() {
+		nics := []*ovirtsdk.Nic{
+			createNic(&networkName, &vnicProfileName, &vnicProfileID, false),
+		}
+
+		mapping := []v2vv1.NetworkResourceMappingItem{
+			{
+				Source: v2vv1.Source{
+					Name: &srcNetMappingName,
+				},
+				Target: v2vv1.ObjectIdentifier{
+					Name: "pod",
+				},
+				Type: &podType,
+			},
+			{
+				Source: v2vv1.Source{
+					Name: &srcNetMappingName,
+				},
+				Target: v2vv1.ObjectIdentifier{
+					Name: "ovn-kubernetes1",
+				},
+				Type: &multusType,
+			},
+		}
+
+		failures := validator.ValidateNetworkMapping(nics, &mapping, namespace)
+
+		Expect(failures).To(HaveLen(1))
+		Expect(failures[0].ID).To(Equal(validators.NetworkSourceDuplicateID))
+	})
 	It("should reject mapping of two nics of the same vnic profile to a pod network", func() {
 		nics := []*ovirtsdk.Nic{
 			createNic(&networkName, &vnicProfileName, &vnicProfileID, false),
