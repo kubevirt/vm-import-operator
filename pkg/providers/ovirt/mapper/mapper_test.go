@@ -122,7 +122,6 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		vmSpecCPU := vmSpec.Spec.Template.Spec.Domain.CPU
 
 		Expect(vmSpecCPU.DedicatedCPUPlacement).To(BeTrue())
-		Expect(vmSpec.Spec.Template.Spec.Domain.Resources.Requests.Memory().Value()).To(BeEquivalentTo(vmSpec.Spec.Template.Spec.Domain.Resources.Limits.Memory().Value()))
 		Expect(vmSpec.Spec.Template.Spec.Domain.Resources.Requests.Memory().Value()).To(BeEquivalentTo(maxMemoryGI))
 	})
 
@@ -156,11 +155,6 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		hugePageSize := vmSpec.Spec.Template.Spec.Domain.Memory.Hugepages.PageSize
 		mappedHugePageSize := vm.MustCustomProperties().Slice()[0].MustValue()
 		Expect(hugePageSize).To(Equal(fmt.Sprintf("%sMi", mappedHugePageSize)))
-
-		// max memory
-		memLimit, _ := vmSpec.Spec.Template.Spec.Domain.Resources.Limits.Memory().AsInt64()
-		memMax := vm.MustMemoryPolicy().MustMax()
-		Expect(memLimit).To(Equal(memMax))
 	})
 
 	It("should map graphics consoles for non-windows OS", func() {
