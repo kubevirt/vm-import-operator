@@ -25,7 +25,7 @@ function install_kubevirt {
 
 # Install golang to run generate manifests
 function ensure_golang {
-    GOVERSION='go1.14.2.linux-amd64.tar.gz'
+    GOVERSION='go1.14.12.linux-amd64.tar.gz'
     if [[ "$(go version 2>&1)" =~ "not found" ]]; then
         wget -q https://dl.google.com/go/${GOVERSION}
         tar -C /usr/local -xzf ${GOVERSION}
