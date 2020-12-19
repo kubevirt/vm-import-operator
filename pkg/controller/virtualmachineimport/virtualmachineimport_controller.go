@@ -328,9 +328,12 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		return reconcile.Result{RequeueAfter: requeueAfterValidationFailureTime}, nil
 	}
 
-	// Stop the VM
-	if err = provider.StopVM(instance, r.client); err != nil {
-		return reconcile.Result{}, err
+	// don't stop the VM during a warm import unless it's time to finalize
+	if !shouldWarmImport(provider, instance) || shouldFinalizeWarmImport(instance) {
+		// Stop the VM
+		if err = provider.StopVM(instance, r.client); err != nil {
+			return reconcile.Result{}, err
+		}
 	}
 
 	// Create mapper:
@@ -351,9 +354,17 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	if shouldWarmImport(provider, instance) {
-		requeueAfter, err := r.warmImport(provider, instance, mapper, vmName, reqLogger)
-		return reconcile.Result{RequeueAfter: requeueAfter}, err
+		if shouldFinalizeWarmImport(instance) {
+			err = r.setupNextStage(provider, instance, mapper, vmName, true)
+			if err != nil {
+				return reconcile.Result{RequeueAfter: FastReQ}, err
+			}
+		} else {
+			requeueAfter, err := r.warmImport(provider, instance, mapper, vmName, reqLogger)
+			return reconcile.Result{RequeueAfter: requeueAfter}, err
+		}
 	}
+
 
 	if shouldImportDisks(instance) {
 		done, err := r.importDisks(provider, instance, mapper, vmName)
@@ -550,12 +561,6 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 				}
 			}
 		} else if err == nil {
-			if instance.Spec.Warm {
-				err = r.setFinalCheckpoint(foundDv)
-				if err != nil {
-					return false, err
-				}
-			}
 			instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 			// Set dataVolume as done, if it's in Succeeded state:
 			if foundDv.Status.Phase == cdiv1.Succeeded {

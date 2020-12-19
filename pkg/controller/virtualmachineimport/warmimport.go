@@ -18,7 +18,11 @@ import (
 )
 
 func shouldWarmImport(provider provider.Provider, instance *v2vv1.VirtualMachineImport) bool {
-	return provider.SupportsWarmMigration() && instance.Spec.Warm && (instance.Spec.FinalizeDate == nil || instance.Spec.FinalizeDate.After(time.Now()))
+	return provider.SupportsWarmMigration() && instance.Spec.Warm
+}
+
+func shouldFinalizeWarmImport(instance *v2vv1.VirtualMachineImport) bool {
+	return instance.Spec.Warm && instance.Spec.FinalizeDate != nil && !instance.Spec.FinalizeDate.After(time.Now())
 }
 
 func (r *ReconcileVirtualMachineImport) warmImport(provider provider.Provider, instance *v2vv1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName, log logr.Logger) (time.Duration, error) {
@@ -71,7 +75,7 @@ func (r *ReconcileVirtualMachineImport) warmImport(provider provider.Provider, i
 		return SlowReQ, err
 	}
 
-	err = r.setupNextStage(provider, instance, mapper, vmName)
+	err = r.setupNextStage(provider, instance, mapper, vmName, false)
 	if err != nil {
 		return FastReQ, err
 	}
@@ -177,12 +181,8 @@ func (r *ReconcileVirtualMachineImport) isStageComplete(instance *v2vv1.VirtualM
 	return disksDoneStage == len(dvs), nil
 }
 
-func (r *ReconcileVirtualMachineImport) setupNextStage(provider provider.Provider, instance *v2vv1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName) error {
-	snapshotRef, err := provider.CreateVMSnapshot()
-	if err != nil {
-		_ = r.incrementWarmImportFailures(instance)
-		return err
-	}
+func (r *ReconcileVirtualMachineImport) setupNextStage(provider provider.Provider, instance *v2vv1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName, final bool) error {
+	var snapshotRef string
 
 	dvs, err := mapper.MapDataVolumes(&vmName.Name)
 	if err != nil {
@@ -196,6 +196,18 @@ func (r *ReconcileVirtualMachineImport) setupNextStage(provider provider.Provide
 		if err != nil {
 			return err
 		}
+		if dv.Spec.FinalCheckpoint {
+			return nil
+		}
+
+		if snapshotRef == "" {
+			snapshotRef, err = provider.CreateVMSnapshot()
+			if err != nil {
+				_ = r.incrementWarmImportFailures(instance)
+				return err
+			}
+		}
+
 		// this shouldn't happen, since the initial checkpoint should
 		// have been set when the DV was created.
 		if dv.Spec.Checkpoints == nil || len(dv.Spec.Checkpoints) == 0 {
@@ -205,11 +217,12 @@ func (r *ReconcileVirtualMachineImport) setupNextStage(provider provider.Provide
 		} else {
 			numCheckpoints := len(dv.Spec.Checkpoints)
 			newCheckpoint := cdiv1.DataVolumeCheckpoint{
-				Previous: dv.Spec.Checkpoints[numCheckpoints].Current,
+				Previous: dv.Spec.Checkpoints[numCheckpoints - 1].Current,
 				Current:  snapshotRef,
 			}
 
 			dv.Spec.Checkpoints = append(dv.Spec.Checkpoints, newCheckpoint)
+			dv.Spec.FinalCheckpoint = final
 		}
 		err = r.client.Update(context.TODO(), dv)
 		if err != nil {
@@ -239,10 +252,6 @@ func (r *ReconcileVirtualMachineImport) setNextStageTime(vmiName types.Namespace
 	instanceCopy.Status.WarmImport.NextStageTime = &nextStageTime
 
 	return r.client.Status().Update(context.TODO(), instanceCopy)
-}
-
-func readyToFinalize(instance *v2vv1.VirtualMachineImport) bool {
-	return instance.Spec.FinalizeDate != nil && !instance.Spec.FinalizeDate.After(time.Now())
 }
 
 func (r *ReconcileVirtualMachineImport) setFinalCheckpoint(dv *cdiv1.DataVolume) error {
