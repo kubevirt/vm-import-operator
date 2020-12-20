@@ -2124,6 +2124,15 @@ func CreateVMImport() *extv1.CustomResourceDefinition {
 											},
 											Required: []string{"name"},
 										},
+										"warm": {
+											Type:        "boolean",
+											Description: "Indicates whether this is a warm import.",
+										},
+										"finalizeDate": {
+											Type:        "string",
+											Format:      "date-time",
+											Description: "Indicates when to stop incrementally copying and finalize a warm import.",
+										},
 										"source": {
 											Type:        "object",
 											Description: "VirtualMachineImportSourceSpec defines the source provider and the internal mapping resources",
@@ -2548,6 +2557,33 @@ DiskMappings.Source.ID represents the DiskObjectId or vDiskID of the VirtualDisk
 										"targetVmName": {
 											Description: "The name of the virtual machine created by the import process",
 											Type:        "string",
+										},
+										"warmImport": {
+											Description: "Details about the status of a warm import.",
+											Type:        "object",
+											Properties: map[string]extv1.JSONSchemaProps{
+												"nextStageTime": {
+													Type:        "string",
+													Format:      "date-time",
+													Description: "The time when the next warm import stage is scheduled.",
+												},
+												"successes": {
+													Type:        "integer",
+													Description: "The total number of successful stages.",
+												},
+												"failures": {
+													Type:        "integer",
+													Description: "The total number of failed stages.",
+												},
+												"consecutiveFailures": {
+													Type:        "integer",
+													Description: "The number of stages that have failed consecutively, reset after a success.",
+												},
+												"rootSnapshot": {
+													Type:        "string",
+													Description: "The ID of the initial snapshot that was created to start the warm import.",
+												},
+											},
 										},
 									},
 								},

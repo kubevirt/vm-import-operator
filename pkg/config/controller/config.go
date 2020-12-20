@@ -1,6 +1,10 @@
 package controller
 
-import "github.com/kubevirt/vm-import-operator/pkg/config"
+import (
+	"strconv"
+
+	"github.com/kubevirt/vm-import-operator/pkg/config"
+)
 
 const (
 	// OsConfigMapNamespaceKey defines the configuration key for the OS mapping config map namespace
@@ -8,6 +12,16 @@ const (
 
 	// OsConfigMapNameKey defines the configuration key for the OS mapping config map name
 	OsConfigMapNameKey = "osConfigMap.name"
+
+	// WarmImportMaxFailuresKey defines the total number of failures to tolerate before failing the warm import
+	WarmImportMaxFailuresKey     = "warmImport.maxFailures"
+	warmImportMaxFailuresDefault = 10
+	// WarmImportConsecutiveFailuresKey defines the number of consecutive failures to tolerate before failing the warm import
+	WarmImportConsecutiveFailuresKey     = "warmImport.consecutiveFailures"
+	warmImportConsecutiveFailuresDefault = 5
+	// WarmImportIntervalMinutesKey defines how long to wait between warm import iterations
+	WarmImportIntervalMinutesKey     = "warmImport.intervalMinutes"
+	warmImportIntervalMinutesDefault = 60
 )
 
 // ControllerConfig stores controller runtime configuration
@@ -30,4 +44,29 @@ func (c ControllerConfig) OsConfigMapNamespace() string {
 // OsConfigMapName provides name of the the OS mapping ConfigMap. Empty string is returned when the name is not present.
 func (c ControllerConfig) OsConfigMapName() string {
 	return c.ConfigMap.Data[OsConfigMapNameKey]
+}
+
+func (c ControllerConfig) WarmImportMaxFailures() int {
+	return c.getKeyAsInt(WarmImportMaxFailuresKey, warmImportMaxFailuresDefault, 0)
+}
+
+func (c ControllerConfig) WarmImportConsecutiveFailures() int {
+	return c.getKeyAsInt(WarmImportConsecutiveFailuresKey, warmImportConsecutiveFailuresDefault, 0)
+}
+
+func (c ControllerConfig) WarmImportIntervalMinutes() int {
+	return c.getKeyAsInt(WarmImportIntervalMinutesKey, warmImportIntervalMinutesDefault, 0)
+}
+
+func (c ControllerConfig) getKeyAsInt(key string, default_ int, floor int) int {
+	raw := c.ConfigMap.Data[key]
+	parsed, err := strconv.Atoi(raw)
+	if err != nil {
+		parsed = default_
+	}
+	if parsed >= floor {
+		return parsed
+	} else {
+		return floor
+	}
 }

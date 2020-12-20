@@ -856,7 +856,7 @@ var _ = Describe("Reconcile steps", func() {
 			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
 				return fmt.Errorf("Not modified")
 			}
-			err := reconciler.createDataVolume(mock, mapper, instance, dv, vmName)
+			_, err := reconciler.createDataVolume(mock, mapper, instance, &dv, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -871,7 +871,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
-			err := reconciler.createDataVolume(mock, mapper, instance, dv, vmName)
+			_, err := reconciler.createDataVolume(mock, mapper, instance, &dv, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -889,7 +889,7 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 			dv = cdiv1.DataVolume{}
-			err := reconciler.createDataVolume(mock, mapper, instance, dv, vmName)
+			_, err := reconciler.createDataVolume(mock, mapper, instance, &dv, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -903,7 +903,7 @@ var _ = Describe("Reconcile steps", func() {
 			}
 			dv = cdiv1.DataVolume{}
 
-			err := reconciler.createDataVolume(mock, mapper, instance, dv, vmName)
+			_, err := reconciler.createDataVolume(mock, mapper, instance, &dv, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -919,7 +919,7 @@ var _ = Describe("Reconcile steps", func() {
 			}
 			dv = cdiv1.DataVolume{}
 
-			err := reconciler.createDataVolume(mock, mapper, instance, dv, vmName)
+			_, err := reconciler.createDataVolume(mock, mapper, instance, &dv, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -935,7 +935,7 @@ var _ = Describe("Reconcile steps", func() {
 			}
 			dv = cdiv1.DataVolume{}
 
-			err := reconciler.createDataVolume(mock, mapper, instance, dv, vmName)
+			_, err := reconciler.createDataVolume(mock, mapper, instance, &dv, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -962,7 +962,7 @@ var _ = Describe("Reconcile steps", func() {
 
 			dv = cdiv1.DataVolume{}
 
-			err := reconciler.createDataVolume(mock, mapper, instance, dv, vmName)
+			_, err := reconciler.createDataVolume(mock, mapper, instance, &dv, vmName)
 
 			Expect(err).To(Not(BeNil()))
 		})
@@ -984,7 +984,7 @@ var _ = Describe("Reconcile steps", func() {
 			}
 
 			dv := cdiv1.DataVolume{}
-			err := reconciler.createDataVolume(mock, mapper, instance, dv, vmName)
+			_, err := reconciler.createDataVolume(mock, mapper, instance, &dv, vmName)
 
 			Expect(err).To(BeNil())
 		})

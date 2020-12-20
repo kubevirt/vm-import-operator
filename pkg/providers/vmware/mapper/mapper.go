@@ -598,7 +598,6 @@ func (r *VmwareMapper) mapNetworks() ([]kubevirtv1.Network, error) {
 				kubevirtNetworks = append(kubevirtNetworks, kubevirtNet)
 			}
 		}
-
 	}
 
 	return kubevirtNetworks, nil

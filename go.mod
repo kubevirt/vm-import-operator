@@ -11,6 +11,7 @@ require (
 	github.com/coreos/go-semver v0.3.0
 	github.com/coreos/prometheus-operator v0.38.1-0.20200424145508-7e176fda06cc
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
+	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
 	github.com/k8snetworkplumbingwg/network-attachment-definition-client v0.0.0-20191119172530-79f836b90111
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -42,7 +43,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 	k8s.io/utils v0.0.0-20200619165400-6e3d28b6ed19
 	kubevirt.io/client-go v0.33.0
-	kubevirt.io/containerized-data-importer v1.25.0
+	kubevirt.io/containerized-data-importer v1.27.0
 	kubevirt.io/controller-lifecycle-operator-sdk v0.1.1
 	libvirt.org/libvirt-go-xml v6.6.0+incompatible
 	sigs.k8s.io/controller-runtime v0.6.2

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/vmware/govmomi/find"
@@ -131,6 +132,32 @@ func (r RichVmwareClient) CreateVMSnapshot(moRef string, name string, desc strin
 	}
 	snapshotRef := res.Result.(types.ManagedObjectReference)
 	return &snapshotRef, nil
+}
+
+func (r RichVmwareClient) FindVMSnapshot(moRef string, snapshot string) (*types.ManagedObjectReference, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	vm := r.getVMByMoRef(moRef)
+	snapshotRef, err := vm.FindSnapshot(ctx, snapshot)
+	if err != nil {
+		if strings.Contains(err.Error(), "no snapshots") || strings.Contains(err.Error(), "not found") {
+			return nil, nil
+		} else {
+			return nil, err
+		}
+	}
+	return snapshotRef, nil
+}
+
+func (r RichVmwareClient) RemoveVMSnapshot(moRef string, snapshot string, removeChildren bool, consolidate *bool) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	vm := r.getVMByMoRef(moRef)
+	task, err := vm.RemoveSnapshot(ctx, snapshot, removeChildren, consolidate)
+	if err != nil {
+		return err
+	}
+	return task.Wait(ctx)
 }
 
 // GetVMProperties retrieves the Properties struct for the VM.
