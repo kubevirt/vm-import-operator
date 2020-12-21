@@ -12,7 +12,8 @@ import (
 
 	resources "github.com/kubevirt/vm-import-operator/pkg/operator/resources/operator"
 	"k8s.io/client-go/rest"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 func TestOperator(t *testing.T) {
@@ -26,7 +27,7 @@ var cfg *rest.Config
 var crd = resources.CreateVMImportConfig()
 
 var _ = BeforeSuite(func(done Done) {
-	logf.SetLogger(logf.ZapLoggerTo(GinkgoWriter, true))
+	logf.SetLogger(zap.New(zap.UseDevMode(false), zap.WriteTo(GinkgoWriter)))
 
 	env := &envtest.Environment{}
 
