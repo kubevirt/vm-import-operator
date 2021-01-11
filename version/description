@@ -1,8 +1,35 @@
-v0.2.5
+v0.3.0
+
+Adds support for Warm Import of vSphere VMs.
 
 Features:
-* Expose /dev/kvm in the guest conversion pod
+* Base Dockerfiles on ubi/go-toolset:1.14.12
+* Update to CDI 1.27.0
+* Add support for Warm Import
+* Validate the target VM name
+* Pin gorilla/websocket to 1.4.2
+* Replace Kubevirt client with controller-runtime client in tests
+* Allow explicit AccessMode mapping in the oVirt provider
+* Add optional AccessMode to StorageResourceMappingItem
+* Add CreateVMSnapshot to Provider interface
 
 Bugs:
-* Use DeletePropagationForeground when deleting jobs
-* Install the latest version of CDI on the test cluster
+* sigs.k8s.io/controller-runtime/pkg/runtime/* packages are deprecated, and were moved to new pathes.
+* Don't stop VM for warm imports until finalization
+* Update Network Mapping validation for duplicates
+* Fix erroneous test failures caused by lingering resources
+* Throw a validation error if a VM with the given name exists
+* Requeque when VMI not yet created
+* Fix typo in VM validation for NUMA
+* vSphere: Gracefully shutdown vSphere VMs
+* vSphere: Don't add interfaces for unmapped networks
+* vSphere: find a desktop template if there are no server templates
+* vSphere: always map machine type to q35
+* vSphere: use VM UUID and disk key to name DataVolumes
+* vSphere: should look for a small template for the given OS first
+* oVirt: mapper should not set memory limits
+* oVirt: use 'scsi' bus for disks with the 'virtio_scsi' type
+
+Docs:
+* Add documentation for Access Mode and Volume Mode
+* Add vSphere resource mapping documentation.
