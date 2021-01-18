@@ -2,6 +2,7 @@ package validators
 
 import (
 	"fmt"
+
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
 
 	"github.com/kubevirt/vm-import-operator/pkg/utils"

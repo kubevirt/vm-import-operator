@@ -12,10 +12,10 @@ import (
 
 var (
 	templateNamespace = "openshift"
-	serverWorkload  = "server"
-	desktopWorkload = "desktop"
-	smallFlavor     = "small"
-	mediumFlavor    = "medium"
+	serverWorkload    = "server"
+	desktopWorkload   = "desktop"
+	smallFlavor       = "small"
+	mediumFlavor      = "medium"
 )
 
 // TemplateFinder attempts to find a template based on given parameters
