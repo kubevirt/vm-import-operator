@@ -591,17 +591,24 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 				foundPod := &corev1.Pod{}
 				err = r.client.Get(context.TODO(), types.NamespacedName{Namespace: instance.Namespace, Name: importerPodNameFromDv(dvID)}, foundPod)
 				if err == nil {
+					var terminationMessage string
 					// Emit an event about why pod failed:
 					if foundPod.Status.ContainerStatuses != nil &&
 						foundPod.Status.ContainerStatuses[0].LastTerminationState.Terminated != nil &&
 						foundPod.Status.ContainerStatuses[0].LastTerminationState.Terminated.ExitCode > 0 {
-						r.recorder.Eventf(instance, corev1.EventTypeWarning, EventPVCImportFailed, foundPod.Status.ContainerStatuses[0].LastTerminationState.Terminated.Message)
+						terminationMessage = foundPod.Status.ContainerStatuses[0].LastTerminationState.Terminated.Message
+						r.recorder.Eventf(instance, corev1.EventTypeWarning, EventPVCImportFailed, terminationMessage)
 					}
 					// End the import in case the pod keeps crashing:
 					for _, cs := range foundPod.Status.ContainerStatuses {
 						if cs.State.Waiting != nil && cs.State.Waiting.Reason == podCrashLoopBackOff && cs.RestartCount > int32(importPodRestartTolerance) {
 							log.Info("CDI import pod failed.", "VM.Name", vmName)
-							if err = r.endImportAsFailed(provider, instance, foundDv, "pod CrashLoopBackoff restart exceeded"); err != nil {
+
+							message := "pod CrashLoopBackoff restart exceeded"
+							if terminationMessage != "" {
+								message = fmt.Sprintf("%s (%s)", terminationMessage, message)
+							}
+							if err = r.endImportAsFailed(provider, instance, foundDv, message); err != nil {
 								return false, err
 							}
 						}
