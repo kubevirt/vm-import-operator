@@ -378,7 +378,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 
 	if shouldConvertGuest(provider, instance) {
-		done, err := r.convertGuest(provider, instance, vmName)
+		done, err := r.convertGuest(provider, instance, mapper, vmName)
 		if err != nil {
 			return reconcile.Result{}, err
 		}
@@ -474,11 +474,16 @@ func (r *ReconcileVirtualMachineImport) addWatchForImportPod(instance *v2vv1.Vir
 }
 
 // convertGuest starts a Job to run virt-v2v on the target VM
-func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider, instance *v2vv1.VirtualMachineImport, vmName types.NamespacedName) (bool, error) {
+func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider, instance *v2vv1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName) (bool, error) {
 	log := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
 	// find the vmspec
 	vmSpec := &kubevirtv1.VirtualMachine{}
 	err := r.client.Get(context.TODO(), vmName, vmSpec)
+	if err != nil {
+		return false, err
+	}
+
+	dataVolumes, err := mapper.MapDataVolumes(&vmName.Name)
 	if err != nil {
 		return false, err
 	}
@@ -489,7 +494,7 @@ func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider,
 	}
 	if pod == nil {
 		log.Info("Creating conversion pod")
-		pod, err = provider.LaunchGuestConversionPod(vmSpec)
+		pod, err = provider.LaunchGuestConversionPod(vmSpec, dataVolumes)
 		if err != nil {
 			return false, err
 		}

@@ -3,6 +3,7 @@ package vmware
 import (
 	"encoding/xml"
 	"fmt"
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 
 	"github.com/kubevirt/vm-import-operator/pkg/pods"
 
@@ -494,22 +495,22 @@ func (r *VmwareProvider) GetGuestConversionPod() (*corev1.Pod, error) {
 	return pod, nil
 }
 
-func (r *VmwareProvider) LaunchGuestConversionPod(vmSpec *v1.VirtualMachine) (*corev1.Pod, error) {
-	configMap, err := r.ensureConfigMapIsPresent(vmSpec)
+func (r *VmwareProvider) LaunchGuestConversionPod(vmSpec *v1.VirtualMachine, dataVolumes map[string]cdiv1.DataVolume) (*corev1.Pod, error) {
+	configMap, err := r.ensureConfigMapIsPresent(vmSpec, dataVolumes)
 	if err != nil {
 		return nil, err
 	}
-	return r.ensureGuestConversionPodIsPresent(vmSpec, configMap)
+	return r.ensureGuestConversionPodIsPresent(vmSpec, dataVolumes, configMap)
 }
 
-func (r *VmwareProvider) ensureConfigMapIsPresent(vmSpec *v1.VirtualMachine) (*corev1.ConfigMap, error) {
+func (r *VmwareProvider) ensureConfigMapIsPresent(vmSpec *v1.VirtualMachine, dataVolumes map[string]cdiv1.DataVolume) (*corev1.ConfigMap, error) {
 	vmiName := r.getNamespacedName()
 	configMap, err := r.configMapsManager.FindFor(vmiName)
 	if err != nil {
 		return nil, err
 	}
 	if configMap == nil {
-		configMap, err = r.createConfigMap(vmSpec)
+		configMap, err = r.createConfigMap(vmSpec, dataVolumes)
 		if err != nil {
 			return nil, err
 		}
@@ -517,9 +518,9 @@ func (r *VmwareProvider) ensureConfigMapIsPresent(vmSpec *v1.VirtualMachine) (*c
 	return configMap, nil
 }
 
-func (r *VmwareProvider) createConfigMap(vmSpec *v1.VirtualMachine) (*corev1.ConfigMap, error) {
+func (r *VmwareProvider) createConfigMap(vmSpec *v1.VirtualMachine, dataVolumes map[string]cdiv1.DataVolume) (*corev1.ConfigMap, error) {
 	vmiName := r.getNamespacedName()
-	domain := guestconversion.MakeLibvirtDomain(vmSpec)
+	domain := guestconversion.MakeLibvirtDomain(vmSpec, dataVolumes)
 	domXML, err := xml.Marshal(domain)
 	if err != nil {
 		return nil, err
@@ -539,14 +540,14 @@ func (r *VmwareProvider) createConfigMap(vmSpec *v1.VirtualMachine) (*corev1.Con
 	return newConfigMap, nil
 }
 
-func (r *VmwareProvider) ensureGuestConversionPodIsPresent(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) (*corev1.Pod, error) {
+func (r *VmwareProvider) ensureGuestConversionPodIsPresent(vmSpec *v1.VirtualMachine, dataVolumes map[string]cdiv1.DataVolume, libvirtConfigMap *corev1.ConfigMap) (*corev1.Pod, error) {
 	vmiName := r.getNamespacedName()
 	pod, err := r.podsManager.FindFor(vmiName)
 	if err != nil {
 		return nil, err
 	}
 	if pod == nil {
-		pod, err = r.createGuestConversionPod(vmSpec, libvirtConfigMap)
+		pod, err = r.createGuestConversionPod(vmSpec, dataVolumes, libvirtConfigMap)
 		if err != nil {
 			return nil, err
 		}
@@ -554,9 +555,9 @@ func (r *VmwareProvider) ensureGuestConversionPodIsPresent(vmSpec *v1.VirtualMac
 	return pod, nil
 }
 
-func (r *VmwareProvider) createGuestConversionPod(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) (*corev1.Pod, error) {
+func (r *VmwareProvider) createGuestConversionPod(vmSpec *v1.VirtualMachine, dataVolumes map[string]cdiv1.DataVolume, libvirtConfigMap *corev1.ConfigMap) (*corev1.Pod, error) {
 	vmiName := r.getNamespacedName()
-	pod := guestconversion.MakeGuestConversionPodSpec(vmSpec, libvirtConfigMap)
+	pod := guestconversion.MakeGuestConversionPodSpec(vmSpec, dataVolumes, libvirtConfigMap)
 	pod.OwnerReferences = []metav1.OwnerReference{
 		ownerreferences.NewVMImportControllerReference(r.vmiTypeMeta, r.vmiObjectMeta),
 	}

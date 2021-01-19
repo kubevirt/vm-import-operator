@@ -1178,10 +1178,12 @@ var _ = Describe("Reconcile steps", func() {
 			prov   *mockProvider
 			vmName types.NamespacedName
 			pod    *corev1.Pod
+			mapper *mockMapper
 		)
 
 		BeforeEach(func() {
 			prov = &mockProvider{}
+			mapper = &mockMapper{}
 			vmName = types.NamespacedName{Name: "test", Namespace: "default"}
 
 			pod = &corev1.Pod{
@@ -1240,7 +1242,7 @@ var _ = Describe("Reconcile steps", func() {
 		It("should return false with no error when the pod is pending", func() {
 			pod.Status.Phase = corev1.PodPending
 
-			done, err := reconciler.convertGuest(prov, instance, vmName)
+			done, err := reconciler.convertGuest(prov, instance, mapper, vmName)
 			Expect(err).To(BeNil())
 			Expect(done).To(BeFalse())
 		})
@@ -1248,7 +1250,7 @@ var _ = Describe("Reconcile steps", func() {
 		It("should return false with no error when the pod is running", func() {
 			pod.Status.Phase = corev1.PodRunning
 
-			done, err := reconciler.convertGuest(prov, instance, vmName)
+			done, err := reconciler.convertGuest(prov, instance, mapper, vmName)
 			Expect(err).To(BeNil())
 			Expect(done).To(BeFalse())
 		})
@@ -1256,7 +1258,7 @@ var _ = Describe("Reconcile steps", func() {
 		It("should return false with no error when the pod is failed", func() {
 			pod.Status.Phase = corev1.PodFailed
 
-			done, err := reconciler.convertGuest(prov, instance, vmName)
+			done, err := reconciler.convertGuest(prov, instance, mapper, vmName)
 			Expect(err).To(BeNil())
 			Expect(done).To(BeFalse())
 		})
@@ -1264,7 +1266,7 @@ var _ = Describe("Reconcile steps", func() {
 		It("should return true with no error when the pod is successful", func() {
 			pod.Status.Phase = corev1.PodSucceeded
 
-			done, err := reconciler.convertGuest(prov, instance, vmName)
+			done, err := reconciler.convertGuest(prov, instance, mapper, vmName)
 			Expect(err).To(BeNil())
 			Expect(done).To(BeTrue())
 		})
@@ -2053,7 +2055,7 @@ func (p *mockProvider) GetGuestConversionPod() (*corev1.Pod, error) {
 	return getGuestConversionPod()
 }
 
-func (p *mockProvider) LaunchGuestConversionPod(_ *kubevirtv1.VirtualMachine) (*corev1.Pod, error) {
+func (p *mockProvider) LaunchGuestConversionPod(_ *kubevirtv1.VirtualMachine, _ map[string]cdiv1.DataVolume) (*corev1.Pod, error) {
 	return launchGuestConversionPod()
 }
 

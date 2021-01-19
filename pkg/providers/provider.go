@@ -36,7 +36,7 @@ type Provider interface {
 	ProcessTemplate(*oapiv1.Template, *string, string) (*kubevirtv1.VirtualMachine, error)
 	NeedsGuestConversion() bool
 	GetGuestConversionPod() (*corev1.Pod, error)
-	LaunchGuestConversionPod(*kubevirtv1.VirtualMachine) (*corev1.Pod, error)
+	LaunchGuestConversionPod(*kubevirtv1.VirtualMachine, map[string]cdiv1.DataVolume) (*corev1.Pod, error)
 	SupportsWarmMigration() bool
 	CreateVMSnapshot() (string, error)
 }
