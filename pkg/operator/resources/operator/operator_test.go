@@ -44,8 +44,9 @@ var _ = Describe("Operator resource test", func() {
 			schema := getSchema(crdCreatorObj.creator)
 			missingEntries := schema.GetMissingEntries(crdCreatorObj.resource)
 			for _, missing := range missingEntries {
-				if strings.HasPrefix(missing.Path, "/status") {
-					//Not using subresources, so status is not expected to appear in CRD
+				if strings.HasPrefix(missing.Path, "/status") || strings.HasPrefix(missing.Path, "/spec/finalizeDate") {
+					// Not using subresources, so status is not expected to appear in CRD.
+					// GetMissingEntries doesn't handle dates properly, so skip the finalizeDate field.
 				} else {
 					msg := "Discrepancy between CRD and Struct Missing or incorrect schema validation at [%v], expected type [%v] in CRD file [%v]"
 					Fail(fmt.Sprintf(msg, missing.Path, missing.Type, crdFileName))
