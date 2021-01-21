@@ -11,7 +11,7 @@ import (
 
 var _ = Describe("GuestConversion", func() {
 
-	Describe("MakeGuestConversionJobSpec", func() {
+	Describe("MakeGuestConversionPodSpec", func() {
 
 		var configMap *v1.ConfigMap
 		var vmSpec *kubevirtv1.VirtualMachine
@@ -36,13 +36,13 @@ var _ = Describe("GuestConversion", func() {
 		})
 
 		It("should create a volume and mount for the libvirt domain config map", func() {
-			job := MakeGuestConversionJobSpec(vmSpec, configMap)
-			Expect(len(job.Spec.Template.Spec.Volumes)).To(Equal(1))
-			Expect(job.Spec.Template.Spec.Volumes[0].Name).To(Equal(configMapVolumeName))
-			Expect(job.Spec.Template.Spec.Volumes[0].ConfigMap).ToNot(BeNil())
-			Expect(job.Spec.Template.Spec.Volumes[0].ConfigMap.Name).To(Equal("testMap"))
-			Expect(len(job.Spec.Template.Spec.Containers[0].VolumeMounts)).To(Equal(1))
-			Expect(job.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(configMapVolumeName))
+			pod := MakeGuestConversionPodSpec(vmSpec, configMap)
+			Expect(len(pod.Spec.Volumes)).To(Equal(1))
+			Expect(pod.Spec.Volumes[0].Name).To(Equal(configMapVolumeName))
+			Expect(pod.Spec.Volumes[0].ConfigMap).ToNot(BeNil())
+			Expect(pod.Spec.Volumes[0].ConfigMap.Name).To(Equal("testMap"))
+			Expect(len(pod.Spec.Containers[0].VolumeMounts)).To(Equal(1))
+			Expect(pod.Spec.Containers[0].VolumeMounts[0].Name).To(Equal(configMapVolumeName))
 		})
 
 		It("should create a volume and mount for each volume that belongs to the VM", func() {
@@ -60,24 +60,24 @@ var _ = Describe("GuestConversion", func() {
 					},
 				},
 			}
-			job := MakeGuestConversionJobSpec(vmSpec, configMap)
-			Expect(len(job.Spec.Template.Spec.Volumes)).To(Equal(3))
-			Expect(job.Spec.Template.Spec.Volumes[0].Name).To(Equal("dv-1"))
-			Expect(job.Spec.Template.Spec.Volumes[0].VolumeSource.PersistentVolumeClaim.ClaimName).To(Equal("dv-1"))
+			pod := MakeGuestConversionPodSpec(vmSpec, configMap)
+			Expect(len(pod.Spec.Volumes)).To(Equal(3))
+			Expect(pod.Spec.Volumes[0].Name).To(Equal("dv-1"))
+			Expect(pod.Spec.Volumes[0].VolumeSource.PersistentVolumeClaim.ClaimName).To(Equal("dv-1"))
 
-			Expect(job.Spec.Template.Spec.Volumes[1].Name).To(Equal("dv-2"))
-			Expect(job.Spec.Template.Spec.Volumes[1].VolumeSource.PersistentVolumeClaim.ClaimName).To(Equal("dv-2"))
+			Expect(pod.Spec.Volumes[1].Name).To(Equal("dv-2"))
+			Expect(pod.Spec.Volumes[1].VolumeSource.PersistentVolumeClaim.ClaimName).To(Equal("dv-2"))
 
-			Expect(job.Spec.Template.Spec.Volumes[2].Name).To(Equal(configMapVolumeName))
-			Expect(job.Spec.Template.Spec.Volumes[2].ConfigMap).ToNot(BeNil())
-			Expect(job.Spec.Template.Spec.Volumes[2].ConfigMap.Name).To(Equal("testMap"))
+			Expect(pod.Spec.Volumes[2].Name).To(Equal(configMapVolumeName))
+			Expect(pod.Spec.Volumes[2].ConfigMap).ToNot(BeNil())
+			Expect(pod.Spec.Volumes[2].ConfigMap.Name).To(Equal("testMap"))
 
-			Expect(len(job.Spec.Template.Spec.Containers[0].VolumeMounts)).To(Equal(3))
-			Expect(job.Spec.Template.Spec.Containers[0].VolumeMounts[0].Name).To(Equal("dv-1"))
-			Expect(job.Spec.Template.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal("/mnt/disks/disk0"))
-			Expect(job.Spec.Template.Spec.Containers[0].VolumeMounts[1].Name).To(Equal("dv-2"))
-			Expect(job.Spec.Template.Spec.Containers[0].VolumeMounts[1].MountPath).To(Equal("/mnt/disks/disk1"))
-			Expect(job.Spec.Template.Spec.Containers[0].VolumeMounts[2].Name).To(Equal(configMapVolumeName))
+			Expect(len(pod.Spec.Containers[0].VolumeMounts)).To(Equal(3))
+			Expect(pod.Spec.Containers[0].VolumeMounts[0].Name).To(Equal("dv-1"))
+			Expect(pod.Spec.Containers[0].VolumeMounts[0].MountPath).To(Equal("/mnt/disks/disk0"))
+			Expect(pod.Spec.Containers[0].VolumeMounts[1].Name).To(Equal("dv-2"))
+			Expect(pod.Spec.Containers[0].VolumeMounts[1].MountPath).To(Equal("/mnt/disks/disk1"))
+			Expect(pod.Spec.Containers[0].VolumeMounts[2].Name).To(Equal(configMapVolumeName))
 		})
 	})
 

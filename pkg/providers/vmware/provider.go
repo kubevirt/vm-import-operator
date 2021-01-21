@@ -4,17 +4,17 @@ import (
 	"encoding/xml"
 	"fmt"
 
+	"github.com/kubevirt/vm-import-operator/pkg/pods"
+
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
 	"github.com/kubevirt/vm-import-operator/pkg/configmaps"
 	"github.com/kubevirt/vm-import-operator/pkg/guestconversion"
-	"github.com/kubevirt/vm-import-operator/pkg/jobs"
 	oapiv1 "github.com/openshift/api/template/v1"
 	tempclient "github.com/openshift/client-go/template/clientset/versioned/typed/template/v1"
 	"github.com/vmware/govmomi/object"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
 	"gopkg.in/yaml.v2"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -61,7 +61,7 @@ type VmwareProvider struct {
 	resourceMapping       *v1beta1.VmwareMappings
 	secretsManager        provider.SecretsManager
 	configMapsManager     provider.ConfigMapsManager
-	jobsManager           provider.JobsManager
+	podsManager           provider.PodsManager
 	templateFinder        *vtemplates.TemplateFinder
 	templateHandler       *templates.TemplateHandler
 	virtualMachineManager provider.VirtualMachineManager
@@ -79,7 +79,7 @@ func NewVmwareProvider(vmiObjectMeta metav1.ObjectMeta, vmiTypeMeta metav1.TypeM
 	configMapsManager := configmaps.NewManager(client)
 	dataVolumesManager := datavolumes.NewManager(client)
 	virtualMachineManager := virtualmachines.NewManager(client)
-	jobsManager := jobs.NewManager(client)
+	podsManager := pods.NewManager(client)
 	templateProvider := templates.NewTemplateProvider(tempClient)
 	osFinder := vos.VmwareOSFinder{OsMapProvider: os.NewOSMapProvider(client, ctrlConfig.OsConfigMapName(), ctrlConfig.OsConfigMapNamespace())}
 	return VmwareProvider{
@@ -90,7 +90,7 @@ func NewVmwareProvider(vmiObjectMeta metav1.ObjectMeta, vmiTypeMeta metav1.TypeM
 		configMapsManager:     &configMapsManager,
 		dataVolumesManager:    &dataVolumesManager,
 		virtualMachineManager: &virtualMachineManager,
-		jobsManager:           &jobsManager,
+		podsManager:           &podsManager,
 		osFinder:              &osFinder,
 		templateHandler:       templates.NewTemplateHandler(templateProvider),
 		templateFinder:        vtemplates.NewTemplateFinder(templateProvider, osFinder),
@@ -324,10 +324,10 @@ func (r *VmwareProvider) CleanUp(failure bool, cr *v1beta1.VirtualMachineImport,
 		}
 	}
 
-	// only clean up the job on success,
-	// since the job log is important for debugging
+	// only clean up the pod on success,
+	// since the pod log is important for debugging
 	if !failure {
-		err = r.jobsManager.DeleteFor(vmiName)
+		err = r.podsManager.DeleteFor(vmiName)
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -485,21 +485,21 @@ func (r *VmwareProvider) NeedsGuestConversion() bool {
 	return true
 }
 
-func (r *VmwareProvider) GetGuestConversionJob() (*batchv1.Job, error) {
+func (r *VmwareProvider) GetGuestConversionPod() (*corev1.Pod, error) {
 	vmiName := r.getNamespacedName()
-	job, err := r.jobsManager.FindFor(vmiName)
+	pod, err := r.podsManager.FindFor(vmiName)
 	if err != nil {
 		return nil, err
 	}
-	return job, nil
+	return pod, nil
 }
 
-func (r *VmwareProvider) LaunchGuestConversionJob(vmSpec *v1.VirtualMachine) (*batchv1.Job, error) {
+func (r *VmwareProvider) LaunchGuestConversionPod(vmSpec *v1.VirtualMachine) (*corev1.Pod, error) {
 	configMap, err := r.ensureConfigMapIsPresent(vmSpec)
 	if err != nil {
 		return nil, err
 	}
-	return r.ensureGuestConversionJobIsPresent(vmSpec, configMap)
+	return r.ensureGuestConversionPodIsPresent(vmSpec, configMap)
 }
 
 func (r *VmwareProvider) ensureConfigMapIsPresent(vmSpec *v1.VirtualMachine) (*corev1.ConfigMap, error) {
@@ -539,32 +539,32 @@ func (r *VmwareProvider) createConfigMap(vmSpec *v1.VirtualMachine) (*corev1.Con
 	return newConfigMap, nil
 }
 
-func (r *VmwareProvider) ensureGuestConversionJobIsPresent(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) (*batchv1.Job, error) {
+func (r *VmwareProvider) ensureGuestConversionPodIsPresent(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) (*corev1.Pod, error) {
 	vmiName := r.getNamespacedName()
-	job, err := r.jobsManager.FindFor(vmiName)
+	pod, err := r.podsManager.FindFor(vmiName)
 	if err != nil {
 		return nil, err
 	}
-	if job == nil {
-		job, err = r.createGuestConversionJob(vmSpec, libvirtConfigMap)
+	if pod == nil {
+		pod, err = r.createGuestConversionPod(vmSpec, libvirtConfigMap)
 		if err != nil {
 			return nil, err
 		}
 	}
-	return job, nil
+	return pod, nil
 }
 
-func (r *VmwareProvider) createGuestConversionJob(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) (*batchv1.Job, error) {
+func (r *VmwareProvider) createGuestConversionPod(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) (*corev1.Pod, error) {
 	vmiName := r.getNamespacedName()
-	job := guestconversion.MakeGuestConversionJobSpec(vmSpec, libvirtConfigMap)
-	job.OwnerReferences = []metav1.OwnerReference{
+	pod := guestconversion.MakeGuestConversionPodSpec(vmSpec, libvirtConfigMap)
+	pod.OwnerReferences = []metav1.OwnerReference{
 		ownerreferences.NewVMImportControllerReference(r.vmiTypeMeta, r.vmiObjectMeta),
 	}
-	err := r.jobsManager.CreateFor(job, vmiName)
+	err := r.podsManager.CreateFor(pod, vmiName)
 	if err != nil {
 		return nil, err
 	}
-	return job, nil
+	return pod, nil
 }
 
 func (r *VmwareProvider) getNamespacedName() k8stypes.NamespacedName {

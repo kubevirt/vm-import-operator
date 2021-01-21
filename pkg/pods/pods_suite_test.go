@@ -1,4 +1,4 @@
-package jobs
+package pods
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestJobsManager(t *testing.T) {
+func TestPodsManager(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "JobsManager Suite")
+	RunSpecs(t, "PodsManager Suite")
 }

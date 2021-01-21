@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	batchv1 "k8s.io/api/batch/v1"
+	"kubevirt.io/containerized-data-importer/pkg/common"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	v1 "kubevirt.io/client-go/api/v1"
@@ -18,52 +19,45 @@ var (
 	imagePullPolicy = corev1.PullPolicy(os.Getenv("IMAGE_PULL_POLICY"))
 )
 
-// MakeGuestConversionJobSpec creates a job spec for a virt-v2v job,
+// MakeGuestConversionPodSpec creates a pod spec for a virt-v2v pod,
 // containing a volume and a mount for each volume on the VM, as well
 // as a volume and mount for the config map containing the libvirt domain XML.
-func MakeGuestConversionJobSpec(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) *batchv1.Job {
-	// Only ever run the guest conversion job once per VM
-	completions := int32(1)
-	parallelism := int32(1)
-	backoffLimit := int32(0)
+func MakeGuestConversionPodSpec(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) *corev1.Pod {
+	// this is the fsGroup that the CDI importer pod uses
+	fsGroup := common.QemuSubGid
 
-	volumes, volumeMounts := makeJobVolumeMounts(vmSpec, libvirtConfigMap)
+	volumes, volumeMounts := makePodVolumeMounts(vmSpec, libvirtConfigMap)
 
-	return &batchv1.Job{
-		Spec: batchv1.JobSpec{
-			Completions:  &completions,
-			Parallelism:  &parallelism,
-			BackoffLimit: &backoffLimit,
-			Template: corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					RestartPolicy: corev1.RestartPolicyNever,
-					Containers: []corev1.Container{
-						{
-							Name:            "virt-v2v",
-							Image:           virtV2vImage,
-							VolumeMounts:    volumeMounts,
-							ImagePullPolicy: imagePullPolicy,
-							// Request access to /dev/kvm via Kubevirt's Device Manager
-							Resources: corev1.ResourceRequirements{
-								Limits: corev1.ResourceList{
-									"devices.kubevirt.io/kvm": resource.MustParse("1"),
-								},
-							},
+	return &corev1.Pod{
+		Spec: corev1.PodSpec{
+			SecurityContext: &corev1.PodSecurityContext{
+				FSGroup: &fsGroup,
+			},
+			RestartPolicy: corev1.RestartPolicyNever,
+			Containers: []corev1.Container{
+				{
+					Name:            "virt-v2v",
+					Image:           virtV2vImage,
+					VolumeMounts:    volumeMounts,
+					ImagePullPolicy: imagePullPolicy,
+					// Request access to /dev/kvm via Kubevirt's Device Manager
+					Resources: corev1.ResourceRequirements{
+						Limits: corev1.ResourceList{
+							"devices.kubevirt.io/kvm": resource.MustParse("1"),
 						},
-					},
-					Volumes: volumes,
-					// Ensure that the pod is deployed on a node where /dev/kvm is present.
-					NodeSelector: map[string]string{
-						"kubevirt.io/schedulable": "true",
 					},
 				},
 			},
+			Volumes: volumes,
+			// Ensure that the pod is deployed on a node where /dev/kvm is present.
+			NodeSelector: map[string]string{
+				"kubevirt.io/schedulable": "true",
+			},
 		},
-		Status: batchv1.JobStatus{},
 	}
 }
 
-func makeJobVolumeMounts(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) ([]corev1.Volume, []corev1.VolumeMount) {
+func makePodVolumeMounts(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.ConfigMap) ([]corev1.Volume, []corev1.VolumeMount) {
 	volumes := make([]corev1.Volume, 0)
 	volumeMounts := make([]corev1.VolumeMount, 0)
 	// add volumes and mounts for each of the VM's disks.
@@ -106,7 +100,7 @@ func makeJobVolumeMounts(vmSpec *v1.VirtualMachine, libvirtConfigMap *corev1.Con
 	return volumes, volumeMounts
 }
 
-// MakeLibvirtDomain makes a minimal libvirt domain for a VM to be used by the guest conversion job
+// MakeLibvirtDomain makes a minimal libvirt domain for a VM to be used by the guest conversion pod
 func MakeLibvirtDomain(vmSpec *v1.VirtualMachine) *libvirtxml.Domain {
 	// virt-v2v needs a very minimal libvirt domain XML file to be provided
 	// with the locations of each of the disks on the VM that is to be converted.
@@ -121,7 +115,7 @@ func MakeLibvirtDomain(vmSpec *v1.VirtualMachine) *libvirtxml.Domain {
 			Source: &libvirtxml.DomainDiskSource{
 				File: &libvirtxml.DomainDiskSourceFile{
 					// the location where the disk images will be found on
-					// the virt-v2v pod. See also makeJobVolumeMounts.
+					// the virt-v2v pod. See also makePodVolumeMounts.
 					File: fmt.Sprintf("/mnt/disks/disk%v/disk.img", i),
 				},
 			},

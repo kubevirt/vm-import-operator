@@ -30,7 +30,6 @@ import (
 	ovirtprovider "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt"
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	templatev1 "github.com/openshift/client-go/template/clientset/versioned/typed/template/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -191,7 +190,7 @@ func add(mgr manager.Manager, r *ReconcileVirtualMachineImport) error {
 	}
 
 	err = c.Watch(
-		&source.Kind{Type: &batchv1.Job{}},
+		&source.Kind{Type: &corev1.Pod{}},
 		&handler.EnqueueRequestForOwner{
 			IsController: true,
 			OwnerType:    &v2vv1.VirtualMachineImport{},
@@ -484,17 +483,17 @@ func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider,
 		return false, err
 	}
 
-	job, err := provider.GetGuestConversionJob()
+	pod, err := provider.GetGuestConversionPod()
 	if err != nil {
 		return false, err
 	}
-	if job == nil {
-		log.Info("Creating conversion job")
-		job, err = provider.LaunchGuestConversionJob(vmSpec)
+	if pod == nil {
+		log.Info("Creating conversion pod")
+		pod, err = provider.LaunchGuestConversionPod(vmSpec)
 		if err != nil {
 			return false, err
 		}
-		processingCond := conditions.NewProcessingCondition(string(v2vv1.ConvertingGuest), fmt.Sprintf("Running virt-v2v job %s", job.Name), corev1.ConditionTrue)
+		processingCond := conditions.NewProcessingCondition(string(v2vv1.ConvertingGuest), fmt.Sprintf("Running virt-v2v pod %s", pod.Name), corev1.ConditionTrue)
 		err = r.upsertStatusConditions(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}, processingCond)
 		if err != nil {
 			return false, err
@@ -506,20 +505,16 @@ func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider,
 		}
 	}
 
-	if job.Status.Active > 0 {
-		return false, nil
-	}
-
-	if job.Status.Failed > 0 {
-		log.Info("Conversion job failed.", "Job.Name", job.Name)
-		err := r.endGuestConversionAsFailed(provider, instance, fmt.Sprintf("virt-v2v job %s failed", job.Name))
+	if pod.Status.Phase == corev1.PodSucceeded {
+		return true, nil
+	} else if pod.Status.Phase == corev1.PodFailed {
+		log.Info("Conversion pod failed.", "Pod.Name", pod.Name)
+		err := r.endGuestConversionAsFailed(provider, instance, fmt.Sprintf("virt-v2v pod %s failed", pod.Name))
 		if err != nil {
 			return false, err
 		}
-		return false, nil
 	}
-
-	return job.Status.Succeeded > 0, nil
+	return false, nil
 }
 
 func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, instance *v2vv1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName) (bool, error) {
