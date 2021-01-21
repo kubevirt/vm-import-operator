@@ -5,11 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 	"os"
 	"strconv"
 	"strings"
 	"time"
+
+	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware"
 
@@ -365,7 +366,6 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		}
 	}
 
-
 	if shouldImportDisks(instance) {
 		done, err := r.importDisks(provider, instance, mapper, vmName)
 		if err != nil {
@@ -404,7 +404,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		if requeue {
 			// Requeue when vmi was not created yet or was not scheduled
 			return reconcile.Result{RequeueAfter: time.Second * 15}, err
-		} 
+		}
 	} else {
 		// Update progress if all disks import done:
 		if err := r.updateProgress(instance, progressDone); err != nil {
@@ -912,7 +912,7 @@ func (r *ReconcileVirtualMachineImport) startVM(provider provider.Provider, inst
 			return true, nil
 		}
 		return false, err
-	} 
+	}
 
 	log.Info("VMI available", "VM.Name", vmName)
 	if vmi.Status.Phase == kubevirtv1.Running || vmi.Status.Phase == kubevirtv1.Scheduled {

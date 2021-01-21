@@ -217,7 +217,7 @@ func (r *ReconcileVirtualMachineImport) setupNextStage(provider provider.Provide
 		} else {
 			numCheckpoints := len(dv.Spec.Checkpoints)
 			newCheckpoint := cdiv1.DataVolumeCheckpoint{
-				Previous: dv.Spec.Checkpoints[numCheckpoints - 1].Current,
+				Previous: dv.Spec.Checkpoints[numCheckpoints-1].Current,
 				Current:  snapshotRef,
 			}
 
