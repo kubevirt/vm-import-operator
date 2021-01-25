@@ -471,6 +471,10 @@ func (r *VmwareMapper) MapVM(targetVmName *string, vmSpec *kubevirtv1.VirtualMac
 	// Map clock
 	vmSpec.Spec.Template.Spec.Domain.Clock = r.mapClock(r.hostProperties)
 
+	// remove any default networks/interfaces from the template
+	vmSpec.Spec.Template.Spec.Networks = []kubevirtv1.Network{}
+	vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces = []kubevirtv1.Interface{}
+
 	if r.mappings != nil && r.mappings.NetworkMappings != nil {
 		// Map networks
 		vmSpec.Spec.Template.Spec.Networks, err = r.mapNetworks()
