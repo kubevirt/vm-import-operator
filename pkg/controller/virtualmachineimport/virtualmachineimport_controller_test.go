@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	batchv1 "k8s.io/api/batch/v1"
-
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
 	"github.com/kubevirt/vm-import-operator/pkg/metrics"
 
@@ -61,8 +59,8 @@ var (
 	getKvConfig              func() kvConfig.KubeVirtConfig
 	getCtrlConfig            func() ctrlConfig.ControllerConfig
 	needsGuestConversion     func() bool
-	getGuestConversionJob    func() (*batchv1.Job, error)
-	launchGuestConversionJob func() (*batchv1.Job, error)
+	getGuestConversionPod    func() (*corev1.Pod, error)
+	launchGuestConversionPod func() (*corev1.Pod, error)
 	supportsWarmMigration    func() bool
 	createVMSnapshot         func() (string, error)
 )
@@ -1179,21 +1177,21 @@ var _ = Describe("Reconcile steps", func() {
 		var (
 			prov   *mockProvider
 			vmName types.NamespacedName
-			job    *batchv1.Job
+			pod    *corev1.Pod
 		)
 
 		BeforeEach(func() {
 			prov = &mockProvider{}
 			vmName = types.NamespacedName{Name: "test", Namespace: "default"}
 
-			job = &batchv1.Job{
+			pod = &corev1.Pod{
 				TypeMeta: v1.TypeMeta{},
 				ObjectMeta: v1.ObjectMeta{
-					Name: "test-job",
+					Name: "test-pod",
 				},
-				Spec: batchv1.JobSpec{},
-				Status: batchv1.JobStatus{
-					Conditions: []batchv1.JobCondition{},
+				Spec: corev1.PodSpec{},
+				Status: corev1.PodStatus{
+					Conditions: []corev1.PodCondition{},
 				},
 			}
 
@@ -1223,40 +1221,48 @@ var _ = Describe("Reconcile steps", func() {
 				case *v2vv1.VirtualMachineImport:
 					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{}
 					obj.(*v2vv1.VirtualMachineImport).Annotations = map[string]string{sourceVMInitialState: string(provider.VMStatusUp)}
-				case *batchv1.Job:
-					obj = job
+				case *corev1.Pod:
+					obj = pod
 				}
 				return nil
 			}
 			needsGuestConversion = func() bool {
 				return true
 			}
-			getGuestConversionJob = func() (*batchv1.Job, error) {
+			getGuestConversionPod = func() (*corev1.Pod, error) {
 				return nil, nil
 			}
-			launchGuestConversionJob = func() (*batchv1.Job, error) {
-				return job, nil
+			launchGuestConversionPod = func() (*corev1.Pod, error) {
+				return pod, nil
 			}
 		})
 
-		It("should return false with no error when the job is active", func() {
-			job.Status.Active = int32(1)
+		It("should return false with no error when the pod is pending", func() {
+			pod.Status.Phase = corev1.PodPending
 
 			done, err := reconciler.convertGuest(prov, instance, vmName)
 			Expect(err).To(BeNil())
 			Expect(done).To(BeFalse())
 		})
 
-		It("should return false with no error when the job is failed", func() {
-			job.Status.Failed = int32(1)
+		It("should return false with no error when the pod is running", func() {
+			pod.Status.Phase = corev1.PodRunning
 
 			done, err := reconciler.convertGuest(prov, instance, vmName)
 			Expect(err).To(BeNil())
 			Expect(done).To(BeFalse())
 		})
 
-		It("should return true with no error when the job is successful", func() {
-			job.Status.Succeeded = int32(1)
+		It("should return false with no error when the pod is failed", func() {
+			pod.Status.Phase = corev1.PodFailed
+
+			done, err := reconciler.convertGuest(prov, instance, vmName)
+			Expect(err).To(BeNil())
+			Expect(done).To(BeFalse())
+		})
+
+		It("should return true with no error when the pod is successful", func() {
+			pod.Status.Phase = corev1.PodSucceeded
 
 			done, err := reconciler.convertGuest(prov, instance, vmName)
 			Expect(err).To(BeNil())
@@ -2043,12 +2049,12 @@ func (p *mockProvider) NeedsGuestConversion() bool {
 	return needsGuestConversion()
 }
 
-func (p *mockProvider) GetGuestConversionJob() (*batchv1.Job, error) {
-	return getGuestConversionJob()
+func (p *mockProvider) GetGuestConversionPod() (*corev1.Pod, error) {
+	return getGuestConversionPod()
 }
 
-func (p *mockProvider) LaunchGuestConversionJob(_ *kubevirtv1.VirtualMachine) (*batchv1.Job, error) {
-	return launchGuestConversionJob()
+func (p *mockProvider) LaunchGuestConversionPod(_ *kubevirtv1.VirtualMachine) (*corev1.Pod, error) {
+	return launchGuestConversionPod()
 }
 
 func (p *mockProvider) SupportsWarmMigration() bool {

@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	batchv1 "k8s.io/api/batch/v1"
-
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
 
 	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
@@ -403,12 +401,12 @@ func (o *OvirtProvider) NeedsGuestConversion() bool {
 }
 
 // GetGuestConversionJob is not implemented.
-func (o *OvirtProvider) GetGuestConversionJob() (*batchv1.Job, error) {
+func (o *OvirtProvider) GetGuestConversionPod() (*corev1.Pod, error) {
 	return nil, nil
 }
 
 // LaunchGuestConversionJob is not implemented.
-func (o *OvirtProvider) LaunchGuestConversionJob(_ *kubevirtv1.VirtualMachine) (*batchv1.Job, error) {
+func (o *OvirtProvider) LaunchGuestConversionPod(_ *kubevirtv1.VirtualMachine) (*corev1.Pod, error) {
 	return nil, nil
 }
 

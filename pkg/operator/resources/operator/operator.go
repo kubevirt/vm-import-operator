@@ -238,13 +238,16 @@ func getControllerPolicyRules() []rbacv1.PolicyRule {
 		},
 		{
 			APIGroups: []string{
-				"batch",
+				"security.openshift.io",
 			},
 			Resources: []string{
-				"jobs",
+				"securitycontextconstraints",
+			},
+			ResourceNames: []string{
+				"anyuid",
 			},
 			Verbs: []string{
-				"*",
+				"use",
 			},
 		},
 	}

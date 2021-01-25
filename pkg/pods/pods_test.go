@@ -1,11 +1,12 @@
-package jobs
+package pods
 
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,66 +18,66 @@ var (
 	deleteCalled = false
 )
 
-var _ = Describe("Jobs Manager", func() {
+var _ = Describe("Pods Manager", func() {
 
 	manager := NewManager(mockClient{})
 	vmiCrName := types.NamespacedName{Name: "test", Namespace: "test"}
 
 	Describe("FindFor", func() {
-		It("should return nil, nil when there are no jobs found", func() {
+		It("should return nil, nil when there are no pods found", func() {
 			list = func(context.Context, runtime.Object) error {
 				return nil
 			}
-			job, err := manager.FindFor(vmiCrName)
-			Expect(job).To(BeNil())
+			pod, err := manager.FindFor(vmiCrName)
+			Expect(pod).To(BeNil())
 			Expect(err).To(BeNil())
 		})
 
-		It("should return an error if more than one job is found", func() {
+		It("should return an error if more than one pod is found", func() {
 			list = func(_ context.Context, obj runtime.Object) error {
-				obj.(*batchv1.JobList).Items = []batchv1.Job{
+				obj.(*corev1.PodList).Items = []corev1.Pod{
 					{}, {},
 				}
 				return nil
 			}
-			job, err := manager.FindFor(vmiCrName)
-			Expect(job).To(BeNil())
+			pod, err := manager.FindFor(vmiCrName)
+			Expect(pod).To(BeNil())
 			Expect(err).ToNot(BeNil())
-			Expect(err.Error()).To(Equal("too many jobs matching given labels: map[vmimport.v2v.kubevirt.io/vmi-name:test]"))
+			Expect(err.Error()).To(Equal("too many pods matching given labels: map[vmimport.v2v.kubevirt.io/vmi-name:test]"))
 		})
 
-		It("should return the job if one is found", func() {
-			testJob := batchv1.Job{
+		It("should return the pod if one is found", func() {
+			testPod := corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-job",
+					Name: "test-pod",
 				},
 			}
 			list = func(_ context.Context, obj runtime.Object) error {
-				obj.(*batchv1.JobList).Items = []batchv1.Job{
-					testJob,
+				obj.(*corev1.PodList).Items = []corev1.Pod{
+					testPod,
 				}
 				return nil
 			}
-			job, err := manager.FindFor(vmiCrName)
-			Expect(job).ToNot(BeNil())
+			pod, err := manager.FindFor(vmiCrName)
+			Expect(pod).ToNot(BeNil())
 			Expect(err).To(BeNil())
-			Expect(job.Name).To(Equal(testJob.Name))
+			Expect(pod.Name).To(Equal(testPod.Name))
 		})
 	})
 
 	Describe("CreateFor", func() {
 		It("should set GenerateName, blank out Name, and set the vmi-name label", func() {
-			testJob := &batchv1.Job{
+			testPod := &corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "should-be-blanked",
 				},
 			}
 
-			err := manager.CreateFor(testJob, vmiCrName)
+			err := manager.CreateFor(testPod, vmiCrName)
 			Expect(err).To(BeNil())
-			Expect(testJob.GenerateName).To(Equal(prefix))
-			Expect(testJob.Name).To(Equal(""))
-			Expect(testJob.Labels[vmiNameLabel]).To(Equal(vmiCrName.Name))
+			Expect(testPod.GenerateName).To(Equal(prefix))
+			Expect(testPod.Name).To(Equal(""))
+			Expect(testPod.Labels[vmiNameLabel]).To(Equal(vmiCrName.Name))
 		})
 	})
 
@@ -85,7 +86,7 @@ var _ = Describe("Jobs Manager", func() {
 			deleteCalled = false
 		})
 
-		It("should return nil when there are no jobs found", func() {
+		It("should return nil when there are no pods found", func() {
 			list = func(context.Context, runtime.Object) error {
 				return nil
 			}
@@ -94,9 +95,9 @@ var _ = Describe("Jobs Manager", func() {
 			Expect(err).To(BeNil())
 		})
 
-		It("should return an error if more than one job is found", func() {
+		It("should return an error if more than one pod is found", func() {
 			list = func(_ context.Context, obj runtime.Object) error {
-				obj.(*batchv1.JobList).Items = []batchv1.Job{
+				obj.(*corev1.PodList).Items = []corev1.Pod{
 					{}, {},
 				}
 				return nil
@@ -104,18 +105,18 @@ var _ = Describe("Jobs Manager", func() {
 			err := manager.DeleteFor(vmiCrName)
 			Expect(deleteCalled).To(BeFalse())
 			Expect(err).ToNot(BeNil())
-			Expect(err.Error()).To(Equal("too many jobs matching given labels: map[vmimport.v2v.kubevirt.io/vmi-name:test]"))
+			Expect(err.Error()).To(Equal("too many pods matching given labels: map[vmimport.v2v.kubevirt.io/vmi-name:test]"))
 		})
 
-		It("should return nil if one job is found", func() {
-			testJob := batchv1.Job{
+		It("should return nil if one pod is found", func() {
+			testPod := corev1.Pod{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-job",
+					Name: "test-pod",
 				},
 			}
 			list = func(_ context.Context, obj runtime.Object) error {
-				obj.(*batchv1.JobList).Items = []batchv1.Job{
-					testJob,
+				obj.(*corev1.PodList).Items = []corev1.Pod{
+					testPod,
 				}
 				return nil
 			}

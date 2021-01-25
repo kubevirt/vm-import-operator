@@ -3,7 +3,6 @@ package provider
 import (
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	oapiv1 "github.com/openshift/api/template/v1"
-	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
@@ -36,8 +35,8 @@ type Provider interface {
 	FindTemplate() (*oapiv1.Template, error)
 	ProcessTemplate(*oapiv1.Template, *string, string) (*kubevirtv1.VirtualMachine, error)
 	NeedsGuestConversion() bool
-	GetGuestConversionJob() (*batchv1.Job, error)
-	LaunchGuestConversionJob(*kubevirtv1.VirtualMachine) (*batchv1.Job, error)
+	GetGuestConversionPod() (*corev1.Pod, error)
+	LaunchGuestConversionPod(*kubevirtv1.VirtualMachine) (*corev1.Pod, error)
 	SupportsWarmMigration() bool
 	CreateVMSnapshot() (string, error)
 }
@@ -80,9 +79,9 @@ type VirtualMachineManager interface {
 	DeleteFor(types.NamespacedName) error
 }
 
-// JobsManager defines operations on Jobs
-type JobsManager interface {
-	FindFor(types.NamespacedName) (*batchv1.Job, error)
-	CreateFor(*batchv1.Job, types.NamespacedName) error
+// PodsManager defines operations on Pods
+type PodsManager interface {
+	FindFor(types.NamespacedName) (*corev1.Pod, error)
+	CreateFor(*corev1.Pod, types.NamespacedName) error
 	DeleteFor(types.NamespacedName) error
 }
