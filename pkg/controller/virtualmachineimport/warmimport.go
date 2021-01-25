@@ -27,7 +27,7 @@ func shouldFinalizeWarmImport(instance *v2vv1.VirtualMachineImport) bool {
 
 func (r *ReconcileVirtualMachineImport) warmImport(provider provider.Provider, instance *v2vv1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName, log logr.Logger) (time.Duration, error) {
 	if instance.Status.WarmImport.Failures > r.ctrlConfig.WarmImportMaxFailures() || instance.Status.WarmImport.ConsecutiveFailures > r.ctrlConfig.WarmImportConsecutiveFailures() {
-		err := r.endWarmImportAsFailed(provider, instance, "warm import retry limit reached")
+		err := r.endWarmImportFailed(provider, instance, "warm import retry limit reached")
 		if err != nil {
 			return NoReQ, err
 		}
@@ -133,7 +133,7 @@ func (r *ReconcileVirtualMachineImport) ensureDisksExist(provider provider.Provi
 			return false, err
 		}
 		if !valid {
-			err := r.endImportAsFailed(provider, instance, dv, "disk is in illegal status")
+			err := r.endDiskImportFailed(provider, instance, dv, "disk is in illegal status")
 			if err != nil {
 				return false, err
 			}
