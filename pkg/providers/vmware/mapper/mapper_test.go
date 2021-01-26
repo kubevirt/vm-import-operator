@@ -2,9 +2,6 @@ package mapper_test
 
 import (
 	"context"
-
-	v1 "k8s.io/api/core/v1"
-
 	"github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware/mapper"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware/os"
@@ -16,6 +13,7 @@ import (
 	"github.com/vmware/govmomi/simulator"
 	"github.com/vmware/govmomi/vim25/mo"
 	"github.com/vmware/govmomi/vim25/types"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
 )
@@ -266,6 +264,28 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(len(networks)).To(Equal(0))
 		Expect(networkInterfaceMultiQueue).ToNot(BeNil())
 		Expect(*networkInterfaceMultiQueue).To(BeFalse())
+	})
+
+	It("should remove any networks or interfaces from the template", func() {
+		mappings := &v1beta1.VmwareMappings{}
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{
+			Spec: kubevirtv1.VirtualMachineSpec{
+				Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
+					Spec: kubevirtv1.VirtualMachineInstanceSpec{
+						Domain: kubevirtv1.DomainSpec{
+							Devices: kubevirtv1.Devices{
+								Interfaces: []kubevirtv1.Interface{{}},
+							},
+						},
+						Networks: []kubevirtv1.Network{{}},
+					},
+				},
+			},
+		})
+		Expect(err).To(BeNil())
+		Expect(len(vmSpec.Spec.Template.Spec.Networks)).To(Equal(0))
+		Expect(len(vmSpec.Spec.Template.Spec.Domain.Devices.Interfaces)).To(Equal(0))
 	})
 })
 
