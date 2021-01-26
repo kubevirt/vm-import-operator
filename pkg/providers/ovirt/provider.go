@@ -3,6 +3,7 @@ package ovirtprovider
 import (
 	"errors"
 	"fmt"
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"strings"
 
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
@@ -406,7 +407,7 @@ func (o *OvirtProvider) GetGuestConversionPod() (*corev1.Pod, error) {
 }
 
 // LaunchGuestConversionJob is not implemented.
-func (o *OvirtProvider) LaunchGuestConversionPod(_ *kubevirtv1.VirtualMachine) (*corev1.Pod, error) {
+func (o *OvirtProvider) LaunchGuestConversionPod(_ *kubevirtv1.VirtualMachine, _ map[string]cdiv1.DataVolume) (*corev1.Pod, error) {
 	return nil, nil
 }
 
