@@ -92,6 +92,8 @@ const (
 	EventGuestConversionFailed = "GuestConversionFailed"
 	// EventWarmImportFailed is emmitted when a warm import attempt fails.
 	EventWarmImportFailed = "WarmImportFailed"
+	// EventVMNotFound is emitted when the target VM cannot be found, perhaps due to being deleted during an import.
+	EventVMNotFound = "VMNotFound"
 
 	SlowReQ = time.Second * 10
 	FastReQ = time.Second * 2
@@ -353,6 +355,17 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportScheduled, "Import of Virtual Machine %s/%s started", vmName.Namespace, vmName.Name)
 	}
 
+	// At this point the target VM should exist, so fail the import if it's not there.
+	err = r.client.Get(context.TODO(), vmName, &kubevirtv1.VirtualMachine{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			// end import in failure
+			err := r.endVMNotFound(provider, instance)
+			return reconcile.Result{}, err
+		}
+		return reconcile.Result{}, err
+	}
+
 	if shouldWarmImport(provider, instance) {
 		if shouldFinalizeWarmImport(instance) {
 			err = r.setupNextStage(provider, instance, mapper, vmName, true)
@@ -514,7 +527,7 @@ func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider,
 		return true, nil
 	} else if pod.Status.Phase == corev1.PodFailed {
 		log.Info("Conversion pod failed.", "Pod.Name", pod.Name)
-		err := r.endGuestConversionAsFailed(provider, instance, fmt.Sprintf("virt-v2v pod %s failed", pod.Name))
+		err := r.endGuestConversionFailed(provider, instance, fmt.Sprintf("virt-v2v pod %s failed", pod.Name))
 		if err != nil {
 			return false, err
 		}
@@ -548,7 +561,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 			if valid {
 				log.Info("Creating data volume", "DataVolume.Name", dv.Name, "VM.Name", vmName)
 				if _, err = r.createDataVolume(provider, mapper, instance, &dv, vmName); err != nil {
-					if err = r.endImportAsFailed(provider, instance, foundDv, err.Error()); err != nil {
+					if err = r.endDiskImportFailed(provider, instance, foundDv, err.Error()); err != nil {
 						return false, err
 					}
 					return false, err
@@ -556,7 +569,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 			} else {
 				// If disk status is wrong, end the import as failed:
 				log.Info("Disk status is incorrect", "DataVolume.Name", dv.Name, "VM.Name", vmName)
-				if err = r.endImportAsFailed(provider, instance, foundDv, "disk is in illegal status"); err != nil {
+				if err = r.endDiskImportFailed(provider, instance, foundDv, "disk is in illegal status"); err != nil {
 					return false, err
 				}
 			}
@@ -568,7 +581,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 				dvsDone[dvID] = true
 			} else if foundDv.Status.Phase == cdiv1.Failed {
 				log.Info("Data volume import failed", "DataVolume.Name", foundDv.Name, "VM.Name", vmName)
-				if err = r.endImportAsFailed(provider, instance, foundDv, "dv is in Failed Phase"); err != nil {
+				if err = r.endDiskImportFailed(provider, instance, foundDv, "dv is in Failed Phase"); err != nil {
 					return false, err
 				}
 			} else if foundDv.Status.Phase == cdiv1.Pending {
@@ -608,7 +621,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 							if terminationMessage != "" {
 								message = fmt.Sprintf("%s (%s)", terminationMessage, message)
 							}
-							if err = r.endImportAsFailed(provider, instance, foundDv, message); err != nil {
+							if err = r.endDiskImportFailed(provider, instance, foundDv, message); err != nil {
 								return false, err
 							}
 						}
@@ -638,18 +651,17 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 	return done, nil
 }
 
-func (r *ReconcileVirtualMachineImport) endGuestConversionAsFailed(provider provider.Provider, instance *v2vv1.VirtualMachineImport, message string) error {
-	errorMessage := fmt.Sprintf("Error converting guests: %s", message)
+func (r *ReconcileVirtualMachineImport) fail(provider provider.Provider, instance *v2vv1.VirtualMachineImport, reason v2vv1.SucceededConditionReason, message string) error {
 	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 
 	// Update processing condition to failed:
-	processingCond := conditions.NewProcessingCondition(string(v2vv1.ProcessingFailed), errorMessage, corev1.ConditionFalse)
+	processingCond := conditions.NewProcessingCondition(string(v2vv1.ProcessingFailed), message, corev1.ConditionFalse)
 	if err := r.upsertStatusConditions(instanceNamespacedName, processingCond); err != nil {
 		return err
 	}
 
 	// Update succeed condition to failed:
-	succeededCond := conditions.NewSucceededCondition(string(v2vv1.GuestConversionFailed), errorMessage, corev1.ConditionFalse)
+	succeededCond := conditions.NewSucceededCondition(string(reason), message, corev1.ConditionFalse)
 	if err := r.upsertStatusConditions(instanceNamespacedName, succeededCond); err != nil {
 		return err
 	}
@@ -658,9 +670,6 @@ func (r *ReconcileVirtualMachineImport) endGuestConversionAsFailed(provider prov
 	if err := r.updateProgress(instance, progressDone); err != nil {
 		return err
 	}
-
-	// Update event:
-	r.recorder.Event(instance, corev1.EventTypeWarning, EventGuestConversionFailed, message)
 
 	// Cleanup
 	if err := r.afterFailure(provider, instance); err != nil {
@@ -670,67 +679,37 @@ func (r *ReconcileVirtualMachineImport) endGuestConversionAsFailed(provider prov
 	return nil
 }
 
-func (r *ReconcileVirtualMachineImport) endImportAsFailed(provider provider.Provider, instance *v2vv1.VirtualMachineImport, dv *cdiv1.DataVolume, message string) error {
-	errorMessage := fmt.Sprintf("Error while importing disk image: %s. %s", dv.Name, message)
-	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
+func (r *ReconcileVirtualMachineImport) endVMNotFound(provider provider.Provider, instance *v2vv1.VirtualMachineImport) error {
+	message := fmt.Sprintf("target VM %s not found", instance.Status.TargetVMName)
 
-	// Update processing condition to failed:
-	processingCond := conditions.NewProcessingCondition(string(v2vv1.ProcessingFailed), errorMessage, corev1.ConditionFalse)
-	if err := r.upsertStatusConditions(instanceNamespacedName, processingCond); err != nil {
-		return err
-	}
+	// Update event:
+	r.recorder.Event(instance, corev1.EventTypeWarning, EventVMNotFound, message)
 
-	// Update succeed condition to failed:
-	succeededCond := conditions.NewSucceededCondition(string(v2vv1.DataVolumeCreationFailed), errorMessage, corev1.ConditionFalse)
-	if err := r.upsertStatusConditions(instanceNamespacedName, succeededCond); err != nil {
-		return err
-	}
+	return r.fail(provider, instance, v2vv1.VMNotFound, message)
+}
 
-	// Update progress to done.
-	if err := r.updateProgress(instance, progressDone); err != nil {
-		return err
-	}
-
+func (r *ReconcileVirtualMachineImport) endDiskImportFailed(provider provider.Provider, instance *v2vv1.VirtualMachineImport, dv *cdiv1.DataVolume, message string) error {
 	// Update event:
 	r.recorder.Event(instance, corev1.EventTypeWarning, EventDVCreationFailed, message)
 
-	// Cleanup
-	if err := r.afterFailure(provider, instance); err != nil {
-		return err
-	}
-
-	return nil
+	errorMessage := fmt.Sprintf("Error while importing disk image: %s. %s", dv.Name, message)
+	return r.fail(provider, instance, v2vv1.DataVolumeCreationFailed, errorMessage)
 }
 
-func (r *ReconcileVirtualMachineImport) endWarmImportAsFailed(provider provider.Provider, instance *v2vv1.VirtualMachineImport, message string) error {
-	errorMessage := fmt.Sprintf("Error while attempting warm import: %s", message)
-	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
+func (r *ReconcileVirtualMachineImport) endGuestConversionFailed(provider provider.Provider, instance *v2vv1.VirtualMachineImport, message string) error {
+	// Update event:
+	r.recorder.Event(instance, corev1.EventTypeWarning, EventGuestConversionFailed, message)
 
-	// Update processing condition to failed:
-	processingCond := conditions.NewProcessingCondition(string(v2vv1.ProcessingFailed), errorMessage, corev1.ConditionFalse)
-	if err := r.upsertStatusConditions(instanceNamespacedName, processingCond); err != nil {
-		return err
-	}
-	// Update succeed condition to failed:
-	succeededCond := conditions.NewSucceededCondition(string(v2vv1.WarmImportFailed), errorMessage, corev1.ConditionFalse)
-	if err := r.upsertStatusConditions(instanceNamespacedName, succeededCond); err != nil {
-		return err
-	}
+	errorMessage := fmt.Sprintf("Error converting guests: %s", message)
+	return r.fail(provider, instance, v2vv1.GuestConversionFailed, errorMessage)
+}
 
-	// Update progress to done.
-	if err := r.updateProgress(instance, progressDone); err != nil {
-		return err
-	}
-
+func (r *ReconcileVirtualMachineImport) endWarmImportFailed(provider provider.Provider, instance *v2vv1.VirtualMachineImport, message string) error {
 	// Update event:
 	r.recorder.Event(instance, corev1.EventTypeWarning, EventWarmImportFailed, message)
 
-	// Cleanup
-	if err := r.afterFailure(provider, instance); err != nil {
-		return err
-	}
-
-	return nil
+	errorMessage := fmt.Sprintf("Error while attempting warm import: %s", message)
+	return r.fail(provider, instance, v2vv1.WarmImportFailed, errorMessage)
 }
 
 func importerPodNameFromDv(dvID string) string {

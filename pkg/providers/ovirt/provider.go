@@ -3,6 +3,7 @@ package ovirtprovider
 import (
 	"errors"
 	"fmt"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"strings"
 
@@ -385,7 +386,9 @@ func (o *OvirtProvider) CleanUp(failure bool, cr *v2vv1.VirtualMachineImport, cl
 		}
 
 		err = o.virtualMachineManager.DeleteFor(vmiName)
-		if err != nil {
+		// ignore not found errors, since the VM being deleted
+		// might be the cause of the failed import.
+		if err != nil && !k8serrors.IsNotFound(err) {
 			errs = append(errs, err)
 		}
 	}
