@@ -59,7 +59,7 @@ var biosTypeMapping = map[string]*kubevirtv1.Bootloader{
 // disk is an abstraction of a VMWare VirtualDisk
 type disk struct {
 	backingFileName string
-	capacity        resource.Quantity
+	capacity        int64
 	datastoreMoRef  string
 	datastoreName   string
 	id              string
@@ -198,11 +198,6 @@ func (r *VmwareMapper) buildDisks() error {
 			backingFileName = backingInfo.FileName
 			datastoreName = getDatastoreNameFromBacking(backingFileName)
 
-			capacity, err := getCapacityForVirtualDisk(virtualDisk)
-			if err != nil {
-				return err
-			}
-
 			if virtualDisk.VDiskId != nil {
 				diskId = virtualDisk.VDiskId.Id
 			} else {
@@ -211,7 +206,7 @@ func (r *VmwareMapper) buildDisks() error {
 
 			disk := disk{
 				backingFileName: backingFileName,
-				capacity:        capacity,
+				capacity:        getDiskCapacityInBytes(virtualDisk),
 				datastoreMoRef:  datastoreMoRef,
 				datastoreName:   datastoreName,
 				id:              diskId,
@@ -291,7 +286,7 @@ func (r *VmwareMapper) getVolumeModeForDisk(mapping *v1beta1.StorageResourceMapp
 }
 
 // MapDataVolumes maps the VMware disks to CDI DataVolumes
-func (r *VmwareMapper) MapDataVolumes(_ *string) (map[string]cdiv1.DataVolume, error) {
+func (r *VmwareMapper) MapDataVolumes(_ *string, filesystemOverhead cdiv1.FilesystemOverhead) (map[string]cdiv1.DataVolume, error) {
 	err := r.buildDisks()
 	if err != nil {
 		return nil, err
@@ -303,6 +298,15 @@ func (r *VmwareMapper) MapDataVolumes(_ *string) (map[string]cdiv1.DataVolume, e
 		dvName := fmt.Sprintf("%s-%d", r.vmProperties.Config.Uuid, disk.key)
 
 		mapping := r.getMappingForDisk(disk)
+
+		storageClass := r.getStorageClassForDisk(mapping)
+
+		overhead := utils.GetOverheadForStorageClass(filesystemOverhead, storageClass)
+		capacityWithOverhead := int64(float64(disk.capacity) * (1 + overhead))
+		capacityAsQuantity, err := bytesToQuantity(capacityWithOverhead)
+		if err != nil {
+			return nil, err
+		}
 
 		dvs[dvName] = cdiv1.DataVolume{
 			TypeMeta: metav1.TypeMeta{
@@ -330,10 +334,10 @@ func (r *VmwareMapper) MapDataVolumes(_ *string) (map[string]cdiv1.DataVolume, e
 					VolumeMode: r.getVolumeModeForDisk(mapping),
 					Resources: corev1.ResourceRequirements{
 						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: disk.capacity,
+							corev1.ResourceStorage: capacityAsQuantity,
 						},
 					},
-					StorageClassName: r.getStorageClassForDisk(mapping),
+					StorageClassName: storageClass,
 				},
 			},
 		}
@@ -655,17 +659,10 @@ func (r *VmwareMapper) mapResourceReservations() (kubevirtv1.ResourceRequirement
 	return reqs, nil
 }
 
-func getCapacityForVirtualDisk(disk *types.VirtualDisk) (resource.Quantity, error) {
+func bytesToQuantity(bytes int64) (resource.Quantity, error) {
 	var capacity resource.Quantity
-	var capacityInBytes int64
 
-	// which of these is populated depends on the version of vCenter
-	if disk.CapacityInBytes > 0 {
-		capacityInBytes = disk.CapacityInBytes
-	} else {
-		capacityInBytes = disk.CapacityInKB * 1024
-	}
-	diskSizeConverted, err := utils.FormatBytes(capacityInBytes)
+	diskSizeConverted, err := utils.FormatBytes(bytes)
 	if err != nil {
 		return capacity, err
 	}
@@ -674,6 +671,18 @@ func getCapacityForVirtualDisk(disk *types.VirtualDisk) (resource.Quantity, erro
 		return capacity, err
 	}
 	return capacity, nil
+}
+
+func getDiskCapacityInBytes(disk *types.VirtualDisk) int64 {
+	var capacityInBytes int64
+
+	if disk.CapacityInBytes > 0 {
+		capacityInBytes = disk.CapacityInBytes
+	} else {
+		capacityInBytes = disk.CapacityInKB * 1024
+	}
+
+	return capacityInBytes
 }
 
 func getDatastoreNameFromBacking(backingFile string) string {

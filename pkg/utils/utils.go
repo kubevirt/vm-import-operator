@@ -9,6 +9,8 @@ import (
 	"time"
 	"unicode"
 
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
+
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	v1 "kubevirt.io/client-go/api/v1"
 
@@ -354,4 +356,23 @@ func UpdateAnnotations(vm *v1.VirtualMachine, annotationMap map[string]string) {
 		vm.ObjectMeta.SetAnnotations(annotations)
 	}
 	AppendMap(annotations, annotationMap)
+}
+
+func GetOverheadForStorageClass(filesystemOverhead cdiv1.FilesystemOverhead, storageClass *string) float64 {
+	scName := ""
+	defaultOverhead := 0.055
+
+	if storageClass != nil {
+		scName = *storageClass
+	}
+
+	rawOverhead, ok := filesystemOverhead.StorageClass[scName]
+	if !ok {
+		rawOverhead = filesystemOverhead.Global
+	}
+	overhead, err := strconv.ParseFloat(string(rawOverhead), 64)
+	if err != nil {
+		overhead = defaultOverhead
+	}
+	return overhead
 }

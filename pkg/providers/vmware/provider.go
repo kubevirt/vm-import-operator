@@ -3,6 +3,7 @@ package vmware
 import (
 	"encoding/xml"
 	"fmt"
+
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 

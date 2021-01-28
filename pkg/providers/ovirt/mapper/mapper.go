@@ -248,7 +248,7 @@ func (o *OvirtMapper) getAccessMode(diskAttachment *ovirtsdk.DiskAttachment, map
 
 // MapDataVolumes map the oVirt VM disks to the map of CDI DataVolumes specification, where
 // map key is the target-vm-name + id of the oVirt disk
-func (o *OvirtMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.DataVolume, error) {
+func (o *OvirtMapper) MapDataVolumes(targetVMName *string, filesystemOverhead cdiv1.FilesystemOverhead) (map[string]cdiv1.DataVolume, error) {
 	// TODO: stateless, boot_devices, floppy/cdrom
 	diskAttachments, _ := o.vm.DiskAttachments()
 	dvs := make(map[string]cdiv1.DataVolume, len(diskAttachments.Slice()))
@@ -258,17 +258,21 @@ func (o *OvirtMapper) MapDataVolumes(targetVMName *string) (map[string]cdiv1.Dat
 		dvName := buildDataVolumeName(*targetVMName, diskAttachID)
 		disk, _ := diskAttachment.Disk()
 		diskID, _ := disk.Id()
-		diskSize, _ := disk.ProvisionedSize()
-		diskSizeConverted, err := utils.FormatBytes(diskSize)
-		if err != nil {
-			return dvs, err
-		}
-		quantity, _ := resource.ParseQuantity(diskSizeConverted)
 
 		mapping := o.getMapping(disk, o.mappings)
 		accessMode := o.getAccessMode(diskAttachment, mapping)
 		sdClass := o.getStorageClassForDisk(mapping)
 		volumeMode := o.getVolumeMode(mapping)
+
+		diskSize, _ := disk.ProvisionedSize()
+		overhead := utils.GetOverheadForStorageClass(filesystemOverhead, sdClass)
+		sizeWithOverhead := int64(float64(diskSize) * (1 + overhead))
+
+		diskSizeConverted, err := utils.FormatBytes(sizeWithOverhead)
+		if err != nil {
+			return dvs, err
+		}
+		quantity, _ := resource.ParseQuantity(diskSizeConverted)
 
 		dvs[dvName] = cdiv1.DataVolume{
 			TypeMeta: metav1.TypeMeta{

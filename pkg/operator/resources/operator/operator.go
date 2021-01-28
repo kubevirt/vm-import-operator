@@ -177,6 +177,17 @@ func getControllerPolicyRules() []rbacv1.PolicyRule {
 		},
 		{
 			APIGroups: []string{
+				"cdi.kubevirt.io",
+			},
+			Resources: []string{
+				"cdiconfigs",
+			},
+			Verbs: []string{
+				"get",
+			},
+		},
+		{
+			APIGroups: []string{
 				"template.openshift.io",
 			},
 			Resources: []string{
