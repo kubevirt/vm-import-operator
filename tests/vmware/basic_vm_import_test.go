@@ -2,6 +2,7 @@ package vmware_test
 
 import (
 	"context"
+	"fmt"
 	"github.com/kubevirt/vm-import-operator/tests/vmware"
 	"github.com/onsi/ginkgo/extensions/table"
 	"k8s.io/apimachinery/pkg/types"
@@ -62,7 +63,7 @@ var _ = Describe("Basic VM import ", func() {
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).NotTo(BeRunning(f).Timeout(2 * time.Minute))
 
-			vm := test.validateTargetConfiguration(vmBlueprint.Name)
+			vm := test.validateTargetConfiguration(vmBlueprint.Name, string(created.UID))
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveDefaultStorageClass(f))
 
 			// ensure the virt-v2v pod is cleaned up after a success
@@ -90,7 +91,7 @@ var _ = Describe("Basic VM import ", func() {
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).To(BeRunning(f))
 
-			vm := test.validateTargetConfiguration(vmBlueprint.Name)
+			vm := test.validateTargetConfiguration(vmBlueprint.Name, string(created.UID))
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveDefaultStorageClass(f))
 
 			// ensure the virt-v2v pod is cleaned up after a success
@@ -118,7 +119,7 @@ var _ = Describe("Basic VM import ", func() {
 			vmBlueprint := v1.VirtualMachine{ObjectMeta: metav1.ObjectMeta{Name: retrieved.Status.TargetVMName, Namespace: namespace}}
 			Expect(vmBlueprint).To(BeRunning(f))
 
-			vm := test.validateTargetConfiguration(vmBlueprint.Name)
+			vm := test.validateTargetConfiguration(vmBlueprint.Name, string(created.UID))
 			Expect(vm.Spec.Template.Spec.Volumes[0].DataVolume.Name).To(HaveStorageClass(storageClass, f))
 		},
 			table.Entry(" for disk", v2vv1.VmwareMappings{
@@ -197,7 +198,7 @@ var _ = Describe("Basic VM import ", func() {
 	})
 })
 
-func (t *basicVmImportTest) validateTargetConfiguration(vmName string) *v1.VirtualMachine {
+func (t *basicVmImportTest) validateTargetConfiguration(vmName string, uid string) *v1.VirtualMachine {
 	vmNamespacedName := types.NamespacedName{Name: vmName, Namespace: t.framework.Namespace.Name}
 
 	vm := &v1.VirtualMachine{}
@@ -228,7 +229,7 @@ func (t *basicVmImportTest) validateTargetConfiguration(vmName string) *v1.Virtu
 	Expect(disks).To(HaveLen(1))
 	disk0 := disks[0]
 	Expect(disk0.Disk.Bus).To(BeEquivalentTo("virtio"))
-	Expect(disk0.Name).To(BeEquivalentTo("dv-f7c371d6-2003-5a48-9859-3bc9a8b08908-204"))
+	Expect(disk0.Name).To(BeEquivalentTo(fmt.Sprintf("dv-%s-204", uid)))
 
 	By("having correct volumes")
 	Expect(spec.Volumes).To(HaveLen(1))
