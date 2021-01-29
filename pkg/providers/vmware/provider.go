@@ -3,6 +3,7 @@ package vmware
 import (
 	"encoding/xml"
 	"fmt"
+	"strings"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
@@ -200,6 +201,7 @@ func (r *VmwareProvider) LoadVM(sourceSpec v1beta1.VirtualMachineImportSourceSpe
 		return err
 	}
 	r.vm = vm.(*object.VirtualMachine)
+
 	return nil
 }
 
@@ -369,17 +371,27 @@ func (r *VmwareProvider) TestConnection() error {
 
 // Validate checks whether the source VM and resource mapping is valid.
 func (r *VmwareProvider) Validate() ([]v1beta1.VirtualMachineImportCondition, error) {
+	vmProperties, err := r.getVmProperties()
+	if err != nil {
+		return nil, err
+	}
+
 	validCondition := conditions.NewCondition(v1beta1.Valid, string(v1beta1.ValidationCompleted), "Validation completed successfully", corev1.ConditionTrue)
 	mappingCondition := conditions.NewCondition(v1beta1.MappingRulesVerified, string(v1beta1.MappingRulesVerificationCompleted), "All mapping rules checks passed", corev1.ConditionTrue)
+	validationFailures := make([]string, 0)
+
+	if vmProperties.Guest.ToolsStatus != types.VirtualMachineToolsStatusToolsOk && vmProperties.Runtime.PowerState != types.VirtualMachinePowerStatePoweredOff {
+		validationFailures = append(validationFailures, "VM must be powered off, or up to date VMWare Tools must be installed and running to allow the guest to be shutdown gracefully")
+	}
 
 	if r.instance.Spec.Warm {
-		vmProperties, err := r.getVmProperties()
-		if err != nil {
-			return nil, err
-		}
 		if vmProperties.Config.ChangeTrackingEnabled == nil || !*vmProperties.Config.ChangeTrackingEnabled {
-			//validCondition = conditions.NewCondition(v1beta1.Valid, string(v1beta1.ValidationFailed), "Changed Block Tracking must be enabled to allow warm import", corev1.ConditionFalse)
+			validationFailures = append(validationFailures, "Changed Block Tracking must be enabled to allow warm import")
 		}
+	}
+
+	if len(validationFailures) > 0 {
+		validCondition = conditions.NewCondition(v1beta1.Valid, string(v1beta1.ValidationFailed), strings.Join(validationFailures, "; "), corev1.ConditionFalse)
 	}
 
 	return []v1beta1.VirtualMachineImportCondition{validCondition, mappingCondition}, nil
