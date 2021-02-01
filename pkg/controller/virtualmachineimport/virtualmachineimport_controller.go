@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"kubevirt.io/containerized-data-importer/pkg/common"
+
 	k8svalidation "k8s.io/apimachinery/pkg/util/validation"
 
 	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware"
@@ -223,6 +225,7 @@ type ReconcileVirtualMachineImport struct {
 	recorder               record.EventRecorder
 	controller             controller.Controller
 	apiReader              client.Reader
+	filesystemOverhead     cdiv1.FilesystemOverhead
 }
 
 // Reconcile reads that state of the cluster for a VirtualMachineImport object and makes changes based on the state read
@@ -278,6 +281,11 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		if len(instance.GetFinalizers()) == 0 {
 			return reconcile.Result{}, nil
 		}
+	}
+
+	r.filesystemOverhead, err = r.getCDIFilesystemOverhead()
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 
 	// Init provider:
@@ -496,7 +504,7 @@ func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider,
 		return false, err
 	}
 
-	dataVolumes, err := mapper.MapDataVolumes(&vmName.Name)
+	dataVolumes, err := mapper.MapDataVolumes(&vmName.Name, r.filesystemOverhead)
 	if err != nil {
 		return false, err
 	}
@@ -537,7 +545,8 @@ func (r *ReconcileVirtualMachineImport) convertGuest(provider provider.Provider,
 
 func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, instance *v2vv1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName) (bool, error) {
 	log := log.WithValues("Request.Namespace", instance.Namespace, "Request.Name", instance.Name)
-	dvs, err := mapper.MapDataVolumes(&vmName.Name)
+
+	dvs, err := mapper.MapDataVolumes(&vmName.Name, r.filesystemOverhead)
 	if err != nil {
 		return false, err
 	}
@@ -1394,6 +1403,28 @@ func (r *ReconcileVirtualMachineImport) fetchVM(instance *v2vv1.VirtualMachineIm
 	provider.PrepareResourceMapping(resourceMapping, instance.Spec.Source)
 
 	return nil
+}
+
+func (r *ReconcileVirtualMachineImport) getCDIFilesystemOverhead() (cdiv1.FilesystemOverhead, error) {
+	filesystemOverhead := cdiv1.FilesystemOverhead{
+		Global:       common.DefaultGlobalOverhead,
+		StorageClass: make(map[string]cdiv1.Percent),
+	}
+
+	cdiConfig := &cdiv1.CDIConfig{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: "config", Namespace: ""}, cdiConfig)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return filesystemOverhead, nil
+		}
+		return filesystemOverhead, err
+	}
+
+	if cdiConfig.Spec.FilesystemOverhead != nil {
+		return *cdiConfig.Spec.FilesystemOverhead, nil
+	}
+
+	return filesystemOverhead, nil
 }
 
 func validateName(instance *v2vv1.VirtualMachineImport, sourceName string) error {

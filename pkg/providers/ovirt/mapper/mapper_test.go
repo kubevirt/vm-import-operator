@@ -3,9 +3,9 @@ package mapper_test
 import (
 	"fmt"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 
-	"k8s.io/apimachinery/pkg/api/resource"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -23,8 +23,11 @@ const memoryGI = 1024 * 1024 * 1024
 const maxMemoryGI = 4 * 1024 * 1024 * 1024
 
 var (
-	targetVMName   = "myvm"
-	expectedDVName = targetVMName + "-" + "123"
+	targetVMName       = "myvm"
+	expectedDVName     = targetVMName + "-" + "123"
+	filesystemOverhead = cdiv1.FilesystemOverhead{
+		Global: "0.0",
+	}
 )
 
 var (
@@ -362,7 +365,7 @@ var _ = Describe("Test pvc accessmodes", func() {
 		namespace := "the-namespace"
 		mapper := mapper.NewOvirtMapper(vm, &mappings, credentials, namespace, &osFinder)
 		daName := expectedDVName
-		dvs, _ := mapper.MapDataVolumes(&targetVMName)
+		dvs, _ := mapper.MapDataVolumes(&targetVMName, filesystemOverhead)
 
 		Expect(dvs).To(HaveLen(1))
 		Expect(dvs).To(HaveKey(daName))
@@ -382,7 +385,10 @@ var _ = Describe("Test pvc accessmodes", func() {
 
 var _ = Describe("Test mapping disks", func() {
 	var (
-		vm *ovirtsdk.Vm
+		vm                 *ovirtsdk.Vm
+		filesystemOverhead = cdiv1.FilesystemOverhead{
+			Global: "0.0",
+		}
 	)
 
 	BeforeEach(func() {
@@ -399,7 +405,7 @@ var _ = Describe("Test mapping disks", func() {
 		namespace := "the-namespace"
 		mapper := mapper.NewOvirtMapper(vm, &mappings, credentials, namespace, &osFinder)
 		daName := expectedDVName
-		dvs, _ := mapper.MapDataVolumes(&targetVMName)
+		dvs, _ := mapper.MapDataVolumes(&targetVMName, filesystemOverhead)
 
 		Expect(dvs).To(HaveLen(1))
 		Expect(dvs).To(HaveKey(daName))
@@ -419,11 +425,73 @@ var _ = Describe("Test mapping disks", func() {
 		Expect(dv.Spec.PVC.AccessModes).To(HaveLen(1))
 		Expect(dv.Spec.PVC.Resources.Requests).To(HaveKey(corev1.ResourceStorage))
 		storageResource := dv.Spec.PVC.Resources.Requests[corev1.ResourceStorage]
-		Expect(storageResource.Format).To(Equal(resource.BinarySI))
 		Expect(storageResource.Value()).To(BeEquivalentTo(memoryGI))
 
 		Expect(dv.Spec.PVC.StorageClassName).To(Not(BeNil()))
 		Expect(*dv.Spec.PVC.StorageClassName).To(Equal("storageclassname"))
+	})
+
+	It("should map disk with default overhead", func() {
+		mappings := createMappings()
+		credentials := mapper.DataVolumeCredentials{
+			URL:           "any-url",
+			SecretName:    "secret-name",
+			ConfigMapName: "config-map",
+		}
+		namespace := "the-namespace"
+		mapper := mapper.NewOvirtMapper(vm, &mappings, credentials, namespace, &osFinder)
+		daName := expectedDVName
+
+		// request 100% overhead, resulting in a disk of twice the size.
+		overhead := cdiv1.FilesystemOverhead{
+			Global: "1.0",
+		}
+		dvs, _ := mapper.MapDataVolumes(&targetVMName, overhead)
+
+		Expect(dvs).To(HaveLen(1))
+		Expect(dvs).To(HaveKey(daName))
+
+		dv := dvs[expectedDVName]
+
+		Expect(dv.Spec.PVC.Resources.Requests).To(HaveKey(corev1.ResourceStorage))
+		storageResource := dv.Spec.PVC.Resources.Requests[corev1.ResourceStorage]
+		Expect(storageResource.Value()).To(BeEquivalentTo(memoryGI * 2))
+
+		Expect(dv.Spec.PVC.StorageClassName).To(Not(BeNil()))
+		Expect(*dv.Spec.PVC.StorageClassName).To(Equal("storageclassname"))
+	})
+
+	It("should map disk with storage class specific overhead", func() {
+		mappings := createMappings()
+		credentials := mapper.DataVolumeCredentials{
+			URL:           "any-url",
+			SecretName:    "secret-name",
+			ConfigMapName: "config-map",
+		}
+		namespace := "the-namespace"
+		mapper := mapper.NewOvirtMapper(vm, &mappings, credentials, namespace, &osFinder)
+		daName := expectedDVName
+		scName := "storageclassname"
+		// request 100% overhead for the storage class, resulting in a disk of twice the size.
+		overhead := cdiv1.FilesystemOverhead{
+			Global: "0.0",
+			StorageClass: map[string]cdiv1.Percent{
+				scName: "1.0",
+			},
+		}
+		dvs, _ := mapper.MapDataVolumes(&targetVMName, overhead)
+
+		Expect(dvs).To(HaveLen(1))
+		Expect(dvs).To(HaveKey(daName))
+
+		dv := dvs[expectedDVName]
+
+		Expect(dv.Spec.PVC.Resources.Requests).To(HaveKey(corev1.ResourceStorage))
+		storageResource := dv.Spec.PVC.Resources.Requests[corev1.ResourceStorage]
+		Expect(storageResource.Value()).To(BeEquivalentTo(memoryGI * 2))
+
+		Expect(dv.Spec.PVC.StorageClassName).To(Not(BeNil()))
+		Expect(*dv.Spec.PVC.StorageClassName).To(Equal(scName))
 	})
 
 	It("should map disk storage class from disk", func() {
@@ -447,7 +515,7 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
-		dvs, _ := mapper.MapDataVolumes(&targetVMName)
+		dvs, _ := mapper.MapDataVolumes(&targetVMName, filesystemOverhead)
 
 		Expect(dvs).To(HaveLen(1))
 		Expect(dvs[expectedDVName].Spec.PVC.StorageClassName).To(Not(BeNil()))
@@ -476,7 +544,7 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
-		dvs, err := mapper.MapDataVolumes(&targetVMName)
+		dvs, err := mapper.MapDataVolumes(&targetVMName, filesystemOverhead)
 
 		Expect(err).To(BeNil())
 		Expect(dvs).To(HaveLen(1))
@@ -502,7 +570,7 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
-		dvs, err := mapper.MapDataVolumes(&targetVMName)
+		dvs, err := mapper.MapDataVolumes(&targetVMName, filesystemOverhead)
 
 		Expect(err).To(BeNil())
 		Expect(dvs).To(HaveLen(1))
@@ -515,7 +583,7 @@ var _ = Describe("Test mapping disks", func() {
 		}
 		mapper := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
 
-		dvs, err := mapper.MapDataVolumes(&targetVMName)
+		dvs, err := mapper.MapDataVolumes(&targetVMName, filesystemOverhead)
 
 		Expect(err).To(BeNil())
 		Expect(dvs).To(HaveLen(1))
@@ -549,7 +617,7 @@ var _ = Describe("Test mapping disks", func() {
 		}
 
 		mapper_ := mapper.NewOvirtMapper(vm, &mappings, mapper.DataVolumeCredentials{}, "", &osFinder)
-		dvs, _ := mapper_.MapDataVolumes(&targetVMName)
+		dvs, _ := mapper_.MapDataVolumes(&targetVMName, filesystemOverhead)
 		mapper_.MapDisk(vmSpec, dvs[expectedDVName])
 		Expect(vmSpec.Spec.Template.Spec.Domain.Devices.Disks[0].Disk.Bus).To(Equal(mapper.DiskInterfaceModelMapping[string(diskInterface)]))
 	},

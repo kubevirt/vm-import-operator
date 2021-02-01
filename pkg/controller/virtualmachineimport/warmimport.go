@@ -110,7 +110,7 @@ func (r *ReconcileVirtualMachineImport) ensureDisksExist(provider provider.Provi
 		}
 	}
 
-	dvs, err := mapper.MapDataVolumes(&vmName.Name)
+	dvs, err := mapper.MapDataVolumes(&vmName.Name, r.filesystemOverhead)
 	if err != nil {
 		return false, err
 	}
@@ -154,7 +154,7 @@ func (r *ReconcileVirtualMachineImport) ensureDisksExist(provider provider.Provi
 
 func (r *ReconcileVirtualMachineImport) isStageComplete(instance *v2vv1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName) (bool, error) {
 	disksDoneStage := 0
-	dvs, err := mapper.MapDataVolumes(&vmName.Name)
+	dvs, err := mapper.MapDataVolumes(&vmName.Name, r.filesystemOverhead)
 	if err != nil {
 		return false, err
 	}
@@ -184,7 +184,7 @@ func (r *ReconcileVirtualMachineImport) isStageComplete(instance *v2vv1.VirtualM
 func (r *ReconcileVirtualMachineImport) setupNextStage(provider provider.Provider, instance *v2vv1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName, final bool) error {
 	var snapshotRef string
 
-	dvs, err := mapper.MapDataVolumes(&vmName.Name)
+	dvs, err := mapper.MapDataVolumes(&vmName.Name, r.filesystemOverhead)
 	if err != nil {
 		return err
 	}

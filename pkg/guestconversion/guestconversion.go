@@ -2,8 +2,9 @@ package guestconversion
 
 import (
 	"fmt"
-	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 	"os"
+
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 
 	"kubevirt.io/containerized-data-importer/pkg/common"
 

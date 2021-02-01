@@ -3,9 +3,10 @@ package ovirtprovider
 import (
 	"errors"
 	"fmt"
+	"strings"
+
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
-	"strings"
 
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
 

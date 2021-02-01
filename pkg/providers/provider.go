@@ -46,7 +46,7 @@ type Mapper interface {
 	CreateEmptyVM(vmName *string) *kubevirtv1.VirtualMachine
 	ResolveVMName(targetVMName *string) *string
 	MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachine) (*kubevirtv1.VirtualMachine, error)
-	MapDataVolumes(targetVMName *string) (map[string]cdiv1.DataVolume, error)
+	MapDataVolumes(targetVMName *string, filesystemOverhead cdiv1.FilesystemOverhead) (map[string]cdiv1.DataVolume, error)
 	MapDisk(vmSpec *kubevirtv1.VirtualMachine, dv cdiv1.DataVolume)
 }
 

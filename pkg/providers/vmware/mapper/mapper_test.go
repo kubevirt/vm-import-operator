@@ -2,6 +2,7 @@ package mapper_test
 
 import (
 	"context"
+
 	"github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware/mapper"
 	"github.com/kubevirt/vm-import-operator/pkg/providers/vmware/os"
@@ -16,6 +17,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
+	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 )
 
 var (
@@ -40,7 +42,9 @@ var (
 	// disks
 	expectedNumDisks  = 2
 	diskName1         = "disk-202-0"
+	diskBytes1        = 2147483648
 	diskName2         = "disk-202-1"
+	diskBytes2        = 1073741824
 	expectedDiskName1 = "c39a8d6c-ea37-5c91-8979-334e7e07cab5-203"
 	expectedDiskName2 = "c39a8d6c-ea37-5c91-8979-334e7e07cab5-205"
 
@@ -291,10 +295,17 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 var _ = Describe("Test mapping disks", func() {
 	var (
-		vm             *object.VirtualMachine
-		vmProperties   *mo.VirtualMachine
-		hostProperties *mo.HostSystem
-		credentials    *mapper.DataVolumeCredentials
+		vm                 *object.VirtualMachine
+		vmProperties       *mo.VirtualMachine
+		hostProperties     *mo.HostSystem
+		credentials        *mapper.DataVolumeCredentials
+		storageClass       = "mystorageclass"
+		filesystemOverhead = cdiv1.FilesystemOverhead{
+			Global: "0.0",
+			StorageClass: map[string]cdiv1.Percent{
+				storageClass: "1.0",
+			},
+		}
 	)
 
 	BeforeEach(func() {
@@ -308,7 +319,6 @@ var _ = Describe("Test mapping disks", func() {
 	})
 
 	It("should map datavolumes", func() {
-		storageClass := "mystorageclass"
 		mappings := createMinimalMapping()
 		mappings.DiskMappings = &[]v1beta1.StorageResourceMappingItem{
 			{
@@ -329,7 +339,7 @@ var _ = Describe("Test mapping disks", func() {
 			},
 		}
 		mapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
-		dvs, _ := mapper.MapDataVolumes(&targetVMName)
+		dvs, _ := mapper.MapDataVolumes(&targetVMName, filesystemOverhead)
 		Expect(dvs).To(HaveLen(expectedNumDisks))
 		Expect(dvs).To(HaveKey(expectedDiskName1))
 		Expect(dvs).To(HaveKey(expectedDiskName2))
@@ -337,10 +347,20 @@ var _ = Describe("Test mapping disks", func() {
 		Expect(dvs[expectedDiskName1].Spec.PVC.VolumeMode).To(Equal(&volumeModeBlock))
 		Expect(dvs[expectedDiskName1].Spec.PVC.AccessModes[0]).To(Equal(accessModeRWM))
 		Expect(dvs[expectedDiskName1].Spec.PVC.StorageClassName).To(Equal(&storageClass))
+
 		// check that defaults are set correctly
 		Expect(dvs[expectedDiskName2].Spec.PVC.VolumeMode).To(Equal(&volumeModeFilesystem))
 		Expect(dvs[expectedDiskName2].Spec.PVC.AccessModes[0]).To(Equal(accessModeRWO))
 		Expect(dvs[expectedDiskName2].Spec.PVC.StorageClassName).To(BeNil())
+
+		// check that disk overheads are set correctly
+		Expect(dvs[expectedDiskName1].Spec.PVC.Resources.Requests).To(HaveKey(v1.ResourceStorage))
+		storageResource := dvs[expectedDiskName1].Spec.PVC.Resources.Requests[v1.ResourceStorage]
+		Expect(storageResource.Value()).To(BeEquivalentTo(diskBytes1 * 2))
+
+		Expect(dvs[expectedDiskName2].Spec.PVC.Resources.Requests).To(HaveKey(v1.ResourceStorage))
+		storageResource = dvs[expectedDiskName2].Spec.PVC.Resources.Requests[v1.ResourceStorage]
+		Expect(storageResource.Value()).To(BeEquivalentTo(diskBytes2))
 	})
 })
 
