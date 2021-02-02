@@ -151,7 +151,7 @@ func (r *VmwareProvider) CreateMapper() (provider.Mapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	return mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, r.resourceMapping, r.vmiObjectMeta.Namespace, r.osFinder), nil
+	return mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, r.resourceMapping, string(r.vmiObjectMeta.UID), r.vmiObjectMeta.Namespace, r.osFinder), nil
 }
 
 // FindTemplate attempts to find best match for a template based on the source VM

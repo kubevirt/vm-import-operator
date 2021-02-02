@@ -23,6 +23,7 @@ import (
 var (
 	vmMoRef      = "vm-70"
 	targetVMName = "basic-vm"
+	instanceUID  = "d39a8d6c-ea37-5c91-8979-334e7e07cab6"
 
 	// vm attributes
 	memoryReservationStr       = "2048Mi"
@@ -45,8 +46,8 @@ var (
 	diskBytes1        = 2147483648
 	diskName2         = "disk-202-1"
 	diskBytes2        = 1073741824
-	expectedDiskName1 = "c39a8d6c-ea37-5c91-8979-334e7e07cab5-203"
-	expectedDiskName2 = "c39a8d6c-ea37-5c91-8979-334e7e07cab5-205"
+	expectedDiskName1 = "d39a8d6c-ea37-5c91-8979-334e7e07cab6-203"
+	expectedDiskName2 = "d39a8d6c-ea37-5c91-8979-334e7e07cab6-205"
 
 	volumeModeBlock      = v1.PersistentVolumeBlock
 	volumeModeFilesystem = v1.PersistentVolumeFilesystem
@@ -124,7 +125,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 	It("should map name", func() {
 		mappings := createMinimalMapping()
-		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, instanceUID, "", osFinder)
 		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 		Expect(err).To(BeNil())
 
@@ -133,7 +134,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 	It("should map memory reservation", func() {
 		mappings := createMinimalMapping()
-		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, instanceUID, "", osFinder)
 		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 		Expect(err).To(BeNil())
 
@@ -143,7 +144,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 	It("should map machine type", func() {
 		mappings := createMinimalMapping()
-		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, instanceUID, "", osFinder)
 		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 		Expect(err).To(BeNil())
 
@@ -152,7 +153,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 	It("should map CPU topology", func() {
 		mappings := createMinimalMapping()
-		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, instanceUID, "", osFinder)
 		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 		Expect(err).To(BeNil())
 
@@ -163,7 +164,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 	It("should map timezone", func() {
 		mappings := createMinimalMapping()
-		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, instanceUID, "", osFinder)
 		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 		Expect(err).To(BeNil())
 
@@ -172,7 +173,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 	It("should map pod network by moref", func() {
 		mappings := createPodNetworkMapping(true)
-		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, instanceUID, "", osFinder)
 		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 		Expect(err).To(BeNil())
 
@@ -193,7 +194,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 	It("should map pod network by name", func() {
 		mappings := createPodNetworkMapping(false)
-		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, instanceUID, "", osFinder)
 		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 		Expect(err).To(BeNil())
 
@@ -214,7 +215,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 	It("should map multus network by network moref", func() {
 		mappings := createMultusNetworkMapping(true)
-		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, instanceUID, "", osFinder)
 		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 		Expect(err).To(BeNil())
 
@@ -235,7 +236,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 	It("should map multus network by name", func() {
 		mappings := createMultusNetworkMapping(false)
-		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, instanceUID, "", osFinder)
 		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 		Expect(err).To(BeNil())
 
@@ -256,7 +257,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 	It("should disable NetworkInterfaceMultiQueue when there are no mapped interfaces", func() {
 		mappings := createMinimalMapping()
-		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, instanceUID, "", osFinder)
 		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 		Expect(err).To(BeNil())
 
@@ -272,7 +273,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 
 	It("should remove any networks or interfaces from the template", func() {
 		mappings := &v1beta1.VmwareMappings{}
-		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		vmMapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, instanceUID, "", osFinder)
 		vmSpec, err := vmMapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{
 			Spec: kubevirtv1.VirtualMachineSpec{
 				Template: &kubevirtv1.VirtualMachineInstanceTemplateSpec{
@@ -338,7 +339,7 @@ var _ = Describe("Test mapping disks", func() {
 				},
 			},
 		}
-		mapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, "", osFinder)
+		mapper := mapper.NewVmwareMapper(vm, vmProperties, hostProperties, credentials, mappings, instanceUID, "", osFinder)
 		dvs, _ := mapper.MapDataVolumes(&targetVMName, filesystemOverhead)
 		Expect(dvs).To(HaveLen(expectedNumDisks))
 		Expect(dvs).To(HaveKey(expectedDiskName1))

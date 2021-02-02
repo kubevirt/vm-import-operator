@@ -90,6 +90,7 @@ type VmwareMapper struct {
 	credentials    *DataVolumeCredentials
 	disks          *[]disk
 	hostProperties *mo.HostSystem
+	instanceUID    string
 	mappings       *v1beta1.VmwareMappings
 	namespace      string
 	nics           *[]nic
@@ -99,10 +100,11 @@ type VmwareMapper struct {
 }
 
 // NewVmwareMapper creates a new VmwareMapper struct
-func NewVmwareMapper(vm *object.VirtualMachine, vmProperties *mo.VirtualMachine, hostProperties *mo.HostSystem, credentials *DataVolumeCredentials, mappings *v1beta1.VmwareMappings, namespace string, osFinder vos.OSFinder) *VmwareMapper {
+func NewVmwareMapper(vm *object.VirtualMachine, vmProperties *mo.VirtualMachine, hostProperties *mo.HostSystem, credentials *DataVolumeCredentials, mappings *v1beta1.VmwareMappings, instanceUID string, namespace string, osFinder vos.OSFinder) *VmwareMapper {
 	return &VmwareMapper{
 		credentials:    credentials,
 		hostProperties: hostProperties,
+		instanceUID:    instanceUID,
 		mappings:       mappings,
 		namespace:      namespace,
 		osFinder:       osFinder,
@@ -295,7 +297,7 @@ func (r *VmwareMapper) MapDataVolumes(_ *string, filesystemOverhead cdiv1.Filesy
 	dvs := make(map[string]cdiv1.DataVolume)
 
 	for _, disk := range *r.disks {
-		dvName := fmt.Sprintf("%s-%d", r.vmProperties.Config.Uuid, disk.key)
+		dvName := fmt.Sprintf("%s-%d", r.instanceUID, disk.key)
 
 		mapping := r.getMappingForDisk(disk)
 
