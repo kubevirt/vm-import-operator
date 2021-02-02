@@ -17,7 +17,7 @@ spec:
       serviceAccountName: cdi-sa
       containers:
       - name: vcsim
-        image: mansam/vcsim:latest
+        image: quay.io/slucidi/vcsim:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8989
