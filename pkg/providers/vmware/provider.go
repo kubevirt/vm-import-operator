@@ -53,6 +53,8 @@ const (
 
 	warmMigrationSnapshotName        = "warm-migration-stage"
 	warmMigrationSnapshotDescription = "VM Import Operator warm migration stage"
+
+	annRetainConversionPod = "vmimport.v2v.kubevirt.io/retain-conversion-pod"
 )
 
 // VmwareProvider is VMware implementation of the Provider interface to support importing VMs from VMware
@@ -327,9 +329,9 @@ func (r *VmwareProvider) CleanUp(failure bool, cr *v1beta1.VirtualMachineImport,
 		}
 	}
 
-	// only clean up the pod on success,
-	// since the pod log is important for debugging
-	if !failure {
+	// keep the conversion pod around if it failed or the annotation was set
+	_, found := cr.Annotations[annRetainConversionPod]
+	if !(failure || found) {
 		err = r.podsManager.DeleteFor(vmiName)
 		if err != nil {
 			errs = append(errs, err)
