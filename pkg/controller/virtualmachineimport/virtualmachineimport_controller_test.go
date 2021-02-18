@@ -981,10 +981,20 @@ var _ = Describe("Reconcile steps", func() {
 				return nil
 			}
 
+			annotations := make(map[string]string)
+			annotations[AnnDVNetwork] = "annDVNetwork"
+			annotations[AnnDVMultusNetwork] = "annDVMultusNetwork"
+			instance.SetAnnotations(annotations)
+
 			dv := cdiv1.DataVolume{}
 			_, err := reconciler.createDataVolume(mock, mapper, instance, &dv, vmName)
 
 			Expect(err).To(BeNil())
+
+			// ensure that DV transfer network annotations were propagated from VMI to DVs
+			Expect(dv.Annotations).ToNot(BeNil())
+			Expect(dv.Annotations[AnnDVNetwork]).To(Equal("annDVNetwork"))
+			Expect(dv.Annotations[AnnDVMultusNetwork]).To(Equal("annDVMultusNetwork"))
 		})
 	})
 
