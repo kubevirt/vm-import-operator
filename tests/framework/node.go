@@ -58,14 +58,6 @@ func (f *Framework) GetAllSchedulableNodes() (*k8sv1.NodeList, error) {
 // both iptables and newer nftables.
 // Based on https://github.com/kubevirt/kubevirt/blob/master/tests/vmi_multus_test.go
 func (f *Framework) ConfigureNodeNetwork() error {
-	// Fetching the kubevirt-operator image from the pod makes this independent from the installation method / image used
-	pods, err := f.K8sClient.CoreV1().Pods(f.KubeVirtInstallNamespace).List(context.TODO(), metav1.ListOptions{LabelSelector: "kubevirt.io=virt-operator"})
-	if err != nil {
-		return err
-	}
-
-	virtOperatorImage := pods.Items[0].Spec.Containers[0].Image
-
 	// Privileged DaemonSet configuring host networking as needed
 	networkConfigDaemonSet := appsv1.DaemonSet{
 		TypeMeta: metav1.TypeMeta{
@@ -90,7 +82,7 @@ func (f *Framework) ConfigureNodeNetwork() error {
 							Name: "network-config",
 							// Reuse image which is already installed in the cluster. All we need is chroot.
 							// Local OKD cluster doesn't allow us to pull from the outside.
-							Image: virtOperatorImage,
+							Image: "centos:8",
 							Command: []string{
 								"sh",
 								"-c",
