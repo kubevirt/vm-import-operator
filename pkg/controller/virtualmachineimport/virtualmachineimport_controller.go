@@ -58,6 +58,10 @@ const (
 	AnnCurrentProgress = annAPIGroup + "/progress"
 	// AnnPropagate is annotation defining which values to propagate
 	AnnPropagate = annAPIGroup + "/propagate-annotations"
+	// AnnDVNetwork is propagated to the DataVolume importer pods.
+	AnnDVNetwork = "k8s.v1.cni.cncf.io/networks"
+	// AnnDVMultusNetwork is propagated to the DataVolume importer pods.
+	AnnDVMultusNetwork = "v1.multus-cni.io/default-network"
 	// TrackingLabel is a label used to track related entities.
 	TrackingLabel = annAPIGroup + "/tracker"
 	// constants
@@ -865,6 +869,23 @@ func setAnnotations(instance *v2vv1.VirtualMachineImport, vmSpec *kubevirtv1.Vir
 	}
 }
 
+func setDVNetworkAnnotations(instance *v2vv1.VirtualMachineImport, dv *cdiv1.DataVolume) {
+	annotations := instance.GetAnnotations()
+	dvAnnotations := dv.GetAnnotations()
+	if dvAnnotations == nil {
+		dvAnnotations = map[string]string{}
+		dv.SetAnnotations(dvAnnotations)
+	}
+	dvNetwork := annotations[AnnDVNetwork]
+	if dvNetwork != "" {
+		dvAnnotations[AnnDVNetwork] = annotations[AnnDVNetwork]
+	}
+	dvMultusNetwork := annotations[AnnDVMultusNetwork]
+	if dvMultusNetwork != "" {
+		dvAnnotations[AnnDVMultusNetwork] = annotations[AnnDVMultusNetwork]
+	}
+}
+
 func setTrackerLabel(meta metav1.ObjectMeta, instance *v2vv1.VirtualMachineImport) {
 	iLabels := instance.GetLabels()
 	tracker := iLabels[TrackingLabel]
@@ -996,6 +1017,9 @@ func (r *ReconcileVirtualMachineImport) createDataVolume(provider provider.Provi
 
 	// Set tracking label
 	setTrackerLabel(dv.ObjectMeta, instance)
+
+	// Set transfer network annotations
+	setDVNetworkAnnotations(instance, dv)
 
 	err = r.client.Create(context.TODO(), dv)
 	if err != nil {
