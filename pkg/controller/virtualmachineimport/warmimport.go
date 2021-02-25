@@ -17,8 +17,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// if the finalization date is already past and we haven't captured a snapshot yet,
+// then we should just proceed with a cold import.
+func skipWarmImport(instance *v2vv1.VirtualMachineImport) bool {
+	return shouldFinalizeWarmImport(instance) && instance.Status.WarmImport.RootSnapshot == nil
+}
+
 func shouldWarmImport(provider provider.Provider, instance *v2vv1.VirtualMachineImport) bool {
-	return provider.SupportsWarmMigration() && instance.Spec.Warm
+	return provider.SupportsWarmMigration() && instance.Spec.Warm && !skipWarmImport(instance)
 }
 
 func shouldFinalizeWarmImport(instance *v2vv1.VirtualMachineImport) bool {
