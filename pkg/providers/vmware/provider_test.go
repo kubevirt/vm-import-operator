@@ -82,6 +82,129 @@ func getSimulatorVMIdentifiers(vm *simulator.VirtualMachine) (string, string, st
 	return vm.Reference().Value, vm.Config.Uuid, vm.Name
 }
 
+var _ = Describe("Validation", func() {
+	var provider *VmwareProvider
+	var model *simulator.Model
+	var server *simulator.Server
+
+	BeforeEach(func() {
+		model, server, provider = makeProvider()
+	})
+
+	AfterEach(func() {
+		server.Close()
+		model.Remove()
+	})
+
+	It("should throw a validation failure if a warm import was requested but CBT is disabled", func() {
+		vm := getSimulatorVM()
+		_, uuid, _ := getSimulatorVMIdentifiers(vm)
+
+		vm.Runtime.PowerState = types.VirtualMachinePowerStatePoweredOff
+		cbtEnabled := false
+		vm.Config.ChangeTrackingEnabled = &cbtEnabled
+		provider.instance.Spec.Warm = true
+		provider.instance.Spec.Source = v1beta1.VirtualMachineImportSourceSpec{
+			Vmware: &v1beta1.VirtualMachineImportVmwareSourceSpec{
+				VM: v1beta1.VirtualMachineImportVmwareSourceVMSpec{
+					ID:   &uuid,
+					Name: nil,
+				},
+			},
+		}
+
+		conditions, err := provider.Validate()
+		Expect(err).To(BeNil())
+
+		// valid condition, then mapping condition
+		Expect(len(conditions)).To(Equal(2))
+		Expect(conditions[0].Type).To(Equal(v1beta1.Valid))
+		Expect(*conditions[0].Reason).To(Equal(string(v1beta1.ValidationFailed)))
+		Expect(conditions[0].Status).To(Equal(v1.ConditionFalse))
+		Expect(*conditions[0].Message).To(ContainSubstring("Changed Block Tracking must be enabled to allow warm import"))
+	})
+
+	It("should not throw a validation failure if a warm import was requested and CBT is enabled", func() {
+		vm := getSimulatorVM()
+		_, uuid, _ := getSimulatorVMIdentifiers(vm)
+
+		vm.Runtime.PowerState = types.VirtualMachinePowerStatePoweredOff
+		cbtEnabled := true
+		vm.Config.ChangeTrackingEnabled = &cbtEnabled
+		provider.instance.Spec.Warm = true
+		provider.instance.Spec.Source = v1beta1.VirtualMachineImportSourceSpec{
+			Vmware: &v1beta1.VirtualMachineImportVmwareSourceSpec{
+				VM: v1beta1.VirtualMachineImportVmwareSourceVMSpec{
+					ID:   &uuid,
+					Name: nil,
+				},
+			},
+		}
+
+		conditions, err := provider.Validate()
+		Expect(err).To(BeNil())
+
+		// valid condition, then mapping condition
+		Expect(len(conditions)).To(Equal(2))
+		Expect(conditions[0].Type).To(Equal(v1beta1.Valid))
+		Expect(*conditions[0].Reason).To(Equal(string(v1beta1.ValidationCompleted)))
+		Expect(conditions[0].Status).To(Equal(v1.ConditionTrue))
+		Expect(*conditions[0].Message).ToNot(ContainSubstring("Changed Block Tracking must be enabled to allow warm import"))
+	})
+
+	It("should throw a validation failure the VM is powered on but the VMware tools aren't installed", func() {
+		vm := getSimulatorVM()
+		_, uuid, _ := getSimulatorVMIdentifiers(vm)
+
+		vm.Runtime.PowerState = types.VirtualMachinePowerStatePoweredOn
+		vm.Guest.ToolsStatus = types.VirtualMachineToolsStatusToolsNotInstalled
+		provider.instance.Spec.Source = v1beta1.VirtualMachineImportSourceSpec{
+			Vmware: &v1beta1.VirtualMachineImportVmwareSourceSpec{
+				VM: v1beta1.VirtualMachineImportVmwareSourceVMSpec{
+					ID:   &uuid,
+					Name: nil,
+				},
+			},
+		}
+
+		conditions, err := provider.Validate()
+		Expect(err).To(BeNil())
+
+		// valid condition, then mapping condition
+		Expect(len(conditions)).To(Equal(2))
+		Expect(conditions[0].Type).To(Equal(v1beta1.Valid))
+		Expect(*conditions[0].Reason).To(Equal(string(v1beta1.ValidationFailed)))
+		Expect(conditions[0].Status).To(Equal(v1.ConditionFalse))
+		Expect(*conditions[0].Message).To(ContainSubstring("VM must be powered off, or up to date VMWare Tools must be installed and running to allow the guest to be shutdown gracefully"))
+	})
+
+	It("should not throw a validation failure the VM is powered on but the VMware tools are installed", func() {
+		vm := getSimulatorVM()
+		_, uuid, _ := getSimulatorVMIdentifiers(vm)
+
+		vm.Runtime.PowerState = types.VirtualMachinePowerStatePoweredOn
+		vm.Guest.ToolsStatus = types.VirtualMachineToolsStatusToolsOk
+		provider.instance.Spec.Source = v1beta1.VirtualMachineImportSourceSpec{
+			Vmware: &v1beta1.VirtualMachineImportVmwareSourceSpec{
+				VM: v1beta1.VirtualMachineImportVmwareSourceVMSpec{
+					ID:   &uuid,
+					Name: nil,
+				},
+			},
+		}
+
+		conditions, err := provider.Validate()
+		Expect(err).To(BeNil())
+
+		// valid condition, then mapping condition
+		Expect(len(conditions)).To(Equal(2))
+		Expect(conditions[0].Type).To(Equal(v1beta1.Valid))
+		Expect(*conditions[0].Reason).To(Equal(string(v1beta1.ValidationCompleted)))
+		Expect(conditions[0].Status).To(Equal(v1.ConditionTrue))
+		Expect(*conditions[0].Message).ToNot(ContainSubstring("VM must be powered off, or up to date VMWare Tools must be installed and running to allow the guest to be shutdown gracefully"))
+	})
+})
+
 var _ = Describe("Initialization", func() {
 	provider := VmwareProvider{}
 	instance := &v1beta1.VirtualMachineImport{}
