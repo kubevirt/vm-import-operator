@@ -253,8 +253,8 @@ func (r *ReconcileVirtualMachineImport) setNextStageTime(vmiName types.Namespace
 
 	instanceCopy := instance.DeepCopy()
 	nextStageTime := metav1.NewTime(time.Now().Add(time.Duration(r.ctrlConfig.WarmImportIntervalMinutes()) * time.Minute))
-	instance.Status.WarmImport.Successes += 1
-	instance.Status.WarmImport.ConsecutiveFailures = 0
+	instanceCopy.Status.WarmImport.Successes += 1
+	instanceCopy.Status.WarmImport.ConsecutiveFailures = 0
 	instanceCopy.Status.WarmImport.NextStageTime = &nextStageTime
 
 	return r.client.Status().Update(context.TODO(), instanceCopy)
