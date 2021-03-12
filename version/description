@@ -1,14 +1,5 @@
-v0.3.1
-
-Features:
-* Add annotation to retain the v2v pod after success
-* Propagate network annotations to DataVolumes
+v0.3.2
 
 Bugs:
-* Fix warm import finalization edge case
-* Validate that VMWare Tools are present
-* Use VMI UID instead of vSphere UUID to name DVs
-* Add overhead to requested size when creating DVs
-* Fail the import if the target VM is gone
-* Mount block devices properly on the virt-v2v container
-* Fail import when V2V overlays can't be committed.
+* Fix warm import status update
+* Pull centos:8 from Quay.io
