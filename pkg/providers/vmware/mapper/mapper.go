@@ -304,7 +304,7 @@ func (r *VmwareMapper) MapDataVolumes(_ *string, filesystemOverhead cdiv1.Filesy
 		storageClass := r.getStorageClassForDisk(mapping)
 
 		overhead := utils.GetOverheadForStorageClass(filesystemOverhead, storageClass)
-		capacityWithOverhead := int64(float64(disk.capacity) * (1 + overhead))
+		capacityWithOverhead := (int64(float64(disk.capacity) / (1 - overhead)) / 512 + 1 ) * 512
 		capacityAsQuantity, err := bytesToQuantity(capacityWithOverhead)
 		if err != nil {
 			return nil, err

@@ -304,7 +304,7 @@ var _ = Describe("Test mapping disks", func() {
 		filesystemOverhead = cdiv1.FilesystemOverhead{
 			Global: "0.0",
 			StorageClass: map[string]cdiv1.Percent{
-				storageClass: "1.0",
+				storageClass: "0.055",
 			},
 		}
 	)
@@ -357,11 +357,11 @@ var _ = Describe("Test mapping disks", func() {
 		// check that disk overheads are set correctly
 		Expect(dvs[expectedDiskName1].Spec.PVC.Resources.Requests).To(HaveKey(v1.ResourceStorage))
 		storageResource := dvs[expectedDiskName1].Spec.PVC.Resources.Requests[v1.ResourceStorage]
-		Expect(storageResource.Value()).To(BeEquivalentTo(diskBytes1 * 2))
+		Expect(storageResource.Value()).To(BeEquivalentTo(2272469504))
 
 		Expect(dvs[expectedDiskName2].Spec.PVC.Resources.Requests).To(HaveKey(v1.ResourceStorage))
 		storageResource = dvs[expectedDiskName2].Spec.PVC.Resources.Requests[v1.ResourceStorage]
-		Expect(storageResource.Value()).To(BeEquivalentTo(diskBytes2))
+		Expect(storageResource.Value()).To(BeEquivalentTo(1073742336))
 	})
 })
 

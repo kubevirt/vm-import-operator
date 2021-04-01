@@ -266,7 +266,7 @@ func (o *OvirtMapper) MapDataVolumes(targetVMName *string, filesystemOverhead cd
 
 		diskSize, _ := disk.ProvisionedSize()
 		overhead := utils.GetOverheadForStorageClass(filesystemOverhead, sdClass)
-		sizeWithOverhead := int64(float64(diskSize) * (1 + overhead))
+		sizeWithOverhead := (int64(float64(diskSize) / (1 - overhead)) / 512 + 1) * 512
 
 		diskSizeConverted, err := utils.FormatBytes(sizeWithOverhead)
 		if err != nil {
