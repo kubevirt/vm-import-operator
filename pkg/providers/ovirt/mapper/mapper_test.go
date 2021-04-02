@@ -425,7 +425,7 @@ var _ = Describe("Test mapping disks", func() {
 		Expect(dv.Spec.PVC.AccessModes).To(HaveLen(1))
 		Expect(dv.Spec.PVC.Resources.Requests).To(HaveKey(corev1.ResourceStorage))
 		storageResource := dv.Spec.PVC.Resources.Requests[corev1.ResourceStorage]
-		Expect(storageResource.Value()).To(BeEquivalentTo(memoryGI))
+		Expect(storageResource.Value()).To(BeEquivalentTo(1073742336))
 
 		Expect(dv.Spec.PVC.StorageClassName).To(Not(BeNil()))
 		Expect(*dv.Spec.PVC.StorageClassName).To(Equal("storageclassname"))
@@ -444,7 +444,7 @@ var _ = Describe("Test mapping disks", func() {
 
 		// request 100% overhead, resulting in a disk of twice the size.
 		overhead := cdiv1.FilesystemOverhead{
-			Global: "1.0",
+			Global: "0.055",
 		}
 		dvs, _ := mapper.MapDataVolumes(&targetVMName, overhead)
 
@@ -455,7 +455,7 @@ var _ = Describe("Test mapping disks", func() {
 
 		Expect(dv.Spec.PVC.Resources.Requests).To(HaveKey(corev1.ResourceStorage))
 		storageResource := dv.Spec.PVC.Resources.Requests[corev1.ResourceStorage]
-		Expect(storageResource.Value()).To(BeEquivalentTo(memoryGI * 2))
+		Expect(storageResource.Value()).To(BeEquivalentTo(1136235008))
 
 		Expect(dv.Spec.PVC.StorageClassName).To(Not(BeNil()))
 		Expect(*dv.Spec.PVC.StorageClassName).To(Equal("storageclassname"))
@@ -476,7 +476,7 @@ var _ = Describe("Test mapping disks", func() {
 		overhead := cdiv1.FilesystemOverhead{
 			Global: "0.0",
 			StorageClass: map[string]cdiv1.Percent{
-				scName: "1.0",
+				scName: "0.055",
 			},
 		}
 		dvs, _ := mapper.MapDataVolumes(&targetVMName, overhead)
@@ -488,7 +488,7 @@ var _ = Describe("Test mapping disks", func() {
 
 		Expect(dv.Spec.PVC.Resources.Requests).To(HaveKey(corev1.ResourceStorage))
 		storageResource := dv.Spec.PVC.Resources.Requests[corev1.ResourceStorage]
-		Expect(storageResource.Value()).To(BeEquivalentTo(memoryGI * 2))
+		Expect(storageResource.Value()).To(BeEquivalentTo(1136235008))
 
 		Expect(dv.Spec.PVC.StorageClassName).To(Not(BeNil()))
 		Expect(*dv.Spec.PVC.StorageClassName).To(Equal(scName))
