@@ -1689,7 +1689,7 @@ var _ = Describe("Reconcile steps", func() {
 			Expect(event).To(ContainSubstring("ImportInProgress"))
 
 			Expect(err).To(BeNil())
-			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: SlowReQ}))
 		})
 
 		It("should fail to start vm: ", func() {
@@ -1738,7 +1738,7 @@ var _ = Describe("Reconcile steps", func() {
 			result, err := reconciler.Reconcile(request)
 
 			Expect(err).To(BeNil())
-			Expect(result).To(Equal(reconcile.Result{}))
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: SlowReQ}))
 		})
 
 		It("should exit early if vm condition is succeed: ", func() {
@@ -1864,7 +1864,8 @@ var _ = Describe("Reconcile steps", func() {
 				result, err := reconciler.Reconcile(request)
 
 				Expect(err).To(BeNil())
-				Expect(result).To(Equal(reconcile.Result{}))
+
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: SlowReQ}))
 				Expect(config.Finalizers).To(Not(BeNil()))
 				Expect(config.Annotations[AnnCurrentProgress]).To(Not(BeNil()))
 

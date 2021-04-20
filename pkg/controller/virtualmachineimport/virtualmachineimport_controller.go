@@ -398,7 +398,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 
 		if !done {
 			reqLogger.Info("Waiting for disks to be imported")
-			return reconcile.Result{}, nil
+			return reconcile.Result{RequeueAfter: SlowReQ}, nil
 		}
 	}
 
@@ -410,7 +410,7 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 
 		if !done {
 			reqLogger.Info("Waiting for guest to be converted")
-			return reconcile.Result{}, nil
+			return reconcile.Result{RequeueAfter: SlowReQ}, nil
 		}
 	}
 
