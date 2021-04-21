@@ -1462,7 +1462,7 @@ func validateName(instance *v2vv1.VirtualMachineImport, sourceName string) error
 		name = sourceName
 	}
 
-	errs := k8svalidation.IsQualifiedName(name)
+	errs := k8svalidation.IsDNS1123Label(name)
 	if len(errs) != 0 {
 		var errString string
 		for _, e := range errs {
