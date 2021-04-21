@@ -50,6 +50,27 @@ func (r *ReconcileVirtualMachineImport) warmImport(provider provider.Provider, i
 		return FastReQ, nil
 	}
 
+	// if the datavolumes are waiting for first consumer, then
+	// attempt to start the VM so that Kubevirt can schedule
+	// it and allow the datavolumes to bind.
+	waiting, err := r.dvsWaitingForFirstConsumer(instance, mapper, vmName)
+	if err != nil {
+		return FastReQ, err
+	}
+	if waiting {
+		log.Info("Waiting for data volumes to be bound.")
+		err = r.setRunning(vmName, true)
+		if err != nil {
+			return FastReQ, err
+		}
+	} else {
+		// restore the original running state if the datavolumes are no longer waiting.
+		err = r.setRunning(vmName, mapper.RunningState())
+		if err != nil {
+			return FastReQ, err
+		}
+	}
+
 	// if the stage isn't complete yet (all dvs paused), requeue till it's done
 	complete, err := r.isStageComplete(instance, mapper, vmName)
 	if err != nil {

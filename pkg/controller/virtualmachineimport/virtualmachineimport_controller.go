@@ -397,6 +397,27 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 		}
 
 		if !done {
+			// if the datavolumes are waiting for first consumer, then
+			// attempt to start the VM so that Kubevirt can schedule
+			// it and allow the datavolumes to bind.
+			waiting, err := r.dvsWaitingForFirstConsumer(instance, mapper, vmName)
+			if err != nil {
+				return reconcile.Result{RequeueAfter: FastReQ}, err
+			}
+			if waiting {
+				log.Info("Waiting for data volumes to be bound.")
+				err = r.setRunning(vmName, true)
+				if err != nil {
+					return reconcile.Result{RequeueAfter: FastReQ}, err
+				}
+			} else {
+				// restore the original running state if the datavolumes are no longer waiting.
+				err = r.setRunning(vmName, mapper.RunningState())
+				if err != nil {
+					return reconcile.Result{RequeueAfter: FastReQ}, err
+				}
+			}
+
 			reqLogger.Info("Waiting for disks to be imported")
 			return reconcile.Result{RequeueAfter: SlowReQ}, nil
 		}
@@ -664,6 +685,28 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 	return done, nil
 }
 
+func (r *ReconcileVirtualMachineImport) dvsWaitingForFirstConsumer(instance *v2vv1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName) (bool, error) {
+	dvs, err := mapper.MapDataVolumes(&vmName.Name, r.filesystemOverhead)
+	if err != nil {
+		return false, err
+	}
+
+	for dvID, _ := range dvs {
+		dvName := types.NamespacedName{Namespace: instance.Namespace, Name: dvID}
+		dv, err := r.getDataVolume(dvName)
+		if err != nil {
+			return false, err
+		}
+		if dv == nil {
+			continue
+		}
+		if dv.Status.Phase == cdiv1.WaitForFirstConsumer {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (r *ReconcileVirtualMachineImport) fail(provider provider.Provider, instance *v2vv1.VirtualMachineImport, reason v2vv1.SucceededConditionReason, message string) error {
 	instanceNamespacedName := types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace}
 
@@ -913,7 +956,7 @@ func (r *ReconcileVirtualMachineImport) startVM(provider provider.Provider, inst
 				return false, err
 			}
 			log.Info("Starting a vm", "VM.Name", vmName)
-			if err = r.updateToRunning(vmName); err != nil {
+			if err = r.setRunning(vmName, true); err != nil {
 				// Emit event vm failed to start:
 				r.recorder.Eventf(instance, corev1.EventTypeWarning, EventVMStartFailed, "Virtual Machine %s failed to start: %s", vmIdentifier, err)
 				return false, err
@@ -1110,7 +1153,7 @@ func (r *ReconcileVirtualMachineImport) createProvider(vmi *v2vv1.VirtualMachine
 	return nil, fmt.Errorf("Invalid source type. Only Ovirt and Vmware type is supported")
 }
 
-func (r *ReconcileVirtualMachineImport) updateToRunning(vmName types.NamespacedName) error {
+func (r *ReconcileVirtualMachineImport) setRunning(vmName types.NamespacedName, running bool) error {
 	var vm kubevirtv1.VirtualMachine
 	err := r.client.Get(context.TODO(), vmName, &vm)
 	if err != nil {
@@ -1118,7 +1161,6 @@ func (r *ReconcileVirtualMachineImport) updateToRunning(vmName types.NamespacedN
 	}
 
 	copy := vm.DeepCopy()
-	running := true
 	copy.Spec.Running = &running
 
 	patch := client.MergeFrom(&vm)

@@ -509,6 +509,12 @@ func (r *VmwareMapper) MapVM(targetVmName *string, vmSpec *kubevirtv1.VirtualMac
 	return vmSpec, nil
 }
 
+// RunningState determines whether the created Kubevirt vmSpec should
+// have a running state of true or false.
+func (r *VmwareMapper) RunningState() bool {
+	return false
+}
+
 func (r *VmwareMapper) mapLabels(vmLabels map[string]string) map[string]string {
 	var labels map[string]string
 	if vmLabels == nil {
