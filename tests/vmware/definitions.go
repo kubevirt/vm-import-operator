@@ -13,9 +13,10 @@ var (
 )
 
 // vcsim/0051-VirtualMachine-vm-66.xml
-// vm-66 has no networks and one disk
+// vm-66 has one network and one disk
 var (
 	VM66 = "f7c371d6-2003-5a48-9859-3bc9a8b08908"
+	VM66Network = "ethernet-0"
 	VM66DiskName = "disk-202-0"
 	VM66Datastore = "/tmp/govcsim-DC0-LocalDS_0-024565671@folder-5"
 	VM66DatastoreName = "LocalDS_0"

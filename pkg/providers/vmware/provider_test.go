@@ -46,6 +46,7 @@ func makeProvider() (*simulator.Model, *simulator.Server, *VmwareProvider) {
 		instance: &v1beta1.VirtualMachineImport{
 			Spec: v1beta1.VirtualMachineImportSpec{},
 		},
+		resourceMapping: &v1beta1.VmwareMappings{},
 	}
 	return model, server, provider
 }
@@ -81,6 +82,84 @@ func getSimulatorVM() *simulator.VirtualMachine {
 func getSimulatorVMIdentifiers(vm *simulator.VirtualMachine) (string, string, string) {
 	return vm.Reference().Value, vm.Config.Uuid, vm.Name
 }
+
+var _ = Describe("MappingVerification", func() {
+	var provider *VmwareProvider
+	var model *simulator.Model
+	var server *simulator.Server
+
+	BeforeEach(func() {
+		model, server, provider = makeProvider()
+		vm := getSimulatorVM()
+		_, uuid, _ := getSimulatorVMIdentifiers(vm)
+		provider.instance.Spec.Source = v1beta1.VirtualMachineImportSourceSpec{
+			Vmware: &v1beta1.VirtualMachineImportVmwareSourceSpec{
+				VM: v1beta1.VirtualMachineImportVmwareSourceVMSpec{
+					ID:   &uuid,
+					Name: nil,
+				},
+			},
+		}
+	})
+
+	AfterEach(func() {
+		server.Close()
+		model.Remove()
+	})
+
+	It("should fail mapping verification if network mappings are missing", func() {
+		provider.resourceMapping.NetworkMappings = nil
+		conditions, err := provider.Validate()
+		Expect(err).To(BeNil())
+		// valid condition, then mapping condition
+		Expect(len(conditions)).To(Equal(2))
+		Expect(conditions[1].Type).To(Equal(v1beta1.MappingRulesVerified))
+		Expect(*conditions[1].Reason).To(Equal(string(v1beta1.MappingRulesVerificationFailed)))
+		Expect(conditions[1].Status).To(Equal(v1.ConditionFalse))
+		Expect(*conditions[1].Message).To(ContainSubstring("VM has one or more unmapped networks: ethernet-0"))
+	})
+
+	It("should fail mapping verification if any networks are unmapped", func() {
+		provider.resourceMapping.NetworkMappings = &[]v1beta1.NetworkResourceMappingItem{}
+		conditions, err := provider.Validate()
+		Expect(err).To(BeNil())
+		// valid condition, then mapping condition
+		Expect(len(conditions)).To(Equal(2))
+		Expect(conditions[1].Type).To(Equal(v1beta1.MappingRulesVerified))
+		Expect(*conditions[1].Reason).To(Equal(string(v1beta1.MappingRulesVerificationFailed)))
+		Expect(conditions[1].Status).To(Equal(v1.ConditionFalse))
+		Expect(*conditions[1].Message).To(ContainSubstring("VM has one or more unmapped networks: ethernet-0"))
+	})
+
+	It("should fail mapping verification if multiple source networks target a pod network", func() {
+		networkTypePod := "pod"
+		sourceName := "ethernet-0"
+		provider.resourceMapping.NetworkMappings = &[]v1beta1.NetworkResourceMappingItem{
+			{
+				Source: v1beta1.Source{
+					Name: &sourceName,
+					ID:   nil,
+				},
+				Type: &networkTypePod,
+			},
+			{
+				Source: v1beta1.Source{
+					Name: &sourceName,
+					ID:   nil,
+				},
+				Type: &networkTypePod,
+			},
+		}
+		conditions, err := provider.Validate()
+		Expect(err).To(BeNil())
+		// valid condition, then mapping condition
+		Expect(len(conditions)).To(Equal(2))
+		Expect(conditions[1].Type).To(Equal(v1beta1.MappingRulesVerified))
+		Expect(*conditions[1].Reason).To(Equal(string(v1beta1.MappingRulesVerificationFailed)))
+		Expect(conditions[1].Status).To(Equal(v1.ConditionFalse))
+		Expect(*conditions[1].Message).To(ContainSubstring("Network mapping contains more than one source network that targets a pod network: ethernet-0"))
+	})
+})
 
 var _ = Describe("Validation", func() {
 	var provider *VmwareProvider

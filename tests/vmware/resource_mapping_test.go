@@ -80,6 +80,9 @@ var _ = Describe("VM import ", func() {
 				StorageMappings: &[]v2vv1.StorageResourceMappingItem{
 					{Source: v2vv1.Source{ID: &vmware.VM66Datastore}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
+				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+					{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+				},
 			}
 			rm, err := f.CreateVmwareResourceMapping(mappings)
 			if err != nil {

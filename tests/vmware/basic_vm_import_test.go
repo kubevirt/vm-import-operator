@@ -3,6 +3,7 @@ package vmware_test
 import (
 	"context"
 	"fmt"
+	"github.com/kubevirt/vm-import-operator/tests"
 	"github.com/kubevirt/vm-import-operator/tests/vmware"
 	"github.com/onsi/ginkgo/extensions/table"
 	"k8s.io/apimachinery/pkg/types"
@@ -47,7 +48,11 @@ var _ = Describe("Basic VM import ", func() {
 	Context(" without resource mapping", func() {
 		It("should create stopped VM", func() {
 			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, false)
-
+			vmi.Spec.Source.Vmware.Mappings = &v2vv1.VmwareMappings{
+				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+					{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+				},
+			}
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -75,7 +80,11 @@ var _ = Describe("Basic VM import ", func() {
 
 		It("should create started VM", func() {
 			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, true)
-
+			vmi.Spec.Source.Vmware.Mappings = &v2vv1.VmwareMappings{
+				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+					{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+				},
+			}
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -126,15 +135,24 @@ var _ = Describe("Basic VM import ", func() {
 				DiskMappings: &[]v2vv1.StorageResourceMappingItem{
 					{Source: v2vv1.Source{Name: &vmware.VM66DiskName}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
+				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+					{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+				},
 			}, f.DefaultStorageClass),
 			table.Entry(" for storage domain by name", v2vv1.VmwareMappings{
 				StorageMappings: &[]v2vv1.StorageResourceMappingItem{
 					{Source: v2vv1.Source{Name: &vmware.VM66DatastoreName}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
+				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+					{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+				},
 			}, f.DefaultStorageClass),
 			table.Entry(" for storage domain by id", v2vv1.VmwareMappings{
 				StorageMappings: &[]v2vv1.StorageResourceMappingItem{
 					{Source: v2vv1.Source{ID: &vmware.VM66Datastore}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+				},
+				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+					{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
 				},
 			}, f.DefaultStorageClass))
 	})
@@ -143,6 +161,11 @@ var _ = Describe("Basic VM import ", func() {
 		It("should not affect imported VM or VMI", func() {
 			By("Creating Virtual Machine Import")
 			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, true)
+			vmi.Spec.Source.Vmware.Mappings = &v2vv1.VmwareMappings{
+				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+					{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+				},
+			}
 			vmImports := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace)
 
 			created, err := vmImports.Create(context.TODO(), &vmi, metav1.CreateOptions{})
@@ -218,8 +241,8 @@ func (t *basicVmImportTest) validateTargetConfiguration(vmName string, uid strin
 	Expect(cpu.Sockets).To(BeEquivalentTo(1))
 	Expect(cpu.Threads).To(BeEquivalentTo(0))
 
-	By("having no networks")
-	Expect(spec.Networks).To(HaveLen(0))
+	By("having 1 network")
+	Expect(spec.Networks).To(HaveLen(1))
 
 	By("having correct clock settings")
 	Expect(spec.Domain.Clock.UTC).ToNot(BeNil())

@@ -3,6 +3,7 @@ package vmware_test
 import (
 	"context"
 	"fmt"
+	"github.com/kubevirt/vm-import-operator/tests"
 	"github.com/kubevirt/vm-import-operator/tests/vmware"
 	"k8s.io/apimachinery/pkg/types"
 	v1 "kubevirt.io/client-go/api/v1"
@@ -40,6 +41,11 @@ var _ = Describe("VM import cancellation ", func() {
 		}
 		vmImports = f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace)
 		cr := utils.VirtualMachineImportCr(framework.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, true)
+		cr.Spec.Source.Vmware.Mappings = &v2vv1.VmwareMappings{
+			NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
+				{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+			},
+		}
 		vmi, err = vmImports.Create(context.TODO(), &cr, metav1.CreateOptions{})
 		if err != nil {
 			Fail(err.Error())
