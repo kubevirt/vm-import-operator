@@ -1,4 +1,7 @@
-v0.3.3
+v0.3.4
 
 Bugs:
-* Update storage overhead formula
+* Validate that vSphere networks are mapped
+* Start VMs so WaitForFirstConsumer DVs can bind
+* Requeue while waiting for disk copies and v2v
+* Use IsDNS1123Label to validate VM names
