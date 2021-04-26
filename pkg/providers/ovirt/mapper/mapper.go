@@ -227,6 +227,16 @@ func (o *OvirtMapper) MapDisk(vmSpec *kubevirtv1.VirtualMachine, dv cdiv1.DataVo
 	vmSpec.Spec.Template.Spec.Domain.Devices.Disks = append(vmSpec.Spec.Template.Spec.Domain.Devices.Disks, disk)
 }
 
+// RunningState determines whether the created Kubevirt vmSpec should
+// have a running state of true or false.
+func (o *OvirtMapper) RunningState() bool {
+	running := o.mapHighAvailability()
+	if running != nil {
+		return *running
+	}
+	return false
+}
+
 // If the mapping specifies the access mode return that, otherwise determine the access mode
 // of the PVC based on the VM's disk read only attribute and based on the affinity settings of the VM.
 func (o *OvirtMapper) getAccessMode(diskAttachment *ovirtsdk.DiskAttachment, mapping *v2vv1.StorageResourceMappingItem) corev1.PersistentVolumeAccessMode {

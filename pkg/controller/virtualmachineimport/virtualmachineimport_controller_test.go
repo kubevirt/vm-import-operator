@@ -2102,6 +2102,11 @@ func (m *mockMapper) MapDataVolumes(targetVMName *string, overhead cdiv1.Filesys
 func (m *mockMapper) MapDisk(vmSpec *kubevirtv1.VirtualMachine, dv cdiv1.DataVolume) {
 }
 
+// RunningState implements Mapper.RunningState
+func (m *mockMapper) RunningState() bool {
+	return false
+}
+
 // NewOvirtClient implements Factory.NewOvirtClient
 func (f *mockFactory) NewOvirtClient(dataMap map[string]string) (pclient.VMClient, error) {
 	return &mockOvirtClient{}, nil

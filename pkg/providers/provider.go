@@ -48,6 +48,7 @@ type Mapper interface {
 	MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMachine) (*kubevirtv1.VirtualMachine, error)
 	MapDataVolumes(targetVMName *string, filesystemOverhead cdiv1.FilesystemOverhead) (map[string]cdiv1.DataVolume, error)
 	MapDisk(vmSpec *kubevirtv1.VirtualMachine, dv cdiv1.DataVolume)
+	RunningState() bool
 }
 
 // VMStatus represents VM status
