@@ -119,7 +119,7 @@ var _ = Describe("VM import", func() {
 		vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM70, namespace, secret.Name, f.NsPrefix, true)
 		vmi.Spec.Source.Vmware.Mappings = &v2vv1.VmwareMappings{
 			NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-				{Source: v2vv1.Source{ID: &vmware.VM70Network}, Type: &tests.PodType},
+				{Source: v2vv1.Source{Name: &vmware.VM70Network}, Type: &tests.PodType},
 			},
 		}
 		created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})

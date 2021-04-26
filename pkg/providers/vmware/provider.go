@@ -377,24 +377,92 @@ func (r *VmwareProvider) Validate() ([]v1beta1.VirtualMachineImportCondition, er
 	}
 
 	validCondition := conditions.NewCondition(v1beta1.Valid, string(v1beta1.ValidationCompleted), "Validation completed successfully", corev1.ConditionTrue)
-	mappingCondition := conditions.NewCondition(v1beta1.MappingRulesVerified, string(v1beta1.MappingRulesVerificationCompleted), "All mapping rules checks passed", corev1.ConditionTrue)
 	validationFailures := make([]string, 0)
+	mappingCondition := conditions.NewCondition(v1beta1.MappingRulesVerified, string(v1beta1.MappingRulesVerificationCompleted), "All mapping rules checks passed", corev1.ConditionTrue)
+	mappingFailures := make([]string, 0)
 
-	if vmProperties.Guest.ToolsStatus != types.VirtualMachineToolsStatusToolsOk && vmProperties.Runtime.PowerState != types.VirtualMachinePowerStatePoweredOff {
+	if !r.validateToolsStatus(vmProperties) {
 		validationFailures = append(validationFailures, "VM must be powered off, or up to date VMWare Tools must be installed and running to allow the guest to be shutdown gracefully")
 	}
-
 	if r.instance.Spec.Warm {
-		if vmProperties.Config.ChangeTrackingEnabled == nil || !*vmProperties.Config.ChangeTrackingEnabled {
+		if !r.validateChangeTrackingEnabled(vmProperties) {
 			validationFailures = append(validationFailures, "Changed Block Tracking must be enabled to allow warm import")
 		}
 	}
-
 	if len(validationFailures) > 0 {
 		validCondition = conditions.NewCondition(v1beta1.Valid, string(v1beta1.ValidationFailed), strings.Join(validationFailures, "; "), corev1.ConditionFalse)
 	}
 
+	nics := mapper.BuildNics(vmProperties)
+	if unmapped := r.validateNetworksMapped(nics); len(unmapped) > 0 {
+		mappingFailures = append(mappingFailures, fmt.Sprintf("VM has one or more unmapped networks: %s", strings.Join(unmapped, ", ")))
+	}
+	if podTargets := r.validateNoDuplicatePodTargets(nics); len(podTargets) > 1 {
+		mappingFailures = append(mappingFailures, fmt.Sprintf("Network mapping contains more than one source network that targets a pod network: %s", strings.Join(podTargets, ", ")))
+	}
+	if len(mappingFailures) > 0 {
+		mappingCondition = conditions.NewCondition(v1beta1.MappingRulesVerified, string(v1beta1.MappingRulesVerificationFailed), strings.Join(mappingFailures, "; "), corev1.ConditionFalse)
+	}
+
 	return []v1beta1.VirtualMachineImportCondition{validCondition, mappingCondition}, nil
+}
+
+func (r *VmwareProvider) validateToolsStatus(vmProperties *mo.VirtualMachine) bool {
+	return vmProperties.Guest.ToolsStatus == types.VirtualMachineToolsStatusToolsOk || vmProperties.Runtime.PowerState == types.VirtualMachinePowerStatePoweredOff
+}
+
+func (r *VmwareProvider) validateChangeTrackingEnabled(vmProperties *mo.VirtualMachine) bool {
+	return vmProperties.Config.ChangeTrackingEnabled != nil && *vmProperties.Config.ChangeTrackingEnabled
+}
+
+func (r *VmwareProvider) validateNetworksMapped(nics []mapper.Nic) []string {
+	var unmapped []string
+	if r.resourceMapping.NetworkMappings == nil {
+		for _, nic := range nics {
+			unmapped = append(unmapped, nic.Name)
+		}
+		return unmapped
+	}
+	for _, nic := range nics {
+		mapped := false
+		for _, mapping := range *r.resourceMapping.NetworkMappings {
+			if (mapping.Source.Name != nil && nic.Name == *mapping.Source.Name) ||
+				(mapping.Source.ID != nil && (nic.Network == *mapping.Source.ID || nic.DVPortGroup == *mapping.Source.ID)) {
+				mapped = true
+				break
+			}
+		}
+		if !mapped {
+			unmapped = append(unmapped, nic.Name)
+		}
+	}
+
+	return unmapped
+}
+
+func (r *VmwareProvider) validateNoDuplicatePodTargets(nics []mapper.Nic) []string {
+	var podTargets []string
+	if r.resourceMapping.NetworkMappings == nil {
+		return podTargets
+	}
+	for _, nic := range nics {
+		var identifier string
+		for _, mapping := range *r.resourceMapping.NetworkMappings {
+			if mapping.Source.Name != nil && nic.Name == *mapping.Source.Name {
+				identifier = *mapping.Source.Name
+			} else if mapping.Source.ID != nil && (nic.Network == *mapping.Source.ID || nic.DVPortGroup == *mapping.Source.ID){
+				identifier = *mapping.Source.ID
+			}
+
+			if len(identifier) > 0 {
+				if mapping.Type == nil || *mapping.Type == "pod" {
+					podTargets = append(podTargets, identifier)
+				}
+			}
+		}
+	}
+
+	return podTargets
 }
 
 // Close logs out the client and shuts down idle connections.
