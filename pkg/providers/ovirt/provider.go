@@ -425,6 +425,11 @@ func (o *OvirtProvider) CreateVMSnapshot() (string, error) {
 	return "", nil
 }
 
+// RemoveVMSnapshot is not implemented.
+func (o *OvirtProvider) RemoveVMSnapshot(_ string, _ bool) error {
+	return nil
+}
+
 func (o *OvirtProvider) prepareDataVolumeCredentials() (mapper.DataVolumeCredentials, error) {
 	keyAccess := o.ovirtSecretDataMap["username"]
 	keySecret := o.ovirtSecretDataMap["password"]

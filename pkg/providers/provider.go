@@ -39,6 +39,7 @@ type Provider interface {
 	LaunchGuestConversionPod(*kubevirtv1.VirtualMachine, map[string]cdiv1.DataVolume) (*corev1.Pod, error)
 	SupportsWarmMigration() bool
 	CreateVMSnapshot() (string, error)
+	RemoveVMSnapshot(string, bool) error
 }
 
 // Mapper is interface to be used for mapping external VM to kubevirt VM
