@@ -241,9 +241,16 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling VirtualMachineImport")
 
+	config, err := r.ctrlConfigProvider.GetConfig()
+	if err != nil {
+		log.Error(err, "Cannot get controller config.")
+	} else {
+		r.ctrlConfig = config
+	}
+
 	// Fetch the VirtualMachineImport instance
 	instance := &v2vv1.VirtualMachineImport{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
