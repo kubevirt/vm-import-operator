@@ -360,6 +360,18 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 
 	// don't stop the VM during a warm import unless it's time to finalize
 	if !shouldWarmImport(provider, instance) || shouldFinalizeWarmImport(instance) {
+		if _, ok := instance.Annotations[sourceVMInitialState]; !ok {
+			vmStatus, err := provider.GetVMStatus()
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+
+			log.Info("Storing source VM status", "status", vmStatus)
+			err = r.storeSourceVMStatus(instance, string(vmStatus))
+			if err != nil {
+				return reconcile.Result{}, err
+			}
+		}
 		// Stop the VM
 		if err = provider.StopVM(instance, r.client); err != nil {
 			return reconcile.Result{}, err
@@ -610,11 +622,11 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 			}
 			if valid {
 				log.Info("Creating data volume", "DataVolume.Name", dv.Name, "VM.Name", vmName)
-				if _, err = r.createDataVolume(provider, mapper, instance, &dv, vmName); err != nil {
-					if err = r.endDiskImportFailed(provider, instance, foundDv, err.Error()); err != nil {
+				if _, createErr := r.createDataVolume(provider, mapper, instance, &dv, vmName); createErr != nil {
+					if err = r.endDiskImportFailed(provider, instance, foundDv, createErr.Error()); err != nil {
 						return false, err
 					}
-					return false, err
+					return false, createErr
 				}
 			} else {
 				// If disk status is wrong, end the import as failed:
@@ -1031,7 +1043,11 @@ func shouldReconcile(instance *v2vv1.VirtualMachineImport) bool {
 }
 
 func shouldStartVM(instance *v2vv1.VirtualMachineImport) bool {
-	return instance.Spec.StartVM != nil && *instance.Spec.StartVM && conditions.HasSucceededConditionOfReason(instance.Status.Conditions, v2vv1.VirtualMachineReady)
+	return conditions.HasSucceededConditionOfReason(instance.Status.Conditions, v2vv1.VirtualMachineReady) &&
+		((instance.Spec.StartVM != nil && *instance.Spec.StartVM) ||
+			(instance.Spec.StartVM == nil &&
+				instance.Spec.Warm &&
+				instance.Annotations[sourceVMInitialState] == string(provider.VMStatusUp)))
 }
 
 func shouldConvertGuest(provider provider.Provider, instance *v2vv1.VirtualMachineImport) bool {
@@ -1590,17 +1606,6 @@ func (r *ReconcileVirtualMachineImport) validate(instance *v2vv1.VirtualMachineI
 			// if any performance implication occur.
 			r.recorder.Eventf(instance, corev1.EventTypeNormal, EventImportBlocked, "Virtual Machine %s/%s import blocked: %s", instance.Namespace, vmName, message)
 			return false, nil
-		}
-
-		vmStatus, err := provider.GetVMStatus()
-		if err != nil {
-			return true, err
-		}
-
-		logger.Info("Storing source VM status", "status", vmStatus)
-		err = r.storeSourceVMStatus(instance, string(vmStatus))
-		if err != nil {
-			return true, err
 		}
 	} else {
 		logger.Info("VirtualMachineImport has already been validated positively. Skipping re-validation")
