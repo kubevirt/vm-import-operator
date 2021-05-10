@@ -35,10 +35,10 @@ var _ = Describe("Basic VM warm import ", func() {
 	})
 
 	It("should finalize a warm import", func() {
-		vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, false)
+		vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM70, namespace, secret.Name, f.NsPrefix, false)
 		vmi.Spec.Source.Vmware.Mappings = &v2vv1.VmwareMappings{
 			NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-				{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+				{Source: v2vv1.Source{Name: &vmware.VM70Network}, Type: &tests.PodType},
 			},
 		}
 		vmi.Spec.Warm = true
