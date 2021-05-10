@@ -295,11 +295,27 @@ func (r *VmwareProvider) SupportsWarmMigration() bool {
 	return true
 }
 
+func (r *VmwareProvider) RemoveVMSnapshot(snapshotID string, removeChildren bool) error {
+	vm, err := r.getVM()
+	if err != nil {
+		return err
+	}
+	err = r.vmwareClient.RemoveVMSnapshot(vm.Reference().Value, snapshotID, removeChildren, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // CleanUp removes transient resources created for import
 func (r *VmwareProvider) CleanUp(failure bool, cr *v1beta1.VirtualMachineImport, client client.Client) error {
 	var errs []error
 
 	err := utils.RemoveFinalizer(cr, utils.RestoreVMStateFinalizer, client)
+	if err != nil {
+		errs = append(errs, err)
+	}
+	err = utils.RemoveFinalizer(cr, utils.CleanupSnapshotsFinalizer, client)
 	if err != nil {
 		errs = append(errs, err)
 	}

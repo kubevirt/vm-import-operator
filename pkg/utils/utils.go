@@ -24,6 +24,9 @@ const (
 	// RestoreVMStateFinalizer defines restore source vm finalizer
 	RestoreVMStateFinalizer = "vmimport.v2v.kubevirt.io/restore-state"
 
+	// CleanupSnapshotsFinalizer defines a finalizer to remove warm import snapshots
+	CleanupSnapshotsFinalizer = "vmimport.v2v.kubevirt.io/cleanup-snapshots"
+
 	// Finalaizer for handling cancelled import
 	CancelledImportFinalizer = "vmimport.v2v.kubevirt.io/cancelled-import"
 )

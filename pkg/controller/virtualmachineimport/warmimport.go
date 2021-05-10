@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/kubevirt/vm-import-operator/pkg/utils"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -37,6 +38,11 @@ func (r *ReconcileVirtualMachineImport) warmImport(provider provider.Provider, i
 		if err != nil {
 			return NoReQ, err
 		}
+	}
+
+	err := utils.AddFinalizer(instance, utils.CleanupSnapshotsFinalizer, r.client)
+	if err != nil {
+		return FastReQ, err
 	}
 
 	created, err := r.ensureDisksExist(provider, instance, mapper, vmName)
@@ -88,7 +94,7 @@ func (r *ReconcileVirtualMachineImport) warmImport(provider provider.Provider, i
 
 	// should only run after the very first stage is completed.
 	if instance.Status.WarmImport.NextStageTime == nil {
-		err = r.setNextStageTime(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace})
+		err = r.setNextStageTime(instance)
 		if err != nil {
 			return FastReQ, err
 		}
@@ -107,7 +113,7 @@ func (r *ReconcileVirtualMachineImport) warmImport(provider provider.Provider, i
 		return FastReQ, err
 	}
 
-	err = r.setNextStageTime(types.NamespacedName{Name: instance.Name, Namespace: instance.Namespace})
+	err = r.setNextStageTime(instance)
 	if err != nil {
 		return FastReQ, err
 	}
@@ -118,25 +124,6 @@ func (r *ReconcileVirtualMachineImport) warmImport(provider provider.Provider, i
 }
 
 func (r *ReconcileVirtualMachineImport) ensureDisksExist(provider provider.Provider, instance *v2vv1.VirtualMachineImport, mapper provider.Mapper, vmName types.NamespacedName) (bool, error) {
-	var err error
-	var snapshotRef string
-
-	// only take a snapshot if one hasn't been taken yet
-	if instance.Status.WarmImport.RootSnapshot != nil {
-		snapshotRef = *instance.Status.WarmImport.RootSnapshot
-	} else {
-		snapshotRef, err = provider.CreateVMSnapshot()
-		if err != nil {
-			_ = r.incrementWarmImportFailures(instance)
-			return false, err
-		}
-		instance.Status.WarmImport.RootSnapshot = &snapshotRef
-		err = r.client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			return false, err
-		}
-	}
-
 	dvs, err := mapper.MapDataVolumes(&vmName.Name, r.filesystemOverhead)
 	if err != nil {
 		return false, err
@@ -161,6 +148,22 @@ func (r *ReconcileVirtualMachineImport) ensureDisksExist(provider provider.Provi
 		}
 		if !valid {
 			err := r.endDiskImportFailed(provider, instance, dv, "disk is in illegal status")
+			if err != nil {
+				return false, err
+			}
+		}
+
+		// only take a snapshot if one hasn't been taken yet
+		var snapshotRef string
+		if instance.Status.WarmImport.RootSnapshot != nil {
+			snapshotRef = *instance.Status.WarmImport.RootSnapshot
+		} else {
+			snapshotRef, err = provider.CreateVMSnapshot()
+			if err != nil {
+				_ = r.incrementWarmImportFailures(instance)
+				return false, err
+			}
+			err = r.setRootSnapshot(instance, snapshotRef)
 			if err != nil {
 				return false, err
 			}
@@ -243,11 +246,18 @@ func (r *ReconcileVirtualMachineImport) setupNextStage(provider provider.Provide
 			}
 		} else {
 			numCheckpoints := len(dv.Spec.Checkpoints)
+			lastCheckpoint := dv.Spec.Checkpoints[numCheckpoints-1]
+			if lastCheckpoint.Previous != "" {
+				_ = provider.RemoveVMSnapshot(lastCheckpoint.Previous, false)
+			}
 			newCheckpoint := cdiv1.DataVolumeCheckpoint{
-				Previous: dv.Spec.Checkpoints[numCheckpoints-1].Current,
+				Previous: lastCheckpoint.Current,
 				Current:  snapshotRef,
 			}
-
+			err = r.setRootSnapshot(instance, lastCheckpoint.Current)
+			if err != nil {
+				return err
+			}
 			dv.Spec.Checkpoints = append(dv.Spec.Checkpoints, newCheckpoint)
 			dv.Spec.FinalCheckpoint = final
 		}
@@ -260,25 +270,32 @@ func (r *ReconcileVirtualMachineImport) setupNextStage(provider provider.Provide
 	return nil
 }
 
-func (r *ReconcileVirtualMachineImport) setNextStageTime(vmiName types.NamespacedName) error {
-	var instance v2vv1.VirtualMachineImport
-	err := r.apiReader.Get(context.TODO(), vmiName, &instance)
+func (r *ReconcileVirtualMachineImport) setRootSnapshot(instance *v2vv1.VirtualMachineImport, snapshotRef string) error {
+	instanceCopy := instance.DeepCopy()
+	instance.Status.WarmImport.RootSnapshot = &snapshotRef
+
+	patch := client.MergeFrom(instanceCopy)
+	err := r.client.Status().Patch(context.TODO(), instance, patch)
 	if err != nil {
 		return err
 	}
+	return nil
+}
 
+func (r *ReconcileVirtualMachineImport) setNextStageTime(instance *v2vv1.VirtualMachineImport) error {
 	// we already have the next stage scheduled
 	if instance.Status.WarmImport.NextStageTime != nil && instance.Status.WarmImport.NextStageTime.After(time.Now()) {
 		return nil
 	}
 
 	instanceCopy := instance.DeepCopy()
+	patch := client.MergeFrom(instanceCopy)
 	nextStageTime := metav1.NewTime(time.Now().Add(time.Duration(r.ctrlConfig.WarmImportIntervalMinutes()) * time.Minute))
-	instanceCopy.Status.WarmImport.Successes += 1
-	instanceCopy.Status.WarmImport.ConsecutiveFailures = 0
-	instanceCopy.Status.WarmImport.NextStageTime = &nextStageTime
+	instance.Status.WarmImport.Successes += 1
+	instance.Status.WarmImport.ConsecutiveFailures = 0
+	instance.Status.WarmImport.NextStageTime = &nextStageTime
 
-	return r.client.Status().Update(context.TODO(), instanceCopy)
+	return r.client.Status().Patch(context.TODO(), instance, patch)
 }
 
 func (r *ReconcileVirtualMachineImport) setFinalCheckpoint(dv *cdiv1.DataVolume) error {

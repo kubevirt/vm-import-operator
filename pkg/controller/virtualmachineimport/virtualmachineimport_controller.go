@@ -319,11 +319,20 @@ func (r *ReconcileVirtualMachineImport) Reconcile(request reconcile.Request) (re
 	}
 	defer provider.Close()
 
-	if instance.DeletionTimestamp != nil && utils.HasFinalizer(instance, utils.RestoreVMStateFinalizer) {
-		err := r.finalize(instance, provider)
-		if err != nil {
-			// requeue if locked
-			return reconcile.Result{RequeueAfter: 1 * time.Second}, nil
+	if instance.DeletionTimestamp != nil {
+		if utils.HasFinalizer(instance, utils.RestoreVMStateFinalizer) {
+			err := r.finalize(instance, provider)
+			if err != nil {
+				// requeue if locked
+				return reconcile.Result{RequeueAfter: 1 * time.Second}, nil
+			}
+		}
+		if utils.HasFinalizer(instance, utils.CleanupSnapshotsFinalizer) && instance.Status.WarmImport.RootSnapshot != nil {
+			_ = provider.RemoveVMSnapshot(*instance.Status.WarmImport.RootSnapshot, true)
+			err = utils.RemoveFinalizer(instance, utils.CleanupSnapshotsFinalizer, r.client)
+			if err != nil {
+				reqLogger.Error(err, "Finalizing - failed to remove snapshot finalizer")
+			}
 		}
 		return reconcile.Result{}, nil
 	}

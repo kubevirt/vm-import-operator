@@ -63,6 +63,7 @@ var (
 	launchGuestConversionPod func() (*corev1.Pod, error)
 	supportsWarmMigration    func() bool
 	createVMSnapshot         func() (string, error)
+	removeVMSnapshot         func(string, bool) error
 )
 
 var _ = Describe("Reconcile steps", func() {
@@ -2076,6 +2077,10 @@ func (p *mockProvider) SupportsWarmMigration() bool {
 
 func (p *mockProvider) CreateVMSnapshot() (string, error) {
 	return createVMSnapshot()
+}
+
+func (p *mockProvider) RemoveVMSnapshot(snapshotID string, removeChildren bool) error {
+	return removeVMSnapshot(snapshotID, removeChildren)
 }
 
 // CreateEmptyVM implements Mapper.CreateEmptyVM
