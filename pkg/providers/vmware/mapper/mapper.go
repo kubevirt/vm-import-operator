@@ -66,7 +66,6 @@ type DataVolumeCredentials struct {
 	SecretName string
 }
 
-
 // Disk is an abstraction of a VMWare VirtualDisk
 type Disk struct {
 	BackingFileName string
@@ -316,7 +315,8 @@ func (r *VmwareMapper) MapDataVolumes(_ *string, filesystemOverhead cdiv1.Filesy
 		storageClass := r.getStorageClassForDisk(mapping)
 
 		overhead := utils.GetOverheadForStorageClass(filesystemOverhead, storageClass)
-		capacityWithOverhead := (int64(float64(disk.Capacity) / (1 - overhead)) / 512 + 1 ) * 512
+		blockSize := int64(512)
+		capacityWithOverhead := utils.RoundUp(int64(float64(disk.Capacity)/(1-overhead)), blockSize)
 		capacityAsQuantity, err := bytesToQuantity(capacityWithOverhead)
 		if err != nil {
 			return nil, err

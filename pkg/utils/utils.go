@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"fmt"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -378,4 +379,10 @@ func GetOverheadForStorageClass(filesystemOverhead cdiv1.FilesystemOverhead, sto
 		overhead = defaultOverhead
 	}
 	return overhead
+}
+
+// RoundUp returns the number rounded up to the nearest multiple.
+func RoundUp(number, multiple int64) int64 {
+	partitions := math.Ceil(float64(number) / float64(multiple))
+	return int64(partitions) * multiple
 }

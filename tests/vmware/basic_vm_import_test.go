@@ -47,10 +47,10 @@ var _ = Describe("Basic VM import ", func() {
 
 	Context(" without resource mapping", func() {
 		It("should create stopped VM", func() {
-			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, false)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM70, namespace, secret.Name, f.NsPrefix, false)
 			vmi.Spec.Source.Vmware.Mappings = &v2vv1.VmwareMappings{
 				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-					{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+					{Source: v2vv1.Source{Name: &vmware.VM70Network}, Type: &tests.PodType},
 				},
 			}
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
@@ -79,10 +79,10 @@ var _ = Describe("Basic VM import ", func() {
 		})
 
 		It("should create started VM", func() {
-			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM70, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Vmware.Mappings = &v2vv1.VmwareMappings{
 				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-					{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+					{Source: v2vv1.Source{Name: &vmware.VM70Network}, Type: &tests.PodType},
 				},
 			}
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
@@ -114,7 +114,7 @@ var _ = Describe("Basic VM import ", func() {
 	Context(" with in-CR resource mapping", func() {
 		table.DescribeTable("should create running VM", func(mappings v2vv1.VmwareMappings, storageClass string) {
 
-			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM70, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Vmware.Mappings = &mappings
 
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
@@ -133,26 +133,27 @@ var _ = Describe("Basic VM import ", func() {
 		},
 			table.Entry(" for disk", v2vv1.VmwareMappings{
 				DiskMappings: &[]v2vv1.StorageResourceMappingItem{
-					{Source: v2vv1.Source{Name: &vmware.VM66DiskName}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+					{Source: v2vv1.Source{Name: &vmware.VM70DiskName1}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+					{Source: v2vv1.Source{Name: &vmware.VM70DiskName2}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
 				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-					{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+					{Source: v2vv1.Source{Name: &vmware.VM70Network}, Type: &tests.PodType},
 				},
 			}, f.DefaultStorageClass),
 			table.Entry(" for storage domain by name", v2vv1.VmwareMappings{
 				StorageMappings: &[]v2vv1.StorageResourceMappingItem{
-					{Source: v2vv1.Source{Name: &vmware.VM66DatastoreName}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+					{Source: v2vv1.Source{Name: &vmware.VM70DatastoreName}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
 				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-					{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+					{Source: v2vv1.Source{Name: &vmware.VM70Network}, Type: &tests.PodType},
 				},
 			}, f.DefaultStorageClass),
 			table.Entry(" for storage domain by id", v2vv1.VmwareMappings{
 				StorageMappings: &[]v2vv1.StorageResourceMappingItem{
-					{Source: v2vv1.Source{ID: &vmware.VM66Datastore}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+					{Source: v2vv1.Source{ID: &vmware.VM70Datastore}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
 				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-					{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+					{Source: v2vv1.Source{Name: &vmware.VM70Network}, Type: &tests.PodType},
 				},
 			}, f.DefaultStorageClass))
 	})
@@ -160,10 +161,10 @@ var _ = Describe("Basic VM import ", func() {
 	Context("when it's successful and the import CR is removed", func() {
 		It("should not affect imported VM or VMI", func() {
 			By("Creating Virtual Machine Import")
-			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM70, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.Source.Vmware.Mappings = &v2vv1.VmwareMappings{
 				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-					{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+					{Source: v2vv1.Source{Name: &vmware.VM70Network}, Type: &tests.PodType},
 				},
 			}
 			vmImports := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace)
@@ -231,14 +232,14 @@ func (t *basicVmImportTest) validateTargetConfiguration(vmName string, uid strin
 	By("having correct machine type")
 	Expect(spec.Domain.Machine.Type).To(BeEquivalentTo("q35"))
 
-	By("having BIOS")
-	Expect(spec.Domain.Firmware.Bootloader.BIOS).NotTo(BeNil())
-	Expect(spec.Domain.Firmware.Bootloader.EFI).To(BeNil())
+	By("having EFI")
+	Expect(spec.Domain.Firmware.Bootloader.BIOS).To(BeNil())
+	Expect(spec.Domain.Firmware.Bootloader.EFI).NotTo(BeNil())
 
 	By("having correct CPU configuration")
 	cpu := spec.Domain.CPU
 	Expect(cpu.Cores).To(BeEquivalentTo(1))
-	Expect(cpu.Sockets).To(BeEquivalentTo(1))
+	Expect(cpu.Sockets).To(BeEquivalentTo(4))
 	Expect(cpu.Threads).To(BeEquivalentTo(0))
 
 	By("having 1 network")
@@ -249,13 +250,16 @@ func (t *basicVmImportTest) validateTargetConfiguration(vmName string, uid strin
 
 	By("having correct disk setup")
 	disks := spec.Domain.Devices.Disks
-	Expect(disks).To(HaveLen(1))
+	Expect(disks).To(HaveLen(2))
 	disk0 := disks[0]
 	Expect(disk0.Disk.Bus).To(BeEquivalentTo("virtio"))
-	Expect(disk0.Name).To(BeEquivalentTo(fmt.Sprintf("dv-%s-204", uid)))
+	Expect(disk0.Name).To(BeEquivalentTo(fmt.Sprintf("dv-%s-203", uid)))
+	disk1 := disks[1]
+	Expect(disk1.Disk.Bus).To(BeEquivalentTo("virtio"))
+	Expect(disk1.Name).To(BeEquivalentTo(fmt.Sprintf("dv-%s-205", uid)))
 
 	By("having correct volumes")
-	Expect(spec.Volumes).To(HaveLen(1))
+	Expect(spec.Volumes).To(HaveLen(2))
 
 	inputDevices := spec.Domain.Devices.Inputs
 	tablet := utils.FindTablet(inputDevices)

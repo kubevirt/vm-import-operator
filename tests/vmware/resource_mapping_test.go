@@ -78,10 +78,10 @@ var _ = Describe("VM import ", func() {
 		It("should create running VM", func() {
 			mappings := v2vv1.VmwareMappings{
 				StorageMappings: &[]v2vv1.StorageResourceMappingItem{
-					{Source: v2vv1.Source{ID: &vmware.VM66Datastore}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
+					{Source: v2vv1.Source{ID: &vmware.VM70Datastore}, Target: v2vv1.ObjectIdentifier{Name: f.DefaultStorageClass}},
 				},
 				NetworkMappings: &[]v2vv1.NetworkResourceMappingItem{
-					{Source: v2vv1.Source{Name: &vmware.VM66Network}, Type: &tests.PodType},
+					{Source: v2vv1.Source{Name: &vmware.VM70Network}, Type: &tests.PodType},
 				},
 			}
 			rm, err := f.CreateVmwareResourceMapping(mappings)
@@ -89,7 +89,7 @@ var _ = Describe("VM import ", func() {
 				Fail(err.Error())
 			}
 
-			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM66, namespace, secret.Name, f.NsPrefix, true)
+			vmi := utils.VirtualMachineImportCr(fwk.ProviderVmware, vmware.VM70, namespace, secret.Name, f.NsPrefix, true)
 			vmi.Spec.ResourceMapping = &v2vv1.ObjectIdentifier{Name: rm.Name, Namespace: &rm.Namespace}
 			created, err := f.VMImportClient.V2vV1beta1().VirtualMachineImports(namespace).Create(context.TODO(), &vmi, metav1.CreateOptions{})
 

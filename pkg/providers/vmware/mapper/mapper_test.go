@@ -361,7 +361,7 @@ var _ = Describe("Test mapping disks", func() {
 
 		Expect(dvs[expectedDiskName2].Spec.PVC.Resources.Requests).To(HaveKey(v1.ResourceStorage))
 		storageResource = dvs[expectedDiskName2].Spec.PVC.Resources.Requests[v1.ResourceStorage]
-		Expect(storageResource.Value()).To(BeEquivalentTo(1073742336))
+		Expect(storageResource.Value()).To(BeEquivalentTo(1073741824))
 	})
 })
 
