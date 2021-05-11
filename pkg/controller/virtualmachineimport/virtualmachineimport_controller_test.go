@@ -454,7 +454,7 @@ var _ = Describe("Reconcile steps", func() {
 		})
 
 		It("should fail update vmimport with conditions: ", func() {
-			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
+			update = func(ctx context.Context, obj runtime.Object, opts ...client.UpdateOption) error {
 				return fmt.Errorf("Not modified")
 			}
 
@@ -479,31 +479,6 @@ var _ = Describe("Reconcile steps", func() {
 
 			Expect(err).To(BeNil())
 			Expect(validated).To(Equal(false))
-		})
-
-		It("should fail with vm status: ", func() {
-			getVMStatus = func() (provider.VMStatus, error) {
-				return "", fmt.Errorf("Not found")
-			}
-
-			validated, err := reconciler.validate(instance, mock)
-
-			Expect(err).To(Not(BeNil()))
-			Expect(validated).To(Equal(true))
-		})
-
-		It("should fail to store vm status: ", func() {
-			statusPatch = func(ctx context.Context, obj runtime.Object, patch client.Patch) error {
-				if obj.(*v2vv1.VirtualMachineImport).Annotations[sourceVMInitialState] == string(provider.VMStatusDown) {
-					return fmt.Errorf("Not modified")
-				}
-				return nil
-			}
-
-			validated, err := reconciler.validate(instance, mock)
-
-			Expect(err).To(Not(BeNil()))
-			Expect(validated).To(Equal(true))
 		})
 	})
 
@@ -1401,6 +1376,8 @@ var _ = Describe("Reconcile steps", func() {
 						Type:   v2vv1.MappingRulesVerified,
 					})
 					obj.(*v2vv1.VirtualMachineImport).Status.Conditions = conditions
+					annotations := map[string]string{"vmimport.v2v.kubevirt.io/source-vm-initial-state": "up"}
+					obj.(*v2vv1.VirtualMachineImport).Annotations = annotations
 					name := "test"
 					obj.(*v2vv1.VirtualMachineImport).Spec.TargetVMName = &name
 				case *corev1.Secret:
@@ -1531,6 +1508,7 @@ var _ = Describe("Reconcile steps", func() {
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch obj.(type) {
 				case *v2vv1.VirtualMachineImport:
+
 					obj.(*v2vv1.VirtualMachineImport).Spec = v2vv1.VirtualMachineImportSpec{
 						Source: v2vv1.VirtualMachineImportSourceSpec{
 							Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
@@ -1609,6 +1587,8 @@ var _ = Describe("Reconcile steps", func() {
 						Type:   v2vv1.MappingRulesVerified,
 					})
 					obj.(*v2vv1.VirtualMachineImport).Status.Conditions = conditions
+					annotations := map[string]string{"vmimport.v2v.kubevirt.io/source-vm-initial-state": "up"}
+					obj.(*v2vv1.VirtualMachineImport).Annotations = annotations
 					name := "test"
 					obj.(*v2vv1.VirtualMachineImport).Spec.TargetVMName = &name
 				case *corev1.Secret:
@@ -1781,6 +1761,7 @@ var _ = Describe("Reconcile steps", func() {
 			)
 			BeforeEach(func() {
 				config = &v2vv1.VirtualMachineImport{}
+				config.Annotations = map[string]string{"vmimport.v2v.kubevirt.io/source-vm-initial-state": "up"}
 				config.Spec = v2vv1.VirtualMachineImportSpec{
 					Source: v2vv1.VirtualMachineImportSourceSpec{
 						Ovirt: &v2vv1.VirtualMachineImportOvirtSourceSpec{},
