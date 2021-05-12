@@ -1,7 +1,8 @@
-v0.3.4
+v0.3.5
 
 Bugs:
-* Validate that vSphere networks are mapped
-* Start VMs so WaitForFirstConsumer DVs can bind
-* Requeue while waiting for disk copies and v2v
-* Use IsDNS1123Label to validate VM names
+* Defer storing the source VM power state until immediately before stopping
+* Fix storage overhead roundup calculation
+* Read controller configmap on each reconcile
+* Add RHEL6.10 to the OS mapper
+* Clean up warm migration snapshots
