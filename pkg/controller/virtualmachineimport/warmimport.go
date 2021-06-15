@@ -247,16 +247,9 @@ func (r *ReconcileVirtualMachineImport) setupNextStage(provider provider.Provide
 		} else {
 			numCheckpoints := len(dv.Spec.Checkpoints)
 			lastCheckpoint := dv.Spec.Checkpoints[numCheckpoints-1]
-			if lastCheckpoint.Previous != "" {
-				_ = provider.RemoveVMSnapshot(lastCheckpoint.Previous, false)
-			}
 			newCheckpoint := cdiv1.DataVolumeCheckpoint{
 				Previous: lastCheckpoint.Current,
 				Current:  snapshotRef,
-			}
-			err = r.setRootSnapshot(instance, lastCheckpoint.Current)
-			if err != nil {
-				return err
 			}
 			dv.Spec.Checkpoints = append(dv.Spec.Checkpoints, newCheckpoint)
 			dv.Spec.FinalCheckpoint = final
