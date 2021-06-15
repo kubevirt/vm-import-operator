@@ -1,8 +1,4 @@
-v0.3.5
+v0.3.6
 
 Bugs:
-* Defer storing the source VM power state until immediately before stopping
-* Fix storage overhead roundup calculation
-* Read controller configmap on each reconcile
-* Add RHEL6.10 to the OS mapper
-* Clean up warm migration snapshots
+* Don't clean up warm import snapshots until after the import
