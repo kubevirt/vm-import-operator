@@ -393,6 +393,10 @@ func createControllerEnv(virtV2vImage, pullPolicy string) []v1.EnvVar {
 			Name:  "VIRTV2V_IMAGE",
 			Value: virtV2vImage,
 		},
+		{
+			Name: "KUBEVIRT_CLIENT_GO_SCHEME_REGISTRATION_VERSION",
+			Value: "v1",
+		},
 	}
 }
 

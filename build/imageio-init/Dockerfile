@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/go-toolset:1.14.12 AS builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.15.7 AS builder
 WORKDIR /opt/app-root/src/vm-import-operator/
 COPY . .
 ENV GOFLAGS=-mod=vendor

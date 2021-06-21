@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/go-toolset:1.14.12 AS builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.15.7 AS builder
 WORKDIR /opt/app-root/src/vm-import-operator/
 COPY . .
 ENV GOFLAGS=-mod=vendor
@@ -8,7 +8,8 @@ RUN	CGO_ENABLED=0 GOOS=linux go build -o /opt/app-root/vm-import-controller cmd/
 FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 ENV CONTROLLER=/usr/local/bin/vm-import-controller \
     USER_UID=1001 \
-    USER_NAME=vm-import-controller
+    USER_NAME=vm-import-controller \
+    KUBEVIRT_CLIENT_GO_SCHEME_REGISTRATION_VERSION=v1
 
 # install controller binary
 COPY --from=builder /opt/app-root/vm-import-controller ${CONTROLLER}
