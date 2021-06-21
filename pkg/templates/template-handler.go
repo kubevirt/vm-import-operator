@@ -4,7 +4,6 @@ import (
 	templatev1 "github.com/openshift/api/template/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kubevirtv1 "kubevirt.io/client-go/api/v1"
-	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
 )
 
 const (
@@ -56,7 +55,7 @@ func (f *TemplateHandler) ProcessTemplate(template *templatev1.Template, vmName 
 		vm.Spec.Template.Spec.Networks = []kubevirtv1.Network{}
 	}
 	if len(vm.Spec.DataVolumeTemplates) > 0 {
-		vm.Spec.DataVolumeTemplates = []cdiv1.DataVolume{}
+		vm.Spec.DataVolumeTemplates = []kubevirtv1.DataVolumeTemplateSpec{}
 	}
 	addLabels(vm, template)
 	return vm, nil

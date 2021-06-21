@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi8/go-toolset:1.14.12 AS builder
+FROM registry.access.redhat.com/ubi8/go-toolset:1.15.7 AS builder
 WORKDIR /opt/app-root/src/vm-import-operator/
 COPY . .
 ENV GOFLAGS=-mod=vendor
@@ -11,7 +11,8 @@ FROM registry.access.redhat.com/ubi8/ubi-minimal:latest
 ENV OPERATOR=/usr/local/bin/vm-import-operator \
     USER_UID=1001 \
     USER_NAME=vm-import-operator \
-    CSV_GENERATOR=/usr/bin/csv-generator
+    CSV_GENERATOR=/usr/bin/csv-generator \
+    KUBEVIRT_CLIENT_GO_SCHEME_REGISTRATION_VERSION=v1
 
 # install operator binary
 COPY --from=builder /opt/app-root/vm-import-operator ${OPERATOR}
