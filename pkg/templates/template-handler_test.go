@@ -4,15 +4,13 @@ import (
 	"fmt"
 
 	"github.com/kubevirt/vm-import-operator/pkg/templates"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	templatev1 "github.com/openshift/api/template/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	v1 "kubevirt.io/client-go/api/v1"
-	cdiv1 "kubevirt.io/containerized-data-importer/pkg/apis/core/v1alpha1"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var (
@@ -119,9 +117,9 @@ func createVM(namespace string, name string) *v1.VirtualMachine {
 	}
 }
 
-func createDataVolumes(namespace string, name string) []cdiv1.DataVolume {
-	dvs := []cdiv1.DataVolume{}
-	return append(dvs, cdiv1.DataVolume{
+func createDataVolumes(namespace string, name string) []v1.DataVolumeTemplateSpec {
+	dvts := []v1.DataVolumeTemplateSpec{}
+	return append(dvts, v1.DataVolumeTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
