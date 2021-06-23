@@ -32,7 +32,7 @@ require (
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
 	github.com/vmware/govmomi v0.23.1
 	github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2 // indirect
-	golang.org/x/tools v0.0.0-20200616195046-dc31b401abb5
+	golang.org/x/tools v0.0.0-20210106214847-113979e3529a
 	gopkg.in/yaml.v2 v2.3.0
 	k8s.io/api v0.19.0-rc.2
 	k8s.io/apiextensions-apiserver v0.19.0-rc.2
@@ -103,3 +103,5 @@ replace sigs.k8s.io/controller-tools => sigs.k8s.io/controller-tools v0.2.4
 replace kubevirt.io/qe-tools => kubevirt.io/qe-tools v0.1.6
 
 replace github.com/gorilla/websocket => github.com/gorilla/websocket v1.4.2
+
+replace github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
