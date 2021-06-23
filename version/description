@@ -1,4 +1,4 @@
-v0.3.6
+v0.3.7
 
 Bugs:
-* Don't clean up warm import snapshots until after the import
+* Update Kubevirt client-go, update go-toolkit
