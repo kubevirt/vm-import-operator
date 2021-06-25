@@ -1,4 +1,5 @@
-v0.3.6
+v0.3.7
 
 Bugs:
-* Don't clean up warm import snapshots until after the import
+* Force gogo/protobuf to 1.3.2
+* Update Kubevirt client-go, update go-toolkit
