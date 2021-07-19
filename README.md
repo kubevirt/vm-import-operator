@@ -12,7 +12,9 @@ Installation has to be made into KubeVirt installation namespace.
 Default kubevirt namespace is assumed to be 'kubevirt-hyperconverged'.
 In order to generate manifests for a different namespace run:
 ```bash
-TARGET_NAMESPACE=YOUR_DESIRED_NAMESPACE make gen-manifests
+export TARGET_NAMESPACE=YOUR_DESIRED_NAMESPACE
+export VERSION=YOUR_DESIRED_VERSION
+make gen-manifests
 ```
 
 Deploy vm-import-operator resources:
@@ -20,6 +22,14 @@ Deploy vm-import-operator resources:
 kubectl apply -f https://github.com/kubevirt/vm-import-operator/releases/download/v0.3.7/operator.yaml
 kubectl apply -f https://github.com/kubevirt/vm-import-operator/releases/download/v0.3.7/vmimportconfig_cr.yaml
 ```
+
+In order to import you will be required to have:
+* [Kubevirt](https://github.com/kubevirt/kubevirt)
+* [Containerized Data Importer](https://github.com/kubevirt/containerized-data-importer)
+* [Common Templates](https://github.com/kubevirt/common-templates)
+
+Optional for network configurations:
+* [Cluster Networks Addon](https://github.com/kubevirt/cluster-network-addons-operator)
 
 # Import virtual machine from oVirt
 ## Create a secret with oVirt credentials:
@@ -37,7 +47,7 @@ stringData:
     apiUrl: "https://ovirt-engine.example.com:8443/ovirt-engine/api"
     username: admin@internal # provided in the format of username@domain
     password: 123456
-    caCert: |
+    caCert: |-
       -----BEGIN CERTIFICATE-----
       ...
       -----END CERTIFICATE-----
