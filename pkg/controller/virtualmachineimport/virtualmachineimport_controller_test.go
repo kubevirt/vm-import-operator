@@ -7,8 +7,6 @@ import (
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
 	"github.com/kubevirt/vm-import-operator/pkg/metrics"
 
-	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
-
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	"github.com/kubevirt/vm-import-operator/pkg/mappings"
@@ -56,7 +54,6 @@ var (
 	getVM                    func(id *string, name *string, cluster *string, clusterID *string) (interface{}, error)
 	stopVM                   func(id string) error
 	list                     func(ctx context.Context, list runtime.Object, opts ...client.ListOption) error
-	getKvConfig              func() kvConfig.KubeVirtConfig
 	getCtrlConfig            func() ctrlConfig.ControllerConfig
 	needsGuestConversion     func() bool
 	getGuestConversionPod    func() (*corev1.Pod, error)
@@ -81,7 +78,6 @@ var _ = Describe("Reconcile steps", func() {
 		scheme := runtime.NewScheme()
 		factory := &mockFactory{}
 		controller := &mockController{}
-		kvConfigProviderMock := &mockKubeVirtConfigProvider{}
 		ctrlConfigProviderMock := &mockControllerConfigProvider{}
 		scheme.AddKnownTypes(v2vv1.SchemeGroupVersion,
 			&v2vv1.VirtualMachineImport{},
@@ -119,9 +115,6 @@ var _ = Describe("Reconcile steps", func() {
 		cleanUp = func() error {
 			return nil
 		}
-		getKvConfig = func() kvConfig.KubeVirtConfig {
-			return kvConfig.KubeVirtConfig{FeatureGates: "ImportWithoutTemplate"}
-		}
 		getCtrlConfig = func() ctrlConfig.ControllerConfig {
 			return ctrlConfig.ControllerConfig{}
 		}
@@ -134,7 +127,7 @@ var _ = Describe("Reconcile steps", func() {
 		vmName = types.NamespacedName{Name: "test", Namespace: "default"}
 		rec := record.NewFakeRecorder(2)
 
-		reconciler = NewReconciler(mockClient, finder, scheme, ownerreferences.NewOwnerReferenceManager(mockClient), factory, kvConfigProviderMock, rec, controller, ctrlConfigProviderMock)
+		reconciler = NewReconciler(mockClient, finder, scheme, ownerreferences.NewOwnerReferenceManager(mockClient), factory, rec, controller, ctrlConfigProviderMock)
 	})
 
 	AfterEach(func() {
@@ -503,10 +496,6 @@ var _ = Describe("Reconcile steps", func() {
 			findTemplate = func() (*oapiv1.Template, error) {
 				return nil, templateError
 			}
-			getKvConfig = func() kvConfig.KubeVirtConfig {
-				// Feature flag is not present
-				return kvConfig.KubeVirtConfig{}
-			}
 			get = func(ctx context.Context, key client.ObjectKey, obj runtime.Object) error {
 				switch vmImport := obj.(type) {
 				case *v2vv1.VirtualMachineImport:
@@ -527,10 +516,6 @@ var _ = Describe("Reconcile steps", func() {
 			templateProcessingError := fmt.Errorf("Failed")
 			processTemplate = func(template *oapiv1.Template, name *string, namespace string) (*kubevirtv1.VirtualMachine, error) {
 				return nil, templateProcessingError
-			}
-			getKvConfig = func() kvConfig.KubeVirtConfig {
-				// Feature flag is not present
-				return kvConfig.KubeVirtConfig{}
 			}
 
 			name, err := reconciler.createVM(mock, instance, mapper)
@@ -1883,7 +1868,7 @@ var _ = Describe("Disks import progress", func() {
 	)
 })
 
-func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory pclient.Factory, kvConfigProvider kvConfig.KubeVirtConfigProvider, recorder record.EventRecorder, controller controller.Controller, ctrlConfigProvider ctrlConfig.ControllerConfigProvider) *ReconcileVirtualMachineImport {
+func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme *runtime.Scheme, ownerreferencesmgr ownerreferences.OwnerReferenceManager, factory pclient.Factory, recorder record.EventRecorder, controller controller.Controller, ctrlConfigProvider ctrlConfig.ControllerConfigProvider) *ReconcileVirtualMachineImport {
 	return &ReconcileVirtualMachineImport{
 		client:                 client,
 		apiReader:              client,
@@ -1891,7 +1876,6 @@ func NewReconciler(client client.Client, finder mappings.ResourceFinder, scheme 
 		scheme:                 scheme,
 		ownerreferencesmgr:     ownerreferencesmgr,
 		factory:                factory,
-		kvConfigProvider:       kvConfigProvider,
 		recorder:               recorder,
 		controller:             controller,
 		ctrlConfigProvider:     ctrlConfigProvider,
@@ -1909,8 +1893,6 @@ type mockMapper struct{}
 type mockFactory struct{}
 
 type mockController struct{}
-
-type mockKubeVirtConfigProvider struct{}
 
 type mockControllerConfigProvider struct{}
 
@@ -2153,10 +2135,6 @@ func (c *mockVmwareClient) Close() error {
 
 func (c *mockVmwareClient) TestConnection() error {
 	return nil
-}
-
-func (c *mockKubeVirtConfigProvider) GetConfig() (kvConfig.KubeVirtConfig, error) {
-	return getKvConfig(), nil
 }
 
 func (c *mockControllerConfigProvider) GetConfig() (ctrlConfig.ControllerConfig, error) {

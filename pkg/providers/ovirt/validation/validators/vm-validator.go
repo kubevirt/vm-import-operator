@@ -6,8 +6,6 @@ import (
 	"math"
 	"strings"
 
-	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
-
 	"github.com/kubevirt/vm-import-operator/pkg/utils"
 
 	"github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/mapper"
@@ -22,7 +20,7 @@ type rule struct {
 }
 
 // ValidateVM validates given VM
-func ValidateVM(vm *ovirtsdk.Vm, config kvConfig.KubeVirtConfig, finder *otemplates.TemplateFinder) []ValidationFailure {
+func ValidateVM(vm *ovirtsdk.Vm, finder *otemplates.TemplateFinder) []ValidationFailure {
 	var results = isValidBios(vm)
 	if failure, valid := isValidStatus(vm); !valid {
 		results = append(results, failure)
@@ -60,9 +58,6 @@ func ValidateVM(vm *ovirtsdk.Vm, config kvConfig.KubeVirtConfig, finder *otempla
 		results = append(results, failure)
 	}
 	if failure, valid := isValidOrigin(vm); !valid {
-		results = append(results, failure)
-	}
-	if failure, valid := isValidPlacementPolicy(vm, config.LiveMigrationEnabled()); !valid {
 		results = append(results, failure)
 	}
 	if failure, valid := isValidRandomNumberGeneratorSource(vm); !valid {

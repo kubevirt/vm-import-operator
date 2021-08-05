@@ -20,8 +20,6 @@ import (
 
 	ctrlConfig "github.com/kubevirt/vm-import-operator/pkg/config/controller"
 
-	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
-
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
 	pclient "github.com/kubevirt/vm-import-operator/pkg/client"
 	"github.com/kubevirt/vm-import-operator/pkg/conditions"
@@ -120,12 +118,12 @@ var (
 
 // Add creates a new VirtualMachineImport Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
-func Add(mgr manager.Manager, kvConfigProvider kvConfig.KubeVirtConfigProvider, ctrlConfigProvider ctrlConfig.ControllerConfigProvider) error {
-	return add(mgr, newReconciler(mgr, kvConfigProvider, ctrlConfigProvider))
+func Add(mgr manager.Manager, ctrlConfigProvider ctrlConfig.ControllerConfigProvider) error {
+	return add(mgr, newReconciler(mgr, ctrlConfigProvider))
 }
 
 // newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager, kvConfigProvider kvConfig.KubeVirtConfigProvider, ctrlConfigProvider ctrlConfig.ControllerConfigProvider) *ReconcileVirtualMachineImport {
+func newReconciler(mgr manager.Manager, ctrlConfigProvider ctrlConfig.ControllerConfigProvider) *ReconcileVirtualMachineImport {
 	tempClient, err := templatev1.NewForConfig(mgr.GetConfig())
 	if err != nil {
 		log.Error(err, "Unable to get OC client")
@@ -148,7 +146,6 @@ func newReconciler(mgr manager.Manager, kvConfigProvider kvConfig.KubeVirtConfig
 		ocClient:               tempClient,
 		ownerreferencesmgr:     ownerreferencesmgr,
 		factory:                factory,
-		kvConfigProvider:       kvConfigProvider,
 		ctrlConfigProvider:     ctrlConfigProvider,
 		ctrlConfig:             controllerConfig,
 		recorder:               mgr.GetEventRecorderFor("virtualmachineimport-controller"),
@@ -223,7 +220,6 @@ type ReconcileVirtualMachineImport struct {
 	ocClient               *templatev1.TemplateV1Client
 	ownerreferencesmgr     ownerreferences.OwnerReferenceManager
 	factory                pclient.Factory
-	kvConfigProvider       kvConfig.KubeVirtConfigProvider
 	ctrlConfigProvider     ctrlConfig.ControllerConfigProvider
 	ctrlConfig             ctrlConfig.ControllerConfig
 	recorder               record.EventRecorder
@@ -815,30 +811,19 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 	}
 	template, err := provider.FindTemplate()
 	var spec *kubevirtv1.VirtualMachine
-	config, cfgErr := r.kvConfigProvider.GetConfig()
-	if cfgErr != nil {
-		log.Error(cfgErr, "Cannot get KubeVirt cluster config.")
-	}
+
 	if err != nil {
 		reqLogger.Info("No matching template was found for the virtual machine.")
-		if !config.ImportWithoutTemplateEnabled() {
-			if err := r.templateMatchingFailed(err.Error(), &processingCond, provider, instance); err != nil {
-				return "", err
-			}
+		if err := r.templateMatchingFailed(err.Error(), &processingCond, provider, instance); err != nil {
 			return "", err
 		}
-		reqLogger.Info("Using empty VM definition.")
-		spec = mapper.CreateEmptyVM(targetVMName)
+		return "", err
 	} else {
 		reqLogger.Info("A template was found for creating the virtual machine", "Template.Name", template.ObjectMeta.Name)
 		spec, err = provider.ProcessTemplate(template, targetVMName, instance.Namespace)
 		if err != nil {
 			reqLogger.Info("Failed to process the template. Error: " + err.Error())
-			if !config.ImportWithoutTemplateEnabled() {
-				return "", err
-			}
-			reqLogger.Info("Using empty VM definition.")
-			spec = mapper.CreateEmptyVM(targetVMName)
+			return "", err
 		} else {
 			if len(spec.ObjectMeta.Name) > 0 {
 				targetVMName = &spec.ObjectMeta.Name
@@ -1174,7 +1159,7 @@ func (r *ReconcileVirtualMachineImport) createProvider(vmi *v2vv1.VirtualMachine
 
 	// The type of the provider is evaluated based on the source field from the CR
 	if vmi.Spec.Source.Ovirt != nil {
-		provider := ovirtprovider.NewOvirtProvider(vmi.ObjectMeta, vmi.TypeMeta, r.client, r.ocClient, r.factory, r.kvConfigProvider, r.ctrlConfig)
+		provider := ovirtprovider.NewOvirtProvider(vmi.ObjectMeta, vmi.TypeMeta, r.client, r.ocClient, r.factory, r.ctrlConfig)
 		return &provider, nil
 	}
 	if vmi.Spec.Source.Vmware != nil {

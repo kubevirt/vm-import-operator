@@ -2,7 +2,6 @@ package validators
 
 import (
 	v2vv1 "github.com/kubevirt/vm-import-operator/pkg/apis/v2v/v1beta1"
-	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 	otemplates "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/templates"
 	ovirtsdk "github.com/ovirt/go-ovirt"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,11 +14,10 @@ var logger = logf.Log.WithName("validators")
 type ValidatorWrapper struct {
 	networkMappingValidator NetworkMappingValidator
 	storageMappingValidator StorageMappingValidator
-	kvConfigProvider        kvConfig.KubeVirtConfigProvider
 }
 
 // NewValidatorWrapper creates new, configured ValidatorWrapper
-func NewValidatorWrapper(client client.Client, kvConfigProvider kvConfig.KubeVirtConfigProvider) *ValidatorWrapper {
+func NewValidatorWrapper(client client.Client) *ValidatorWrapper {
 	netAttachDefProvider := NetworkAttachmentDefinitions{
 		Client: client,
 	}
@@ -29,17 +27,12 @@ func NewValidatorWrapper(client client.Client, kvConfigProvider kvConfig.KubeVir
 	return &ValidatorWrapper{
 		networkMappingValidator: NewNetworkMappingValidator(&netAttachDefProvider),
 		storageMappingValidator: NewStorageMappingValidator(&storageClassesProvider),
-		kvConfigProvider:        kvConfigProvider,
 	}
 }
 
 // ValidateVM wraps validators package implementation of ValidateVM function
 func (v *ValidatorWrapper) ValidateVM(vm *ovirtsdk.Vm, finder *otemplates.TemplateFinder) []ValidationFailure {
-	kvConfig, err := v.kvConfigProvider.GetConfig()
-	if err != nil {
-		logger.Error(err, "Cannot get KubeVirt cluster config.")
-	}
-	return ValidateVM(vm, kvConfig, finder)
+	return ValidateVM(vm, finder)
 }
 
 // ValidateDiskStatus return true if the disk status is valid:
