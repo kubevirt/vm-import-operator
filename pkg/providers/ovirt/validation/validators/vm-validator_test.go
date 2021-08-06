@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	config "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 	kvConfig "github.com/kubevirt/vm-import-operator/pkg/config/kubevirt"
 	otemplates "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/templates"
 	"github.com/kubevirt/vm-import-operator/pkg/templates"
@@ -311,27 +310,6 @@ var _ = Describe("Validating VM", func() {
 
 		Expect(failures).To(HaveLen(1))
 		Expect(failures[0].ID).To(Equal(validators.VMOriginID))
-	})
-	It("should flag vm with placement_policy.affinity == migratable  and live migration disabled", func() {
-		var vm = newVM()
-		vm.SetPlacementPolicy(
-			ovirtsdk.NewVmPlacementPolicyBuilder().Affinity(ovirtsdk.VMAFFINITY_MIGRATABLE).MustBuild())
-
-		failures := validators.ValidateVM(vm, kvConfig, templateFinder)
-
-		Expect(failures).To(HaveLen(1))
-		Expect(failures[0].ID).To(Equal(validators.VMPlacementPolicyAffinityID))
-	})
-	It("should accept vm with placement_policy.affinity == migratable and live migration enabled", func() {
-		var vm = newVM()
-		vm.SetPlacementPolicy(
-			ovirtsdk.NewVmPlacementPolicyBuilder().Affinity(ovirtsdk.VMAFFINITY_MIGRATABLE).MustBuild())
-
-		kvConfig := config.KubeVirtConfig{FeatureGates: "LiveMigration"}
-
-		failures := validators.ValidateVM(vm, kvConfig, templateFinder)
-
-		Expect(failures).To(BeEmpty())
 	})
 	table.DescribeTable("should flag VM with illegal random number generator source", func(source string) {
 		vm := newVM()

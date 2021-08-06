@@ -38,11 +38,6 @@ type KubeVirtConfig struct {
 	FeatureGates string
 }
 
-// LiveMigrationEnabled returns true if LiveMigration KubeVirt feature gate is enabled
-func (c *KubeVirtConfig) LiveMigrationEnabled() bool {
-	return c.isFeatureGateEnabled(liveMigrationGate)
-}
-
 // ImportWithoutTemplateEnabled returns true if ImportWithoutTemplate KubeVirt feature gate is enabled
 func (c *KubeVirtConfig) ImportWithoutTemplateEnabled() bool {
 	return c.isFeatureGateEnabled(importWithoutTemplateGate)

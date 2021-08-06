@@ -92,4 +92,3 @@ ID | Predicate | Action
 31 | VM.floppies[] is not empty | Log
 32 | vm.timezone is not UTC-compatible | Block
 33 | vm.status other than 'up' or 'down' | Block
-34 | vm. placement_policy.affinity='migratable' and KubeVirt has Live Migration disabled | Block
