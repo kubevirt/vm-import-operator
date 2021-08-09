@@ -62,9 +62,6 @@ func ValidateVM(vm *ovirtsdk.Vm, config kvConfig.KubeVirtConfig, finder *otempla
 	if failure, valid := isValidOrigin(vm); !valid {
 		results = append(results, failure)
 	}
-	if failure, valid := isValidPlacementPolicy(vm, config.LiveMigrationEnabled()); !valid {
-		results = append(results, failure)
-	}
 	if failure, valid := isValidRandomNumberGeneratorSource(vm); !valid {
 		results = append(results, failure)
 	}

@@ -815,13 +815,17 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 	}
 	template, err := provider.FindTemplate()
 	var spec *kubevirtv1.VirtualMachine
-	config, cfgErr := r.kvConfigProvider.GetConfig()
+	config, cfgErr := r.ctrlConfigProvider.GetConfig()
+	if cfgErr != nil {
+		log.Error(cfgErr, "Cannot get controller config.")
+	}
+	kvConfig, cfgErr := r.kvConfigProvider.GetConfig()
 	if cfgErr != nil {
 		log.Error(cfgErr, "Cannot get KubeVirt cluster config.")
 	}
 	if err != nil {
 		reqLogger.Info("No matching template was found for the virtual machine.")
-		if !config.ImportWithoutTemplateEnabled() {
+		if !config.ImportWithoutTemplateEnabled() && !kvConfig.ImportWithoutTemplateEnabled() {
 			if err := r.templateMatchingFailed(err.Error(), &processingCond, provider, instance); err != nil {
 				return "", err
 			}
@@ -834,7 +838,7 @@ func (r *ReconcileVirtualMachineImport) createVM(provider provider.Provider, ins
 		spec, err = provider.ProcessTemplate(template, targetVMName, instance.Namespace)
 		if err != nil {
 			reqLogger.Info("Failed to process the template. Error: " + err.Error())
-			if !config.ImportWithoutTemplateEnabled() {
+			if !config.ImportWithoutTemplateEnabled() && !kvConfig.ImportWithoutTemplateEnabled() {
 				return "", err
 			}
 			reqLogger.Info("Using empty VM definition.")

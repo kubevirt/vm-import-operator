@@ -22,6 +22,9 @@ const (
 	// WarmImportIntervalMinutesKey defines how long to wait between warm import iterations
 	WarmImportIntervalMinutesKey     = "warmImport.intervalMinutes"
 	warmImportIntervalMinutesDefault = 60
+	// ImportWithoutTemplateKey defines whether imports are permitted to run if an Openshift VM template can't be found.
+	ImportWithoutTemplateKey         = "importWithoutTemplate"
+	importWithoutTemplateDefault     = false
 )
 
 // ControllerConfig stores controller runtime configuration
@@ -56,6 +59,19 @@ func (c ControllerConfig) WarmImportConsecutiveFailures() int {
 
 func (c ControllerConfig) WarmImportIntervalMinutes() int {
 	return c.getKeyAsInt(WarmImportIntervalMinutesKey, warmImportIntervalMinutesDefault, 0)
+}
+
+func (c ControllerConfig) ImportWithoutTemplateEnabled() bool {
+	return c.getKeyAsBool(ImportWithoutTemplateKey, importWithoutTemplateDefault)
+}
+
+func (c ControllerConfig) getKeyAsBool(key string, default_ bool) bool {
+	raw := c.ConfigMap.Data[key]
+	parsed, err := strconv.ParseBool(raw)
+	if err != nil {
+		parsed = default_
+	}
+	return parsed
 }
 
 func (c ControllerConfig) getKeyAsInt(key string, default_ int, floor int) int {
