@@ -1,5 +1,7 @@
-v0.3.7
+v0.4.0
 
-Bugs:
-* Force gogo/protobuf to 1.3.2
-* Update Kubevirt client-go, update go-toolkit
+Features:
+* Remove dependency on obsolete Kubevirt config map
+
+Docs:
+* Improve the README

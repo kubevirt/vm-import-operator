@@ -1,0 +1,199 @@
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |2-
+
+            [
+              {
+                "apiVersion":"v2v.kubevirt.io/v1beta1",
+                "kind":"VMImportConfig",
+                "metadata": {
+                  "name":"vm-import-operator-config"
+                },
+                "spec": {
+                  "imagePullPolicy":"IfNotPresent"
+                }
+              }
+            ]
+    capabilities: Virtual Machine Import
+    categories: Import,Virtualization, RHV
+  name: vm-import-operator.0.4.0
+  namespace: kubevirt-hyperconverged
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: Represents a virtual machine import config
+      displayName: Virtual Machine import config
+      kind: VMImportConfig
+      name: vmimportconfigs.v2v.kubevirt.io
+      specDescriptors:
+      - description: The ImageRegistry to use for vm import.
+        displayName: ImageRegistry
+        path: imageRegistry
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: The ImageTag to use for vm import.
+        displayName: ImageTag
+        path: imageTag
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: The ImagePullPolicy to use for vm import.
+        displayName: ImagePullPolicy
+        path: imagePullPolicy
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes:imagePullPolicy
+      statusDescriptors:
+      - description: The deployment phase.
+        displayName: Phase
+        path: phase
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.phase
+      - description: Explanation for the current status of the vm import deployment.
+        displayName: Conditions
+        path: conditions
+        x-descriptors:
+        - urn:alm:descriptor:io.kubernetes.conditions
+      - description: The observed version of the vm import deployment.
+        displayName: Observed vm import Version
+        path: observedVersion
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: The targeted version of the vm import deployment.
+        displayName: Target vm import Version
+        path: targetVersion
+        x-descriptors:
+        - urn:alm:descriptor:text
+      - description: The version of the vm import Operator
+        displayName: Vm import Operator Version
+        path: operatorVersion
+        x-descriptors:
+        - urn:alm:descriptor:text
+      version: v1beta1
+  description: VM import operator provides ability to import virtual machines from other infrastructure like oVirt/RHV
+  displayName: VM import operator
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - events
+          - configmaps
+          - secrets
+          - serviceaccounts
+          - services
+          - services/finalizers
+          verbs:
+          - '*'
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          - deployments/finalizers
+          verbs:
+          - '*'
+        - apiGroups:
+          - v2v.kubevirt.io
+          resources:
+          - vmimportconfigs
+          - vmimportconfigs/finalizers
+          - vmimportconfigs/status
+          verbs:
+          - '*'
+        - apiGroups:
+          - apiextensions.k8s.io
+          resources:
+          - customresourcedefinitions
+          verbs:
+          - '*'
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterrolebindings
+          - clusterroles
+          verbs:
+          - '*'
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - '*'
+        serviceAccountName: vm-import-operator
+      deployments:
+      - name: vm-import-operator
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              name: vm-import-operator
+              operator.v2v.kubevirt.io: ""
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                name: vm-import-operator
+                operator.v2v.kubevirt.io: ""
+            spec:
+              containers:
+              - env:
+                - name: DEPLOY_CLUSTER_RESOURCES
+                  value: "true"
+                - name: OPERATOR_VERSION
+                  value: v0.4.0
+                - name: CONTROLLER_IMAGE
+                  value: quay.io/kubevirt/vm-import-controller:v0.4.0
+                - name: PULL_POLICY
+                  value: Always
+                - name: WATCH_NAMESPACE
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: MONITORING_NAMESPACE
+                  value: openshift-monitoring
+                - name: VIRTV2V_IMAGE
+                  value: quay.io/kubevirt/vm-import-virtv2v:v0.4.0
+                image: quay.io/kubevirt/vm-import-operator:v0.4.0
+                imagePullPolicy: Always
+                name: vm-import-operator
+                resources: {}
+              securityContext:
+                runAsNonRoot: true
+              serviceAccountName: vm-import-operator
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - Import
+  - Virtualization
+  - oVirt
+  - RHV
+  labels:
+    operated-by: vm-import-operator
+  links:
+  - name: VM import operator
+    url: https://github.com/kubevirt/vm-import-operator/blob/master/README.md
+  - name: Source Code
+    url: https://github.com/kubevirt/vm-import-operator
+  maintainers:
+  - email: kubevirt-dev@googlegroups.com
+    name: KubeVirt project
+  maturity: alpha
+  provider:
+    name: KubeVirt project
+  replaces: 0.3.7
+  selector:
+    matchLabels:
+      operated-by: vm-import-operator
+  version: 0.4.0
