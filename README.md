@@ -1,4 +1,4 @@
-vm-import-operator
+-vm-import-operator
 ==================
 
 Operator which imports a VM from oVirt to KubeVirt.
