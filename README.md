@@ -19,8 +19,8 @@ make gen-manifests
 
 Deploy vm-import-operator resources:
 ```bash
-kubectl apply -f https://github.com/kubevirt/vm-import-operator/releases/download/v0.3.7/operator.yaml
-kubectl apply -f https://github.com/kubevirt/vm-import-operator/releases/download/v0.3.7/vmimportconfig_cr.yaml
+kubectl apply -f https://github.com/kubevirt/vm-import-operator/releases/download/v0.4.0/operator.yaml
+kubectl apply -f https://github.com/kubevirt/vm-import-operator/releases/download/v0.4.0/vmimportconfig_cr.yaml
 ```
 
 In order to import you will be required to have:

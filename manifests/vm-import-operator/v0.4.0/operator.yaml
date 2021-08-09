@@ -1,0 +1,209 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    operator.v2v.kubevirt.io: ""
+  name: vmimportconfigs.v2v.kubevirt.io
+spec:
+  group: v2v.kubevirt.io
+  names:
+    categories:
+    - all
+    kind: VMImportConfig
+    listKind: VMImportConfigList
+    plural: vmimportconfigs
+    singular: vmimportconfig
+  scope: Cluster
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+    subresources:
+      status: {}
+    schema:
+      openAPIV3Schema:
+        description: VMImportConfig is the Schema for the vmimportconfigs API
+        properties:
+          apiVersion:
+            description: APIVersion defines the versioned schema of this representation
+              of an object
+            type: string
+          kind:
+            description: Kind is a string value representing the REST resource this
+              object represents
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VMImportConfigSpec defines the desired state of VMImportConfig
+            properties:
+              imagePullPolicy:
+                description: "Image pull policy. One of Always, Never, IfNotPresent. Defaults to Always if :latest tag is specified, or IfNotPresent otherwise. Cannot be updated. More info: https://kubernetes.io/docs/concepts/containers/images#updating-images"
+                enum:
+                - Always
+                - IfNotPresent
+                - Never
+                type: string
+            type: object
+          status:
+            description: VMImportConfigStatus defines the observed state of VMImportConfig
+            properties:
+              conditions:
+                description: A list of current conditions of the VMImportConfig resource
+                items:
+                  properties:
+                    lastHeartbeatTime:
+                      description: Last time the state of the condition was checked
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the state of the condition changed
+                      format: date-time
+                      type: string
+                    message:
+                      description: Message related to the last condition change
+                      type: string
+                    reason:
+                      description: Reason the last condition changed
+                      type: string
+                    status:
+                      description: Current status of the condition, True, False, Unknown
+                      type: string
+                    type:
+                      description: ConditionType is the state of the operator's reconciliation functionality.
+                      type: string
+                  type: object
+                type: array
+              observedVersion:
+                description: The observed version of the VMImportConfig resource
+                type: string
+              operatorVersion:
+                description: The version of the VMImportConfig resource as defined by
+                  the operator
+                type: string
+              targetVersion:
+                description: The desired version of the VMImportConfig resource
+                type: string
+              phase:
+                description: Phase is the current phase of the VMImportConfig deployment
+                type: string
+            type: object
+        type: object
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vm-import-operator
+  namespace: kubevirt-hyperconverged
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: vm-import-operator
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  - events
+  - configmaps
+  - secrets
+  - serviceaccounts
+  - services
+  verbs:
+  - '*'
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  - deployments/finalizers
+  verbs:
+  - '*'
+- apiGroups:
+  - v2v.kubevirt.io
+  resources:
+  - vmimportconfigs
+  - vmimportconfigs/finalizers
+  - vmimportconfigs/status
+  verbs:
+  - '*'
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - '*'
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  - clusterroles
+  verbs:
+  - '*'
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - '*'
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: vm-import-operator
+roleRef:
+  kind: ClusterRole
+  name: vm-import-operator
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+- kind: ServiceAccount
+  name: vm-import-operator
+  namespace: kubevirt-hyperconverged
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vm-import-operator
+  namespace: kubevirt-hyperconverged
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: vm-import-operator
+  template:
+    metadata:
+      labels:
+        name: vm-import-operator
+    spec:
+      serviceAccountName: vm-import-operator
+      containers:
+        - name: vm-import-operator
+          # Replace this with the built image name
+          image: quay.io/kubevirt/vm-import-operator:v0.4.0
+          command:
+          - vm-import-operator
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "vm-import-operator"
+            - name: DEPLOY_CLUSTER_RESOURCES
+              value: "true"
+            - name: OPERATOR_VERSION
+              value: v0.4.0
+            - name: CONTROLLER_IMAGE
+              value: quay.io/kubevirt/vm-import-controller:v0.4.0
+            - name: VIRTV2V_IMAGE
+              value: quay.io/kubevirt/vm-import-virtv2v:v0.4.0
+            - name: PULL_POLICY
+              value: Always
+            - name: MONITORING_NAMESPACE
+              value: openshift-monitoring
