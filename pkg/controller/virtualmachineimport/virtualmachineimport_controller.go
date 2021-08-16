@@ -1047,11 +1047,7 @@ func shouldReconcile(instance *v2vv1.VirtualMachineImport) bool {
 }
 
 func shouldStartVM(instance *v2vv1.VirtualMachineImport) bool {
-	return conditions.HasSucceededConditionOfReason(instance.Status.Conditions, v2vv1.VirtualMachineReady) &&
-		((instance.Spec.StartVM != nil && *instance.Spec.StartVM) ||
-			(instance.Spec.StartVM == nil &&
-				instance.Spec.Warm &&
-				instance.Annotations[sourceVMInitialState] == string(provider.VMStatusUp)))
+	return (instance.Spec.StartVM != nil && *instance.Spec.StartVM) || (instance.Spec.StartVM == nil && instance.Spec.Warm && instance.Annotations[sourceVMInitialState] == string(provider.VMStatusUp))
 }
 
 func shouldConvertGuest(provider provider.Provider, instance *v2vv1.VirtualMachineImport) bool {
