@@ -798,7 +798,9 @@ func (o *OvirtMapper) mapFeatures() *kubevirtv1.Features {
 }
 
 func (o *OvirtMapper) mapTimeZone() *kubevirtv1.Clock {
+	clock := kubevirtv1.Clock{Timer: &kubevirtv1.Timer{}}
 	offset := kubevirtv1.ClockOffsetUTC{}
+
 	if tz, ok := o.vm.TimeZone(); ok {
 		if utcOffset, ok := tz.UtcOffset(); ok {
 			parsedOffset, err := utils.ParseUtcOffsetToSeconds(utcOffset)
@@ -807,10 +809,15 @@ func (o *OvirtMapper) mapTimeZone() *kubevirtv1.Clock {
 			} else {
 				log.Info("VM's utc offset is malformed: " + err.Error())
 			}
+		} else if tzName, ok := tz.Name(); ok {
+			timezone := kubevirtv1.ClockOffsetTimezone(tzName)
+			clock.Timezone = &timezone
 		}
 	}
-	clock := kubevirtv1.Clock{Timer: &kubevirtv1.Timer{}}
-	clock.UTC = &offset
+
+	if clock.Timezone == nil {
+		clock.UTC = &offset
+	}
 
 	return &clock
 }

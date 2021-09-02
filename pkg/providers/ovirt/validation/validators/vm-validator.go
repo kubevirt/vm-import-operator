@@ -27,9 +27,6 @@ func ValidateVM(vm *ovirtsdk.Vm, config kvConfig.KubeVirtConfig, finder *otempla
 	if failure, valid := isValidStatus(vm); !valid {
 		results = append(results, failure)
 	}
-	if failure, valid := isValidTimezone(vm); !valid {
-		results = append(results, failure)
-	}
 	results = append(results, isValidCPU(vm)...)
 	if failure, valid := isValidCPUShares(vm); !valid {
 		results = append(results, failure)
@@ -204,20 +201,6 @@ func isValidStatus(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
 		ID:      VMStatusID,
 		Message: "VM doesn't have any status. Must be 'up' or 'down'.",
 	}, false
-}
-
-func isValidTimezone(vm *ovirtsdk.Vm) (ValidationFailure, bool) {
-	if tz, ok := vm.TimeZone(); ok {
-		if name, ok := tz.Name(); ok {
-			if !utils.IsUtcCompatible(name) {
-				return ValidationFailure{
-					ID:      VMTimezoneID,
-					Message: "VM's timezone is not UTC-compatible. It should have offset of 0 and not observe DST",
-				}, false
-			}
-		}
-	}
-	return ValidationFailure{}, true
 }
 
 func isValidBootMenu(bios *ovirtsdk.Bios) (ValidationFailure, bool) {
