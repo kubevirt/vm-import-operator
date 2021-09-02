@@ -489,7 +489,7 @@ func (r *VmwareProvider) Close() {
 }
 
 // ValidateDiskStatus is a no-op which is present in order to satisfy the Provider interface.
-func (r *VmwareProvider) ValidateDiskStatus(_ string) (bool, error) {
+func (r *VmwareProvider) ValidateDiskStatus(_ cdiv1.DataVolume) (bool, error) {
 	return true, nil
 }
 

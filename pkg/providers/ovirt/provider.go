@@ -235,7 +235,7 @@ func (o *OvirtProvider) PrepareResourceMapping(externalResourceMapping *v2vv1.Re
 }
 
 // ValidateDiskStatus validate current status of the disk in oVirt env:
-func (o *OvirtProvider) ValidateDiskStatus(diskName string) (bool, error) {
+func (o *OvirtProvider) ValidateDiskStatus(dv cdiv1.DataVolume) (bool, error) {
 	// Refresh cached VM data:
 	err := o.LoadVM(o.instance.Spec.Source)
 	if err != nil {
@@ -244,10 +244,12 @@ func (o *OvirtProvider) ValidateDiskStatus(diskName string) (bool, error) {
 
 	// Find the disk by ID and validate the status:
 	if diskAttachments, ok := o.vm.DiskAttachments(); ok {
-		for _, disk := range diskAttachments.Slice() {
-			if diskID, ok := disk.Id(); ok {
-				if strings.Contains(diskName, diskID) {
-					return o.validator.Validator.ValidateDiskStatus(*disk), nil
+		for _, da := range diskAttachments.Slice() {
+			if disk, ok := da.Disk(); ok {
+				if diskID, ok := disk.Id(); ok {
+					if strings.Contains(dv.Spec.Source.Imageio.DiskID, diskID) {
+						return o.validator.Validator.ValidateDiskStatus(*da), nil
+					}
 				}
 			}
 		}

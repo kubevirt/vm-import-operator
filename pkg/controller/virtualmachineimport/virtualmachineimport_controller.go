@@ -616,7 +616,7 @@ func (r *ReconcileVirtualMachineImport) importDisks(provider provider.Provider, 
 		if err != nil && k8serrors.IsNotFound(err) {
 			// We have to validate the disk status, so we are sure, the disk wasn't manipulated,
 			// before we execute the import:
-			valid, err := provider.ValidateDiskStatus(dv.Name)
+			valid, err := provider.ValidateDiskStatus(dv)
 			if err != nil {
 				return false, err
 			}
