@@ -1974,7 +1974,7 @@ func (p *mockProvider) TestConnection() error {
 }
 
 // ValidateDiskStatus return true if disk is valid
-func (p *mockProvider) ValidateDiskStatus(string) (bool, error) {
+func (p *mockProvider) ValidateDiskStatus(volume cdiv1.DataVolume) (bool, error) {
 	return true, nil
 }
 

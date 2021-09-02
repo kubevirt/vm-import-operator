@@ -24,7 +24,7 @@ const maxMemoryGI = 4 * 1024 * 1024 * 1024
 
 var (
 	targetVMName       = "myvm"
-	expectedDVName     = targetVMName + "-" + "123"
+	expectedDVName     = "d7bc458c04f4863b9e517c9b1661fbd34c02dc02"
 	filesystemOverhead = cdiv1.FilesystemOverhead{
 		Global: "0.0",
 	}

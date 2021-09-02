@@ -1,6 +1,7 @@
 package mapper
 
 import (
+	"crypto/sha1"
 	"fmt"
 	"strings"
 
@@ -832,6 +833,7 @@ func getDiskAttachmentByID(id string, diskAttachments *ovirtsdk.DiskAttachmentSl
 }
 
 func buildDataVolumeName(targetVMName string, diskAttachID string) string {
-	dvName, _ := utils.NormalizeName(targetVMName + "-" + diskAttachID)
-	return dvName
+	sha := sha1.New()
+	sha.Write([]byte(targetVMName + diskAttachID))
+	return fmt.Sprintf("%x", sha.Sum(nil))
 }

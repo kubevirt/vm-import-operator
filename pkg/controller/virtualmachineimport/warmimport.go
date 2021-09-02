@@ -142,12 +142,12 @@ func (r *ReconcileVirtualMachineImport) ensureDisksExist(provider provider.Provi
 
 		// We have to validate the disk status, so we are sure, the disk wasn't manipulated,
 		// before we execute the import:
-		valid, err := provider.ValidateDiskStatus(dvName.Name)
+		valid, err := provider.ValidateDiskStatus(dvDef)
 		if err != nil {
 			return false, err
 		}
 		if !valid {
-			err := r.endDiskImportFailed(provider, instance, dv, "disk is in illegal status")
+			err := r.endDiskImportFailed(provider, instance, &dvDef, "disk is in illegal status")
 			if err != nil {
 				return false, err
 			}
