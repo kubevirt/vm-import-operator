@@ -219,7 +219,7 @@ func (t *basicVmImportTest) validateTargetConfiguration(vmName string) *v1.Virtu
 	Expect(spec.Domain.Devices.Interfaces).To(BeEmpty())
 
 	By("having correct clock settings")
-	Expect(spec.Domain.Clock.UTC).ToNot(BeNil())
+	Expect(spec.Domain.Clock.Timezone).ToNot(BeNil())
 
 	By("having correct disk setup")
 	disks := spec.Domain.Devices.Disks

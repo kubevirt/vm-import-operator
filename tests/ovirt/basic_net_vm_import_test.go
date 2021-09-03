@@ -100,7 +100,7 @@ func (t *networkedVMImportTest) validateTargetConfiguration(vmName string) *v1.V
 	Expect(nic.Model).To(BeEquivalentTo("virtio"))
 
 	By("having correct clock settings")
-	Expect(spec.Domain.Clock.UTC).ToNot(BeNil())
+	Expect(spec.Domain.Clock.Timezone).ToNot(BeNil())
 
 	By("having correct disk setup")
 	disks := spec.Domain.Devices.Disks
@@ -116,9 +116,9 @@ func (t *networkedVMImportTest) validateTargetConfiguration(vmName string) *v1.V
 }
 
 func (t *networkedVMImportTest) stub(vmID string) {
+	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
 	diskAttachmentsXML := t.framework.LoadFile("disk-attachments/one.xml")
 	diskXML := t.framework.LoadTemplate("disks/disk-1.xml", map[string]string{"@DISKSIZE": "50331648"})
-	domainXML := t.framework.LoadFile("storage-domains/domain-1.xml")
 	consolesXML := t.framework.LoadFile("graphic-consoles/vnc.xml")
 	networkXML := t.framework.LoadFile("networks/net-1.xml")
 	vnicProfileXML := t.framework.LoadFile("vnic-profiles/vnic-profile-1.xml")

@@ -176,9 +176,6 @@ func (o *OvirtMapper) MapVM(targetVMName *string, vmSpec *kubevirtv1.VirtualMach
 	// Map annotations like sso
 	vmSpec.ObjectMeta.Annotations = o.mapAnnotations()
 
-	// Map placement policy
-	vmSpec.Spec.Template.Spec.EvictionStrategy = o.mapPlacementPolicy()
-
 	// Map timezone
 	vmSpec.Spec.Template.Spec.Domain.Clock = o.mapTimeZone()
 

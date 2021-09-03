@@ -90,7 +90,7 @@ var _ = Describe("Import", func() {
 			vm := test.ensureVMIsRunning(vmID)
 
 			spec := vm.Spec.Template.Spec
-			Expect(spec.Domain.Clock.UTC).ToNot(BeNil())
+			Expect(spec.Domain.Clock.Timezone).ToNot(BeNil())
 		},
 			table.Entry("TzData-compatible: `Africa/Abidjan`", "Africa/Abidjan"),
 			table.Entry("Windows-specific: `GMT Standard Time`", "GMT Standard Time"),
