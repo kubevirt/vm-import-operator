@@ -3,6 +3,7 @@ package mapper
 import (
 	"crypto/sha1"
 	"fmt"
+	"math"
 	"strings"
 
 	oos "github.com/kubevirt/vm-import-operator/pkg/providers/ovirt/os"
@@ -279,7 +280,8 @@ func (o *OvirtMapper) MapDataVolumes(targetVMName *string, filesystemOverhead cd
 		overhead := utils.GetOverheadForStorageClass(filesystemOverhead, sdClass)
 
 		blockSize := int64(1048576)
-		sizeWithOverhead := utils.RoundUp(int64(float64(diskSize)/(1-overhead)), blockSize)
+		alignedSize := utils.RoundUp(diskSize, blockSize)
+		sizeWithOverhead := int64(math.Ceil(float64(alignedSize) / (1 - overhead)))
 		diskSizeConverted, err := utils.FormatBytes(sizeWithOverhead)
 		if err != nil {
 			return dvs, err

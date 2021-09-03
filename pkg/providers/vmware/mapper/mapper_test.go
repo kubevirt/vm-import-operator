@@ -357,7 +357,7 @@ var _ = Describe("Test mapping disks", func() {
 		// check that disk overheads are set correctly
 		Expect(dvs[expectedDiskName1].Spec.PVC.Resources.Requests).To(HaveKey(v1.ResourceStorage))
 		storageResource := dvs[expectedDiskName1].Spec.PVC.Resources.Requests[v1.ResourceStorage]
-		Expect(storageResource.Value()).To(BeEquivalentTo(2273312768))
+		Expect(storageResource.Value()).To(BeEquivalentTo(2272469469))
 
 		Expect(dvs[expectedDiskName2].Spec.PVC.Resources.Requests).To(HaveKey(v1.ResourceStorage))
 		storageResource = dvs[expectedDiskName2].Spec.PVC.Resources.Requests[v1.ResourceStorage]
