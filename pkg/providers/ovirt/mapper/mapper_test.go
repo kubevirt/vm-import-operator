@@ -455,7 +455,7 @@ var _ = Describe("Test mapping disks", func() {
 
 		Expect(dv.Spec.PVC.Resources.Requests).To(HaveKey(corev1.ResourceStorage))
 		storageResource := dv.Spec.PVC.Resources.Requests[corev1.ResourceStorage]
-		Expect(storageResource.Value()).To(BeEquivalentTo(1136656384))
+		Expect(storageResource.Value()).To(BeEquivalentTo(1136234735))
 
 		Expect(dv.Spec.PVC.StorageClassName).To(Not(BeNil()))
 		Expect(*dv.Spec.PVC.StorageClassName).To(Equal("storageclassname"))
@@ -488,7 +488,7 @@ var _ = Describe("Test mapping disks", func() {
 
 		Expect(dv.Spec.PVC.Resources.Requests).To(HaveKey(corev1.ResourceStorage))
 		storageResource := dv.Spec.PVC.Resources.Requests[corev1.ResourceStorage]
-		Expect(storageResource.Value()).To(BeEquivalentTo(1136656384))
+		Expect(storageResource.Value()).To(BeEquivalentTo(1136234735))
 
 		Expect(dv.Spec.PVC.StorageClassName).To(Not(BeNil()))
 		Expect(*dv.Spec.PVC.StorageClassName).To(Equal(scName))

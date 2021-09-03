@@ -2,6 +2,7 @@ package mapper
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"sort"
 	"strconv"
@@ -315,8 +316,10 @@ func (r *VmwareMapper) MapDataVolumes(_ *string, filesystemOverhead cdiv1.Filesy
 		storageClass := r.getStorageClassForDisk(mapping)
 
 		overhead := utils.GetOverheadForStorageClass(filesystemOverhead, storageClass)
+
 		blockSize := int64(1048576)
-		capacityWithOverhead := utils.RoundUp(int64(float64(disk.Capacity)/(1-overhead)), blockSize)
+		capacityWithAlignment := utils.RoundUp(disk.Capacity, blockSize)
+		capacityWithOverhead := int64(math.Ceil(float64(capacityWithAlignment) / (1 - overhead)))
 		capacityAsQuantity, err := bytesToQuantity(capacityWithOverhead)
 		if err != nil {
 			return nil, err
