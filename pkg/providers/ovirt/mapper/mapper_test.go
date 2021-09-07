@@ -206,7 +206,7 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(*clock.UTC.OffsetSeconds).To(BeEquivalentTo(3600))
 	})
 
-	It("should create UTC clock without offset", func() {
+	It("should create UTC clock with timezone by name", func() {
 		vm = createVM()
 		vm.SetTimeZone(ovirtsdk.NewTimeZoneBuilder().
 			Name("Etc/GMT").MustBuild())
@@ -214,9 +214,9 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		vmSpec, _ = mapper.MapVM(&targetVMName, &kubevirtv1.VirtualMachine{})
 
 		clock := vmSpec.Spec.Template.Spec.Domain.Clock
-		Expect(clock.Timezone).To(BeNil())
-		Expect(clock.UTC).NotTo(BeNil())
-		Expect(clock.UTC.OffsetSeconds).To(BeNil())
+		Expect(clock.Timezone).NotTo(BeNil())
+		Expect(string(*clock.Timezone)).To(Equal("Etc/GMT"))
+		Expect(clock.UTC).To(BeNil())
 	})
 
 	It("should handle cluster default bios type", func() {
