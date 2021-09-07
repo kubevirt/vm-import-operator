@@ -25,7 +25,7 @@ type Provider interface {
 	LoadVM(v2vv1.VirtualMachineImportSourceSpec) error
 	PrepareResourceMapping(*v2vv1.ResourceMappingSpec, v2vv1.VirtualMachineImportSourceSpec)
 	Validate() ([]v2vv1.VirtualMachineImportCondition, error)
-	ValidateDiskStatus(string) (bool, error)
+	ValidateDiskStatus(cdiv1.DataVolume) (bool, error)
 	StopVM(*v2vv1.VirtualMachineImport, rclient.Client) error
 	CreateMapper() (Mapper, error)
 	GetVMStatus() (VMStatus, error)
