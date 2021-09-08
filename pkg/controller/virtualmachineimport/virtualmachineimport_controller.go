@@ -1039,7 +1039,7 @@ func shouldReconcile(instance *v2vv1.VirtualMachineImport) bool {
 
 	// If VM is ready, but not yet started run reconcile
 	if cond != nil {
-		if (cond.Reason != nil && *cond.Reason == string(v2vv1.VirtualMachineReady)) && (instance.Spec.StartVM != nil && *instance.Spec.StartVM) {
+		if (cond.Reason != nil && *cond.Reason == string(v2vv1.VirtualMachineReady)) && shouldStartVM(instance) {
 			return true
 		}
 	}
