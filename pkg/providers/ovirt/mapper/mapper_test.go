@@ -273,11 +273,6 @@ var _ = Describe("Test mapping virtual machine attributes", func() {
 		Expect(clock.UTC.OffsetSeconds).To(BeNil())
 	})
 
-	It("should map placement policy", func() {
-		evictionStrategy := vmSpec.Spec.Template.Spec.EvictionStrategy
-		Expect(string(*evictionStrategy)).ToNot(BeNil())
-	})
-
 	It("should map annotations", func() {
 		annotations := vmSpec.ObjectMeta.Annotations
 		Expect(annotations[mapper.AnnotationComment]).To(Equal(vm.MustComment()))

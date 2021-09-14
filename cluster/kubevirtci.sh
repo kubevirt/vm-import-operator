@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export KUBEVIRT_PROVIDER=${KUBEVIRT_PROVIDER:-'k8s-1.18'}
-export KUBEVIRTCI_VERSION=${KUBEVIRTCI_VERSION:-'463da29b9cbdcaa22daed3a8ef5c5e864f582b0b'}
+export KUBEVIRT_PROVIDER=${KUBEVIRT_PROVIDER:-'k8s-1.20'}
+export KUBEVIRTCI_VERSION=${KUBEVIRTCI_VERSION:-'2108081530-91f55e3'}
+export KUBEVIRTCI_TAG=$KUBEVIRTCI_VERSION
 
 KUBEVIRTCI_PATH="${PWD}/_kubevirtci"
 

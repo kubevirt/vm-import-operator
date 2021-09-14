@@ -79,7 +79,6 @@ var _ = Describe("VM validation ", func() {
 
 		Expect(created).To(HaveMappingRulesVerificationFailure(f))
 	},
-		table.Entry("unsupported timezone", vms.UnsupportedTimezoneVmID, "timezone-template.xml", map[string]string{"@TIMEZONE": "America/New_York"}),
 		table.Entry("unsupported s390x architecture", vms.UnsupportedArchitectureVmID, "architecture-template.xml", map[string]string{"@ARCH": "s390x"}),
 		table.Entry("USB enabled", vms.UsbEnabledVmID, "usb-template.xml", map[string]string{"@ENABLED": "true"}),
 		table.Entry("placement policy affinity set to 'migratable'", vms.MigratablePlacementPolicyAffinityVmID, "placement-policy-affinity-template.xml", map[string]string{"@AFFINITY": "migratable"}),

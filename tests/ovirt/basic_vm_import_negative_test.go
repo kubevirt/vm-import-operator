@@ -81,8 +81,7 @@ var _ = Describe("VM import", func() {
 			Expect(errors.IsNotFound(err)).To(BeTrue())
 		}
 	},
-		table.Entry("invalid disk image", "4096"),
-		table.Entry("invalid disk size", "1"),
+		table.Entry("invalid disk size", "0"),
 	)
 
 	It("should fail for missing secret", func() {
