@@ -193,6 +193,12 @@ vendor:
 	go mod tidy
 	go mod vendor
 
+generate-doc: build-docgen
+	_out/metricsdocs > docs/metrics.md
+
+build-docgen:
+	go build -ldflags="-s -w" -o _out/metricsdocs ./tools/metricsdocs
+
 .PHONY: \
 	all \
 	check \
