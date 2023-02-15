@@ -26,7 +26,7 @@ require (
 	github.com/operator-framework/operator-sdk v0.19.2
 	github.com/ovirt/go-ovirt v4.3.4+incompatible
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.5.1
+	github.com/prometheus/client_golang v1.11.1
 	github.com/prometheus/client_model v0.2.0
 	github.com/spf13/pflag v1.0.5
 	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
