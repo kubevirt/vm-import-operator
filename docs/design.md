@@ -211,6 +211,19 @@ metadata:
   namespace: kubevirt
 ```
 
+For newer versions of kubevirt, in which kubevirt-config configmap is obsolete. Importing of template-less VMs can be enabled by specifying `importWithoutTemplate: "true"`in th `vm-import-controller-config` configmap of the vm-import-operator.
+
+```yaml
+apiVersion: v1
+data:
+  importWithoutTemplate: "true"
+kind: ConfigMap
+metadata:
+  name: vm-import-controller-config
+  namespace: kubevirt
+```
+
+
 The user can provide a custom map to override or extend operator's OS map by setting properties in the `vm-import-controller-config` config map in the controller installation namespace.  Both OS config-map name and namespace should be provided under following properties:
 - `osConfigMap.name` - the user OS config map name
 - `osConfigMap.namespace` - the user OS config map namespace
